@@ -1,4 +1,4 @@
-# Nuclear Option Autopilot Mod
+# NO Autopilot Mod
 
 Currently the autopilot is rather basic. There are some additional features, such as Medusa auto jam (currently just an auto fire mode, it won't select targets automatically or anything, it will only save your finger).
 

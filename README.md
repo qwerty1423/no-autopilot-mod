@@ -6,12 +6,12 @@ Currently the autopilot is rather basic. There are some additional features, suc
 
 Some of the not features may eventually be implemented. the ones toward the end, probably won't be.
 
-### list of features in the mod
+### list of notable features in the mod
 
 In order of implementation, earliest first
 
-- altitude hold
 - wing leveller
+- altitude hold
 - climb/descend to altitude
 - set target roll angle
 - vertical speed limiter
@@ -26,6 +26,7 @@ In approximate likelihood of implementation order descending.
 
 - heading hold
 - autothrottle
+- auto-GCAS
 - waypoints and flying to them
 - separate PID values for every aircraft
 - nap of the earth flying
@@ -40,7 +41,9 @@ Autopilot controls roll and pitch. Does not work on helicopters unless they fly 
 
 Ascent/descent rate limits and target altitude can be configured with keyboard while flying.
 
-Target bank angle can be set so that plane turns in a circle. Should be useful for Medusa.
+Target bank angle can be set so that plane turns in a circle. Should be useful for Medusa, for easier loitering.
+
+Large stick inputs will disengage the autopilot.
 
 The mod can also override fly by wire, allowing you to perform better cobra manoeuvres or snap your wings.
 
@@ -86,6 +89,8 @@ Weapon is switched to jammer, and auto jammer enabled. when target is selected, 
 | **Max Climb Rate +/-** | `PageUp` / `PageDown` | Limit vertical speed |
 | **Bank Left/Right** | `[` and `]` | Adjust roll angle |
 | **Reset Bank** | `'` (Quote) | Level the wings, sets roll to 0 |
+
+Large altitude adjustment key has minimum limit to reduce crashes when sea skimming if the key is accidentally pressed.
 
 Keys and UI colours are configurable in the BepInEx config file.
 The [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager) is recommended for changing PID values and other settings in game.

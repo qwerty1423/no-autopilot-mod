@@ -2,30 +2,57 @@
 
 Currently the autopilot is rather basic. There are some additional features, such as Medusa auto jam (currently just an autofire mode, it won't select targets automatically or anything, it will only save your finger).
 
+## features and not features
+
+Some of the not features may eventually be implemented. the ones toward the end, probably won't be.
+
+### list of features in the mod
+
+In order of implementation, earliest first
+
+- altitude hold
+- wing leveller
+- climb/descend to altitude
+- set target roll angle
+- vertical speed limiter
+- HUD autopilot display
+- fuel time and range display
+- Medusa autojam
+- FBW manual override
+
+### features not in the mod (yet?)
+
+In approximate likelihood of implementation order descending.
+
+- heading hold
+- autothrottle
+- waypoints and flying to them
+- separate pid values for every aircraft
+- nap of the earth flying
+- helicopter support
+- auto takeoff and landing
+- auto fighting
+- superhuman combat ai
+
 ## Autopilot
 
-Autopilot controls roll and pitch. does not work on helicopters unless they fly like planes (tarantula probably works when propellers are horizontal. ibis not tested).
+Autopilot controls roll and pitch. Does not work on helicopters unless they fly like planes (tarantula probably works when propellers are horizontal. ibis not tested).
 
 Ascent/descent rate limits and target altitude can be configured with keyboard while flying.
 
 Target bank angle can be set so that plane turns in a circle. Should be useful for Medusa.
 
-The mod can also disable fly by wire, allowing you to perform cobra maneuvers or snap your wings.
+The mod can also override fly by wire, allowing you to perform better cobra maneuvers or snap your wings.
 
-Displays current settings on the HUD. The format is set altitude, set climbrate, set bankangle. For example, autopilot set to 3m altitude, at 40m/s climbrate, at 0 degrees bankangle will show up as `AP: 3 40 0` on the HUD.
+Displays current settings on the HUD. The format is `AP: [Target Altitude] [Max Climb Rate] [Target Bank Angle]`. For example, autopilot set to 3m altitude, at 40m/s climbrate, at 0 degrees bankangle will show up as `AP: 3 40 0` on the HUD.
 
 Has humanlike options that will help reduce its effectiveness. You can probably configure it so that it cannot seaskim at 2m ASL so easily.
 
-PID values can be tuned further if you like, but the defaults should be quite effective.
+PID values can be tuned further if you like, but the defaults should be quite effective. They may not work in all situations or in all aircraft however.
 
-### features currently not in this mod
-- heading hold
-- autothrottle
-- waypoints and flying to them
-- nap of the earth flying
-- separate pid values for every aircraft
-- auto takeoff and landing
-- auto fighting
+There is no limit to the minimum altitude or maximum altitude, but crashes and engine flameouts may result from flying too low or too high.
+
+Use this mod at your own risk.
 
 ## Auto Jammer
 
@@ -60,8 +87,8 @@ Weapon is switched to jammer, and autojammer enabled. when target is selected, i
 | **Bank Left/Right** | `[` and `]` | Adjust roll angle |
 | **Reset Bank** | `'` (Quote) | Level the wings, sets roll to 0 |
 
-Keys and colors are configurable in the BepInEx config file.
-The [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager) is recommended for changing pid values and settings ingame.
+Keys and UI colors are configurable in the BepInEx config file.
+The [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager) is recommended for changing pid values and other settings ingame.
 
 ## Installation
 

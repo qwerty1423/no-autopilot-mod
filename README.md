@@ -99,6 +99,6 @@ The [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.Configura
 
 1. Install BepInEx.
 2. (Recommended) Install BepInEx Configuration Manager.
-3. Download `autopilotmod.zip` and extract the `autopilotmod` folder.
-4. Place the `autopilotmod` folder into your `Nuclear Option/BepInEx/plugins/` folder.
-5. Run the game once to generate the config file.
+3. Download  `noautopilotmod.zip` and extract the `noautopilotmod` folder.
+4. Place the `noautopilotmod` folder into your `Nuclear Option/BepInEx/plugins/` folder.
+6. Run the game once to generate the config file.

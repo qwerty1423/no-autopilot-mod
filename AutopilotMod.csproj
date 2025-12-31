@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>AutopilotMod</AssemblyName>
-    <Description>Advanced Autopilot for Nuclear Option</Description>
-    <Version>4.8.4</Version>
+    <AssemblyName>NOAutopilotMod</AssemblyName>
+    <Description>no autopilot mod</Description>
+    <Version>4.8.5</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>

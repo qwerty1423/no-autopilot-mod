@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 namespace AutopilotMod
 {
-    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.10.0")]
+    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.9.0")]
     public class Plugin : BaseUnityPlugin
     {
         internal new static ManualLogSource Logger;
@@ -172,10 +172,10 @@ namespace AutopilotMod
             GCAS_AutoBuffer = Config.Bind("Auto GCAS", "4. Auto-Pull Buffer", 2f, "Safety margin seconds");
             GCAS_MinAlt = Config.Bind("Auto GCAS", "5. Hard Floor", 0.0f, "Absolute min altitude");
             GCAS_Deadzone = Config.Bind("Auto GCAS", "6. GCAS Deadzone", 0.5f, "GCAS override deadzone");
-            GCAS_P = Config.Bind("Auto GCAS", "7. GCAS P", 0.2f, "G Error -> Stick");
-            GCAS_I = Config.Bind("Auto GCAS", "8. GCAS I", 0.5f, "Builds pull over time");
-            GCAS_D = Config.Bind("Auto GCAS", "9. GCAS D", 0.05f, "Dampens G overshoot");
-            GCAS_ILimit = Config.Bind("Auto GCAS", "10. GCAS I Limit", 1.0f, "Max stick influence");
+            GCAS_P = Config.Bind("GCAS PID", "1. GCAS P", 0.2f, "G Error -> Stick");
+            GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 0.5f, "Builds pull over time");
+            GCAS_D = Config.Bind("GCAS PID", "3. GCAS D", 0.05f, "Dampens G overshoot");
+            GCAS_ILimit = Config.Bind("GCAS PID", "4. GCAS I Limit", 1.0f, "Max stick influence");
 
             // Humanize
             HumanizeEnabled = Config.Bind("Settings - Humanize", "01. Humanize Enabled", true, "Add imperfections");
@@ -675,7 +675,10 @@ namespace AutopilotMod
                             float stickOut = (gError * Plugin.GCAS_P.Value) + gcasIntegral + (gD * Plugin.GCAS_D.Value);
                             
                             pitchOut = Mathf.Clamp(stickOut, -1f, 1f);
+
+                            if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
                         }
+
                         // normal mode
                         else 
                         {

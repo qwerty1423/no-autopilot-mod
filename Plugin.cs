@@ -205,11 +205,11 @@ namespace AutopilotMod
     public static class APData
     {
         public static bool Enabled = false;
+        public static bool WasAPOn = false;
         public static bool AutoJammerActive = false;
         public static bool FBWDisabled = false;
         public static bool GCASActive = false; 
         public static bool GCASWarning = false;
-        public static bool WasAPOn = false;
         public static float TargetAlt = 0f;
         public static float TargetRoll = 0f;
         public static float CurrentAlt = 0f;
@@ -379,7 +379,7 @@ namespace AutopilotMod
         // derivatives
         private static float lastAltError = 0f;
         private static float lastVSError = 0f;
-        private static float lastGError = 0f; // NEW
+        private static float lastGError = 0f;
                 
         // states
         private static int logTimer = 0;
@@ -469,9 +469,9 @@ namespace AutopilotMod
                         }
                     }
 
-                    bool pilotInput = Mathf.Abs(stickPitch) > Plugin.GCAS_Deadzone.Value || Mathf.Abs(stickRoll) > Plugin.GCAS_Deadzone.Value;
+                    bool pilotOverride = Mathf.Abs(stickPitch) > Plugin.GCAS_Deadzone.Value || Mathf.Abs(stickRoll) > Plugin.GCAS_Deadzone.Value;
                     
-                    if (pilotInput || gearDown)
+                    if (pilotOverride || gearDown)
                     {
                         if (APData.GCASActive)
                         {
@@ -483,7 +483,8 @@ namespace AutopilotMod
                     else
                     {
                         float speed = APData.PlayerRB.velocity.magnitude;
-                        if (speed > 15f)
+                        
+                        if (speed > 15f && (!APData.Enabled || APData.GCASActive))
                         {
                             Vector3 velocity = APData.PlayerRB.velocity;
                             float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
@@ -497,8 +498,9 @@ namespace AutopilotMod
 
                             bool dangerImminent = false;
                             bool warningZone = false;
-                            bool isWallThreat = false;
+                            bool isWallThreat = false; // "Hard" obstacles (Mountains/Buildings)
 
+                            // 2. RAYCAST SCAN (For Walls & Slopes)
                             float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
                             Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 10f);
 
@@ -548,10 +550,13 @@ namespace AutopilotMod
 
                             if (APData.GCASActive)
                             {
+                                // DISENGAGE RULES
                                 bool safeToRelease = false;
 
                                 if (!dangerImminent)
                                 {
+                                    // Wall Threat: Release immediately if clear (allows contouring)
+                                    // Floor Threat: Release only if climbing/level (gravity safety)
                                     if (isWallThreat || APData.CurrentAlt > 100f) 
                                         safeToRelease = true;
                                     else if (velocity.y >= 0f) 
@@ -561,25 +566,15 @@ namespace AutopilotMod
                                 if (safeToRelease)
                                 {
                                     APData.GCASActive = false;
-                                    
-                                    if (APData.WasAPOn)
-                                    {
-                                        APData.Enabled = true;
-                                        APData.TargetAlt = APData.CurrentAlt; 
-                                        APData.TargetRoll = 0f;
-                                    }
-                                    else
-                                    {
-                                        APData.Enabled = false;
-                                    }
+                                    APData.Enabled = false; // Always return to Manual, since we only triggered from Manual
                                     
                                     if (Plugin.EnableActionLogs.Value) Plugin.Logger.LogInfo("GCAS RECOVERED");
                                 }
                                 else
                                 {
+                                    // HOLD PULL
                                     APData.GCASWarning = true;
                                     APData.TargetRoll = 0f;
-                                    APData.TargetAlt = APData.CurrentAlt + 2000f;
                                 }
                             }
                             else 
@@ -587,13 +582,12 @@ namespace AutopilotMod
                                 // ENGAGE
                                 if (dangerImminent)
                                 {
-                                    // Save state before taking over
-                                    if (!APData.GCASActive) APData.WasAPOn = APData.Enabled;
-
                                     APData.Enabled = true;
                                     APData.GCASActive = true;
                                     APData.TargetRoll = 0f;
-                                    APData.TargetAlt = APData.CurrentAlt + 2000f;
+                                    
+                                    if (Plugin.EnableActionLogs.Value) 
+                                        Plugin.Logger.LogWarning("GCAS TRIGGER");
                                 }
                                 else if (warningZone)
                                 {
@@ -725,17 +719,14 @@ namespace AutopilotMod
                             float gD = (gError - lastGError) / dt;
                             lastGError = gError;
 
-                            // Calculate stick directly from G error
                             float stickOut = (gError * Plugin.GCAS_P.Value) + gcasIntegral + (gD * Plugin.GCAS_D.Value);
                             
                             pitchOut = Mathf.Clamp(stickOut, -1f, 1f);
-
                             if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
                         }
-
-                        // normal mode
                         else 
                         {
+                            // altitude, vs, angle
                             if (useHumanize && isPitchSleeping) {
                                 pitchOut = (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * Plugin.HumanizeStrength.Value * 0.5f;
                             } 
@@ -831,7 +822,6 @@ namespace AutopilotMod
         private static float fuelFlowEma = 0f;
         private static float lastUpdateTime = 0f;
         
-        // Track the gauge to detect aircraft/HUD switches
         private static FuelGauge lastFuelGauge; 
 
         private static void Postfix(FlightHud __instance)
@@ -842,11 +832,9 @@ namespace AutopilotMod
                 Aircraft aircraft = Traverse.Create(__instance).Field("playerVehicle").GetValue<Aircraft>();
                 if (aircraft == null) return;
 
-                // 1. Find the FuelGauge, even if it is currently disabled (Landing Mode)
                 FuelGauge fg = __instance.GetComponentInChildren<FuelGauge>(true);
                 if (fg == null) return;
 
-                // 2. Reset if we switched aircraft/gauges
                 if (lastFuelGauge != fg) {
                     if (timerObj) UnityEngine.Object.Destroy(timerObj);
                     if (rangeObj) UnityEngine.Object.Destroy(rangeObj);
@@ -860,19 +848,15 @@ namespace AutopilotMod
                     lastUpdateTime = 0f;
                 }
 
-                // 3. Create Objects if missing
                 if (!timerObj) {
                     Text template = Traverse.Create(fg).Field("fuelLabel").GetValue<Text>();
                     if (template == null) return;
-
-                    // Helper to spawn text attached to the HUD root, not the gauge
                     GameObject Spawn(string name) {
                         GameObject go = UnityEngine.Object.Instantiate(template.gameObject, __instance.transform);
                         go.name = name;
-                        go.SetActive(true); // Force visible even if template is hidden
+                        go.SetActive(true); 
                         return go;
                     }
-
                     timerObj = Spawn("AP_Timer");
                     rangeObj = Spawn("AP_Range");
                     apObj = Spawn("AP_Status");
@@ -880,22 +864,17 @@ namespace AutopilotMod
                     fbwObj = Spawn("AP_FBW");
                 }
 
-                // 4. Update Positions (Snap to the fuel gauge position)
-                // We do this every frame in case the UI moves or sways
                 Text refLabel = Traverse.Create(fg).Field("fuelLabel").GetValue<Text>();
                 if (refLabel != null) {
                     Vector3 basePos = refLabel.transform.position;
                     float startY = Plugin.FuelOffsetY.Value;
                     float gap = Plugin.FuelLineSpacing.Value;
                     
-                    // Small helper to position a line
                     void Place(GameObject obj, int index) {
                         if (!obj) return;
-                        // Use transform.up for rotation safety, though usually just Y
                         obj.transform.position = basePos + (obj.transform.up * (startY - (gap * index)));
-                        if (!obj.activeSelf) obj.SetActive(true); // Ensure it stays visible
+                        if (!obj.activeSelf) obj.SetActive(true); 
                     }
-
                     Place(timerObj, 0);
                     Place(rangeObj, 1);
                     Place(apObj, 2);
@@ -903,7 +882,6 @@ namespace AutopilotMod
                     Place(fbwObj, 4);
                 }
 
-                // 5. Calculate Fuel Logic (Same as before)
                 float currentFuel = Traverse.Create(aircraft).Field("fuelCapacity").GetValue<float>() * aircraft.GetFuelLevel();
                 float time = Time.time;
                 if (lastUpdateTime != 0f) {
@@ -917,7 +895,6 @@ namespace AutopilotMod
                     }
                 } else { lastUpdateTime = time; lastFuelMass = currentFuel; }
 
-                // 6. Update Text Content
                 Text tText = timerObj.GetComponent<Text>();
                 Text rText = rangeObj.GetComponent<Text>();
                 Text aText = apObj.GetComponent<Text>();
@@ -948,14 +925,16 @@ namespace AutopilotMod
                 }
 
                 if (APData.Enabled) {
+                    string apStatus = $"A: {APData.TargetAlt:F0} {APData.CurrentMaxClimbRate:F0} {APData.TargetRoll:F0}";
+
                     if (APData.GCASActive) {
-                        aText.text = "GCAS ENGAGED";
+                        aText.text = "Auto-GCAS";
                         aText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
                     } else if (APData.GCASWarning) {
-                        aText.text = "PULL UP";
+                        aText.text = apStatus + " PULL UP";
                         aText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
                     } else {
-                        aText.text = $"A: {APData.TargetAlt:F0} {APData.CurrentMaxClimbRate:F0} {APData.TargetRoll:F0}";
+                        aText.text = apStatus;
                         aText.color = ModUtils.GetColor(Plugin.ColorAPOn.Value, Color.green);
                     }
                 } else {

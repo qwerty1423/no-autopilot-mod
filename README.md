@@ -4,7 +4,7 @@ Currently the autopilot is rather basic. There are some additional features, suc
 
 ## features and not features
 
-Some of the not features may eventually be implemented. the ones toward the end, probably won't be.
+Some of the not features may eventually be implemented.
 
 ### list of notable features in the mod
 
@@ -32,8 +32,6 @@ In approximate likelihood of implementation order descending.
 - nap of the earth flying
 - helicopter support
 - auto take-off and landing
-- auto fighting
-- superhuman combat ai
 
 ## Autopilot
 

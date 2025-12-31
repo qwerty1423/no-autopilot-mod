@@ -493,7 +493,7 @@ namespace AutopilotMod
                             if (velocity.y < -1f) 
                                 diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
 
-                            float availAccel = Mathf.Max(1f, Plugin.GCAS_MaxG.Value - Mathf.Cos(diveAngle * Mathf.Deg2Rad)) * 9.81f;
+                            float availAccel = Plugin.GCAS_MaxG.Value * 9.81f;
                             float timeToLevel = speed * (diveAngle * Mathf.Deg2Rad) / availAccel;
 
                             float autoThresholdTime = timeToLevel + Plugin.GCAS_AutoBuffer.Value;
@@ -501,7 +501,7 @@ namespace AutopilotMod
                             float lookAheadDist = speed * (warnThresholdTime + 2.0f); 
                             
                             float timeToImpact = 999f;
-                            if (Physics.SphereCast(APData.PlayerRB.position, 5f, velocity.normalized, out RaycastHit hit, lookAheadDist))
+                            if (Physics.SphereCast(APData.PlayerRB.position, 1f, velocity.normalized, out RaycastHit hit, lookAheadDist))
                             {
                                 if (hit.collider.gameObject.isStatic || hit.collider.gameObject.layer == 0)
                                     timeToImpact = hit.distance / speed;

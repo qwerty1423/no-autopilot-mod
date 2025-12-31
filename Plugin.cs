@@ -209,6 +209,7 @@ namespace AutopilotMod
         public static bool FBWDisabled = false;
         public static bool GCASActive = false; 
         public static bool GCASWarning = false;
+        public static bool WasAPOn = false;
         public static float TargetAlt = 0f;
         public static float TargetRoll = 0f;
         public static float CurrentAlt = 0f;
@@ -485,65 +486,94 @@ namespace AutopilotMod
                         if (speed > 15f)
                         {
                             Vector3 velocity = APData.PlayerRB.velocity;
+                            float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
+                            
                             float gAccel = Plugin.GCAS_MaxG.Value * 9.81f; 
                             float turnRadius = speed * speed / gAccel;
                             
-                            float bufferDist = (speed * Plugin.GCAS_AutoBuffer.Value) + 50f;
+                            float reactionTime = Plugin.GCAS_AutoBuffer.Value;
+                            float reactionDist = speed * reactionTime;
                             float warnDist = speed * Plugin.GCAS_WarnBuffer.Value;
 
-                            float impactDist = -1f;
-                            float turnAngle = 0f;
+                            bool dangerImminent = false;
+                            bool warningZone = false;
+                            bool isWallThreat = false;
 
-                            float scanRange = (turnRadius * 1.6f) + warnDist + 1000f;
+                            float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
                             Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 10f);
 
                             if (Physics.SphereCast(castStart, 1f, velocity.normalized, out RaycastHit hit, scanRange))
                             {
                                 if (hit.transform.root != APData.PlayerRB.transform.root)
                                 {
-                                    impactDist = hit.distance;
+                                    float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
+                                    float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
                                     
-                                    turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
+                                    if (hit.distance < (reqArc + reactionDist + 20f))
+                                    {
+                                        dangerImminent = true;
+                                        if (hit.normal.y < 0.7f) isWallThreat = true; 
+                                    }
+                                    else if (hit.distance < (reqArc + reactionDist + warnDist))
+                                    {
+                                        warningZone = true;
+                                    }
                                 }
                             }
-                            
-                            if (impactDist < 0f && velocity.y < -1f)
+
+                            if (descentRate > 0.1f) 
                             {
                                 float diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
-                                float distToWater = APData.CurrentAlt / Mathf.Sin(diveAngle * Mathf.Deg2Rad);
-                                
-                                if (distToWater < scanRange)
+                                float pullUpLoss = turnRadius * (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
+                                float vertBuffer = (descentRate * reactionTime) + 15f; 
+
+                                if (APData.CurrentAlt < (pullUpLoss + vertBuffer))
                                 {
-                                    impactDist = distToWater;
-                                    turnAngle = diveAngle;
+                                    bool ignoreFloor = APData.Enabled && !APData.GCASActive && descentRate < 10f;
+                                    
+                                    if (!ignoreFloor)
+                                    {
+                                        dangerImminent = true;
+                                    }
                                 }
                             }
 
-                            bool dangerImminent = false;
-                            bool warningZone = false;
-
-                            if (impactDist > 0f)
+                            if (APData.Enabled && !APData.GCASActive)
                             {
-                                float requiredDistance = turnRadius * (turnAngle * Mathf.Deg2Rad);
-
-                                if (impactDist < (requiredDistance + bufferDist))
+                                if (dangerImminent && !isWallThreat && descentRate < 10f)
                                 {
-                                    dangerImminent = true;
-                                    if (Plugin.EnableActionLogs.Value && !APData.GCASActive)
-                                        Plugin.Logger.LogWarning($"GCAS TRIG: Dist:{impactDist:F0} < Req:{requiredDistance + bufferDist:F0}");
-                                }
-                                else if (impactDist < (requiredDistance + bufferDist + warnDist))
-                                {
-                                    warningZone = true;
+                                    dangerImminent = false;
                                 }
                             }
 
                             if (APData.GCASActive)
                             {
-                                if (!dangerImminent) 
+                                bool safeToRelease = false;
+
+                                if (!dangerImminent)
+                                {
+                                    if (isWallThreat || APData.CurrentAlt > 100f) 
+                                        safeToRelease = true;
+                                    else if (velocity.y >= 0f) 
+                                        safeToRelease = true;
+                                }
+
+                                if (safeToRelease)
                                 {
                                     APData.GCASActive = false;
-                                    APData.Enabled = false;
+                                    
+                                    if (APData.WasAPOn)
+                                    {
+                                        APData.Enabled = true;
+                                        APData.TargetAlt = APData.CurrentAlt; 
+                                        APData.TargetRoll = 0f;
+                                    }
+                                    else
+                                    {
+                                        APData.Enabled = false;
+                                    }
+                                    
+                                    if (Plugin.EnableActionLogs.Value) Plugin.Logger.LogInfo("GCAS RECOVERED");
                                 }
                                 else
                                 {
@@ -554,8 +584,12 @@ namespace AutopilotMod
                             }
                             else 
                             {
+                                // ENGAGE
                                 if (dangerImminent)
                                 {
+                                    // Save state before taking over
+                                    if (!APData.GCASActive) APData.WasAPOn = APData.Enabled;
+
                                     APData.Enabled = true;
                                     APData.GCASActive = true;
                                     APData.TargetRoll = 0f;

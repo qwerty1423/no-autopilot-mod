@@ -60,7 +60,7 @@ namespace AutopilotMod
         public static ConfigEntry<float> GCAS_MaxG;
         public static ConfigEntry<float> GCAS_WarnBuffer;
         public static ConfigEntry<float> GCAS_AutoBuffer;
-        public static ConfigEntry<float> GCAS_MinAlt;
+        public static ConfigEntry<float> GCAS_Clearance;
         public static ConfigEntry<float> GCAS_Deadzone;
         public static ConfigEntry<float> GCAS_P, GCAS_I, GCAS_D, GCAS_ILimit;
 
@@ -170,7 +170,7 @@ namespace AutopilotMod
             GCAS_MaxG = Config.Bind("Auto GCAS", "2. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
             GCAS_WarnBuffer = Config.Bind("Auto GCAS", "3. Warning Buffer", 20.0f, "Seconds warning before auto-pull");
             GCAS_AutoBuffer = Config.Bind("Auto GCAS", "4. Auto-Pull Buffer", 2.0f, "Safety margin seconds");
-            GCAS_MinAlt = Config.Bind("Auto GCAS", "5. Hard Floor", 0.0f, "Absolute min altitude");
+            GCAS_Clearance = Config.Bind("Auto GCAS", "5. GCAS Clearance", 3.0f, "Clearance distance");
             GCAS_Deadzone = Config.Bind("Auto GCAS", "6. GCAS Deadzone", 0.5f, "GCAS override deadzone");
             GCAS_P = Config.Bind("GCAS PID", "1. GCAS P", 0.1f, "G Error -> Stick");
             GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 1.0f, "Builds pull over time");
@@ -488,85 +488,52 @@ namespace AutopilotMod
                         {
                             Vector3 velocity = APData.PlayerRB.velocity;
                             float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
+                            float currentAltAgl = APData.CurrentAlt;
+                            float gAccel = Plugin.GCAS_MaxG.Value * 9.81f; 
+                            float turnRadius = (speed * speed) / gAccel;
+                            
+                            float c = Plugin.GCAS_Clearance.Value;
+                            float lagDist = speed * Plugin.GCAS_AutoBuffer.Value;
 
-                            // Warning Range can be long (for HUD), but Trigger logic will verify distance locally.
-                            float sensorRange = (speed * Plugin.GCAS_WarnBuffer.Value) + 3000f;
+                            float sensorRange = (speed * Plugin.GCAS_WarnBuffer.Value) + 1000f;
                             Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 10f);
-
+                            
                             bool dangerImminent = false;
                             bool warningZone = false;
-                            
-                            if (Physics.SphereCast(castStart, 1f, velocity.normalized, out RaycastHit hit, sensorRange))
+
+                            if (Physics.SphereCast(castStart, 1f, velocity.normalized, out RaycastHit hit, sensorRange) && hit.transform.root != APData.PlayerRB.transform.root)
                             {
-                                if (hit.transform.root != APData.PlayerRB.transform.root)
-                                {
-                                    float gAccel = Plugin.GCAS_MaxG.Value * 9.81f; 
-                                    float turnRadius = speed * speed / gAccel; // Horizontal distance needed to pull 90 degrees
+                                float r = hit.distance + 10f;
+                                float terrainAlt = hit.point.y;
+                                float aircraftAlt = APData.PlayerRB.position.y;
 
-                                    // If we are descending, we check if we can level out before hitting Y-level of impact.
-                                    if (descentRate > 1f) 
-                                    {
-                                        // Calculate dive angle
-                                        float diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
-                                        
-                                        // Altitude lost to transition from Dive -> Level
-                                        float projectedAltLoss = turnRadius * (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
-                                        
-                                        // Real Vertical Distance to impact point (AGL)
-                                        float altitudeAgl = APData.PlayerRB.position.y - hit.point.y;
-                                        
-                                        // Safety Buffer (Vertical meters)
-                                        float floorBuffer = (descentRate * Plugin.GCAS_AutoBuffer.Value) + 20f;
+                                float curveHeight = (r < lagDist) ? 0 : (Mathf.Pow(r - lagDist, 2) / (2 * turnRadius));
+                                float requiredClearance = c + curveHeight;
 
-                                        if (altitudeAgl < (projectedAltLoss + floorBuffer))
-                                        {
-                                            dangerImminent = true;
-                                            if (Plugin.EnableActionLogs.Value && !APData.GCASActive) 
-                                                Plugin.Logger.LogWarning($"GCAS FLOOR: AGL {altitudeAgl:F0} < Req {projectedAltLoss:F0}");
-                                        }
-                                        else if (altitudeAgl < (projectedAltLoss + floorBuffer + (descentRate * Plugin.GCAS_WarnBuffer.Value)))
-                                        {
-                                            warningZone = true;
-                                        }
-                                    }
-
-                                    // Even if we aren't diving, we might hit a wall.
-                                    // If the floor check didn't trigger, we check pure distance.
-                                    if (!dangerImminent)
-                                    {
-                                        // To clear a vertical wall, we effectively need to pull 90 degrees.
-                                        // The horizontal distance covered in a 90 deg pull is exactly 1 Turn Radius.
-                                        // We add a time buffer based on speed.
-                                        float wallSafetyDist = turnRadius + (speed * Plugin.GCAS_AutoBuffer.Value) + 50f;
-                                        
-                                        if (hit.distance < wallSafetyDist)
-                                        {
-                                            dangerImminent = true;
-                                            if (Plugin.EnableActionLogs.Value && !APData.GCASActive) 
-                                                Plugin.Logger.LogWarning($"GCAS WALL: Dist {hit.distance:F0} < Req {wallSafetyDist:F0}");
-                                        }
-                                        else if (hit.distance < (wallSafetyDist + (speed * Plugin.GCAS_WarnBuffer.Value)))
-                                        {
-                                            warningZone = true;
-                                        }
-                                    }
-                                }
+                                if ((aircraftAlt - terrainAlt) < requiredClearance) dangerImminent = true;
+                                else if ((aircraftAlt - terrainAlt) < (requiredClearance + 50f)) warningZone = true;
+                            }
+                            else if (velocity.y < -0.5f) 
+                            {
+                                // If we are descending and the radar sees nothing, we check against Y = 0 (Sea Level)
+                                float r_sea = currentAltAgl / Mathf.Max(0.01f, Mathf.Sin(Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up)) * Mathf.Deg2Rad));
+                                float curveHeightSea = (r_sea < lagDist) ? 0 : (Mathf.Pow(r_sea - lagDist, 2) / (2 * turnRadius));
+                                
+                                if (currentAltAgl < (c + curveHeightSea)) dangerImminent = true;
                             }
 
-                            // 3. STATE MACHINE
                             if (APData.GCASActive)
                             {
-                                if (!dangerImminent)
+                                if (!dangerImminent || velocity.y > 5f) 
                                 {
                                     APData.GCASActive = false;
                                     APData.Enabled = false;
-                                    if (Plugin.EnableActionLogs.Value) Plugin.Logger.LogInfo("GCAS RECOVERED (Path Clear)");
                                 }
                                 else
                                 {
                                     APData.GCASWarning = true;
                                     APData.TargetRoll = 0f;
-                                    APData.TargetAlt = APData.CurrentAlt + 2000f; 
+                                    APData.TargetAlt = APData.CurrentAlt + 1000f;
                                 }
                             }
                             else 
@@ -576,7 +543,7 @@ namespace AutopilotMod
                                     APData.Enabled = true;
                                     APData.GCASActive = true;
                                     APData.TargetRoll = 0f;
-                                    APData.TargetAlt = APData.CurrentAlt + 2000f;
+                                    APData.TargetAlt = APData.CurrentAlt + 1000f;
                                     ResetIntegrators();
                                 }
                                 else if (warningZone)

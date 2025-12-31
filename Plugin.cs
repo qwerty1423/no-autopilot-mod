@@ -171,7 +171,7 @@ namespace AutopilotMod
             GCAS_MaxG = Config.Bind("Auto GCAS", "3. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
             GCAS_WarnBuffer = Config.Bind("Auto GCAS", "4. Warning Buffer", 20.0f, "Seconds warning before auto-pull");
             GCAS_AutoBuffer = Config.Bind("Auto GCAS", "5. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
-            GCAS_Deadzone = Config.Bind("Auto GCAS", "6. GCAS Deadzone", 0.01f, "GCAS override deadzone");
+            GCAS_Deadzone = Config.Bind("Auto GCAS", "6. GCAS Deadzone", 0.1f, "GCAS override deadzone");
             GCAS_P = Config.Bind("GCAS PID", "1. GCAS P", 0.1f, "G Error -> Stick");
             GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 1.0f, "Builds pull over time");
             GCAS_D = Config.Bind("GCAS PID", "3. GCAS D", 0.0f, "Dampens G overshoot");
@@ -505,7 +505,7 @@ namespace AutopilotMod
                             float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
                             
                             float gAccel = Plugin.GCAS_MaxG.Value * 9.81f; 
-                            float turnRadius = (speed * speed) / gAccel;
+                            float turnRadius = speed * speed / gAccel;
                             
                             float reactionTime = Plugin.GCAS_AutoBuffer.Value;
                             float reactionDist = speed * reactionTime;
@@ -541,7 +541,7 @@ namespace AutopilotMod
                             {
                                 float diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
                                 float pullUpLoss = turnRadius * (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
-                                float vertBuffer = (descentRate * reactionTime) + 15f; 
+                                float vertBuffer = descentRate * reactionTime; 
 
                                 if (APData.CurrentAlt < (pullUpLoss + vertBuffer))
                                 {

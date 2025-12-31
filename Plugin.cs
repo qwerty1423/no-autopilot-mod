@@ -57,6 +57,7 @@ namespace AutopilotMod
 
         // auto GCAS
         public static ConfigEntry<bool> EnableGCAS;
+        public static ConfigEntry<KeyCode> ToggleGCASKey;
         public static ConfigEntry<float> GCAS_MaxG;
         public static ConfigEntry<float> GCAS_WarnBuffer;
         public static ConfigEntry<float> GCAS_AutoBuffer;
@@ -166,9 +167,10 @@ namespace AutopilotMod
 
             // auto GCAS
             EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS", true, "Auto pull up logic");
-            GCAS_MaxG = Config.Bind("Auto GCAS", "2. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
-            GCAS_WarnBuffer = Config.Bind("Auto GCAS", "3. Warning Buffer", 20.0f, "Seconds warning before auto-pull");
-            GCAS_AutoBuffer = Config.Bind("Auto GCAS", "4. Auto-Pull Buffer", 2.0f, "Safety margin seconds");
+            ToggleGCASKey = Config.Bind("Controls", "2. Toggle GCAS Key", KeyCode.Backslash, "Turn Auto-GCAS on/off");
+            GCAS_MaxG = Config.Bind("Auto GCAS", "3. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
+            GCAS_WarnBuffer = Config.Bind("Auto GCAS", "4. Warning Buffer", 20.0f, "Seconds warning before auto-pull");
+            GCAS_AutoBuffer = Config.Bind("Auto GCAS", "5. Auto-Pull Buffer", 2.0f, "Safety margin seconds");
             GCAS_Deadzone = Config.Bind("Auto GCAS", "6. GCAS Deadzone", 0.5f, "GCAS override deadzone");
             GCAS_P = Config.Bind("GCAS PID", "1. GCAS P", 0.1f, "G Error -> Stick");
             GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 1.0f, "Builds pull over time");
@@ -206,6 +208,7 @@ namespace AutopilotMod
     {
         public static bool Enabled = false;
         public static bool WasAPOn = false;
+        public static bool GCASEnabled = true;
         public static bool AutoJammerActive = false;
         public static bool FBWDisabled = false;
         public static bool GCASActive = false; 
@@ -331,6 +334,18 @@ namespace AutopilotMod
                             }
                         }
                     }
+                }
+                if (Input.GetKeyDown(Plugin.ToggleGCASKey.Value))
+                {
+                    APData.GCASEnabled = !APData.GCASEnabled;
+                    
+                    if (!APData.GCASEnabled) {
+                        APData.GCASActive = false;
+                        APData.GCASWarning = false;
+                    }
+
+                    if (Plugin.EnableActionLogs.Value)
+                        Plugin.Logger.LogInfo("Auto-GCAS " + (APData.GCASEnabled ? "ENABLED" : "DISABLED"));
                 }
             } catch (Exception ex) {
                 Plugin.Logger.LogError($"[InputHandlerPatch] Error: {ex}");
@@ -459,7 +474,7 @@ namespace AutopilotMod
                     }
                 }
 
-                if (Plugin.EnableGCAS.Value && APData.PlayerRB != null)
+                if (Plugin.EnableGCAS.Value && APData.GCASEnabled && APData.PlayerRB != null)
                 {
                     bool gearDown = false;
                     if (acRef != null) {
@@ -490,7 +505,7 @@ namespace AutopilotMod
                             float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
                             
                             float gAccel = Plugin.GCAS_MaxG.Value * 9.81f; 
-                            float turnRadius = speed * speed / gAccel;
+                            float turnRadius = (speed * speed) / gAccel;
                             
                             float reactionTime = Plugin.GCAS_AutoBuffer.Value;
                             float reactionDist = speed * reactionTime;
@@ -498,11 +513,10 @@ namespace AutopilotMod
 
                             bool dangerImminent = false;
                             bool warningZone = false;
-                            bool isWallThreat = false; // "Hard" obstacles (Mountains/Buildings)
+                            bool isWallThreat = false; 
 
-                            // 2. RAYCAST SCAN (For Walls & Slopes)
                             float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
-                            Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 10f);
+                            Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f); 
 
                             if (Physics.SphereCast(castStart, 1f, velocity.normalized, out RaycastHit hit, scanRange))
                             {
@@ -531,32 +545,20 @@ namespace AutopilotMod
 
                                 if (APData.CurrentAlt < (pullUpLoss + vertBuffer))
                                 {
-                                    bool ignoreFloor = APData.Enabled && !APData.GCASActive && descentRate < 10f;
-                                    
-                                    if (!ignoreFloor)
-                                    {
-                                        dangerImminent = true;
-                                    }
+                                    dangerImminent = true;
                                 }
-                            }
-
-                            if (APData.Enabled && !APData.GCASActive)
-                            {
-                                if (dangerImminent && !isWallThreat && descentRate < 10f)
+                                else if (APData.CurrentAlt < (pullUpLoss + vertBuffer + (descentRate * Plugin.GCAS_WarnBuffer.Value)))
                                 {
-                                    dangerImminent = false;
+                                    warningZone = true;
                                 }
                             }
 
                             if (APData.GCASActive)
                             {
-                                // DISENGAGE RULES
                                 bool safeToRelease = false;
 
                                 if (!dangerImminent)
                                 {
-                                    // Wall Threat: Release immediately if clear (allows contouring)
-                                    // Floor Threat: Release only if climbing/level (gravity safety)
                                     if (isWallThreat || APData.CurrentAlt > 100f) 
                                         safeToRelease = true;
                                     else if (velocity.y >= 0f) 
@@ -566,20 +568,17 @@ namespace AutopilotMod
                                 if (safeToRelease)
                                 {
                                     APData.GCASActive = false;
-                                    APData.Enabled = false; // Always return to Manual, since we only triggered from Manual
-                                    
+                                    APData.Enabled = false; 
                                     if (Plugin.EnableActionLogs.Value) Plugin.Logger.LogInfo("GCAS RECOVERED");
                                 }
                                 else
                                 {
-                                    // HOLD PULL
                                     APData.GCASWarning = true;
                                     APData.TargetRoll = 0f;
                                 }
                             }
                             else 
                             {
-                                // ENGAGE
                                 if (dangerImminent)
                                 {
                                     APData.Enabled = true;
@@ -611,7 +610,7 @@ namespace AutopilotMod
                             if (maxE <= 1f) maxE = 100f;
                             float pct = energy / maxE;
 
-                            bool thresholdMet = (pct >= Plugin.AutoJammerThreshold.Value);
+                            bool thresholdMet = pct >= Plugin.AutoJammerThreshold.Value;
 
                             if (thresholdMet) {
                                 jammerNextReleaseTime = 0f;
@@ -926,31 +925,31 @@ namespace AutopilotMod
 
                 if (APData.Enabled) {
                     string apStatus = $"A: {APData.TargetAlt:F0} {APData.CurrentMaxClimbRate:F0} {APData.TargetRoll:F0}";
-
-                    if (APData.GCASActive) {
-                        aText.text = "Auto-GCAS";
-                        aText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
-                    } else if (APData.GCASWarning) {
-                        aText.text = apStatus + " PULL UP";
-                        aText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
-                    } else {
-                        aText.text = apStatus;
-                        aText.color = ModUtils.GetColor(Plugin.ColorAPOn.Value, Color.green);
-                    }
                 } else {
-                    if (APData.GCASWarning) {
+                    if (!APData.GCASEnabled) {
+                        aText.text = "GCAS OFF";
+                        aText.color = ModUtils.GetColor(Plugin.ColorWarn.Value, Color.yellow);
+                    }
+                    else if (APData.GCASActive) {
+                        aText.text = "AUTO-GCAS";
+                        aText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
+                    } 
+                    else if (APData.GCASWarning) {
                         aText.text = "PULL UP";
                         aText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
-                    } else { aText.text = ""; }
+                    } 
+                    else {
+                        aText.text = "";
+                    }
                 }
                 
                 if (APData.AutoJammerActive) {
-                    jText.text = "AJ: ON";
+                    jText.text = "AJ ON";
                     jText.color = ModUtils.GetColor(Plugin.ColorAPOn.Value, Color.green);
                 } else { jText.text = ""; }
                 
                 if (APData.FBWDisabled) {
-                    fText.text = "FBW: OFF";
+                    fText.text = "FBW OFF";
                     fText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
                 } else { fText.text = ""; }
 

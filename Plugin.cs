@@ -503,46 +503,48 @@ namespace AutopilotMod
                             float timeToImpact = 999f;
                             if (Physics.SphereCast(APData.PlayerRB.position, 1f, velocity.normalized, out RaycastHit hit, lookAheadDist))
                             {
-                                if (hit.collider.gameObject.isStatic || hit.collider.gameObject.layer == 0)
-                                    timeToImpact = hit.distance / speed;
-                            }
-                            
-                            float timeToFloor = 999f;
-                            if (velocity.y < -5f) {
-                                float distToFloor = APData.CurrentAlt - Plugin.GCAS_MinAlt.Value;
-                                if (distToFloor > 0) timeToFloor = distToFloor / Mathf.Abs(velocity.y);
-                                else timeToFloor = 0f;
-                            }
+                                float gAccel = Plugin.GCAS_MaxG.Value * 9.81f;
+                                float turnRadius = (speed * speed) / gAccel;
 
-                            float finalTTA = Mathf.Min(timeToImpact, timeToFloor);
-                            
-                            if (APData.GCASActive)
-                            {
-                                bool climbing = velocity.y > 5f;
-                                bool noseUp = fwd.y > 0.1f;
-                                bool pathClear = finalTTA > warnThresholdTime;
+                                float diveRad = diveAngle * Mathf.Deg2Rad;
+                                float projectedAltLoss = turnRadius * (1f - Mathf.Cos(diveRad));
 
-                                if (climbing && noseUp && pathClear) {
-                                    APData.GCASActive = false;
-                                    APData.Enabled = false;
-                                    if (Plugin.EnableActionLogs.Value) Plugin.Logger.LogInfo("GCAS RECOVERED");
-                                } else {
-                                    APData.TargetRoll = 0f;
-                                    APData.TargetAlt = APData.CurrentAlt + 500f; 
-                                    APData.CurrentMaxClimbRate = 100f; 
-                                    APData.GCASWarning = true; 
+                                float verticalDistToImpact = hit.distance * Mathf.Sin(diveRad);
+
+                                float verticalBuffer = speed * Mathf.Sin(diveRad) * Plugin.GCAS_AutoBuffer.Value;
+
+                                float totalReqDist = projectedAltLoss + verticalBuffer + 10f;
+
+                                if (verticalDistToImpact < totalReqDist)
+                                {
+                                    if (APData.GCASActive)
+                                    {
+                                        // Check if we are safe yet
+                                        bool climbing = velocity.y > 0f;
+                                        // If climbing and nose is up, we are safe.
+                                        if (climbing && fwd.y > 0.1f) {
+                                            APData.GCASActive = false;
+                                            APData.Enabled = false;
+                                            if (Plugin.EnableActionLogs.Value) Plugin.Logger.LogInfo("GCAS RECOVERED");
+                                        } else {
+                                            // Keep pulling
+                                            APData.GCASWarning = true;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // ENGAGE
+                                        APData.Enabled = true;
+                                        APData.GCASActive = true;
+                                        APData.TargetRoll = 0f;
+                                        APData.TargetAlt = APData.CurrentAlt + 1000f; // Dummy value, PID uses G-Force anyway
+                                        ResetIntegrators();
+                                        if (Plugin.EnableActionLogs.Value) Plugin.Logger.LogWarning($"GCAS ENGAGE! AltLoss:{projectedAltLoss:F0}m");
+                                    }
                                 }
-                            }
-                            else
-                            {
-                                if (finalTTA < autoThresholdTime) {
-                                    APData.Enabled = true;
-                                    APData.GCASActive = true;
-                                    APData.TargetRoll = 0f;
-                                    APData.TargetAlt = APData.CurrentAlt + 500f;
-                                    ResetIntegrators();
-                                    if (Plugin.EnableActionLogs.Value) Plugin.Logger.LogWarning($"GCAS ENGAGE! TTA:{finalTTA:F1}s");
-                                } else if (finalTTA < warnThresholdTime) {
+                                else if (verticalDistToImpact < (totalReqDist + (speed * Plugin.GCAS_WarnBuffer.Value))) 
+                                {
+                                    // Just warning logic
                                     APData.GCASWarning = true;
                                 }
                             }

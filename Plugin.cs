@@ -489,62 +489,62 @@ namespace AutopilotMod
                             Vector3 velocity = APData.PlayerRB.velocity;
                             Vector3 fwd = APData.PlayerRB.transform.forward;
 
-                            float diveAngle = 0f;
-                            if (velocity.y < -1f) 
-                                diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
-
-                            float availAccel = Plugin.GCAS_MaxG.Value * 9.81f;
-                            float timeToLevel = speed * (diveAngle * Mathf.Deg2Rad) / availAccel;
-
-                            float autoThresholdTime = timeToLevel + Plugin.GCAS_AutoBuffer.Value;
-                            float warnThresholdTime = timeToLevel + Plugin.GCAS_WarnBuffer.Value;
-                            float lookAheadDist = speed * (warnThresholdTime + 2.0f); 
-                            
-                            if (Physics.SphereCast(APData.PlayerRB.position, 1f, velocity.normalized, out RaycastHit hit, lookAheadDist))
+                            if (APData.GCASActive)
                             {
-                                float gAccel = Plugin.GCAS_MaxG.Value * 9.81f;
-                                float turnRadius = (speed * speed) / gAccel;
+                                bool climbing = velocity.y > 0f;
+                                bool noseUp = fwd.y > 0.0f; 
 
-                                float diveRad = diveAngle * Mathf.Deg2Rad;
-                                float projectedAltLoss = turnRadius * (1f - Mathf.Cos(diveRad));
+                                if (climbing && noseUp) {
+                                    APData.GCASActive = false;
+                                    APData.Enabled = false;
+                                    if (Plugin.EnableActionLogs.Value) Plugin.Logger.LogInfo("GCAS RECOVERED");
+                                } else {
+                                    APData.GCASWarning = true;
+                                    APData.TargetRoll = 0f;
+                                    APData.TargetAlt = APData.CurrentAlt + 2000f;
+                                }
+                            }
+                            else 
+                            {
+                                float diveAngle = 0f;
+                                if (velocity.y < -1f) 
+                                    diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
 
-                                float verticalDistToImpact = hit.distance * Mathf.Sin(diveRad);
+                                Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 10f);
 
-                                float verticalBuffer = speed * Mathf.Sin(diveRad) * Plugin.GCAS_AutoBuffer.Value;
-
-                                float totalReqDist = projectedAltLoss + verticalBuffer + 10f;
-
-                                if (verticalDistToImpact < totalReqDist)
+                                if (Physics.SphereCast(castStart, 1f, velocity.normalized, out RaycastHit hit, 5000f))
                                 {
-                                    if (APData.GCASActive)
+                                    if (hit.transform.root != APData.PlayerRB.transform.root)
                                     {
-                                        // Check if we are safe yet
-                                        bool climbing = velocity.y > 0f;
-                                        // If climbing and nose is up, we are safe.
-                                        if (climbing && fwd.y > 0.1f) {
-                                            APData.GCASActive = false;
-                                            APData.Enabled = false;
-                                            if (Plugin.EnableActionLogs.Value) Plugin.Logger.LogInfo("GCAS RECOVERED");
-                                        } else {
-                                            // Keep pulling
+                                        // A. Physics Projection
+                                        float gAccel = Plugin.GCAS_MaxG.Value * 9.81f; 
+                                        float turnRadius = (speed * speed) / gAccel;
+                                        float projectedAltLoss = turnRadius * (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
+
+                                        // B. Vertical Space Available
+                                        float altitudeAgl = APData.PlayerRB.position.y - hit.point.y;
+
+                                        // C. Safety Buffer
+                                        float descentRate = Mathf.Abs(velocity.y);
+                                        float safetyBufferMeters = (descentRate * Plugin.GCAS_AutoBuffer.Value) + 20f; // +20m hard floor
+
+                                        // D. Trigger
+                                        if (altitudeAgl < (projectedAltLoss + safetyBufferMeters))
+                                        {
+                                            APData.Enabled = true;
+                                            APData.GCASActive = true;
+                                            APData.TargetRoll = 0f;
+                                            APData.TargetAlt = APData.CurrentAlt + 2000f; 
+                                            ResetIntegrators();
+                                            
+                                            if (Plugin.EnableActionLogs.Value) 
+                                                Plugin.Logger.LogWarning($"GCAS TRIGGER! AGL:{altitudeAgl:F0}m Loss:{projectedAltLoss:F0}m");
+                                        }
+                                        else if (altitudeAgl < (projectedAltLoss + safetyBufferMeters + (speed * Plugin.GCAS_WarnBuffer.Value)))
+                                        {
                                             APData.GCASWarning = true;
                                         }
                                     }
-                                    else
-                                    {
-                                        // ENGAGE
-                                        APData.Enabled = true;
-                                        APData.GCASActive = true;
-                                        APData.TargetRoll = 0f;
-                                        APData.TargetAlt = APData.CurrentAlt + 1000f; // Dummy value, PID uses G-Force anyway
-                                        ResetIntegrators();
-                                        if (Plugin.EnableActionLogs.Value) Plugin.Logger.LogWarning($"GCAS ENGAGE! AltLoss:{projectedAltLoss:F0}m");
-                                    }
-                                }
-                                else if (verticalDistToImpact < (totalReqDist + (speed * Plugin.GCAS_WarnBuffer.Value))) 
-                                {
-                                    // Just warning logic
-                                    APData.GCASWarning = true;
                                 }
                             }
                         }

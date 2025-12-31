@@ -500,7 +500,6 @@ namespace AutopilotMod
                             float warnThresholdTime = timeToLevel + Plugin.GCAS_WarnBuffer.Value;
                             float lookAheadDist = speed * (warnThresholdTime + 2.0f); 
                             
-                            float timeToImpact = 999f;
                             if (Physics.SphereCast(APData.PlayerRB.position, 1f, velocity.normalized, out RaycastHit hit, lookAheadDist))
                             {
                                 float gAccel = Plugin.GCAS_MaxG.Value * 9.81f;

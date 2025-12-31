@@ -487,73 +487,85 @@ namespace AutopilotMod
                         if (speed > 15f)
                         {
                             Vector3 velocity = APData.PlayerRB.velocity;
-                            Vector3 fwd = APData.PlayerRB.transform.forward;
+                            float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
+
+                            float diveAngle = 0f;
+                            if (velocity.y < -0.1f) 
+                                diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
+
+                            float requiredSensorRange = (speed * Plugin.GCAS_WarnBuffer.Value) + 3000f;
+                            Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 10f);
+
+                            bool terrainDetected = false;
+                            bool dangerImminent = false;
+                            bool warningZone = false;
+                            
+                            float altitudeAgl = 99999f;
+                            float projectedAltLoss = 0f;
+
+                            if (Physics.SphereCast(castStart, 1f, velocity.normalized, out RaycastHit hit, requiredSensorRange))
+                            {
+                                if (hit.transform.root != APData.PlayerRB.transform.root)
+                                {
+                                    terrainDetected = true;
+                                    altitudeAgl = APData.PlayerRB.position.y - hit.point.y;
+
+                                    float gAccel = Plugin.GCAS_MaxG.Value * 9.81f; 
+                                    float turnRadius = speed * speed / gAccel;
+                                    
+                                    if (descentRate > 1f) {
+                                        projectedAltLoss = turnRadius * (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
+                                    } else {
+                                        projectedAltLoss = 0f;
+                                    }
+
+                                    float triggerBuffer = (descentRate * Plugin.GCAS_AutoBuffer.Value) + 20f;
+                                    float warningBuffer = descentRate * Plugin.GCAS_WarnBuffer.Value;
+
+                                    float triggerAlt = projectedAltLoss + triggerBuffer;
+                                    
+                                    if (altitudeAgl < triggerAlt) 
+                                    {
+                                        dangerImminent = true;
+                                    }
+                                    else if (altitudeAgl < (triggerAlt + warningBuffer))
+                                    {
+                                        warningZone = true;
+                                    }
+                                }
+                            }
 
                             if (APData.GCASActive)
                             {
-                                bool climbing = velocity.y > 0f;
-                                bool noseUp = fwd.y > 0.0f; 
-
-                                if (climbing && noseUp) {
+                                if (!terrainDetected || !dangerImminent)
+                                {
                                     APData.GCASActive = false;
                                     APData.Enabled = false;
                                     if (Plugin.EnableActionLogs.Value) Plugin.Logger.LogInfo("GCAS RECOVERED");
-                                } else {
+                                }
+                                else
+                                {
                                     APData.GCASWarning = true;
                                     APData.TargetRoll = 0f;
                                     APData.TargetAlt = APData.CurrentAlt + 2000f;
                                 }
                             }
-                            // detection logic
                             else 
                             {
-                                float diveAngle = 0f;
-                                if (velocity.y < -1f) 
-                                    diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
-
-                                float requiredSensorRange = (speed * Plugin.GCAS_WarnBuffer.Value) + 3000f;
-                                
-                                Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 10f);
-
-                                if (Physics.SphereCast(castStart, 1f, velocity.normalized, out RaycastHit hit, requiredSensorRange))
+                                if (dangerImminent && descentRate > 1f)
                                 {
-                                    if (hit.transform.root != APData.PlayerRB.transform.root)
-                                    {
-                                        // A. Physics Projection
-                                        float gAccel = Plugin.GCAS_MaxG.Value * 9.81f; 
-                                        float turnRadius = (speed * speed) / gAccel;
-                                        float projectedAltLoss = turnRadius * (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
-
-                                        // B. Vertical Space Available (AGL)
-                                        float altitudeAgl = APData.PlayerRB.position.y - hit.point.y;
-
-                                        // C. Descent Rate (Vertical Speed)
-                                        float descentRate = Mathf.Abs(velocity.y);
-
-                                        // D. Safety Buffers
-                                        // Trigger Buffer: How many meters we fall while the controls physically move
-                                        float triggerBuffer = (descentRate * Plugin.GCAS_AutoBuffer.Value) + 20f;
-                                        
-                                        // Warning Buffer: How many meters we fall during the warning time
-                                        float warningBuffer = descentRate * Plugin.GCAS_WarnBuffer.Value;
-
-                                        float triggerAlt = projectedAltLoss + triggerBuffer;
-                                        
-                                        if (altitudeAgl < triggerAlt)
-                                        {
-                                            APData.Enabled = true;
-                                            APData.GCASActive = true;
-                                            APData.TargetRoll = 0f;
-                                            APData.TargetAlt = APData.CurrentAlt + 2000f; 
-                                            ResetIntegrators();
-                                            if (Plugin.EnableActionLogs.Value) 
-                                                Plugin.Logger.LogWarning($"GCAS TRIGGER! AGL:{altitudeAgl:F0}m Loss:{projectedAltLoss:F0}m");
-                                        }
-                                        else if (altitudeAgl < (triggerAlt + warningBuffer))
-                                        {
-                                            APData.GCASWarning = true;
-                                        }
-                                    }
+                                    APData.Enabled = true;
+                                    APData.GCASActive = true;
+                                    APData.TargetRoll = 0f;
+                                    APData.TargetAlt = APData.CurrentAlt + 2000f;
+                                    ResetIntegrators();
+                                    
+                                    if (Plugin.EnableActionLogs.Value) 
+                                        Plugin.Logger.LogWarning($"GCAS TRIGGER! AGL:{altitudeAgl:F0}m Loss:{projectedAltLoss:F0}m");
+                                }
+                                else if (warningZone && descentRate > 1f)
+                                {
+                                    APData.GCASWarning = true;
                                 }
                             }
                         }

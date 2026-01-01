@@ -454,10 +454,8 @@ namespace AutopilotMod
 
             try
             {
-                // Access input via cached field
                 object inputObj = Plugin.f_controlInputs.GetValue(__instance);
                 
-                // Read stick inputs using FieldInfo for speed
                 float stickPitch = 0f;
                 float stickRoll = 0f;
 
@@ -465,7 +463,6 @@ namespace AutopilotMod
                     stickPitch = (float)Plugin.f_pitch.GetValue(inputObj);
                     stickRoll = (float)Plugin.f_roll.GetValue(inputObj);
                 } else {
-                    // Fallback to Traverse if cache failed
                     stickPitch = Traverse.Create(inputObj).Field("pitch").GetValue<float>();
                     stickRoll = Traverse.Create(inputObj).Field("roll").GetValue<float>();
                 }
@@ -473,20 +470,19 @@ namespace AutopilotMod
                 APData.GCASWarning = false;
 
                 float currentG = 1f;
-                float radarAlt = APData.CurrentAlt; // Default to MSL if fetch fails
+                float radarAlt = APData.CurrentAlt; 
                 Aircraft acRef = null;
 
                 if (APData.PlayerRB != null) {
                     acRef = APData.PlayerRB.GetComponent<Aircraft>();
                     if (acRef != null) {
-                        // Fix: Fetch actual Radar Altitude (AGL) for GCAS
+                        // Fetch Radar Alt
                         if (Plugin.f_radarAlt != null) {
                             radarAlt = (float)Plugin.f_radarAlt.GetValue(acRef);
                         }
 
-                        // Get G-Force
-                        if (Plugin.f_pilots != null) 
-                        {
+                        // Fetch G-Force
+                        if (Plugin.f_pilots != null) {
                             System.Collections.IList pilots = (System.Collections.IList)Plugin.f_pilots.GetValue(acRef);
                             if (pilots != null && pilots.Count > 0 && Plugin.m_GetAccel != null) {
                                 Vector3 pAccel = (Vector3)Plugin.m_GetAccel.Invoke(pilots[0], null);
@@ -519,6 +515,7 @@ namespace AutopilotMod
                         {
                             Vector3 velocity = APData.PlayerRB.velocity;
                             
+                            // Physics Calcs
                             float gAccel = Plugin.GCAS_MaxG.Value * 9.81f; 
                             float turnRadius = (speed * speed) / gAccel;
                             float reactionDist = speed * Plugin.GCAS_AutoBuffer.Value;
@@ -527,18 +524,18 @@ namespace AutopilotMod
                             bool dangerImminent = false;
                             bool warningZone = false;
 
-                            // Fix: LayerMask to ignore own aircraft layer
+                            // Fix: LayerMask ignoring Self AND use QueryTriggerInteraction.Ignore to skip triggers
                             int layerMask = ~(1 << APData.PlayerRB.gameObject.layer);
                             
-                            // Forward Probe
-                            if (Physics.SphereCast(APData.PlayerRB.position + (velocity.normalized * 20f), 2f, velocity.normalized, out RaycastHit hit, turnRadius * 1.5f + warnDist, layerMask))
+                            // Forward Probe (Reduced Radius from 2f to 1f to avoid tree branches/triggers)
+                            if (Physics.SphereCast(APData.PlayerRB.position + (velocity.normalized * 10f), 1f, velocity.normalized, out RaycastHit hit, turnRadius * 1.5f + warnDist, layerMask, QueryTriggerInteraction.Ignore))
                             {
                                 float dist = hit.distance;
                                 if (dist < (turnRadius + reactionDist)) dangerImminent = true;
                                 else if (dist < (turnRadius + reactionDist + warnDist)) warningZone = true;
                             }
 
-                            // Dive Probe (Using Radar Alt)
+                            // Dive Probe
                             if (velocity.y < -1f) 
                             {
                                 float diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
@@ -601,12 +598,8 @@ namespace AutopilotMod
                             if (isJammerHoldingTrigger && Plugin.f_weaponManager != null) {
                                 object wm = Plugin.f_weaponManager.GetValue(acRef);
                                 if (wm != null) {
-                                    if (Plugin.m_Fire != null) {
-                                        Plugin.m_Fire.Invoke(wm, null);
-                                    } else {
-                                        // Fallback if caching failed
-                                        Traverse.Create(wm).Method("Fire").GetValue();
-                                    }
+                                    if (Plugin.m_Fire != null) Plugin.m_Fire.Invoke(wm, null);
+                                    else Traverse.Create(wm).Method("Fire").GetValue();
                                 }
                             }
                         }
@@ -616,7 +609,6 @@ namespace AutopilotMod
                 // --- AUTOPILOT CORE ---
                 if (APData.Enabled)
                 {
-                    // Pilot override check
                     if (Mathf.Abs(stickPitch) > Plugin.StickDeadzone.Value || Mathf.Abs(stickRoll) > Plugin.StickDeadzone.Value)
                     {
                         APData.Enabled = false;
@@ -627,7 +619,6 @@ namespace AutopilotMod
                     {
                         if (APData.PlayerRB != null) APData.PlayerRB.isKinematic = false;
                         
-                        // Inputs (Manual adjustments via keys)
                         if (!APData.GCASActive)
                         {
                             if (Input.GetKey(Plugin.UpKey.Value)) APData.TargetAlt += Plugin.AltStep.Value;
@@ -643,65 +634,56 @@ namespace AutopilotMod
                             if (Input.GetKey(Plugin.BankRightKey.Value)) APData.TargetRoll = Mathf.Repeat(APData.TargetRoll - Plugin.BankStep.Value + 180f, 360f) - 180f;
                         }
 
-                        // --- VAR SETUP ---
                         float dt = Time.deltaTime; 
                         float pitchOut = 0f;
                         float rollOut = 0f;
                         float noiseT = Time.time * Plugin.HumanizeSpeed.Value;
-                        
-                        // Define useHumanize BEFORE using it
                         bool useHumanize = Plugin.HumanizeEnabled.Value && !APData.GCASActive;
 
-                        // --- HUMANIZE LOGIC ---
+                        // Humanize Logic
                         if (useHumanize) {
-                            // Update Pitch Sleep State
                             float altErrAbs = Mathf.Abs(APData.TargetAlt - APData.CurrentAlt);
                             float vsAbs = (APData.PlayerRB != null) ? Mathf.Abs(APData.PlayerRB.velocity.y) : 0f;
-                            
                             if (!isPitchSleeping) {
                                 if (altErrAbs < Plugin.Hum_Alt_Inner.Value && vsAbs < Plugin.Hum_VS_Inner.Value) {
                                     pitchSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Hum_PitchSleepMin.Value, Plugin.Hum_PitchSleepMax.Value);
                                     isPitchSleeping = true;
                                 }
-                            } else {
-                                if (altErrAbs > Plugin.Hum_Alt_Outer.Value || vsAbs > Plugin.Hum_VS_Outer.Value || Time.time > pitchSleepUntil) {
-                                    isPitchSleeping = false;
-                                }
+                            } else if (altErrAbs > Plugin.Hum_Alt_Outer.Value || vsAbs > Plugin.Hum_VS_Outer.Value || Time.time > pitchSleepUntil) {
+                                isPitchSleeping = false;
                             }
 
-                            // Update Roll Sleep State
                             float rollErrAbs = Mathf.Abs(Mathf.DeltaAngle(APData.CurrentRoll, APData.TargetRoll));
                             float rollRateAbs = (APData.PlayerRB != null) ? Mathf.Abs(APData.PlayerRB.transform.InverseTransformDirection(APData.PlayerRB.angularVelocity).z * 57.29f) : 0f;
-
                             if (!isRollSleeping) {
                                 if (rollErrAbs < Plugin.Hum_Roll_Inner.Value && rollRateAbs < Plugin.Hum_RollRate_Inner.Value) {
                                     rollSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Hum_RollSleepMin.Value, Plugin.Hum_RollSleepMax.Value);
                                     isRollSleeping = true;
                                 }
-                            } else {
-                                if (rollErrAbs > Plugin.Hum_Roll_Outer.Value || rollRateAbs > Plugin.Hum_RollRate_Outer.Value || Time.time > rollSleepUntil) {
-                                    isRollSleeping = false;
-                                }
+                            } else if (rollErrAbs > Plugin.Hum_Roll_Outer.Value || rollRateAbs > Plugin.Hum_RollRate_Outer.Value || Time.time > rollSleepUntil) {
+                                isRollSleeping = false;
                             }
                         }
 
-                        // -- Pitch --
+                        // Pitch Control
+                        float pInv = Plugin.InvertPitch.Value ? -1f : 1f;
+
                         if (APData.GCASActive)
                         {
                             float targetG = Plugin.GCAS_MaxG.Value;
                             float gError = targetG - currentG;
+                            
                             gcasIntegral = Mathf.Clamp(gcasIntegral + (gError * dt * Plugin.GCAS_I.Value), -Plugin.GCAS_ILimit.Value, Plugin.GCAS_ILimit.Value);
-
+                            
                             float gD = (gError - lastGError) / dt;
                             lastGError = gError;
 
                             float stick = (gError * Plugin.GCAS_P.Value) + gcasIntegral + (gD * Plugin.GCAS_D.Value);
-                            pitchOut = Mathf.Clamp(stick, -1f, 1f);
+                            
+                            pitchOut = Mathf.Clamp(stick * pInv, -1f, 1f);
                         }
                         else
                         {
-                            float pInv = Plugin.InvertPitch.Value ? -1f : 1f;
-
                             if (useHumanize && isPitchSleeping) {
                                 pitchOut = (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * Plugin.HumanizeStrength.Value * 0.5f;
                             } else {
@@ -710,7 +692,6 @@ namespace AutopilotMod
                                 float altD = (altError - lastAltError) / dt; lastAltError = altError;
                                 
                                 float targetVS = Mathf.Clamp((altError * Plugin.Conf_Alt_P.Value) + altIntegral + (altD * Plugin.Conf_Alt_D.Value), -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
-                                
                                 float vsError = targetVS - APData.PlayerRB.velocity.y;
                                 vsIntegral = Mathf.Clamp(vsIntegral + (vsError * dt * Plugin.Conf_VS_I.Value), -Plugin.Conf_VS_ILimit.Value, Plugin.Conf_VS_ILimit.Value);
                                 float vsD = (vsError - lastVSError) / dt; lastVSError = vsError;
@@ -729,12 +710,11 @@ namespace AutopilotMod
                                 float stickRaw = (angleError * Plugin.Conf_Angle_P.Value) + angleIntegral - (pitchRate * Plugin.Conf_Angle_D.Value);
                                 
                                 pitchOut = Mathf.Clamp(stickRaw * pInv, -1f, 1f);
-
                                 if (useHumanize) pitchOut += (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
                             }
                         }
 
-                        // -- Roll --
+                        // Roll Control
                         float rInv = Plugin.InvertRoll.Value ? -1f : 1f;
                         float rollError = Mathf.DeltaAngle(APData.CurrentRoll, APData.TargetRoll);
                         float rollRate = APData.PlayerRB.transform.InverseTransformDirection(APData.PlayerRB.angularVelocity).z * 57.29f;
@@ -744,14 +724,11 @@ namespace AutopilotMod
                         } else {
                             rollIntegral = Mathf.Clamp(rollIntegral + (rollError * dt * Plugin.RollI.Value), -Plugin.RollILimit.Value, Plugin.RollILimit.Value);
                             float rollD = (0f - rollRate) * Plugin.RollD.Value;
-                            
                             float stickRaw = (rollError * Plugin.RollP.Value) + rollIntegral + rollD;
                             rollOut = Mathf.Clamp(stickRaw * rInv, -Plugin.RollMax.Value, Plugin.RollMax.Value);
-
                             if (useHumanize) rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
                         }
 
-                        // Apply to Cached Fields
                         if (Plugin.f_pitch != null && Plugin.f_roll != null) {
                             Plugin.f_pitch.SetValue(inputObj, Mathf.Clamp(pitchOut, -1f, 1f));
                             Plugin.f_roll.SetValue(inputObj, Mathf.Clamp(rollOut, -1f, 1f));
@@ -772,9 +749,7 @@ namespace AutopilotMod
                     }
                 }
                 
-                if (Plugin.LogPIDData.Value) {
-                     Console.WriteLine($"{Time.time:F2}\t{stickPitch:F4}\t{APData.CurrentAlt:F1}");
-                }
+                if (Plugin.LogPIDData.Value) Console.WriteLine($"{Time.time:F2}\t{stickPitch:F4}\t{APData.CurrentAlt:F1}");
             }
             catch (Exception ex) { 
                 Plugin.Logger.LogError($"[ControlOverridePatch] Error: {ex}");

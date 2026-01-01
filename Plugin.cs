@@ -72,8 +72,8 @@ namespace AutopilotMod
 
         // --- CACHED REFLECTION FIELDS ---
         internal static FieldInfo f_playerVehicle;
-        internal static FieldInfo f_controlInputs;
-        internal static FieldInfo f_pitch, f_roll;
+        internal static FieldInfo f_controlInputs; 
+        internal static FieldInfo f_pitch, f_roll; 
         
         // Aircraft Specifics
         internal static FieldInfo f_controlsFilter, f_fuelCapacity, f_pilots, f_gearState, f_weaponManager, f_radarAlt;
@@ -90,7 +90,6 @@ namespace AutopilotMod
             Plugin.Logger = base.Logger;
             
             // --- BIND CONFIGS ---
-
             // Visuals
             ColorAPOn = Config.Bind("Visuals - Colors", "1. Color AP On", "#00FF00", "Green");
             ColorAPOff = Config.Bind("Visuals - Colors", "2. Color AP Off", "#FFFFFF80", "Transparent White");
@@ -98,11 +97,9 @@ namespace AutopilotMod
             ColorWarn = Config.Bind("Visuals - Colors", "4. Color Warning", "#FFFF00", "Yellow");
             ColorCrit = Config.Bind("Visuals - Colors", "5. Color Critical", "#FF0000", "Red");
             ColorInfo = Config.Bind("Visuals - Colors", "6. Color Info", "#00FFFF", "Cyan");
-
             FuelOffsetY = Config.Bind("Visuals - Layout", "1. Stack Start Y", -20f, "Vertical position");
             FuelLineSpacing = Config.Bind("Visuals - Layout", "2. Line Spacing", 20f, "Vertical gap");
             ShowExtraInfo = Config.Bind("Visuals", "Show Fuel/AP Info", true, "Show extra info on Fuel Gauge");
-
             FuelSmoothing = Config.Bind("Calculations", "1. Fuel Flow Smoothing", 0.1f, "Alpha value");
             FuelUpdateInterval = Config.Bind("Calculations", "2. Fuel Update Interval", 1.0f, "Seconds");
             FuelWarnMinutes = Config.Bind("Calculations", "3. Fuel Warning Time", 15, "Minutes");
@@ -122,11 +119,11 @@ namespace AutopilotMod
             EnableAutoJammer = Config.Bind("Auto Jammer", "1. Enable Auto Jammer", true, "Allow the feature");
             AutoJammerKey = Config.Bind("Auto Jammer", "2. Toggle Key", KeyCode.Slash, "Key to toggle jamming");
             AutoJammerThreshold = Config.Bind("Auto Jammer", "3. Energy Threshold", 0.99f, "Fire when energy > this %");
-            AutoJammerHumanize = Config.Bind("Auto Jammer", "4. Humanize Delay", true, "Add random delay to mimic human reaction");
+            AutoJammerHumanize = Config.Bind("Auto Jammer", "4. Humanize Delay", true, "Add random delay");
             AutoJammerMinDelay = Config.Bind("Auto Jammer", "5. Delay Min", 0.05f, "Seconds");
             AutoJammerMaxDelay = Config.Bind("Auto Jammer", "6. Delay Max", 0.2f, "Seconds");
-            AutoJammerReleaseMin = Config.Bind("Auto Jammer", "7. Release Delay Min", 0.05f, "Seconds to hold after energy drops");
-            AutoJammerReleaseMax = Config.Bind("Auto Jammer", "8. Release Delay Max", 0.2f, "Seconds to hold after energy drops");
+            AutoJammerReleaseMin = Config.Bind("Auto Jammer", "7. Release Delay Min", 0.05f, "Seconds");
+            AutoJammerReleaseMax = Config.Bind("Auto Jammer", "8. Release Delay Max", 0.2f, "Seconds");
 
             // Controls
             ToggleKey = Config.Bind("Controls", "01. Toggle AP Key", KeyCode.Equals, "AP On/Off");
@@ -153,22 +150,19 @@ namespace AutopilotMod
             DefaultMaxClimbRate = Config.Bind("Tuning - 0. Limits", "1. Default Max Climb Rate", 40f, "Startup value");
             Conf_VS_MaxAngle = Config.Bind("Tuning - 0. Limits", "2. Max Pitch Angle", 900.0f, "Safety Clamp");
 
-            // PID Loops
+            // Loops
             Conf_Alt_P = Config.Bind("Tuning - 1. Altitude", "1. Alt P", 0.5f, "Alt Error -> Target VS");
             Conf_Alt_I = Config.Bind("Tuning - 1. Altitude", "2. Alt I", 0.0f, "Accumulates Error");
             Conf_Alt_D = Config.Bind("Tuning - 1. Altitude", "3. Alt D", 1.5f, "Dampens Approach");
             Conf_Alt_ILimit = Config.Bind("Tuning - 1. Altitude", "4. Alt I Limit", 10.0f, "Max Integral (m/s)");
-
             Conf_VS_P = Config.Bind("Tuning - 2. VertSpeed", "1. VS P", 0.5f, "VS Error -> Target Angle");
             Conf_VS_I = Config.Bind("Tuning - 2. VertSpeed", "2. VS I", 0.1f, "Trim Angle");
             Conf_VS_D = Config.Bind("Tuning - 2. VertSpeed", "3. VS D", 0.1f, "Dampens VS Change");
             Conf_VS_ILimit = Config.Bind("Tuning - 2. VertSpeed", "4. VS I Limit", 300.0f, "Max Trim (Deg)");
-
             Conf_Angle_P = Config.Bind("Tuning - 3. Angle", "1. Angle P", 0.01f, "Angle Error -> Stick");
             Conf_Angle_I = Config.Bind("Tuning - 3. Angle", "2. Angle I", 0.0f, "Holds Angle");
             Conf_Angle_D = Config.Bind("Tuning - 3. Angle", "3. Angle D", 0.0f, "Dampens Rotation");
             Conf_Angle_ILimit = Config.Bind("Tuning - 3. Angle", "4. Angle I Limit", 100.0f, "Max Integral (Stick)");
-
             RollP = Config.Bind("Tuning - Roll", "1. Roll P", 0.01f, "P");
             RollI = Config.Bind("Tuning - Roll", "2. Roll I", 0.002f, "I");
             RollD = Config.Bind("Tuning - Roll", "3. Roll D", 0.001f, "D");
@@ -209,7 +203,7 @@ namespace AutopilotMod
             try {
                 f_playerVehicle = typeof(FlightHud).GetField("playerVehicle", BindingFlags.NonPublic | BindingFlags.Instance);
                 
-                // PilotPlayerState inherits from PilotBaseState, where controlInputs likely lives
+                // PilotPlayerState inherits from PilotBaseState
                 f_controlInputs = typeof(PilotPlayerState).GetField("controlInputs", BindingFlags.NonPublic | BindingFlags.Instance);
                 if (f_controlInputs == null && typeof(PilotPlayerState).BaseType != null) {
                     f_controlInputs = typeof(PilotPlayerState).BaseType.GetField("controlInputs", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -222,22 +216,22 @@ namespace AutopilotMod
                     f_roll = inputType.GetField("roll");
                 }
 
-                // Aircraft fields
-                BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+                // Aircraft fields - Use Public|NonPublic to be safe
+                BindingFlags allFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
                 
-                f_controlsFilter = typeof(Aircraft).GetField("controlsFilter", flags);
-                f_fuelCapacity = typeof(Aircraft).GetField("fuelCapacity", flags);
-                f_pilots = typeof(Aircraft).GetField("pilots", flags);
-                f_gearState = typeof(Aircraft).GetField("gearState", flags);
-                f_weaponManager = typeof(Aircraft).GetField("weaponManager", flags);
-                f_radarAlt = typeof(Aircraft).GetField("radarAlt", flags);
+                f_controlsFilter = typeof(Aircraft).GetField("controlsFilter", allFlags);
+                f_fuelCapacity = typeof(Aircraft).GetField("fuelCapacity", allFlags);
+                f_pilots = typeof(Aircraft).GetField("pilots", allFlags);
+                f_gearState = typeof(Aircraft).GetField("gearState", allFlags);
+                f_weaponManager = typeof(Aircraft).GetField("weaponManager", allFlags);
+                f_radarAlt = typeof(Aircraft).GetField("radarAlt", allFlags);
 
                 // Jammer/Power fields
                 Type psType = typeof(Aircraft).Assembly.GetType("PowerSupply");
                 if (psType != null) {
-                    f_charge = psType.GetField("charge", BindingFlags.NonPublic | BindingFlags.Instance);
-                    f_maxCharge = psType.GetField("maxCharge", BindingFlags.NonPublic | BindingFlags.Instance);
-                    f_powerSupply = typeof(Aircraft).GetField("powerSupply", BindingFlags.NonPublic | BindingFlags.Instance);
+                    f_charge = psType.GetField("charge", allFlags);
+                    f_maxCharge = psType.GetField("maxCharge", allFlags);
+                    f_powerSupply = typeof(Aircraft).GetField("powerSupply", allFlags);
                 }
 
                 // Pilot Methods
@@ -246,9 +240,10 @@ namespace AutopilotMod
                     m_GetAccel = pilotType.GetMethod("GetAccel");
                 }
 
+                // Weapon Methods
                 Type wmType = typeof(Aircraft).Assembly.GetType("WeaponManager");
                 if (wmType != null) {
-                    m_Fire = wmType.GetMethod("Fire", BindingFlags.Public | BindingFlags.Instance);
+                    m_Fire = wmType.GetMethod("Fire");
                 }
 
             } catch (Exception ex) {
@@ -299,7 +294,7 @@ namespace AutopilotMod
         private static void Postfix(object playerVehicle, float altitude)
         {
             try {
-                APData.CurrentAlt = altitude; // Autopilot uses MSL
+                APData.CurrentAlt = altitude; 
                 if (playerVehicle != null)
                 {
                     Component v = (Component)playerVehicle;
@@ -327,9 +322,7 @@ namespace AutopilotMod
                     var rb = v.GetComponent<Rigidbody>();
                     if (APData.PlayerRB != rb) APData.PlayerRB = rb;
                 }
-            } catch (Exception ex) {
-                Plugin.Logger.LogError($"[HudPatch] Error: {ex}");
-            }
+            } catch { }
         }
     }
 
@@ -360,16 +353,13 @@ namespace AutopilotMod
                             if (Plugin.m_GetFBW == null) Plugin.m_GetFBW = cf.GetType().GetMethod("GetFlyByWireParameters");
                             if (Plugin.m_SetFBW == null) Plugin.m_SetFBW = cf.GetType().GetMethod("SetFlyByWireParameters");
                             
-                            // Handle inner class method call if necessary (common wrapper pattern in Unity)
                             if (Plugin.m_GetFBW != null && Plugin.m_SetFBW != null) {
                                 object result = Plugin.m_GetFBW.Invoke(cf, null);
-                                // Result is ValueTuple<bool, float[]>
-                                // ValueTuple uses fields Item1, Item2
                                 bool isEnabled = (bool)result.GetType().GetField("Item1").GetValue(result);
                                 float[] values = (float[])result.GetType().GetField("Item2").GetValue(result);
                                 
                                 Plugin.m_SetFBW.Invoke(cf, [!isEnabled, values]);
-                                APData.FBWDisabled = !!isEnabled; // Logic: if it was enabled, it is now disabled
+                                APData.FBWDisabled = !!isEnabled;
                             }
                         }
                     }
@@ -454,6 +444,7 @@ namespace AutopilotMod
 
             try
             {
+                // Access input via cached field
                 object inputObj = Plugin.f_controlInputs.GetValue(__instance);
                 
                 float stickPitch = 0f;
@@ -470,18 +461,18 @@ namespace AutopilotMod
                 APData.GCASWarning = false;
 
                 float currentG = 1f;
-                float radarAlt = APData.CurrentAlt; 
+                float radarAlt = APData.CurrentAlt; // Default to MSL if fetch fails
                 Aircraft acRef = null;
 
                 if (APData.PlayerRB != null) {
                     acRef = APData.PlayerRB.GetComponent<Aircraft>();
                     if (acRef != null) {
-                        // Fetch Radar Alt
+                        // Safe Radar Alt
                         if (Plugin.f_radarAlt != null) {
                             radarAlt = (float)Plugin.f_radarAlt.GetValue(acRef);
                         }
 
-                        // Fetch G-Force
+                        // Safe G-Force
                         if (Plugin.f_pilots != null) {
                             System.Collections.IList pilots = (System.Collections.IList)Plugin.f_pilots.GetValue(acRef);
                             if (pilots != null && pilots.Count > 0 && Plugin.m_GetAccel != null) {
@@ -492,10 +483,11 @@ namespace AutopilotMod
                     }
                 }
 
-                // --- GCAS LOGIC ---
+                // --- GCAS LOGIC (Reverted to Original Logic) ---
                 if (Plugin.EnableGCAS.Value && APData.GCASEnabled && APData.PlayerRB != null)
                 {
                     bool gearDown = false;
+                    // Safe Gear Check
                     if (acRef != null && Plugin.f_gearState != null) {
                         object gs = Plugin.f_gearState.GetValue(acRef);
                         if (gs != null && !gs.ToString().Contains("LockedRetracted")) gearDown = true;
@@ -515,7 +507,6 @@ namespace AutopilotMod
                         {
                             Vector3 velocity = APData.PlayerRB.velocity;
                             
-                            // Physics Calcs
                             float gAccel = Plugin.GCAS_MaxG.Value * 9.81f; 
                             float turnRadius = (speed * speed) / gAccel;
                             float reactionDist = speed * Plugin.GCAS_AutoBuffer.Value;
@@ -524,18 +515,17 @@ namespace AutopilotMod
                             bool dangerImminent = false;
                             bool warningZone = false;
 
-                            // Fix: LayerMask ignoring Self AND use QueryTriggerInteraction.Ignore to skip triggers
+                            // Original: Use LayerMask but Original Range/Radius
                             int layerMask = ~(1 << APData.PlayerRB.gameObject.layer);
                             
-                            // Forward Probe (Reduced Radius from 2f to 1f to avoid tree branches/triggers)
-                            if (Physics.SphereCast(APData.PlayerRB.position + (velocity.normalized * 10f), 1f, velocity.normalized, out RaycastHit hit, turnRadius * 1.5f + warnDist, layerMask, QueryTriggerInteraction.Ignore))
+                            // Reverted Distance/Radius (1f radius, 20f scan)
+                            if (Physics.SphereCast(APData.PlayerRB.position + (velocity.normalized * 20f), 1f, velocity.normalized, out RaycastHit hit, turnRadius * 1.5f + warnDist, layerMask))
                             {
                                 float dist = hit.distance;
                                 if (dist < (turnRadius + reactionDist)) dangerImminent = true;
                                 else if (dist < (turnRadius + reactionDist + warnDist)) warningZone = true;
                             }
 
-                            // Dive Probe
                             if (velocity.y < -1f) 
                             {
                                 float diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
@@ -547,9 +537,8 @@ namespace AutopilotMod
 
                             if (APData.GCASActive)
                             {
-                                // Recovery Check
                                 if (!dangerImminent) {
-                                    if (velocity.y >= 0f || radarAlt > 200f) {
+                                    if (velocity.y >= 0f || radarAlt > 150f) {
                                         APData.GCASActive = false;
                                         APData.Enabled = false; 
                                     }
@@ -572,7 +561,7 @@ namespace AutopilotMod
                     }
                 }
 
-                // --- JAMMER LOGIC ---
+                // --- JAMMER LOGIC (Cached) ---
                 if (APData.AutoJammerActive && acRef != null && acRef.name.Contains("EW1"))
                 {
                     if (Plugin.f_charge != null && Plugin.f_powerSupply != null) {
@@ -672,18 +661,20 @@ namespace AutopilotMod
                         {
                             float targetG = Plugin.GCAS_MaxG.Value;
                             float gError = targetG - currentG;
-                            
                             gcasIntegral = Mathf.Clamp(gcasIntegral + (gError * dt * Plugin.GCAS_I.Value), -Plugin.GCAS_ILimit.Value, Plugin.GCAS_ILimit.Value);
                             
+                            // Reverted: Use D-Term, Apply Inversion at END
                             float gD = (gError - lastGError) / dt;
                             lastGError = gError;
-
+                            
                             float stick = (gError * Plugin.GCAS_P.Value) + gcasIntegral + (gD * Plugin.GCAS_D.Value);
                             
-                            pitchOut = Mathf.Clamp(stick * pInv, -1f, 1f);
+                            pitchOut = Mathf.Clamp(stick, -1f, 1f);
+                            if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
                         }
                         else
                         {
+                            // Standard AP Loop
                             if (useHumanize && isPitchSleeping) {
                                 pitchOut = (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * Plugin.HumanizeStrength.Value * 0.5f;
                             } else {
@@ -709,7 +700,10 @@ namespace AutopilotMod
                                 
                                 float stickRaw = (angleError * Plugin.Conf_Angle_P.Value) + angleIntegral - (pitchRate * Plugin.Conf_Angle_D.Value);
                                 
-                                pitchOut = Mathf.Clamp(stickRaw * pInv, -1f, 1f);
+                                // Reverted: Apply Inversion at END
+                                pitchOut = Mathf.Clamp(stickRaw, -1f, 1f);
+                                if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
+
                                 if (useHumanize) pitchOut += (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
                             }
                         }
@@ -725,10 +719,14 @@ namespace AutopilotMod
                             rollIntegral = Mathf.Clamp(rollIntegral + (rollError * dt * Plugin.RollI.Value), -Plugin.RollILimit.Value, Plugin.RollILimit.Value);
                             float rollD = (0f - rollRate) * Plugin.RollD.Value;
                             float stickRaw = (rollError * Plugin.RollP.Value) + rollIntegral + rollD;
-                            rollOut = Mathf.Clamp(stickRaw * rInv, -Plugin.RollMax.Value, Plugin.RollMax.Value);
+                            rollOut = Mathf.Clamp(stickRaw, -Plugin.RollMax.Value, Plugin.RollMax.Value);
+                            
+                            if (!Plugin.InvertRoll.Value) rollOut = -rollOut;
+
                             if (useHumanize) rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
                         }
 
+                        // Apply to inputs
                         if (Plugin.f_pitch != null && Plugin.f_roll != null) {
                             Plugin.f_pitch.SetValue(inputObj, Mathf.Clamp(pitchOut, -1f, 1f));
                             Plugin.f_roll.SetValue(inputObj, Mathf.Clamp(rollOut, -1f, 1f));

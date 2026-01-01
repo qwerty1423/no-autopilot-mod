@@ -59,7 +59,7 @@ namespace AutopilotMod
         // Auto GCAS
         public static ConfigEntry<bool> EnableGCAS;
         public static ConfigEntry<KeyCode> ToggleGCASKey;
-        public static ConfigEntry<float> GCAS_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone;
+        public static ConfigEntry<float> GCAS_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
         public static ConfigEntry<float> GCAS_P, GCAS_I, GCAS_D, GCAS_ILimit;
 
         // Humanize
@@ -175,8 +175,9 @@ namespace AutopilotMod
             ToggleGCASKey = Config.Bind("Auto GCAS", "2. Toggle GCAS Key", KeyCode.Backslash, "Turn Auto-GCAS on/off");
             GCAS_MaxG = Config.Bind("Auto GCAS", "3. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
             GCAS_WarnBuffer = Config.Bind("Auto GCAS", "4. Warning Buffer", 20.0f, "Seconds warning before auto-pull");
-            GCAS_AutoBuffer = Config.Bind("Auto GCAS", "5. Auto-Pull Buffer", 2.0f, "Safety margin seconds");
+            GCAS_AutoBuffer = Config.Bind("Auto GCAS", "5. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
             GCAS_Deadzone = Config.Bind("Auto GCAS", "6. GCAS Deadzone", 0.5f, "GCAS override deadzone");
+            GCAS_ScanRadius = Config.Bind("Auto GCAS", "7. Scan Radius", 2.0f, "Width of the collision tunnel. Bigger = safer for wings.");
             GCAS_P = Config.Bind("GCAS PID", "1. GCAS P", 0.1f, "G Error -> Stick");
             GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 1.0f, "Builds pull over time");
             GCAS_D = Config.Bind("GCAS PID", "3. GCAS D", 0.0f, "Dampens G overshoot");
@@ -513,12 +514,12 @@ namespace AutopilotMod
 
                             bool dangerImminent = false;
                             bool warningZone = false;
-                            bool isWallThreat = false;
+                            // bool isWallThreat = false;
 
                             Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f); 
                             float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
 
-                            if (Physics.SphereCast(castStart, 1f, velocity.normalized, out RaycastHit hit, scanRange))
+                            if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange))
                             {
                                 if (hit.transform.root != APData.PlayerRB.transform.root)
                                 {
@@ -528,7 +529,7 @@ namespace AutopilotMod
                                     if (hit.distance < (reqArc + reactionDist + 20f))
                                     {
                                         dangerImminent = true;
-                                        if (hit.normal.y < 0.7f) isWallThreat = true;
+                                        // if (hit.normal.y < 0.7f) isWallThreat = true;
                                     }
                                     else if (hit.distance < (reqArc + reactionDist + warnDist))
                                     {
@@ -537,7 +538,6 @@ namespace AutopilotMod
                                 }
                             }
 
-                            // Reverted to 4.9.0 Floor Logic (Uses MSL APData.CurrentAlt, not RadarAlt)
                             if (descentRate > 0.1f) 
                             {
                                 float diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
@@ -555,8 +555,9 @@ namespace AutopilotMod
                                 // Reverted to 4.9.0 Release Logic
                                 if (!dangerImminent)
                                 {
-                                    if (isWallThreat || APData.CurrentAlt > 100f) safeToRelease = true;
-                                    else if (velocity.y >= 0f) safeToRelease = true;
+                                    // if (isWallThreat || APData.CurrentAlt > 100f) safeToRelease = true;
+                                    // else if (velocity.y >= 0f) safeToRelease = true;
+                                    safeToRelease = true;
                                 }
 
                                 if (safeToRelease)

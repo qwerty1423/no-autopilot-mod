@@ -223,12 +223,14 @@ namespace AutopilotMod
                 }
 
                 // Aircraft fields
-                f_controlsFilter = typeof(Aircraft).GetField("controlsFilter", BindingFlags.NonPublic | BindingFlags.Instance);
-                f_fuelCapacity = typeof(Aircraft).GetField("fuelCapacity", BindingFlags.NonPublic | BindingFlags.Instance);
-                f_pilots = typeof(Aircraft).GetField("pilots", BindingFlags.NonPublic | BindingFlags.Instance);
-                f_gearState = typeof(Aircraft).GetField("gearState", BindingFlags.NonPublic | BindingFlags.Instance);
-                f_weaponManager = typeof(Aircraft).GetField("weaponManager", BindingFlags.NonPublic | BindingFlags.Instance);
-                f_radarAlt = typeof(Aircraft).GetField("radarAlt", BindingFlags.Public | BindingFlags.Instance);
+                BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+                
+                f_controlsFilter = typeof(Aircraft).GetField("controlsFilter", flags);
+                f_fuelCapacity = typeof(Aircraft).GetField("fuelCapacity", flags);
+                f_pilots = typeof(Aircraft).GetField("pilots", flags);
+                f_gearState = typeof(Aircraft).GetField("gearState", flags);
+                f_weaponManager = typeof(Aircraft).GetField("weaponManager", flags);
+                f_radarAlt = typeof(Aircraft).GetField("radarAlt", flags);
 
                 // Jammer/Power fields
                 Type psType = typeof(Aircraft).Assembly.GetType("PowerSupply");
@@ -483,10 +485,13 @@ namespace AutopilotMod
                         }
 
                         // Get G-Force
-                        System.Collections.IList pilots = (System.Collections.IList)Plugin.f_pilots.GetValue(acRef);
-                        if (pilots != null && pilots.Count > 0 && Plugin.m_GetAccel != null) {
-                            Vector3 pAccel = (Vector3)Plugin.m_GetAccel.Invoke(pilots[0], null);
-                            currentG = Vector3.Dot(pAccel + Vector3.up, acRef.transform.up);
+                        if (Plugin.f_pilots != null) 
+                        {
+                            System.Collections.IList pilots = (System.Collections.IList)Plugin.f_pilots.GetValue(acRef);
+                            if (pilots != null && pilots.Count > 0 && Plugin.m_GetAccel != null) {
+                                Vector3 pAccel = (Vector3)Plugin.m_GetAccel.Invoke(pilots[0], null);
+                                currentG = Vector3.Dot(pAccel + Vector3.up, acRef.transform.up);
+                            }
                         }
                     }
                 }
@@ -495,7 +500,7 @@ namespace AutopilotMod
                 if (Plugin.EnableGCAS.Value && APData.GCASEnabled && APData.PlayerRB != null)
                 {
                     bool gearDown = false;
-                    if (acRef != null) {
+                    if (acRef != null && Plugin.f_gearState != null) {
                         object gs = Plugin.f_gearState.GetValue(acRef);
                         if (gs != null && !gs.ToString().Contains("LockedRetracted")) gearDown = true;
                     }

@@ -363,7 +363,7 @@ namespace AutopilotMod
                                 float[] values = (float[])result.GetType().GetField("Item2").GetValue(result);
                                 
                                 Plugin.m_SetFBW.Invoke(cf, [!isEnabled, values]);
-                                APData.FBWDisabled = !(!isEnabled);
+                                APData.FBWDisabled = !!isEnabled;
                             }
                         }
                     }
@@ -450,6 +450,7 @@ namespace AutopilotMod
 
             try
             {
+                // Access input via cached field
                 object inputObj = Plugin.f_controlInputs.GetValue(__instance);
                 
                 float stickPitch = 0f;
@@ -466,16 +467,18 @@ namespace AutopilotMod
                 APData.GCASWarning = false;
 
                 float currentG = 1f;
-                float radarAlt = APData.CurrentAlt; 
+                float radarAlt = APData.CurrentAlt; // Default to MSL if fetch fails
                 Aircraft acRef = null;
 
                 if (APData.PlayerRB != null) {
                     acRef = APData.PlayerRB.GetComponent<Aircraft>();
                     if (acRef != null) {
+                        // Safe Radar Alt
                         if (Plugin.f_radarAlt != null) {
                             radarAlt = (float)Plugin.f_radarAlt.GetValue(acRef);
                         }
 
+                        // Safe G-Force
                         if (Plugin.f_pilots != null) {
                             System.Collections.IList pilots = (System.Collections.IList)Plugin.f_pilots.GetValue(acRef);
                             if (pilots != null && pilots.Count > 0 && Plugin.m_GetAccel != null) {
@@ -486,10 +489,11 @@ namespace AutopilotMod
                     }
                 }
 
-                // --- GCAS LOGIC (Restored specific logic) ---
+                // --- GCAS LOGIC (Original) ---
                 if (Plugin.EnableGCAS.Value && APData.GCASEnabled && APData.PlayerRB != null)
                 {
                     bool gearDown = false;
+                    // Safe Gear Check
                     if (acRef != null && Plugin.f_gearState != null) {
                         object gs = Plugin.f_gearState.GetValue(acRef);
                         if (gs != null && !gs.ToString().Contains("LockedRetracted")) gearDown = true;
@@ -519,11 +523,12 @@ namespace AutopilotMod
                             bool warningZone = false;
                             bool isWallThreat = false;
 
-                            int layerMask = ~(1 << APData.PlayerRB.gameObject.layer);
-                            
-                            // Reverting to the Logic that sets isWallThreat
-                            Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f); 
+                            // Original Logic: SphereCast from ahead
                             float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
+                            Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f); 
+
+                            // LayerMask Safe
+                            int layerMask = ~(1 << APData.PlayerRB.gameObject.layer);
 
                             if (Physics.SphereCast(castStart, 1f, velocity.normalized, out RaycastHit hit, scanRange, layerMask))
                             {
@@ -550,7 +555,6 @@ namespace AutopilotMod
                                 else if (radarAlt < (pullUpLoss + reactionDist + (Mathf.Abs(velocity.y) * Plugin.GCAS_WarnBuffer.Value))) warningZone = true;
                             }
 
-                            // --- The specific logic block you requested ---
                             if (APData.GCASActive)
                             {
                                 bool safeToRelease = false;
@@ -575,12 +579,12 @@ namespace AutopilotMod
                                     APData.TargetRoll = 0f;
                                 }
                             }
-                            // ---------------------------------------------
                             else if (dangerImminent)
                             {
                                 APData.Enabled = true;
                                 APData.GCASActive = true;
                                 APData.TargetRoll = 0f;
+                                if (Plugin.EnableActionLogs.Value) Plugin.Logger.LogWarning("GCAS TRIGGER");
                             }
                             else if (warningZone)
                             {
@@ -692,7 +696,7 @@ namespace AutopilotMod
                             float gError = targetG - currentG;
                             gcasIntegral = Mathf.Clamp(gcasIntegral + (gError * dt * Plugin.GCAS_I.Value), -Plugin.GCAS_ILimit.Value, Plugin.GCAS_ILimit.Value);
                             
-                            // D-Term
+                            // Original Logic: D-Term + Last Inversion
                             float gD = (gError - lastGError) / dt;
                             lastGError = gError;
                             
@@ -753,6 +757,7 @@ namespace AutopilotMod
                             if (useHumanize) rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
                         }
 
+                        // Apply to inputs
                         if (Plugin.f_pitch != null && Plugin.f_roll != null) {
                             Plugin.f_pitch.SetValue(inputObj, Mathf.Clamp(pitchOut, -1f, 1f));
                             Plugin.f_roll.SetValue(inputObj, Mathf.Clamp(rollOut, -1f, 1f));

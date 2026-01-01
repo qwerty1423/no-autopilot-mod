@@ -1,7 +1,6 @@
 using System;
 using System.Reflection;
 using System.Collections;
-using System.Collections.Generic;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -203,22 +202,20 @@ namespace AutopilotMod
 
             // --- REFLECTION CACHING ---
             try {
+                // 1. Get Player Vehicle
                 f_playerVehicle = typeof(FlightHud).GetField("playerVehicle", BindingFlags.NonPublic | BindingFlags.Instance);
                 
-                // PilotPlayerState inherits from PilotBaseState
                 f_controlInputs = typeof(PilotPlayerState).GetField("controlInputs", BindingFlags.NonPublic | BindingFlags.Instance);
                 if (f_controlInputs == null && typeof(PilotPlayerState).BaseType != null) {
                     f_controlInputs = typeof(PilotPlayerState).BaseType.GetField("controlInputs", BindingFlags.NonPublic | BindingFlags.Instance);
                 }
                 
-                // FlightControlInput fields
-                Type inputType = typeof(PilotPlayerState).Assembly.GetType("FlightControlInput") ?? typeof(PilotPlayerState).Assembly.GetType("VTOLVR.FlightControlInput");
-                if (inputType != null) {
+                if (f_controlInputs != null) {
+                    Type inputType = f_controlInputs.FieldType;
                     f_pitch = inputType.GetField("pitch");
                     f_roll = inputType.GetField("roll");
                 }
 
-                // Aircraft fields - Use Public|NonPublic to be safe
                 BindingFlags allFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
                 
                 f_controlsFilter = typeof(Aircraft).GetField("controlsFilter", allFlags);
@@ -226,9 +223,9 @@ namespace AutopilotMod
                 f_pilots = typeof(Aircraft).GetField("pilots", allFlags);
                 f_gearState = typeof(Aircraft).GetField("gearState", allFlags);
                 f_weaponManager = typeof(Aircraft).GetField("weaponManager", allFlags);
-                f_radarAlt = typeof(Aircraft).GetField("radarAlt", allFlags);
+                
+                // f_radarAlt = typeof(Aircraft).GetField("radarAlt", allFlags); 
 
-                // Jammer/Power fields
                 Type psType = typeof(Aircraft).Assembly.GetType("PowerSupply");
                 if (psType != null) {
                     f_charge = psType.GetField("charge", allFlags);
@@ -236,13 +233,11 @@ namespace AutopilotMod
                     f_powerSupply = typeof(Aircraft).GetField("powerSupply", allFlags);
                 }
 
-                // Pilot Methods
                 Type pilotType = typeof(Aircraft).Assembly.GetType("Pilot");
                 if (pilotType != null) {
                     m_GetAccel = pilotType.GetMethod("GetAccel");
                 }
 
-                // Weapon Methods
                 Type wmType = typeof(Aircraft).Assembly.GetType("WeaponManager");
                 if (wmType != null) {
                     m_Fire = wmType.GetMethod("Fire");
@@ -480,7 +475,7 @@ namespace AutopilotMod
 
                         // Safe G-Force
                         if (Plugin.f_pilots != null) {
-                            System.Collections.IList pilots = (System.Collections.IList)Plugin.f_pilots.GetValue(acRef);
+                            IList pilots = (IList)Plugin.f_pilots.GetValue(acRef);
                             if (pilots != null && pilots.Count > 0 && Plugin.m_GetAccel != null) {
                                 Vector3 pAccel = (Vector3)Plugin.m_GetAccel.Invoke(pilots[0], null);
                                 currentG = Vector3.Dot(pAccel + Vector3.up, acRef.transform.up);
@@ -523,26 +518,25 @@ namespace AutopilotMod
                             bool warningZone = false;
                             bool isWallThreat = false;
 
-                            // Original Logic: SphereCast from ahead
-                            float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
                             Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f); 
+                            float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
 
-                            // LayerMask Safe
-                            int layerMask = ~(1 << APData.PlayerRB.gameObject.layer);
-
-                            if (Physics.SphereCast(castStart, 1f, velocity.normalized, out RaycastHit hit, scanRange, layerMask))
+                            if (Physics.SphereCast(castStart, 1f, velocity.normalized, out RaycastHit hit, scanRange))
                             {
-                                float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
-                                float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
-                                
-                                if (hit.distance < (reqArc + reactionDist + 20f))
+                                if (hit.transform.root != APData.PlayerRB.transform.root)
                                 {
-                                    dangerImminent = true;
-                                    if (hit.normal.y < 0.7f) isWallThreat = true; 
-                                }
-                                else if (hit.distance < (reqArc + reactionDist + warnDist))
-                                {
-                                    warningZone = true;
+                                    float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
+                                    float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
+                                    
+                                    if (hit.distance < (reqArc + reactionDist + 20f))
+                                    {
+                                        dangerImminent = true;
+                                        if (hit.normal.y < 0.7f) isWallThreat = true; 
+                                    }
+                                    else if (hit.distance < (reqArc + reactionDist + warnDist))
+                                    {
+                                        warningZone = true;
+                                    }
                                 }
                             }
 

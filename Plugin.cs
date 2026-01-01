@@ -473,10 +473,10 @@ namespace AutopilotMod
                 if (APData.PlayerRB != null) {
                     acRef = APData.PlayerRB.GetComponent<Aircraft>();
                     if (acRef != null) {
-                        // Safe Radar Alt
-                        if (Plugin.f_radarAlt != null) {
-                            radarAlt = (float)Plugin.f_radarAlt.GetValue(acRef);
-                        }
+                        // it is broken
+                        // if (Plugin.f_radarAlt != null) {
+                        //     radarAlt = (float)Plugin.f_radarAlt.GetValue(acRef);
+                        // }
 
                         // Safe G-Force
                         if (Plugin.f_pilots != null) {

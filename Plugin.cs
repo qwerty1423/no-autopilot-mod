@@ -602,7 +602,7 @@ namespace AutopilotMod
         public static float ConvertVS_ToDisplay(float metersPerSec)
         {
             if (PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial)
-                return metersPerSec * 3.28084f;
+                return metersPerSec * 196.850394f;
             return metersPerSec;
         }
         public static float ConvertVS_FromDisplay(float displayVal)

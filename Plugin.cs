@@ -17,7 +17,7 @@ namespace AutopilotMod
 
         // ap menu?
         public static ConfigEntry<KeyCode> MenuKey;
-        private Rect _windowRect = new Rect(50, 50, 250, 0);
+        private Rect _windowRect = new Rect(50, 50, 250, 300);
         private bool _showMenu = false;
         
         private string _bufAlt = "10000";

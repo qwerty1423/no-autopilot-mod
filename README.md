@@ -37,9 +37,7 @@ In approximate likelihood of implementation order descending.
 
 ## Autopilot
 
-really bad demo video (my laptop is not good enough to record or my recording settings are bad. maybe both. will record again with my desktop later)
-
-https://github.com/user-attachments/assets/3000ab2d-5bcd-46d8-b539-b1b465850720
+![imperialap](https://github.com/user-attachments/assets/23580e9d-2ea9-441d-8079-a181dab5c0cc)
 
 Autopilot controls roll and pitch. Any aircraft works if it flies like a plane (helicopters somehow work, but probably require small ascent/descent rate limits).
 
@@ -69,19 +67,21 @@ Also has humanlike options that can reduce its reaction time and randomise it.
 
 ## Fuel time and range display
 
-Also displays fuel time remaining and range. Unfortunately for non-metric system users, range is displayed in km. fuel time remaining is displayed HH: MM.
+Also displays fuel time remaining and range.
 
-All the distance and speed units are displayed in metric system currently, this cannot be changed yet.
+Unit display is configurable:
+
+<img width="648" height="268" alt="apconfig" src="https://github.com/user-attachments/assets/7d4d4268-ccea-442f-aba5-5b5aecdee1cf" />
 
 ## Auto-GCAS
 
-also really bad demo video (the plane also crashed at the end, probably it didn't see the mountain or something?)
+also really bad demo video (the plane also crashed at the end, gcas didn't see the mountain or something?)
 
 https://github.com/user-attachments/assets/1785beb8-1faa-4c5f-9fdb-ae67181053e2
 
 i will make some better videos later.
 
-## Usage example with EW plane
+## Usage example with Medusa
 
 After take-off, throttle kept at 100% for climb. Autopilot set to 10000m target altitude, 50 m/s climb rate and 30 degrees bank angle. Autopilot displays `A: 10000 50 30`.
 

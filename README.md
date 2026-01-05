@@ -67,9 +67,11 @@ Also has humanlike options that can reduce its reaction time and randomise it.
 
 ## Fuel time and range display
 
-Also displays fuel time remaining and range. Unfortunately for non-metric system users, range is displayed in km. fuel time remaining is displayed HH: MM.
+Also displays fuel time remaining and range.
 
-All the distance and speed units are displayed in metric system currently, this cannot be changed yet.
+Unit display is configurable:
+
+<img width="648" height="268" alt="apconfig" src="https://github.com/user-attachments/assets/7d4d4268-ccea-442f-aba5-5b5aecdee1cf" />
 
 ## Auto-GCAS
 

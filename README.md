@@ -37,9 +37,7 @@ In approximate likelihood of implementation order descending.
 
 ## Autopilot
 
-really bad demo video (my laptop is not good enough to record or my recording settings are bad. maybe both. will record again with my desktop later)
-
-https://github.com/user-attachments/assets/3000ab2d-5bcd-46d8-b539-b1b465850720
+![imperialap](https://github.com/user-attachments/assets/23580e9d-2ea9-441d-8079-a181dab5c0cc)
 
 Autopilot controls roll and pitch. Any aircraft works if it flies like a plane (helicopters somehow work, but probably require small ascent/descent rate limits).
 

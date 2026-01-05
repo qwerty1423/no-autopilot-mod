@@ -2,6 +2,8 @@
 
 Currently the autopilot is rather basic. There are some additional features, such as EW auto jam (currently just an auto fire mode, it won't select targets automatically or anything, it will only save your finger).
 
+![autopilot-demo](https://github.com/user-attachments/assets/9fdd050a-548e-4e51-b1cd-5e5f69b1e119)
+
 ## features and not features
 
 Some of the not features may eventually be implemented.
@@ -30,10 +32,14 @@ In approximate likelihood of implementation order descending.
 - waypoints and flying to them
 - separate PID values for every aircraft
 - nap of the earth flying
-- helicopter support
+- proper helicopter support
 - auto take-off and landing
 
 ## Autopilot
+
+really bad demo video (my laptop is not good enough to record or my recording settings are bad. maybe both. will record again with my desktop later)
+
+https://github.com/user-attachments/assets/3000ab2d-5bcd-46d8-b539-b1b465850720
 
 Autopilot controls roll and pitch. Any aircraft works if it flies like a plane (helicopters somehow work, but probably require small ascent/descent rate limits).
 
@@ -57,7 +63,7 @@ Use this mod at your own risk.
 
 ## Auto Jammer
 
-There is also an auto jammer mode for EW plane, that will jam if capacitor is full. The auto jammer will hit the fire button and there is no check for whether the jammer pods are selected, so you should make sure that they are. There is a check for the plane itself though, so you don't have to worry about accidentally enabling it on a different plane.
+There is also an auto jammer mode for Medusa, that will jam if capacitor is full. The auto jammer will hit the fire button and there is no check for whether the jammer pods are selected, so you should make sure that they are. There is a check for the plane itself though, so you don't have to worry about accidentally enabling it on a different plane.
 
 Also has humanlike options that can reduce its reaction time and randomise it.
 
@@ -65,7 +71,15 @@ Also has humanlike options that can reduce its reaction time and randomise it.
 
 Also displays fuel time remaining and range. Unfortunately for non-metric system users, range is displayed in km. fuel time remaining is displayed HH: MM.
 
-Oh, forgot to mention that all the other units are also displayed in metric system, this cannot be changed.
+All the distance and speed units are displayed in metric system currently, this cannot be changed yet.
+
+## Auto-GCAS
+
+also really bad demo video (the plane also crashed at the end, probably it didn't see the mountain or something?)
+
+https://github.com/user-attachments/assets/1785beb8-1faa-4c5f-9fdb-ae67181053e2
+
+i will make some better videos later.
 
 ## Usage example with EW plane
 

@@ -75,7 +75,7 @@ Unit display is configurable:
 
 ## Auto-GCAS
 
-also really bad demo video (the plane also crashed at the end, probably it didn't see the mountain or something?)
+also really bad demo video (the plane also crashed at the end, gcas didn't see the mountain or something?)
 
 https://github.com/user-attachments/assets/1785beb8-1faa-4c5f-9fdb-ae67181053e2
 

@@ -81,7 +81,7 @@ https://github.com/user-attachments/assets/1785beb8-1faa-4c5f-9fdb-ae67181053e2
 
 i will make some better videos later.
 
-## Usage example with EW plane
+## Usage example with Medusa
 
 After take-off, throttle kept at 100% for climb. Autopilot set to 10000m target altitude, 50 m/s climb rate and 30 degrees bank angle. Autopilot displays `A: 10000 50 30`.
 

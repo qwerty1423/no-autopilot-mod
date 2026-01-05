@@ -10,7 +10,36 @@ using UnityEngine.UI;
 
 namespace AutopilotMod
 {
-    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.9.3")]
+    public enum AltitudeUnit
+    {
+        Meters,
+        Feet
+    }
+
+    public enum DistanceUnit
+    {
+        Kilometers,
+        NauticalMiles,
+        Miles
+    }
+
+    public enum VertSpeedUnit
+    {
+        MetersPerSec,
+        FeetPerSec,
+        FeetPerMin,
+        Knots
+    }
+
+    public enum SpeedUnit
+    {
+        KilometersPerHour,
+        MilesPerHour,
+        Knots,
+        MetersPerSec
+    }
+
+    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.10.0")]
     public class Plugin : BaseUnityPlugin
     {
         internal new static ManualLogSource Logger;
@@ -22,6 +51,16 @@ namespace AutopilotMod
         public static ConfigEntry<float> FuelOffsetY, FuelLineSpacing, FuelSmoothing, FuelUpdateInterval;
         public static ConfigEntry<int> FuelWarnMinutes, FuelCritMinutes;
         public static ConfigEntry<bool> ShowExtraInfo;
+        public static ConfigEntry<bool> ShowGCASOff;
+        public static ConfigEntry<AltitudeUnit> UnitAlt;
+        public static ConfigEntry<DistanceUnit> UnitDist;
+        public static ConfigEntry<VertSpeedUnit> UnitVertSpeed;
+        public static ConfigEntry<SpeedUnit> UnitSpeed; // for future
+        public static ConfigEntry<bool> AltShowUnit;
+        public static ConfigEntry<bool> DistShowUnit;
+        public static ConfigEntry<bool> VertSpeedShowUnit;
+        public static ConfigEntry<bool> SpeedShowUnit; // for future
+        public static ConfigEntry<bool> AngleShowUnit;
 
         // Settings
         public static ConfigEntry<bool> EnableActionLogs, EnableDebugDump, ShowLogs, LogPIDData;
@@ -101,6 +140,17 @@ namespace AutopilotMod
             FuelOffsetY = Config.Bind("Visuals - Layout", "1. Stack Start Y", -20f, "Vertical position");
             FuelLineSpacing = Config.Bind("Visuals - Layout", "2. Line Spacing", 20f, "Vertical gap");
             ShowExtraInfo = Config.Bind("Visuals", "Show Fuel/AP Info", true, "Show extra info on Fuel Gauge");
+            ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show the GCAS OFF message");
+            UnitAlt = Config.Bind("Visuals - Units", "1. Altitude Units", AltitudeUnit.Meters, "Unit for Altitude.");
+            UnitDist = Config.Bind("Visuals - Units", "2. Distance Units", DistanceUnit.Kilometers, "Unit for Range.");
+            UnitVertSpeed = Config.Bind("Visuals - Units", "3. Vertical Speed Units", VertSpeedUnit.MetersPerSec, "Unit for Climb Rate.");
+            UnitSpeed = Config.Bind("Visuals - Units", "4. Airspeed Units", SpeedUnit.KilometersPerHour, "Unit for Forward Speed. (for autothrottle that doesn't exist yet)");
+            AltShowUnit = Config.Bind("Visuals - Units", "5. Show unit for alt", false, "(example) on: 10 m, off: 10");
+            DistShowUnit = Config.Bind("Visuals - Units", "6. Show unit for dist", true, "(example) on: 10 km, off: 10");
+            VertSpeedShowUnit = Config.Bind("Visuals - Units", "7. Show unit for vertical speed", false, "(example) on: 10 m/s, off: 10");
+            SpeedShowUnit = Config.Bind("Visuals - Units", "8. Show unit for speed", false, "(example) on: 10 km/h, off: 10 (unused right now, no autothrottle yet)");
+            AngleShowUnit = Config.Bind("Visuals - Units", "9. Show unit for angle", false, "on: 10°, off: 10");
+
             FuelSmoothing = Config.Bind("Calculations", "1. Fuel Flow Smoothing", 0.1f, "Alpha value");
             FuelUpdateInterval = Config.Bind("Calculations", "2. Fuel Update Interval", 1.0f, "Seconds");
             FuelWarnMinutes = Config.Bind("Calculations", "3. Fuel Warning Time", 15, "Minutes");
@@ -278,6 +328,64 @@ namespace AutopilotMod
             if (!hex.StartsWith("#")) hex = "#" + hex;
             if (ColorUtility.TryParseHtmlString(hex, out Color c)) return c;
             return fallback;
+        }
+
+        public static string FormatAltitude(float meters, bool showLabel = true)
+        {
+            if (Plugin.UnitAlt.Value == AltitudeUnit.Feet)
+                return $"{meters * 3.28084f:F0}" + (showLabel ? " ft" : "");
+            
+            return $"{meters:F0}" + (showLabel ? " m" : "");
+        }
+
+        public static string FormatDistance(float meters, bool showLabel = true)
+        {
+            DistanceUnit unit = Plugin.UnitDist.Value;
+
+            if (unit == DistanceUnit.NauticalMiles)
+                return $"{meters * 0.000539957f:F1}" + (showLabel ? " nm" : "");
+            
+            if (unit == DistanceUnit.Miles)
+                return $"{meters * 0.000621371f:F1}" + (showLabel ? " mi" : "");
+            
+            return $"{meters / 1000f:F1}" + (showLabel ? " km" : "");
+        }
+
+        public static string FormatVertSpeed(float ms, bool showLabel = true)
+        {
+            VertSpeedUnit unit = Plugin.UnitVertSpeed.Value;
+
+            if (unit == VertSpeedUnit.FeetPerMin)
+                return $"{ms * 196.85f:F0}" + (showLabel ? " fpm" : "");
+            
+            if (unit == VertSpeedUnit.FeetPerSec)
+                return $"{ms * 3.28084f:F0}" + (showLabel ? " fps" : "");
+
+            if (unit == VertSpeedUnit.Knots)
+                return $"{ms * 1.94384f:F0}" + (showLabel ? " kts" : "");
+
+            return $"{ms:F1}" + (showLabel ? " m/s" : "");
+        }
+
+        public static string FormatSpeed(float ms, bool showLabel = true)
+        {
+            SpeedUnit unit = Plugin.UnitSpeed.Value;
+
+            if (unit == SpeedUnit.Knots)
+                return $"{ms * 1.94384f:F0}" + (showLabel ? " kts" : "");
+
+            if (unit == SpeedUnit.MilesPerHour)
+                return $"{ms * 2.23694f:F0}" + (showLabel ? " mph" : "");
+
+            if (unit == SpeedUnit.KilometersPerHour)
+                return $"{ms * 3.6f:F0}" + (showLabel ? " kph" : "");
+
+            return $"{ms:F0}" + (showLabel ? " m/s" : "");
+        }
+
+        public static string FormatAngle(float angle, bool showLabel = true)
+        {
+            return $"{angle:F0}" + (showLabel ? "°" : "");
         }
     }
 
@@ -817,8 +925,6 @@ namespace AutopilotMod
 
                 if (!timerObj) {
                     GameObject Spawn(string name) {
-                        // FIX: Parent to __instance (the HUD root) instead of the label, 
-                        // to match 4.9.0 behavior and avoid LayoutGroup overrides.
                         GameObject go = UnityEngine.Object.Instantiate(refLabel.gameObject, __instance.transform); 
                         go.name = name;
                         go.SetActive(true); 
@@ -831,14 +937,12 @@ namespace AutopilotMod
                     fbwObj = Spawn("AP_FBW");
                 }
 
-                // Match 4.9.0 Positioning logic (World Position relative to refLabel)
                 float startY = Plugin.FuelOffsetY.Value;
                 float gap = Plugin.FuelLineSpacing.Value;
                 Vector3 basePos = refLabel.transform.position;
 
                 void Place(GameObject obj, int index) {
                     if (!obj) return;
-                    // Use World Position derived from the label's Up vector
                     obj.transform.position = basePos + (obj.transform.up * (startY - (gap * index)));
                     if (!obj.activeSelf) obj.SetActive(true); 
                 }
@@ -885,9 +989,9 @@ namespace AutopilotMod
                     else tText.color = ModUtils.GetColor(Plugin.ColorGood.Value, Color.green);
 
                     float spd = (aircraft.rb != null) ? aircraft.rb.velocity.magnitude : 0f;
-                    float rangeKm = secs * spd / 1000f;
-                    if (rangeKm > 9999f) rangeKm = 9999f;
-                    rText.text = $"{rangeKm:F0} km";
+                    float distMeters = secs * spd;
+                    if (distMeters > 99999000f) distMeters = 99999000f;
+                    rText.text = ModUtils.FormatDistance(distMeters, Plugin.DistShowUnit.Value);
                     rText.color = ModUtils.GetColor(Plugin.ColorInfo.Value, Color.cyan);
                 }
 
@@ -896,9 +1000,12 @@ namespace AutopilotMod
                 } else if (APData.GCASWarning) {
                     aText.text = "PULL UP"; aText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
                 } else if (APData.Enabled) {
-                    aText.text = $"A: {APData.TargetAlt:F0} {APData.CurrentMaxClimbRate:F0} {APData.TargetRoll:F0}";
+                    string altStr = ModUtils.FormatAltitude(APData.TargetAlt, Plugin.AltShowUnit.Value);
+                    string climbStr = ModUtils.FormatVertSpeed(APData.CurrentMaxClimbRate, Plugin.VertSpeedShowUnit.Value);
+                    string rollStr = ModUtils.FormatAngle(APData.TargetRoll, Plugin.AngleShowUnit.Value);
+                    aText.text = $"{altStr} {climbStr} {rollStr}";
                     aText.color = ModUtils.GetColor(Plugin.ColorAPOn.Value, Color.green);
-                } else if (!APData.GCASEnabled) {
+                } else if (!APData.GCASEnabled && Plugin.ShowGCASOff.Value) {
                     aText.text = "GCAS OFF"; aText.color = ModUtils.GetColor(Plugin.ColorWarn.Value, Color.yellow);
                 } else {
                     aText.text = "";

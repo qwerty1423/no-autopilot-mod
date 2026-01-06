@@ -12,7 +12,7 @@ Some of the not features may eventually be implemented.
 
 In order of implementation, earliest first
 
-- wing leveller and altitude hold 
+- wing leveller and altitude hold
 - climb/descend to altitude at set rate
 - set target roll angle
 - HUD autopilot display
@@ -59,7 +59,7 @@ Use this mod at your own risk.
 
 ## Auto Jammer
 
-There is also an auto jammer mode for Medusa, that will jam if capacitor is full. The auto jammer will hit the fire button and there is no check for whether the jammer pods are selected, so you should make sure that they are. There is a check for the plane itself though, so you don't have to worry about accidentally enabling it on a different plane.
+There is also an auto jammer mode for Medusa, that will jam if capacitor is full. The auto jammer will hit the fire button if there is a target selected and the jammer pods are selected.
 
 Also has humanlike options that can reduce its reaction time and randomise it.
 

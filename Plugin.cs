@@ -100,13 +100,16 @@ namespace AutopilotMod
         internal static FieldInfo f_playerVehicle;
         internal static FieldInfo f_controlInputs; 
         internal static FieldInfo f_pitch, f_roll; 
+        internal static FieldInfo f_targetList;
+        internal static FieldInfo f_currentWeaponStation;
+        internal static FieldInfo f_stationWeapons;
         
-        // Aircraft Specifics
         internal static FieldInfo f_fuelCapacity, f_pilots, f_gearState, f_weaponManager; // f_radarAlt;
         
-        // Weapon/Jammer Specifics
         internal static FieldInfo f_powerSupply, f_charge, f_maxCharge;
         internal static MethodInfo m_Fire, m_GetAccel;
+        
+        internal static Type t_JammingPod;
 
         private void Awake()
         {
@@ -151,10 +154,10 @@ namespace AutopilotMod
             AutoJammerKey = Config.Bind("Auto Jammer", "2. Toggle Key", KeyCode.Slash, "Key to toggle jamming");
             AutoJammerThreshold = Config.Bind("Auto Jammer", "3. Energy Threshold", 0.99f, "Fire when energy > this %");
             AutoJammerHumanize = Config.Bind("Auto Jammer", "4. Humanize Delay", true, "Add random delay");
-            AutoJammerMinDelay = Config.Bind("Auto Jammer", "5. Delay Min", 0.05f, "Seconds");
-            AutoJammerMaxDelay = Config.Bind("Auto Jammer", "6. Delay Max", 0.15f, "Seconds");
-            AutoJammerReleaseMin = Config.Bind("Auto Jammer", "7. Release Delay Min", 0.05f, "Seconds");
-            AutoJammerReleaseMax = Config.Bind("Auto Jammer", "8. Release Delay Max", 0.15f, "Seconds");
+            AutoJammerMinDelay = Config.Bind("Auto Jammer", "5. Delay Min", 0.02f, "Seconds");
+            AutoJammerMaxDelay = Config.Bind("Auto Jammer", "6. Delay Max", 0.04f, "Seconds");
+            AutoJammerReleaseMin = Config.Bind("Auto Jammer", "7. Release Delay Min", 0.02f, "Seconds");
+            AutoJammerReleaseMax = Config.Bind("Auto Jammer", "8. Release Delay Max", 0.04f, "Seconds");
 
             // Controls
             ToggleKey = Config.Bind("Controls", "01. Toggle AP Key", KeyCode.Equals, "AP On/Off");
@@ -232,7 +235,6 @@ namespace AutopilotMod
 
             // --- REFLECTION CACHING ---
             try {
-                // 1. Get Player Vehicle
                 f_playerVehicle = typeof(FlightHud).GetField("playerVehicle", BindingFlags.NonPublic | BindingFlags.Instance);
                 
                 f_controlInputs = typeof(PilotPlayerState).GetField("controlInputs", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -270,7 +272,16 @@ namespace AutopilotMod
                 Type wmType = typeof(Aircraft).Assembly.GetType("WeaponManager");
                 if (wmType != null) {
                     m_Fire = wmType.GetMethod("Fire");
+                    f_targetList = wmType.GetField("targetList", BindingFlags.NonPublic | BindingFlags.Instance);
+                    f_currentWeaponStation = wmType.GetField("currentWeaponStation", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 }
+
+                Type wsType = typeof(Aircraft).Assembly.GetType("WeaponStation");
+                if (wsType != null) {
+                    f_stationWeapons = wsType.GetField("Weapons", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                }
+
+                t_JammingPod = typeof(Aircraft).Assembly.GetType("JammingPod");
 
             } catch (Exception ex) {
                 Logger.LogError("Failed to cache reflection fields! Mod might break. " + ex);
@@ -550,6 +561,7 @@ namespace AutopilotMod
         public static float CurrentMaxClimbRate = -1f; 
         public static Rigidbody PlayerRB;
         public static Aircraft LocalAircraft;
+        public static WeaponManager LocalWeaponManager;
     }
 
     // --- HELPERS ---
@@ -869,35 +881,86 @@ namespace AutopilotMod
                 }
 
                 // auto jam
-                if (APData.AutoJammerActive && acRef != null && acRef.name.Contains("EW1"))
+                if (APData.AutoJammerActive && APData.LocalAircraft != null)
                 {
-                    if (Plugin.f_charge != null && Plugin.f_powerSupply != null) {
-                        object ps = Plugin.f_powerSupply.GetValue(acRef);
-                        if (ps != null) {
-                            float cur = (float)Plugin.f_charge.GetValue(ps);
-                            float max = (float)Plugin.f_maxCharge.GetValue(ps);
-                            if (max <= 1f) max = 100f;
-                            float pct = cur / max;
+                    object wm = APData.LocalWeaponManager;
+                    if (wm == null && Plugin.f_weaponManager != null) 
+                        wm = Plugin.f_weaponManager.GetValue(APData.LocalAircraft);
 
-                            if (pct >= Plugin.AutoJammerThreshold.Value) {
-                                if (!isJammerHoldingTrigger) {
-                                    if (jammerNextFireTime == 0f) jammerNextFireTime = Time.time + (Plugin.AutoJammerHumanize.Value ? UnityEngine.Random.Range(Plugin.AutoJammerMinDelay.Value, Plugin.AutoJammerMaxDelay.Value) : 0f);
-                                    if (Time.time >= jammerNextFireTime) { isJammerHoldingTrigger = true; jammerNextFireTime = 0f; }
-                                }
-                            } else {
-                                if (isJammerHoldingTrigger) {
-                                    if (jammerNextReleaseTime == 0f) jammerNextReleaseTime = Time.time + (Plugin.AutoJammerHumanize.Value ? UnityEngine.Random.Range(Plugin.AutoJammerReleaseMin.Value, Plugin.AutoJammerReleaseMax.Value) : 0f);
-                                    if (Time.time >= jammerNextReleaseTime) { isJammerHoldingTrigger = false; jammerNextReleaseTime = 0f; }
+                    if (wm != null)
+                    {
+                        bool fire = false;
+
+                        if (Plugin.f_currentWeaponStation != null && Plugin.f_stationWeapons != null)
+                        {
+                            object currStation = Plugin.f_currentWeaponStation.GetValue(wm);
+                            if (currStation != null)
+                            {
+                                if (Plugin.f_stationWeapons.GetValue(currStation) is IList wpnList)
+                                {
+                                    for (int i = 0; i < wpnList.Count; i++)
+                                    {
+                                        object w = wpnList[i];
+                                        if (w != null && w.GetType() == Plugin.t_JammingPod)
+                                        {
+                                            fire = true;
+                                            break;
+                                        }
+                                    }
                                 }
                             }
+                        }
 
-                            if (isJammerHoldingTrigger && Plugin.f_weaponManager != null) {
-                                object wm = Plugin.f_weaponManager.GetValue(acRef);
-                                if (wm != null) {
-                                    if (Plugin.m_Fire != null) Plugin.m_Fire.Invoke(wm, null);
-                                    else Traverse.Create(wm).Method("Fire").GetValue();
+                        if (fire)
+                        {
+                            fire = false;
+                            if (Plugin.f_targetList != null)
+                            {
+                                if (Plugin.f_targetList.GetValue(wm) is IList tList && tList.Count > 0) fire = true;
+                            }
+                        }
+
+                        if (fire)
+                        {
+                            if (Plugin.f_charge != null && Plugin.f_powerSupply != null) 
+                            {
+                                object ps = Plugin.f_powerSupply.GetValue(APData.LocalAircraft);
+                                if (ps != null) 
+                                {
+                                    float cur = (float)Plugin.f_charge.GetValue(ps);
+                                    float max = (float)Plugin.f_maxCharge.GetValue(ps);
+                                    if (max <= 1f) max = 100f;
+                                    
+                                    if ((cur / max) >= Plugin.AutoJammerThreshold.Value) 
+                                    {
+                                        if (!isJammerHoldingTrigger) 
+                                        {
+                                            if (jammerNextFireTime == 0f) 
+                                                jammerNextFireTime = Time.time + (Plugin.AutoJammerHumanize.Value ? UnityEngine.Random.Range(Plugin.AutoJammerMinDelay.Value, Plugin.AutoJammerMaxDelay.Value) : 0f);
+                                            
+                                            if (Time.time >= jammerNextFireTime) { isJammerHoldingTrigger = true; jammerNextFireTime = 0f; }
+                                        }
+                                    } 
+                                    else 
+                                    {
+                                        if (isJammerHoldingTrigger) 
+                                        {
+                                            if (jammerNextReleaseTime == 0f) 
+                                                jammerNextReleaseTime = Time.time + (Plugin.AutoJammerHumanize.Value ? UnityEngine.Random.Range(Plugin.AutoJammerReleaseMin.Value, Plugin.AutoJammerReleaseMax.Value) : 0f);
+                                            
+                                            if (Time.time >= jammerNextReleaseTime) { isJammerHoldingTrigger = false; jammerNextReleaseTime = 0f; }
+                                        }
+                                    }
+
+                                    if (isJammerHoldingTrigger && Plugin.m_Fire != null) 
+                                        Plugin.m_Fire.Invoke(wm, null);
                                 }
                             }
+                        }
+                        else
+                        {
+                            isJammerHoldingTrigger = false;
+                            jammerNextFireTime = 0f;
                         }
                     }
                 }
@@ -1051,7 +1114,7 @@ namespace AutopilotMod
             }
             catch (Exception ex) { 
                 Plugin.Logger.LogError($"[ControlOverridePatch] Error: {ex}");
-                APData.Enabled = false; 
+                APData.Enabled = false;
             }
         }
     }

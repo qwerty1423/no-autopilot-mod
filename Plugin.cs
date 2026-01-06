@@ -661,7 +661,7 @@ namespace AutopilotMod
     [HarmonyPatch(typeof(FlightHud), "Update")]
     internal class InputHandlerPatch
     {
-        private static void Postfix(FlightHud _)
+        private static void Postfix(FlightHud __instance)
         {
             try {
                 if (Input.GetKeyDown(Plugin.ToggleKey.Value))

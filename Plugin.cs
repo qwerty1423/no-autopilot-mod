@@ -1137,7 +1137,11 @@ namespace AutopilotMod
             if (!Plugin.ShowExtraInfo.Value) return;
 
             try {
-                GameObject currentVehicleObj = ((Component)Plugin.f_playerVehicle.GetValue(__instance))?.gameObject;
+                if (Plugin.f_playerVehicle == null) return;
+
+                object vehicleRaw = Plugin.f_playerVehicle.GetValue(__instance);
+
+                GameObject currentVehicleObj = (vehicleRaw as Component)?.gameObject;
                 
                 if (currentVehicleObj == null) return;
 

@@ -10,19 +10,18 @@ using UnityEngine.UI;
 
 namespace AutopilotMod
 {
-    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.11.1")]
+    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.11.2")]
     public class Plugin : BaseUnityPlugin
     {
         internal new static ManualLogSource Logger;
 
         // ap menu?
         public static ConfigEntry<KeyCode> MenuKey;
-        private Rect _windowRect = new Rect(50, 50, 250, 450);
+        private Rect _windowRect = new(50, 50, 250, 450);
         private bool _showMenu = false;
         
         private Vector2 _scrollPos;
         private bool _isResizing = false;
-        private Rect _resizeRect = new Rect(0, 0, 0, 0);
         
         private string _bufAlt = "0";
         private string _bufClimb = "40";
@@ -276,12 +275,16 @@ namespace AutopilotMod
         private void InitStyles()
         {
             _styleWindow = new GUIStyle(GUI.skin.window);
-            
-            _styleLabel = new GUIStyle(GUI.skin.label);
-            _styleLabel.alignment = TextAnchor.MiddleLeft;
 
-            _styleButton = new GUIStyle(GUI.skin.button);
-            _styleButton.fixedHeight = 25;
+            _styleLabel = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleLeft
+            };
+
+            _styleButton = new GUIStyle(GUI.skin.button)
+            {
+                fixedHeight = 25
+            };
 
             _stylesInitialized = true;
         }
@@ -375,7 +378,7 @@ namespace AutopilotMod
         {
             // detect click
             // The handle is a 20x20 square in the bottom right corner
-            Rect resizeHandleRect = new Rect(_windowRect.width - 20, _windowRect.height - 20, 20, 20);
+            Rect resizeHandleRect = new(_windowRect.width - 20, _windowRect.height - 20, 20, 20);
 
             if (Event.current.type == EventType.MouseDown && resizeHandleRect.Contains(Event.current.mousePosition))
             {
@@ -516,7 +519,7 @@ namespace AutopilotMod
                         bool isEnabled = (bool)result.GetType().GetField("Item1").GetValue(result);
                         float[] values = (float[])result.GetType().GetField("Item2").GetValue(result);
                         
-                        m_SetFBW.Invoke(cf, new object[] { !isEnabled, values });
+                        m_SetFBW.Invoke(cf, [!isEnabled, values]);
                         
                         APData.FBWDisabled = isEnabled;
                     }
@@ -658,7 +661,7 @@ namespace AutopilotMod
     [HarmonyPatch(typeof(FlightHud), "Update")]
     internal class InputHandlerPatch
     {
-        private static void Postfix(FlightHud __instance)
+        private static void Postfix(FlightHud _)
         {
             try {
                 if (Input.GetKeyDown(Plugin.ToggleKey.Value))

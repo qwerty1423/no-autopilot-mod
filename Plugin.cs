@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -43,6 +44,11 @@ namespace AutopilotMod
         public static ConfigEntry<bool> ShowExtraInfo;
         public static ConfigEntry<bool> ShowAPOverlay;
         public static ConfigEntry<bool> ShowGCASOff;
+        public static ConfigEntry<bool> AltShowUnit;
+        public static ConfigEntry<bool> DistShowUnit;
+        public static ConfigEntry<bool> VertSpeedShowUnit;
+        public static ConfigEntry<bool> SpeedShowUnit; // for future
+        public static ConfigEntry<bool> AngleShowUnit;
 
         // Settings
         public static ConfigEntry<float> StickDeadzone;
@@ -121,6 +127,12 @@ namespace AutopilotMod
             ShowExtraInfo = Config.Bind("Visuals", "Show Fuel/AP Info", true, "Show extra info on Fuel Gauge");
             ShowAPOverlay = Config.Bind("Visuals", "Show AP Overlay", true, "Draw AP status text on the HUD. Turn off if you want, there's a window now.");
             ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show the GCAS OFF message");
+            
+            AltShowUnit = Config.Bind("Visuals - Units", "1. Show unit for alt", false, "(example) on: 10m, off: 10");
+            DistShowUnit = Config.Bind("Visuals - Units", "2. Show unit for dist", true, "(example) on: 10km, off: 10");
+            VertSpeedShowUnit = Config.Bind("Visuals - Units", "3. Show unit for vertical speed", false, "(example) on: 10m/s, off: 10");
+            SpeedShowUnit = Config.Bind("Visuals - Units", "4. Show unit for speed", false, "(example) on: 10km/h, off: 10 (unused right now, no autothrottle yet)");
+            AngleShowUnit = Config.Bind("Visuals - Units", "5. Show unit for angle", false, "on: 10°, off: 10");
 
             UI_PosX = Config.Bind("Visuals - UI", "1. Window Position X", -1f, "-1 = Auto Bottom Right, otherwise pixel value");
             UI_PosY = Config.Bind("Visuals - UI", "2. Window Position Y", -1f, "-1 = Auto Bottom Right, otherwise pixel value");
@@ -417,9 +429,9 @@ namespace AutopilotMod
             float currentVS = 0f;
             if (APData.PlayerRB != null) currentVS = APData.PlayerRB.velocity.y;
             
-            string sAlt = UnitConverter.AltitudeReading(APData.CurrentAlt);
-            string sRoll = $"{APData.CurrentRoll:F0}°";
-            string sVS = UnitConverter.ClimbRateReading(currentVS);
+            string sAlt = ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.CurrentAlt), true);
+            string sVS = ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(currentVS), true);
+            string sRoll = ModUtils.ProcessGameString($"{APData.CurrentRoll:F0}°", true);
 
             GUILayout.Label($"Alt: {sAlt}", _styleLabel);
             GUILayout.Label($"VS: {sVS} | Roll: {sRoll}", _styleLabel);
@@ -595,6 +607,7 @@ namespace AutopilotMod
                 return meters * 3.28084f;
             return meters;
         }
+
         public static float ConvertAlt_FromDisplay(float displayVal)
         {
             if (PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial)
@@ -608,11 +621,26 @@ namespace AutopilotMod
                 return metersPerSec * 196.850394f;
             return metersPerSec;
         }
+
         public static float ConvertVS_FromDisplay(float displayVal)
         {
             if (PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial)
                 return displayVal / 196.850394f;
             return displayVal;
+        }
+
+        public static string ProcessGameString(string raw, bool keepUnit)
+        {
+            if (string.IsNullOrEmpty(raw)) return "";
+
+            // always remove the + because it's useless
+            string clean = raw.Replace("+", "");
+
+            if (keepUnit) return clean;
+
+            // keeps negative signs and decimals
+            var match = Regex.Match(clean, @"-?[\d\.,]+");
+            return match.Success ? match.Value : clean;
         }
     }
 
@@ -661,7 +689,7 @@ namespace AutopilotMod
     [HarmonyPatch(typeof(FlightHud), "Update")]
     internal class InputHandlerPatch
     {
-        private static void Postfix(FlightHud __instance)
+        private static void Postfix()
         {
             try {
                 if (Input.GetKeyDown(Plugin.ToggleKey.Value))
@@ -1182,7 +1210,7 @@ namespace AutopilotMod
                     float spd = (aircraft.rb != null) ? aircraft.rb.velocity.magnitude : 0f;
                     float distMeters = secs * spd;
                     if (distMeters > 99999000f) distMeters = 99999000f;
-                    rText.text = UnitConverter.DistanceReading(distMeters);
+                    rText.text = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters),Plugin.DistShowUnit.Value);
                     rText.color = ModUtils.GetColor(Plugin.ColorInfo.Value, Color.cyan);
                 }
 
@@ -1191,9 +1219,9 @@ namespace AutopilotMod
                 } else if (APData.GCASWarning) {
                     aText.text = "PULL UP"; aText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
                 } else if (APData.Enabled && Plugin.ShowAPOverlay.Value) {
-                    string altStr = UnitConverter.AltitudeReading(APData.TargetAlt);
-                    string climbStr = UnitConverter.ClimbRateReading(APData.CurrentMaxClimbRate);
-                    string rollStr = $"{APData.TargetRoll}°";
+                    string altStr = ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.TargetAlt), Plugin.AltShowUnit.Value);
+                    string climbStr = ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(APData.CurrentMaxClimbRate), Plugin.VertSpeedShowUnit.Value);
+                    string rollStr = ModUtils.ProcessGameString($"{APData.TargetRoll}°", Plugin.AngleShowUnit.Value);
                     string newText = $"{altStr} {climbStr} {rollStr}";
                     if (aText.text != newText) aText.text = newText;
                     aText.color = ModUtils.GetColor(Plugin.ColorAPOn.Value, Color.green);

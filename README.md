@@ -20,7 +20,6 @@ In order of implementation, earliest first
 - HUD autopilot display
 - fuel time and range display
 - EW auto jam
-- FBW manual override
 - Auto-GCAS
 - autopilot gui?
 
@@ -50,8 +49,6 @@ Target bank angle can be set so that plane turns in a circle. Should be useful f
 
 Large stick inputs will disengage the autopilot.
 
-The mod can also override fly by wire, allowing you to perform better cobra manoeuvres or snap your wings.
-
 Displays current settings on the HUD. The format is `A: [Target Altitude] [Max Climb Rate] [Target Bank Angle]`. For example, autopilot set to 3m altitude, at 40m/s climb rate, at 0 degrees bank angle will show up as `A: 3 40 0` on the HUD.
 
 Has humanlike options that will help reduce its effectiveness. You can probably configure it so that it cannot sea skim at 2m ASL so easily.
@@ -80,7 +77,7 @@ Unit display is configurable:
 
 also really bad demo video (the plane also crashed at the end, gcas didn't see the mountain or something?)
 
-https://github.com/user-attachments/assets/1785beb8-1faa-4c5f-9fdb-ae67181053e2
+<https://github.com/user-attachments/assets/1785beb8-1faa-4c5f-9fdb-ae67181053e2>
 
 i will make some better videos later.
 
@@ -98,7 +95,6 @@ Weapon is switched to jammer, and auto jammer enabled. when target is selected, 
 | :--- | :--- | :--- |
 | **Toggle Autopilot** | `=` (Equals) | Self-explanatory. |
 | **Toggle Auto-Jammer** | `/` (Slash) | ^^^ |
-| **Toggle FBW** | `Delete` | ^^^ |
 | **Target Alt Small Adjustment** | `Up` / `Down` Arrow | Small adjustments (0.1m default) |
 | **Target Alt Large Adjustment** | `Left` / `Right` Arrow | Large adjustments (100m default) |
 | **Max Climb Rate +/-** | `PageUp` / `PageDown` | Limit vertical speed |

@@ -62,7 +62,7 @@ namespace AutopilotMod
         public static ConfigEntry<float> AutoJammerReleaseMin, AutoJammerReleaseMax;
 
         // Controls
-        public static ConfigEntry<KeyCode> ToggleKey, ToggleFBWKey, UpKey, DownKey, BigUpKey, BigDownKey;
+        public static ConfigEntry<KeyCode> ToggleKey, UpKey, DownKey, BigUpKey, BigDownKey;
         public static ConfigEntry<KeyCode> ClimbRateUpKey, ClimbRateDownKey, BankLeftKey, BankRightKey, BankLevelKey;
 
         // Flight Values
@@ -102,14 +102,11 @@ namespace AutopilotMod
         internal static FieldInfo f_pitch, f_roll; 
         
         // Aircraft Specifics
-        internal static FieldInfo f_controlsFilter, f_fuelCapacity, f_pilots, f_gearState, f_weaponManager, f_radarAlt;
+        internal static FieldInfo f_fuelCapacity, f_pilots, f_gearState, f_weaponManager; // f_radarAlt;
         
         // Weapon/Jammer Specifics
         internal static FieldInfo f_powerSupply, f_charge, f_maxCharge;
         internal static MethodInfo m_Fire, m_GetAccel;
-
-        // FBW Methods
-        internal static MethodInfo m_GetFBW, m_SetFBW;
 
         private void Awake()
         {
@@ -161,7 +158,6 @@ namespace AutopilotMod
 
             // Controls
             ToggleKey = Config.Bind("Controls", "01. Toggle AP Key", KeyCode.Equals, "AP On/Off");
-            ToggleFBWKey = Config.Bind("Controls", "02. Toggle FBW Key", KeyCode.Delete, "Toggle Stability Assist");
             UpKey = Config.Bind("Controls", "03. Altitude Up (Small)", KeyCode.UpArrow, "small increase");
             DownKey = Config.Bind("Controls", "04. Altitude Down (Small)", KeyCode.DownArrow, "small decrease");
             BigUpKey = Config.Bind("Controls", "05. Altitude Up (Big)", KeyCode.LeftArrow, "large increase");
@@ -253,12 +249,11 @@ namespace AutopilotMod
 
                 BindingFlags allFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
                 
-                f_controlsFilter = typeof(Aircraft).GetField("controlsFilter", allFlags);
                 f_fuelCapacity = typeof(Aircraft).GetField("fuelCapacity", allFlags);
                 f_pilots = typeof(Aircraft).GetField("pilots", allFlags);
                 f_gearState = typeof(Aircraft).GetField("gearState", allFlags);
                 f_weaponManager = typeof(Aircraft).GetField("weaponManager", allFlags);
-                f_radarAlt = typeof(Aircraft).GetField("radarAlt", allFlags); 
+                // f_radarAlt = typeof(Aircraft).GetField("radarAlt", allFlags); 
 
                 Type psType = typeof(Aircraft).Assembly.GetType("PowerSupply");
                 if (psType != null) {
@@ -496,9 +491,6 @@ namespace AutopilotMod
                 if (!APData.GCASEnabled) APData.GCASActive = false;
             }
 
-            if (GUILayout.Button($"FBW Stability: {(APData.FBWDisabled ? "OFF" : "ON")}", _styleButton))
-                ToggleFBW_Action();
-
             if (GUILayout.Button("Reset Bank (Level)", _styleButton))
             {
                 APData.TargetRoll = 0f;
@@ -510,35 +502,6 @@ namespace AutopilotMod
             GUILayout.EndScrollView();
 
             GUI.Label(resizeHandleRect, "↘");
-        }
-
-        public static void ToggleFBW_Action()
-        {
-            if (APData.LocalAircraft == null) return;
-
-            try {
-                if (f_controlsFilter == null) return;
-
-                object cf = f_controlsFilter.GetValue(APData.LocalAircraft);
-                
-                if (cf != null && !cf.GetType().Name.Contains("Helo")) {
-                    if (m_GetFBW == null) m_GetFBW = cf.GetType().GetMethod("GetFlyByWireParameters");
-                    if (m_SetFBW == null) m_SetFBW = cf.GetType().GetMethod("SetFlyByWireParameters");
-                    
-                    if (m_GetFBW != null && m_SetFBW != null) {
-                        object result = m_GetFBW.Invoke(cf, null);
-                        
-                        bool isEnabled = (bool)result.GetType().GetField("Item1").GetValue(result);
-                        float[] values = (float[])result.GetType().GetField("Item2").GetValue(result);
-                        
-                        m_SetFBW.Invoke(cf, [!isEnabled, values]);
-                        
-                        APData.FBWDisabled = isEnabled;
-                    }
-                }
-            } catch (Exception ex) {
-                Logger.LogError("Error toggling FBW: " + ex);
-            }
         }
     }
 
@@ -578,7 +541,6 @@ namespace AutopilotMod
         public static bool WasAPOn = false;
         public static bool GCASEnabled = Plugin.EnableGCAS.Value;
         public static bool AutoJammerActive = false;
-        public static bool FBWDisabled = false;
         public static bool GCASActive = false; 
         public static bool GCASWarning = false;
         public static float TargetAlt = 0f;
@@ -665,7 +627,6 @@ namespace AutopilotMod
                         APData.WasAPOn = false;
                         APData.GCASEnabled = Plugin.EnableGCAS.Value;
                         APData.AutoJammerActive = false;
-                        APData.FBWDisabled = false;
                         APData.GCASActive = false;
                         APData.GCASWarning = false;
                         APData.TargetAlt = altitude;
@@ -700,11 +661,6 @@ namespace AutopilotMod
                 if (Plugin.EnableAutoJammer.Value && Input.GetKeyDown(Plugin.AutoJammerKey.Value))
                 {
                     APData.AutoJammerActive = !APData.AutoJammerActive;
-                }
-
-                if (Input.GetKeyDown(Plugin.ToggleFBWKey.Value))
-                {
-                    Plugin.ToggleFBW_Action();
                 }
                 
                 if (Input.GetKeyDown(Plugin.ToggleGCASKey.Value))
@@ -835,7 +791,6 @@ namespace AutopilotMod
                             float gAccel = Plugin.GCAS_MaxG.Value * 9.81f; 
                             float turnRadius = (speed * speed) / gAccel;
                             
-                            // Reverted to 4.9.0 buffer logic
                             float reactionTime = Plugin.GCAS_AutoBuffer.Value;
                             float reactionDist = speed * reactionTime;
                             float warnDist = speed * Plugin.GCAS_WarnBuffer.Value;
@@ -880,11 +835,11 @@ namespace AutopilotMod
                             {
                                 bool safeToRelease = false;
 
-                                // Reverted to 4.9.0 Release Logic
                                 if (!dangerImminent)
                                 {
                                     // if (isWallThreat || APData.CurrentAlt > 100f) safeToRelease = true;
                                     // else if (velocity.y >= 0f) safeToRelease = true;
+
                                     safeToRelease = true;
                                 }
 
@@ -1104,8 +1059,8 @@ namespace AutopilotMod
     [HarmonyPatch(typeof(FlightHud), "Update")]
     internal class HUDVisualsPatch
     {
-        private static GameObject timerObj, rangeObj, apObj, ajObj, fbwObj;
-        private static Text tText, rText, aText, jText, fText;
+        private static GameObject timerObj, rangeObj, apObj, ajObj;
+        private static Text tText, rText, aText, jText;
         private static float lastFuelMass = 0f;
         private static float fuelFlowEma = 0f;
         private static float lastUpdateTime = 0f;
@@ -1132,8 +1087,7 @@ namespace AutopilotMod
                     if (rangeObj) UnityEngine.Object.Destroy(rangeObj);
                     if (apObj) UnityEngine.Object.Destroy(apObj);
                     if (ajObj) UnityEngine.Object.Destroy(ajObj);
-                    if (fbwObj) UnityEngine.Object.Destroy(fbwObj);
-                    timerObj = null; rangeObj = null; apObj = null; ajObj = null; fbwObj = null;
+                    timerObj = null; rangeObj = null; apObj = null; ajObj = null;
 
                     if (_cachedFuelGauge != null) {
                         _cachedRefLabel = Traverse.Create(_cachedFuelGauge).Field("fuelLabel").GetValue<Text>();
@@ -1153,13 +1107,11 @@ namespace AutopilotMod
                     rangeObj = Spawn("AP_Range");
                     apObj = Spawn("AP_Status");
                     ajObj = Spawn("AP_Jammer");
-                    fbwObj = Spawn("AP_FBW");
 
                     tText = timerObj.GetComponent<Text>();
                     rText = rangeObj.GetComponent<Text>();
                     aText = apObj.GetComponent<Text>();
                     jText = ajObj.GetComponent<Text>();
-                    fText = fbwObj.GetComponent<Text>();
                 }
 
                 float startY = Plugin.FuelOffsetY.Value;
@@ -1175,7 +1127,6 @@ namespace AutopilotMod
                 Place(rangeObj, 1);
                 Place(apObj, 2);
                 Place(ajObj, 3);
-                Place(fbwObj, 4);
 
                 // Update Text
                 Aircraft aircraft = APData.LocalAircraft;
@@ -1234,11 +1185,6 @@ namespace AutopilotMod
                 if (APData.AutoJammerActive) {
                     jText.text = "AJ ON"; jText.color = ModUtils.GetColor(Plugin.ColorAPOn.Value, Color.green);
                 } else { jText.text = ""; }
-                
-                if (APData.FBWDisabled) {
-                    fText.text = "FBW OFF"; fText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
-                } else { fText.text = ""; }
-
             } catch (Exception ex) {
                 Plugin.Logger.LogError($"[HUDVisualsPatch] Error: {ex}");
             }

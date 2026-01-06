@@ -12,8 +12,7 @@ Some of the not features may eventually be implemented.
 
 In order of implementation, earliest first
 
-- wing leveller
-- altitude hold
+- wing leveller and altitude hold
 - climb/descend to altitude
 - set target roll angle
 - vertical speed limiter

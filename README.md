@@ -12,15 +12,14 @@ Some of the not features may eventually be implemented.
 
 In order of implementation, earliest first
 
-- wing leveller and altitude hold
-- climb/descend to altitude
+- wing leveller and altitude hold 
+- climb/descend to altitude at set rate
 - set target roll angle
-- vertical speed limiter
 - HUD autopilot display
 - fuel time and range display
-- EW auto jam
+- Medusa auto jam on full capacitor (won’t select targets or weapons)
 - Auto-GCAS
-- autopilot gui?
+- simple autopilot GUI
 
 ### features not in the mod (yet?)
 

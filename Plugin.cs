@@ -516,35 +516,6 @@ namespace AutopilotMod
         }
     }
 
-    public enum AltitudeUnit
-    {
-        Meters,
-        Feet
-    }
-
-    public enum DistanceUnit
-    {
-        Kilometers,
-        NauticalMiles,
-        Miles
-    }
-
-    public enum VertSpeedUnit
-    {
-        MetersPerSec,
-        FeetPerSec,
-        FeetPerMin,
-        Knots
-    }
-
-    public enum SpeedUnit
-    {
-        KilometersPerHour,
-        MilesPerHour,
-        Knots,
-        MetersPerSec
-    }
-
     // --- SHARED DATA ---
     public static class APData
     {

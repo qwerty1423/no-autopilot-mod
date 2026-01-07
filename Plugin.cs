@@ -11,7 +11,7 @@ using UnityEngine.UI;
 
 namespace AutopilotMod
 {
-    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.11.2")]
+    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.11.3")]
     public class Plugin : BaseUnityPlugin
     {
         internal new static ManualLogSource Logger;
@@ -607,13 +607,18 @@ namespace AutopilotMod
         {
             if (string.IsNullOrEmpty(raw)) return "";
 
-            // always remove the + because it's useless
-            string clean = raw.Replace("+", "");
+            // remove spaces
+            string clean = Regex.Replace(raw, @"\s+", "");
+
+            clean = clean.Replace("+", "");
+
+            // remove decimals
+            clean = Regex.Replace(clean, @"[\.]\d+", "");
 
             if (keepUnit) return clean;
 
-            // keeps negative signs and decimals
-            var match = Regex.Match(clean, @"-?[\d\.,]+");
+            // remove units
+            var match = Regex.Match(clean, @"-?\d+");
             return match.Success ? match.Value : clean;
         }
     }
@@ -1237,9 +1242,9 @@ namespace AutopilotMod
                 } else if (APData.GCASWarning) {
                     aText.text = "PULL UP"; aText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
                 } else if (APData.Enabled && Plugin.ShowAPOverlay.Value) {
-                    string altStr = ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.TargetAlt), Plugin.AltShowUnit.Value);
-                    string climbStr = ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(APData.CurrentMaxClimbRate), Plugin.VertSpeedShowUnit.Value);
-                    string rollStr = ModUtils.ProcessGameString($"{APData.TargetRoll}°", Plugin.AngleShowUnit.Value);
+                    string altStr = ModUtils.ProcessGameString(UnitConverter.AltitudeReading(Mathf.Round(APData.TargetAlt)), Plugin.AltShowUnit.Value);
+                    string climbStr = ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(Mathf.Round(APData.CurrentMaxClimbRate)), Plugin.VertSpeedShowUnit.Value);
+                    string rollStr = ModUtils.ProcessGameString($"{APData.TargetRoll:F0}°", Plugin.AngleShowUnit.Value);
                     string newText = $"{altStr} {climbStr} {rollStr}";
                     if (aText.text != newText) aText.text = newText;
                     aText.color = ModUtils.GetColor(Plugin.ColorAPOn.Value, Color.green);

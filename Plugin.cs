@@ -11,7 +11,7 @@ using UnityEngine.UI;
 
 namespace AutopilotMod
 {
-    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.11.3")]
+    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.11.4")]
     public class Plugin : BaseUnityPlugin
     {
         internal new static ManualLogSource Logger;
@@ -980,9 +980,7 @@ namespace AutopilotMod
                         ResetIntegrators();
                     }
                     else
-                    {
-                        if (APData.PlayerRB != null) APData.PlayerRB.isKinematic = false;
-                        
+                    {                        
                         if (!APData.GCASActive)
                         {
                             if (Input.GetKey(Plugin.UpKey.Value)) APData.TargetAlt += Plugin.AltStep.Value;
@@ -1100,11 +1098,9 @@ namespace AutopilotMod
                             if (useHumanize) rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
                         }
 
-                        // Apply to inputs
                         pitchOut = Mathf.Clamp(pitchOut, -1f, 1f);
                         rollOut = Mathf.Clamp(rollOut, -1f, 1f);
 
-                        // Apply to inputs
                         if (Plugin.f_pitch != null && Plugin.f_roll != null) {
                             Plugin.f_pitch.SetValue(inputObj, pitchOut);
                             Plugin.f_roll.SetValue(inputObj, rollOut);
@@ -1142,12 +1138,15 @@ namespace AutopilotMod
             if (!Plugin.ShowExtraInfo.Value) return;
 
             try {
-                if (Plugin.f_playerVehicle == null) return;
+                if (__instance == null || Plugin.f_playerVehicle == null) return;
 
                 object vehicleRaw = Plugin.f_playerVehicle.GetValue(__instance);
+                UnityEngine.Object unityObj = vehicleRaw as UnityEngine.Object;
 
-                GameObject currentVehicleObj = (vehicleRaw as Component)?.gameObject;
-                
+                if (unityObj == null) return;
+                if (vehicleRaw is not Component vehicleComponent) return;
+
+                GameObject currentVehicleObj = vehicleComponent.gameObject;
                 if (currentVehicleObj == null) return;
 
                 if (_lastVehicleChecked != currentVehicleObj || _cachedFuelGauge == null)

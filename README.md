@@ -2,7 +2,7 @@
 
 Currently the autopilot is rather basic. There are some additional features, such as EW auto jam (currently just an auto fire mode, it won't select targets automatically or anything, it will only save your finger).
 
-![autopilot-demo](https://github.com/user-attachments/assets/9fdd050a-548e-4e51-b1cd-5e5f69b1e119)
+![imperialap](https://github.com/user-attachments/assets/23580e9d-2ea9-441d-8079-a181dab5c0cc)
 
 ## features and not features
 
@@ -35,7 +35,7 @@ In approximate likelihood of implementation order descending.
 
 ## Autopilot
 
-![imperialap](https://github.com/user-attachments/assets/23580e9d-2ea9-441d-8079-a181dab5c0cc)
+https://github.com/user-attachments/assets/3d2eaeaa-b810-4353-a4b6-90a1107e3cb9
 
 Autopilot controls roll and pitch. Any aircraft works if it flies like a plane (helicopters somehow work, but probably require small ascent/descent rate limits).
 
@@ -73,11 +73,9 @@ Unit display is configurable:
 
 ## Auto-GCAS
 
-also really bad demo video (the plane also crashed at the end, gcas didn't see the mountain or something?)
+https://github.com/user-attachments/assets/aca3060d-a035-4750-953d-b189f833b2e2
 
-<https://github.com/user-attachments/assets/1785beb8-1faa-4c5f-9fdb-ae67181053e2>
-
-i will make some better videos later.
+will pull up if you are going to hit the ground. also warns you a while before. Can be disabled with `\` key by default, and can be configured to start disabled. GCAS OFF warning can be disabled as well.
 
 ## Usage example with Medusa
 

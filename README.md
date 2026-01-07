@@ -75,6 +75,8 @@ Units use the game's metric/imperial setting.
 
 Will pull up if you are going to hit the ground and warns you a while before. Can be disabled with `\` key by default, and can be configured to start disabled. GCAS OFF warning can be disabled as well.
 
+If you are making large inputs, it will not pull up.
+
 ## Usage example with Medusa
 
 After take-off, throttle kept at 100% for climb. Autopilot set to 10000m target altitude, 50 m/s climb rate and 30 degrees bank angle. Autopilot displays `A: 10000 50 30`.

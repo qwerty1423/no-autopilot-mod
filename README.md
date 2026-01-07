@@ -35,13 +35,13 @@ In approximate likelihood of implementation order descending.
 
 ## Autopilot
 
-https://github.com/user-attachments/assets/3d2eaeaa-b810-4353-a4b6-90a1107e3cb9
+<https://github.com/user-attachments/assets/3d2eaeaa-b810-4353-a4b6-90a1107e3cb9>
 
 Autopilot controls roll and pitch. Any aircraft works if it flies like a plane (helicopters somehow work, but probably require small ascent/descent rate limits).
 
 Ascent/descent rate limits and target altitude can be configured with keyboard while flying. There is also GUI that opens with F8 key by default.
 
-<img width="294" height="444" alt="image" src="https://github.com/user-attachments/assets/53bdb85c-6cf9-4989-ab6b-3e819dedb7a3" />
+![autopilot gui](https://github.com/user-attachments/assets/53bdb85c-6cf9-4989-ab6b-3e819dedb7a3)
 
 Target bank angle can be set so that plane turns in a circle. Should be useful for Medusa, for easier loitering.
 
@@ -67,15 +67,13 @@ Also has humanlike options that can reduce its reaction time and randomise it.
 
 Also displays fuel time remaining and range.
 
-Unit display is configurable:
-
-<img width="648" height="268" alt="apconfig" src="https://github.com/user-attachments/assets/7d4d4268-ccea-442f-aba5-5b5aecdee1cf" />
+Units use the game's metric/imperial setting.
 
 ## Auto-GCAS
 
-https://github.com/user-attachments/assets/aca3060d-a035-4750-953d-b189f833b2e2
+<https://github.com/user-attachments/assets/aca3060d-a035-4750-953d-b189f833b2e2>
 
-will pull up if you are going to hit the ground. also warns you a while before. Can be disabled with `\` key by default, and can be configured to start disabled. GCAS OFF warning can be disabled as well.
+Will pull up if you are going to hit the ground and warns you a while before. Can be disabled with `\` key by default, and can be configured to start disabled. GCAS OFF warning can be disabled as well.
 
 ## Usage example with Medusa
 

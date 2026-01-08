@@ -564,14 +564,6 @@ namespace AutopilotMod
 
                 GUI.Box(tooltipRect, tooltipContent);
             }
-
-            GUIStyle resizeStyle = new(GUI.skin.label)
-            {
-                alignment = TextAnchor.LowerRight,
-                fontSize = 14,
-                padding = new RectOffset(0, 0, 0, 0),
-                margin = new RectOffset(0, 0, 0, 0)
-            };
         }
     }
 

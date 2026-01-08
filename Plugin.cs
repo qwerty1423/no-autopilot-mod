@@ -44,7 +44,11 @@ namespace AutopilotMod
         private float _stationaryTimer = 0f;     
         private bool _isTooltipVisible = false;  
         private bool _wasShownForThisTarget = false;
-        private const float _jitterThreshold = 5.0f;
+        private readonly float _jitterThreshold = 5.0f;
+
+        private float _dynamicLabelWidth = 60f;
+        private readonly GUIContent _measuringContent = new();
+        private readonly float buttonWidth = 38f;
 
         // Visuals
         public static ConfigEntry<string> ColorAPOn, ColorAPOff, ColorGood, ColorWarn, ColorCrit, ColorInfo;
@@ -308,10 +312,7 @@ namespace AutopilotMod
                 alignment = TextAnchor.MiddleLeft
             };
 
-            _styleButton = new GUIStyle(GUI.skin.button)
-            {
-                fixedHeight = 25
-            };
+            _styleButton = new GUIStyle(GUI.skin.button);
 
             _stylesInitialized = true;
         }
@@ -369,8 +370,8 @@ namespace AutopilotMod
                 else if (Event.current.type == EventType.MouseDrag)
                 {
                     Vector2 delta = Event.current.delta;
-                    float minW = 200f;
-                    float minH = 205f;
+                    float minW = 100f;
+                    float minH = 100f;
 
                     if (_activeEdge == RectEdge.Right || _activeEdge == RectEdge.TopRight || _activeEdge == RectEdge.BottomRight)
                         _windowRect.width = Mathf.Max(minW, _windowRect.width + delta.x);
@@ -399,8 +400,8 @@ namespace AutopilotMod
             {
                 float x = UI_PosX.Value;
                 float y = UI_PosY.Value;
-                float w = Mathf.Max(200f, UI_Width.Value);
-                float h = Mathf.Max(205f, UI_Height.Value);
+                float w = Mathf.Max(100f, UI_Width.Value);
+                float h = Mathf.Max(100f, UI_Height.Value);
 
                 if (x < 0) x = Screen.width - w - 20;
                 if (y < 0) y = Screen.height - h - 50;
@@ -414,10 +415,13 @@ namespace AutopilotMod
 
             if (Event.current.type == EventType.MouseDown && _showMenu)
             {
-                bool closeLeft = Mathf.Abs(mousePos.x - _windowRect.x) < thickness;
-                bool closeRight = Mathf.Abs(mousePos.x - _windowRect.xMax) < thickness;
-                bool closeTop = Mathf.Abs(mousePos.y - _windowRect.y) < thickness;
-                bool closeBottom = Mathf.Abs(mousePos.y - _windowRect.yMax) < thickness;
+                bool withinVertical = mousePos.y >= _windowRect.y - thickness && mousePos.y <= _windowRect.yMax + thickness;
+                bool withinHorizontal = mousePos.x >= _windowRect.x - thickness && mousePos.x <= _windowRect.xMax + thickness;
+
+                bool closeLeft = Mathf.Abs(mousePos.x - _windowRect.x) < thickness && withinVertical;
+                bool closeRight = Mathf.Abs(mousePos.x - _windowRect.xMax) < thickness && withinVertical;
+                bool closeTop = Mathf.Abs(mousePos.y - _windowRect.y) < thickness && withinHorizontal;
+                bool closeBottom = Mathf.Abs(mousePos.y - _windowRect.yMax) < thickness && withinHorizontal;
 
                 if (closeLeft && closeTop) _activeEdge = RectEdge.TopLeft;
                 else if (closeRight && closeTop) _activeEdge = RectEdge.TopRight;
@@ -428,8 +432,14 @@ namespace AutopilotMod
                 else if (closeTop) _activeEdge = RectEdge.Top;
                 else if (closeBottom) _activeEdge = RectEdge.Bottom;
 
-                if (_activeEdge != RectEdge.None) { _isResizing = true; Event.current.Use(); }
+                if (_activeEdge != RectEdge.None) 
+                { 
+                    _isResizing = true; 
+                    Event.current.Use(); 
+                }
             }
+            _windowRect.width = Mathf.Min(_windowRect.width, Screen.width);
+            _windowRect.height = Mathf.Min(_windowRect.height, Screen.height);
 
             _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, "Autopilot controls", _styleWindow);
 
@@ -472,13 +482,24 @@ namespace AutopilotMod
             string sVS = ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(currentVS), true);
             string sRoll = ModUtils.ProcessGameString($"{APData.CurrentRoll:F0}°", true);
 
-            GUILayout.Label($"Current: {sAlt} {sVS} {sRoll}", _styleLabel);
+            _measuringContent.text = sAlt;
+            float wAlt = _styleLabel.CalcSize(_measuringContent).x;
+            
+            _measuringContent.text = sVS;
+            float wVS = _styleLabel.CalcSize(_measuringContent).x;
+            
+            _measuringContent.text = sRoll;
+            float wRoll = _styleLabel.CalcSize(_measuringContent).x;
+
+            float targetWidth = Mathf.Max(wAlt, wVS, wRoll);
+            _dynamicLabelWidth = Mathf.Lerp(_dynamicLabelWidth, targetWidth, 0.15f);
 
             GUILayout.BeginHorizontal();
+            GUILayout.Label($"{sAlt}", _styleLabel, GUILayout.Width(_dynamicLabelWidth));
             _bufAlt = GUILayout.TextField(_bufAlt);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target altitude")); 
             
-            if (GUILayout.Button(new GUIContent("HLD", "Set to current altitude"), _styleButton, GUILayout.Width(38))) 
+            if (GUILayout.Button(new GUIContent("HLD", "Set to current altitude"), _styleButton, GUILayout.Width(buttonWidth)))
             {
                 APData.TargetAlt = APData.CurrentAlt;
                 _bufAlt = ModUtils.ConvertAlt_ToDisplay(APData.TargetAlt).ToString("F0");
@@ -487,10 +508,11 @@ namespace AutopilotMod
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
+            GUILayout.Label($"{sVS}", _styleLabel, GUILayout.Width(_dynamicLabelWidth));
             _bufClimb = GUILayout.TextField(_bufClimb);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Max vertical speed"));
 
-            if (GUILayout.Button(new GUIContent("RST", "Reset to default"), _styleButton, GUILayout.Width(38))) 
+            if (GUILayout.Button(new GUIContent("RST", "Reset to default"), _styleButton, GUILayout.Width(buttonWidth))) 
             {
                 APData.CurrentMaxClimbRate = DefaultMaxClimbRate.Value;
                 _bufClimb = ModUtils.ConvertVS_ToDisplay(APData.CurrentMaxClimbRate).ToString("F0");
@@ -499,10 +521,11 @@ namespace AutopilotMod
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
+            GUILayout.Label($"{sRoll}", _styleLabel, GUILayout.Width(_dynamicLabelWidth));
             _bufRoll = GUILayout.TextField(_bufRoll);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target bank angle"));
 
-            if (GUILayout.Button(new GUIContent("LVL", "Set roll to 0"), _styleButton, GUILayout.Width(38))) 
+            if (GUILayout.Button(new GUIContent("LVL", "Set roll to 0"), _styleButton, GUILayout.Width(buttonWidth))) 
             {
                 APData.TargetRoll = 0f;
                 _bufRoll = "0";

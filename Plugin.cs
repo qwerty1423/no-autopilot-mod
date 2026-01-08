@@ -39,6 +39,13 @@ namespace AutopilotMod
         public static ConfigEntry<float> UI_Width, UI_Height;
         private bool _firstWindowInit = true;
 
+        private string _currentHoverTarget = ""; 
+        private Vector2 _stationaryPos;
+        private float _stationaryTimer = 0f;     
+        private bool _isTooltipVisible = false;  
+        private bool _wasShownForThisTarget = false;
+        private const float _jitterThreshold = 5.0f;
+
         // Visuals
         public static ConfigEntry<string> ColorAPOn, ColorAPOff, ColorGood, ColorWarn, ColorCrit, ColorInfo;
         public static ConfigEntry<float> FuelOffsetY, FuelLineSpacing, FuelSmoothing, FuelUpdateInterval;
@@ -468,8 +475,8 @@ namespace AutopilotMod
             GUILayout.Label($"Current: {sAlt} {sVS} {sRoll}", _styleLabel);
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Tgt Alt:", _styleLabel, GUILayout.Width(60));
             _bufAlt = GUILayout.TextField(_bufAlt);
+            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target altitude")); 
             
             if (GUILayout.Button(new GUIContent("HLD", "Set to current altitude"), _styleButton, GUILayout.Width(38))) 
             {
@@ -480,8 +487,8 @@ namespace AutopilotMod
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Max VS:", _styleLabel, GUILayout.Width(60));
             _bufClimb = GUILayout.TextField(_bufClimb);
+            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Max vertical speed"));
 
             if (GUILayout.Button(new GUIContent("RST", "Reset to default"), _styleButton, GUILayout.Width(38))) 
             {
@@ -492,8 +499,8 @@ namespace AutopilotMod
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Tgt Bank:", _styleLabel, GUILayout.Width(60));
             _bufRoll = GUILayout.TextField(_bufRoll);
+            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target bank angle"));
 
             if (GUILayout.Button(new GUIContent("LVL", "Set roll to 0"), _styleButton, GUILayout.Width(38))) 
             {
@@ -520,7 +527,7 @@ namespace AutopilotMod
             }
 
             GUI.backgroundColor = APData.Enabled ? Color.green : Color.red;
-            if (GUILayout.Button(new GUIContent(APData.Enabled ? "Disengage" : "Engage", "Toggle autopilot"), _styleButton))
+            if (GUILayout.Button(new GUIContent(APData.Enabled ? "Disengage" : "Engage", "Toggle autopilot. Engage sets current alt."), _styleButton))
             {
                 APData.Enabled = !APData.Enabled;
                 if (APData.Enabled)
@@ -560,18 +567,58 @@ namespace AutopilotMod
 
             GUILayout.EndScrollView();
 
-            if (!string.IsNullOrEmpty(GUI.tooltip))
-            {
-                GUIContent tooltipContent = new(GUI.tooltip);
-                Vector2 size = GUI.skin.box.CalcSize(tooltipContent);
-                Vector2 pos = Event.current.mousePosition;
-                
-                Rect tooltipRect = new(pos.x + 10, pos.y + 10, size.x, size.y);
-                
-                if (tooltipRect.xMax > _windowRect.width) tooltipRect.x = pos.x - size.x - 5;
-                if (tooltipRect.yMax > _windowRect.height) tooltipRect.y = pos.y - size.y - 5;
+            if (Event.current.type != EventType.Repaint) return;
 
-                GUI.Box(tooltipRect, tooltipContent);
+            string tooltipUnderMouse = GUI.tooltip;
+            Vector2 mousePos = Event.current.mousePosition;
+            float now = Time.realtimeSinceStartup;
+
+            if (tooltipUnderMouse != _currentHoverTarget)
+            {
+                _currentHoverTarget = tooltipUnderMouse;
+                _stationaryPos = mousePos;
+                _stationaryTimer = now;
+                _isTooltipVisible = false;
+                _wasShownForThisTarget = false;
+            }
+
+            float distFromStart = Vector2.Distance(mousePos, _stationaryPos);
+
+            if (distFromStart > _jitterThreshold)
+            {
+                if (!_isTooltipVisible)
+                {
+                    _stationaryPos = mousePos;
+                    _stationaryTimer = now;
+                }
+                else
+                {
+                    _isTooltipVisible = false;
+                    _wasShownForThisTarget = true;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(_currentHoverTarget) && !_wasShownForThisTarget && !_isTooltipVisible)
+            {
+                if (now - _stationaryTimer >= 0.4f)
+                {
+                    _isTooltipVisible = true;
+                }
+            }
+
+            if (_isTooltipVisible && !string.IsNullOrEmpty(_currentHoverTarget))
+            {
+                GUIContent content = new(_currentHoverTarget);
+                GUIStyle style = GUI.skin.box; 
+                Vector2 size = style.CalcSize(content);
+                
+                Rect tooltipRect = new(mousePos.x + 12, mousePos.y + 12, size.x, size.y);
+                
+                if (tooltipRect.xMax > _windowRect.width) tooltipRect.x = mousePos.x - size.x - 5;
+                if (tooltipRect.yMax > _windowRect.height) tooltipRect.y = mousePos.y - size.y - 5;
+
+                GUI.depth = 0;
+                GUI.Box(tooltipRect, content, style);
             }
         }
     }

@@ -471,10 +471,11 @@ namespace AutopilotMod
             GUILayout.Label("Tgt Alt:", _styleLabel, GUILayout.Width(60));
             _bufAlt = GUILayout.TextField(_bufAlt);
             
-            if (GUILayout.Button(new GUIContent("HLD", "Snap to Current Altitude"), _styleButton, GUILayout.Width(38))) 
+            if (GUILayout.Button(new GUIContent("HLD", "Set to current altitude"), _styleButton, GUILayout.Width(38))) 
             {
                 APData.TargetAlt = APData.CurrentAlt;
                 _bufAlt = ModUtils.ConvertAlt_ToDisplay(APData.TargetAlt).ToString("F0");
+                GUI.FocusControl(null);
             }
             GUILayout.EndHorizontal();
 
@@ -482,10 +483,11 @@ namespace AutopilotMod
             GUILayout.Label("Max VS:", _styleLabel, GUILayout.Width(60));
             _bufClimb = GUILayout.TextField(_bufClimb);
 
-            if (GUILayout.Button(new GUIContent("RST", "Reset to Default Rate"), _styleButton, GUILayout.Width(38))) 
+            if (GUILayout.Button(new GUIContent("RST", "Reset to default"), _styleButton, GUILayout.Width(38))) 
             {
                 APData.CurrentMaxClimbRate = DefaultMaxClimbRate.Value;
                 _bufClimb = ModUtils.ConvertVS_ToDisplay(APData.CurrentMaxClimbRate).ToString("F0");
+                GUI.FocusControl(null);
             }
             GUILayout.EndHorizontal();
 
@@ -493,15 +495,16 @@ namespace AutopilotMod
             GUILayout.Label("Tgt Bank:", _styleLabel, GUILayout.Width(60));
             _bufRoll = GUILayout.TextField(_bufRoll);
 
-            if (GUILayout.Button(new GUIContent("LVL", "Level Wings"), _styleButton, GUILayout.Width(38))) 
+            if (GUILayout.Button(new GUIContent("LVL", "Set roll to 0"), _styleButton, GUILayout.Width(38))) 
             {
                 APData.TargetRoll = 0f;
                 _bufRoll = "0";
+                GUI.FocusControl(null);
             }
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(new GUIContent("Set Values", "Applies the typed values"), _styleButton))
+            if (GUILayout.Button(new GUIContent("Set Values", "Applies typed values"), _styleButton))
             {
                 if (float.TryParse(_bufAlt, out float a)) 
                     APData.TargetAlt = ModUtils.ConvertAlt_FromDisplay(a);
@@ -513,10 +516,11 @@ namespace AutopilotMod
                 
                 APData.UseSetValues = true;
                 APData.Enabled = true;
+                GUI.FocusControl(null);
             }
 
             GUI.backgroundColor = APData.Enabled ? Color.green : Color.red;
-            if (GUILayout.Button(new GUIContent(APData.Enabled ? "Disengage" : "Engage", "Toggle Autopilot State"), _styleButton))
+            if (GUILayout.Button(new GUIContent(APData.Enabled ? "Disengage" : "Engage", "Toggle autopilot"), _styleButton))
             {
                 APData.Enabled = !APData.Enabled;
                 if (APData.Enabled)
@@ -529,6 +533,7 @@ namespace AutopilotMod
                         
                     if (float.TryParse(_bufRoll, out float r)) APData.TargetRoll = r;
                 }
+                GUI.FocusControl(null);
             }
             GUI.backgroundColor = Color.white;
             GUILayout.EndHorizontal();
@@ -537,13 +542,16 @@ namespace AutopilotMod
             
             string ajText = "AJ: " + (APData.AutoJammerActive ? "ON" : "OFF");
             if (GUILayout.Button(new GUIContent(ajText, "Toggle Auto Jammer"), _styleButton))
+            {
                 APData.AutoJammerActive = !APData.AutoJammerActive;
-
+                GUI.FocusControl(null);
+            }
             string gcasText = "GCAS: " + (APData.GCASEnabled ? "ON" : "OFF");
             if (GUILayout.Button(new GUIContent(gcasText, "Toggle Auto-GCAS"), _styleButton))
             {
                 APData.GCASEnabled = !APData.GCASEnabled;
                 if (!APData.GCASEnabled) APData.GCASActive = false;
+                GUI.FocusControl(null);
             }
             
             GUILayout.EndHorizontal();

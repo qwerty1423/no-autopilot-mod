@@ -23,6 +23,8 @@ namespace AutopilotMod
         
         private Vector2 _scrollPos;
         private bool _isResizing = false;
+        private RectEdge _activeEdge = RectEdge.None;
+        private enum RectEdge { None, Top, Bottom, Left, Right, TopLeft, TopRight, BottomLeft, BottomRight }
         
         private string _bufAlt = "0";
         private string _bufClimb = "40";
@@ -356,30 +358,42 @@ namespace AutopilotMod
 
             if (_isResizing)
             {
-                // If we let go of the mouse anywhere on screen, stop resizing
-                if (Event.current.type == EventType.MouseUp)
-                {
-                    _isResizing = false;
-                }
-                // If we drag the mouse anywhere on screen, update window size
+                if (Event.current.type == EventType.MouseUp) { _isResizing = false; _activeEdge = RectEdge.None; }
                 else if (Event.current.type == EventType.MouseDrag)
                 {
-                    // Add the mouse movement (delta) to the width/height
-                    _windowRect.width = Mathf.Max(250f, _windowRect.width + Event.current.delta.x);
-                    _windowRect.height = Mathf.Max(200f, _windowRect.height + Event.current.delta.y);
+                    Vector2 delta = Event.current.delta;
+                    float minW = 200f;
+                    float minH = 205f;
+
+                    if (_activeEdge == RectEdge.Right || _activeEdge == RectEdge.TopRight || _activeEdge == RectEdge.BottomRight)
+                        _windowRect.width = Mathf.Max(minW, _windowRect.width + delta.x);
                     
-                    // Repaint immediately so the UI feels responsive
+                    if (_activeEdge == RectEdge.Bottom || _activeEdge == RectEdge.BottomLeft || _activeEdge == RectEdge.BottomRight)
+                        _windowRect.height = Mathf.Max(minH, _windowRect.height + delta.y);
+
+                    if (_activeEdge == RectEdge.Left || _activeEdge == RectEdge.TopLeft || _activeEdge == RectEdge.BottomLeft)
+                    {
+                        float oldX = _windowRect.x;
+                        _windowRect.x = Mathf.Min(_windowRect.xMax - minW, _windowRect.x + delta.x);
+                        _windowRect.width += oldX - _windowRect.x;
+                    }
+
+                    if (_activeEdge == RectEdge.Top || _activeEdge == RectEdge.TopLeft || _activeEdge == RectEdge.TopRight)
+                    {
+                        float oldY = _windowRect.y;
+                        _windowRect.y = Mathf.Min(_windowRect.yMax - minH, _windowRect.y + delta.y);
+                        _windowRect.height += oldY - _windowRect.y;
+                    }
                     Event.current.Use();
                 }
             }
 
             if (_firstWindowInit)
             {
-                // Load positions and sizes from Config
                 float x = UI_PosX.Value;
                 float y = UI_PosY.Value;
-                float w = Mathf.Max(250f, UI_Width.Value);
-                float h = Mathf.Max(200f, UI_Height.Value);
+                float w = Mathf.Max(200f, UI_Width.Value);
+                float h = Mathf.Max(205f, UI_Height.Value);
 
                 if (x < 0) x = Screen.width - w - 20;
                 if (y < 0) y = Screen.height - h - 50;
@@ -388,25 +402,44 @@ namespace AutopilotMod
                 _firstWindowInit = false;
             }
 
-            // Draw the window
-            _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, "Autopilot GUI", _styleWindow);
+            Vector2 mousePos = Event.current.mousePosition;
+            float thickness = 8f;
+
+            if (Event.current.type == EventType.MouseDown && _showMenu)
+            {
+                bool closeLeft = Mathf.Abs(mousePos.x - _windowRect.x) < thickness;
+                bool closeRight = Mathf.Abs(mousePos.x - _windowRect.xMax) < thickness;
+                bool closeTop = Mathf.Abs(mousePos.y - _windowRect.y) < thickness;
+                bool closeBottom = Mathf.Abs(mousePos.y - _windowRect.yMax) < thickness;
+
+                if (closeLeft && closeTop) _activeEdge = RectEdge.TopLeft;
+                else if (closeRight && closeTop) _activeEdge = RectEdge.TopRight;
+                else if (closeLeft && closeBottom) _activeEdge = RectEdge.BottomLeft;
+                else if (closeRight && closeBottom) _activeEdge = RectEdge.BottomRight;
+                else if (closeLeft) _activeEdge = RectEdge.Left;
+                else if (closeRight) _activeEdge = RectEdge.Right;
+                else if (closeTop) _activeEdge = RectEdge.Top;
+                else if (closeBottom) _activeEdge = RectEdge.Bottom;
+
+                if (_activeEdge != RectEdge.None) { _isResizing = true; Event.current.Use(); }
+            }
+
+            _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, "Autopilot controls", _styleWindow);
+
+            float clampedX = Mathf.Clamp(_windowRect.x, 0, Screen.width - _windowRect.width);
+            float clampedY = Mathf.Clamp(_windowRect.y, 0, Screen.height - _windowRect.height);
+
+            if (clampedX != _windowRect.x || clampedY != _windowRect.y)
+            {
+                _windowRect.x = clampedX;
+                _windowRect.y = clampedY;
+            }
         }
 
         private void DrawAPWindow(int windowID)
         {
-            // detect click
-            // The handle is a 20x20 square in the bottom right corner
-            Rect resizeHandleRect = new(_windowRect.width - 20, _windowRect.height - 20, 20, 20);
-
-            if (Event.current.type == EventType.MouseDown && resizeHandleRect.Contains(Event.current.mousePosition))
-            {
-                _isResizing = true;
-                Event.current.Use(); // Consume the click so we don't click buttons underneath
-            }
-
             GUI.DragWindow(new Rect(0, 0, 10000, 25));
 
-            // Save Config
             if (Event.current.type == EventType.Repaint)
             {
                 if (_windowRect.x != UI_PosX.Value || _windowRect.y != UI_PosY.Value)
@@ -421,16 +454,9 @@ namespace AutopilotMod
                 }
             }
 
-            _scrollPos = GUILayout.BeginScrollView(_scrollPos, GUILayout.Height(_windowRect.height - 40));
+            _scrollPos = GUILayout.BeginScrollView(_scrollPos, false, false, GUIStyle.none, GUIStyle.none, GUILayout.Height(_windowRect.height - 30));
 
             GUILayout.BeginVertical();
-
-            string cOn = ColorAPOn.Value.StartsWith("#") ? ColorAPOn.Value : "#" + ColorAPOn.Value;
-            string cOff = ColorAPOff.Value.StartsWith("#") ? ColorAPOff.Value : "#" + ColorAPOff.Value;
-            string statusColor = APData.Enabled ? cOn : cOff;
-            string statusText = APData.Enabled ? "Engaged" : "Disengaged";
-            
-            GUILayout.Label($"Status: <color={statusColor}>{statusText}</color>", _styleLabel);
 
             float currentVS = 0f;
             if (APData.PlayerRB != null) currentVS = APData.PlayerRB.velocity.y;
@@ -439,29 +465,43 @@ namespace AutopilotMod
             string sVS = ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(currentVS), true);
             string sRoll = ModUtils.ProcessGameString($"{APData.CurrentRoll:F0}°", true);
 
-            GUILayout.Label($"Alt: {sAlt}", _styleLabel);
-            GUILayout.Label($"VS: {sVS} | Roll: {sRoll}", _styleLabel);
-
-            GUILayout.Space(10);
+            GUILayout.Label($"Current: {sAlt} {sVS} {sRoll}", _styleLabel);
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Target Alt:", _styleLabel, GUILayout.Width(80));
+            GUILayout.Label("Tgt Alt:", _styleLabel, GUILayout.Width(60));
             _bufAlt = GUILayout.TextField(_bufAlt);
+            
+            if (GUILayout.Button(new GUIContent("HLD", "Snap to Current Altitude"), _styleButton, GUILayout.Width(38))) 
+            {
+                APData.TargetAlt = APData.CurrentAlt;
+                _bufAlt = ModUtils.ConvertAlt_ToDisplay(APData.TargetAlt).ToString("F0");
+            }
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Max V.Spd:", _styleLabel, GUILayout.Width(80));
+            GUILayout.Label("Max VS:", _styleLabel, GUILayout.Width(60));
             _bufClimb = GUILayout.TextField(_bufClimb);
+
+            if (GUILayout.Button(new GUIContent("RST", "Reset to Default Rate"), _styleButton, GUILayout.Width(38))) 
+            {
+                APData.CurrentMaxClimbRate = DefaultMaxClimbRate.Value;
+                _bufClimb = ModUtils.ConvertVS_ToDisplay(APData.CurrentMaxClimbRate).ToString("F0");
+            }
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Bank Angle:", _styleLabel, GUILayout.Width(80));
+            GUILayout.Label("Tgt Bank:", _styleLabel, GUILayout.Width(60));
             _bufRoll = GUILayout.TextField(_bufRoll);
+
+            if (GUILayout.Button(new GUIContent("LVL", "Level Wings"), _styleButton, GUILayout.Width(38))) 
+            {
+                APData.TargetRoll = 0f;
+                _bufRoll = "0";
+            }
             GUILayout.EndHorizontal();
 
-            GUILayout.Space(10);
-
-            if (GUILayout.Button("Set Values", _styleButton))
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(new GUIContent("Set Values", "Applies the typed values"), _styleButton))
             {
                 if (float.TryParse(_bufAlt, out float a)) 
                     APData.TargetAlt = ModUtils.ConvertAlt_FromDisplay(a);
@@ -470,12 +510,12 @@ namespace AutopilotMod
                     APData.CurrentMaxClimbRate = Mathf.Max(0.5f, ModUtils.ConvertVS_FromDisplay(c));
                 
                 if (float.TryParse(_bufRoll, out float r)) APData.TargetRoll = r;
+
+                APData.Enabled = true;
             }
 
-            GUILayout.Space(5);
-
             GUI.backgroundColor = APData.Enabled ? Color.green : Color.red;
-            if (GUILayout.Button(APData.Enabled ? "Disengage" : "Engage", _styleButton))
+            if (GUILayout.Button(new GUIContent(APData.Enabled ? "Disengage" : "Engage", "Toggle Autopilot State"), _styleButton))
             {
                 APData.Enabled = !APData.Enabled;
                 if (APData.Enabled)
@@ -490,29 +530,48 @@ namespace AutopilotMod
                 }
             }
             GUI.backgroundColor = Color.white;
+            GUILayout.EndHorizontal();
 
-            GUILayout.Space(15);
-
-            if (GUILayout.Button($"Auto Jammer: {(APData.AutoJammerActive ? "ON" : "OFF")}", _styleButton))
+            GUILayout.BeginHorizontal();
+            
+            string ajText = "AJ: " + (APData.AutoJammerActive ? "ON" : "OFF");
+            if (GUILayout.Button(new GUIContent(ajText, "Toggle Auto Jammer"), _styleButton))
                 APData.AutoJammerActive = !APData.AutoJammerActive;
 
-            if (GUILayout.Button($"Auto GCAS: {(APData.GCASEnabled ? "ON" : "OFF")}", _styleButton))
+            string gcasText = "GCAS: " + (APData.GCASEnabled ? "ON" : "OFF");
+            if (GUILayout.Button(new GUIContent(gcasText, "Toggle Auto-GCAS"), _styleButton))
             {
                 APData.GCASEnabled = !APData.GCASEnabled;
                 if (!APData.GCASEnabled) APData.GCASActive = false;
             }
-
-            if (GUILayout.Button("Reset Bank", _styleButton))
-            {
-                APData.TargetRoll = 0f;
-                _bufRoll = "0";
-            }
+            
+            GUILayout.EndHorizontal();
 
             GUILayout.EndVertical();
 
             GUILayout.EndScrollView();
 
-            GUI.Label(resizeHandleRect, "↘");
+            if (!string.IsNullOrEmpty(GUI.tooltip))
+            {
+                GUIContent tooltipContent = new(GUI.tooltip);
+                Vector2 size = GUI.skin.box.CalcSize(tooltipContent);
+                Vector2 pos = Event.current.mousePosition;
+                
+                Rect tooltipRect = new(pos.x + 10, pos.y + 10, size.x, size.y);
+                
+                if (tooltipRect.xMax > _windowRect.width) tooltipRect.x = pos.x - size.x - 5;
+                if (tooltipRect.yMax > _windowRect.height) tooltipRect.y = pos.y - size.y - 5;
+
+                GUI.Box(tooltipRect, tooltipContent);
+            }
+
+            GUIStyle resizeStyle = new(GUI.skin.label)
+            {
+                alignment = TextAnchor.LowerRight,
+                fontSize = 14,
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0)
+            };
         }
     }
 

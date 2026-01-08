@@ -41,8 +41,6 @@ Autopilot controls roll and pitch. Any aircraft works if it flies like a plane (
 
 Ascent/descent rate limits and target altitude can be configured with keyboard while flying. There is also GUI that opens with F8 key by default.
 
-![autopilot gui](https://github.com/user-attachments/assets/53bdb85c-6cf9-4989-ab6b-3e819dedb7a3)
-
 Target bank angle can be set so that plane turns in a circle. Should be useful for Medusa, for easier loitering.
 
 Large stick inputs will disengage the autopilot.

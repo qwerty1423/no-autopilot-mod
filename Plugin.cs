@@ -233,7 +233,7 @@ namespace AutopilotMod
             Hum_RollSleepMin = Config.Bind("Settings - Humanize", "15. Roll Sleep Min", 1.5f, "Seconds");
             Hum_RollSleepMax = Config.Bind("Settings - Humanize", "16. Roll Sleep Max", 60.0f, "Seconds");
 
-            // --- REFLECTION CACHING ---
+            // reflection cache
             try {
                 f_playerVehicle = typeof(FlightHud).GetField("playerVehicle", BindingFlags.NonPublic | BindingFlags.Instance);
                 
@@ -389,7 +389,7 @@ namespace AutopilotMod
             }
 
             // Draw the window
-            _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, "AUTOPILOT CONTROLS", _styleWindow);
+            _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, "Autopilot GUI", _styleWindow);
         }
 
         private void DrawAPWindow(int windowID)
@@ -428,9 +428,9 @@ namespace AutopilotMod
             string cOn = ColorAPOn.Value.StartsWith("#") ? ColorAPOn.Value : "#" + ColorAPOn.Value;
             string cOff = ColorAPOff.Value.StartsWith("#") ? ColorAPOff.Value : "#" + ColorAPOff.Value;
             string statusColor = APData.Enabled ? cOn : cOff;
-            string statusText = APData.Enabled ? "ENGAGED" : "DISENGAGED";
+            string statusText = APData.Enabled ? "Engaged" : "Disengaged";
             
-            GUILayout.Label($"STATUS: <color={statusColor}>{statusText}</color>", _styleLabel);
+            GUILayout.Label($"Status: <color={statusColor}>{statusText}</color>", _styleLabel);
 
             float currentVS = 0f;
             if (APData.PlayerRB != null) currentVS = APData.PlayerRB.velocity.y;
@@ -461,7 +461,7 @@ namespace AutopilotMod
 
             GUILayout.Space(10);
 
-            if (GUILayout.Button("SET VALUES", _styleButton))
+            if (GUILayout.Button("Set Values", _styleButton))
             {
                 if (float.TryParse(_bufAlt, out float a)) 
                     APData.TargetAlt = ModUtils.ConvertAlt_FromDisplay(a);
@@ -475,7 +475,7 @@ namespace AutopilotMod
             GUILayout.Space(5);
 
             GUI.backgroundColor = APData.Enabled ? Color.green : Color.red;
-            if (GUILayout.Button(APData.Enabled ? "DISENGAGE" : "ENGAGE", _styleButton))
+            if (GUILayout.Button(APData.Enabled ? "Disengage" : "Engage", _styleButton))
             {
                 APData.Enabled = !APData.Enabled;
                 if (APData.Enabled)
@@ -502,7 +502,7 @@ namespace AutopilotMod
                 if (!APData.GCASEnabled) APData.GCASActive = false;
             }
 
-            if (GUILayout.Button("Reset Bank (Level)", _styleButton))
+            if (GUILayout.Button("Reset Bank", _styleButton))
             {
                 APData.TargetRoll = 0f;
                 _bufRoll = "0";
@@ -532,12 +532,17 @@ namespace AutopilotMod
         public static float CurrentMaxClimbRate = -1f; 
         public static Rigidbody PlayerRB;
         public static Aircraft LocalAircraft;
+        public static object LocalPilot;
         public static WeaponManager LocalWeaponManager;
     }
 
     // --- HELPERS ---
     public static class ModUtils
     {
+        private static readonly Regex _rxSpaces = new(@"\s+");
+        private static readonly Regex _rxDecimals = new(@"[\.]\d+");
+        private static readonly Regex _rxNumber = new(@"-?\d+");
+
         public static Color GetColor(string hex, Color fallback)
         {
             if (string.IsNullOrEmpty(hex)) return fallback;
@@ -579,17 +584,17 @@ namespace AutopilotMod
             if (string.IsNullOrEmpty(raw)) return "";
 
             // remove spaces
-            string clean = Regex.Replace(raw, @"\s+", "");
+            string clean = _rxSpaces.Replace(raw, "");
 
             clean = clean.Replace("+", "");
 
             // remove decimals
-            clean = Regex.Replace(clean, @"[\.]\d+", "");
+            clean = _rxDecimals.Replace(clean, "");
 
             if (keepUnit) return clean;
 
             // remove units
-            var match = Regex.Match(clean, @"-?\d+");
+            var match = _rxNumber.Match(clean);
             return match.Success ? match.Value : clean;
         }
     }
@@ -621,6 +626,15 @@ namespace AutopilotMod
                         APData.TargetRoll = 0f;
                         APData.CurrentMaxClimbRate = -1f;
                         APData.LocalAircraft = v.GetComponent<Aircraft>();
+                        APData.LocalPilot = null;
+                        if (APData.LocalAircraft != null && Plugin.f_pilots != null)
+                        {
+                            IList pilots = (IList)Plugin.f_pilots.GetValue(APData.LocalAircraft);
+                            if (pilots != null && pilots.Count > 0)
+                            {
+                                APData.LocalPilot = pilots[0];
+                            }
+                        }
                     }
 
                     APData.CurrentRoll = v.transform.eulerAngles.z;
@@ -684,6 +698,7 @@ namespace AutopilotMod
         private static float rollSleepUntil = 0f;
         private static bool isPitchSleeping = false;
         private static bool isRollSleeping = false;
+        private static float gcasNextScan = 0f;
 
         // Jammer
         private static float jammerNextFireTime = 0f;
@@ -740,13 +755,9 @@ namespace AutopilotMod
                 if (APData.PlayerRB != null) {
                     acRef = APData.LocalAircraft;
                     if (acRef != null) {
-                        // Safe G-Force
-                        if (Plugin.f_pilots != null) {
-                            IList pilots = (IList)Plugin.f_pilots.GetValue(acRef);
-                            if (pilots != null && pilots.Count > 0 && Plugin.m_GetAccel != null) {
-                                Vector3 pAccel = (Vector3)Plugin.m_GetAccel.Invoke(pilots[0], null);
-                                currentG = Vector3.Dot(pAccel + Vector3.up, acRef.transform.up);
-                            }
+                        if (APData.LocalPilot != null && Plugin.m_GetAccel != null) {
+                            Vector3 pAccel = (Vector3)Plugin.m_GetAccel.Invoke(APData.LocalPilot, null);
+                            currentG = Vector3.Dot(pAccel + Vector3.up, acRef.transform.up);
                         }
                     }
                 }
@@ -777,7 +788,7 @@ namespace AutopilotMod
                             float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
 
                             float gAccel = Plugin.GCAS_MaxG.Value * 9.81f; 
-                            float turnRadius = (speed * speed) / gAccel;
+                            float turnRadius = speed * speed / gAccel;
                             
                             float reactionTime = Plugin.GCAS_AutoBuffer.Value;
                             float reactionDist = speed * reactionTime;
@@ -787,24 +798,28 @@ namespace AutopilotMod
                             bool warningZone = false;
                             // bool isWallThreat = false;
 
-                            Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f); 
-                            float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
-
-                            if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange))
+                            if (Time.time >= gcasNextScan)
                             {
-                                if (hit.transform.root != APData.PlayerRB.transform.root)
+                                gcasNextScan = Time.time + 0.1f;
+                                Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f); 
+                                float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
+
+                                if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange))
                                 {
-                                    float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
-                                    float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
-                                    
-                                    if (hit.distance < (reqArc + reactionDist + 20f))
+                                    if (hit.transform.root != APData.PlayerRB.transform.root)
                                     {
-                                        dangerImminent = true;
-                                        // if (hit.normal.y < 0.7f) isWallThreat = true;
-                                    }
-                                    else if (hit.distance < (reqArc + reactionDist + warnDist))
-                                    {
-                                        warningZone = true;
+                                        float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
+                                        float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
+                                        
+                                        if (hit.distance < (reqArc + reactionDist + 20f))
+                                        {
+                                            dangerImminent = true;
+                                            // if (hit.normal.y < 0.7f) isWallThreat = true;
+                                        }
+                                        else if (hit.distance < (reqArc + reactionDist + warnDist))
+                                        {
+                                            warningZone = true;
+                                        }
                                     }
                                 }
                             }
@@ -1075,9 +1090,6 @@ namespace AutopilotMod
                         if (Plugin.f_pitch != null && Plugin.f_roll != null) {
                             Plugin.f_pitch.SetValue(inputObj, pitchOut);
                             Plugin.f_roll.SetValue(inputObj, rollOut);
-                        } else {
-                            Traverse.Create(inputObj).Field("pitch").SetValue(pitchOut);
-                            Traverse.Create(inputObj).Field("roll").SetValue(rollOut);
                         }
                         
                         stickPitch = pitchOut;
@@ -1194,7 +1206,9 @@ namespace AutopilotMod
                     float calcFlow = Mathf.Max(fuelFlowEma, 0.0001f);
                     float secs = currentFuel / calcFlow;
                     
-                    tText.text = TimeSpan.FromSeconds(Mathf.Min(secs, 359999f)).ToString("hh\\:mm");
+                    string sTime = TimeSpan.FromSeconds(Mathf.Min(secs, 359999f)).ToString("hh\\:mm");
+                    if (tText.text != sTime) tText.text = sTime;
+
                     float mins = secs / 60f;
                     if (mins < Plugin.FuelCritMinutes.Value) tText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
                     else if (mins < Plugin.FuelWarnMinutes.Value) tText.color = ModUtils.GetColor(Plugin.ColorWarn.Value, Color.yellow);
@@ -1203,7 +1217,10 @@ namespace AutopilotMod
                     float spd = (aircraft.rb != null) ? aircraft.rb.velocity.magnitude : 0f;
                     float distMeters = secs * spd;
                     if (distMeters > 99999000f) distMeters = 99999000f;
-                    rText.text = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters),Plugin.DistShowUnit.Value);
+                    
+                    string sRange = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters), Plugin.DistShowUnit.Value);
+                    if (rText.text != sRange) rText.text = sRange;
+                    
                     rText.color = ModUtils.GetColor(Plugin.ColorInfo.Value, Color.cyan);
                 }
 

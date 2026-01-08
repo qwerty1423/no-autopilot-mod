@@ -510,7 +510,8 @@ namespace AutopilotMod
                     APData.CurrentMaxClimbRate = Mathf.Max(0.5f, ModUtils.ConvertVS_FromDisplay(c));
                 
                 if (float.TryParse(_bufRoll, out float r)) APData.TargetRoll = r;
-
+                
+                APData.UseSetValues = true;
                 APData.Enabled = true;
             }
 
@@ -571,7 +572,7 @@ namespace AutopilotMod
     public static class APData
     {
         public static bool Enabled = false;
-        public static bool WasAPOn = false;
+        public static bool UseSetValues = false;
         public static bool GCASEnabled = Plugin.EnableGCAS.Value;
         public static bool AutoJammerActive = false;
         public static bool GCASActive = false; 
@@ -668,7 +669,7 @@ namespace AutopilotMod
                     {
                         lastVehicleObj = v.gameObject;
                         APData.Enabled = false;
-                        APData.WasAPOn = false;
+                        APData.UseSetValues = false;
                         APData.GCASEnabled = Plugin.EnableGCAS.Value;
                         APData.AutoJammerActive = false;
                         APData.GCASActive = false;
@@ -738,7 +739,6 @@ namespace AutopilotMod
         private static float gcasIntegral = 0f;
 
         // Derivative States
-        private static float lastAltError = 0f;
         private static float lastVSError = 0f;
         private static float lastGError = 0f;
         private static float lastAltMeasurement = 0f;
@@ -759,7 +759,7 @@ namespace AutopilotMod
         private static void ResetIntegrators()
         {
             altIntegral = vsIntegral = angleIntegral = rollIntegral = gcasIntegral = 0f;
-            lastAltError = lastVSError = lastGError = 0f;
+            lastVSError = lastGError = 0f;
             isPitchSleeping = isRollSleeping = false;
         }
 
@@ -773,7 +773,7 @@ namespace AutopilotMod
             {
                 if (APData.Enabled)
                 {
-                    if (!APData.GCASActive) 
+                    if (!APData.GCASActive && !APData.UseSetValues) 
                     {
                         APData.TargetAlt = APData.CurrentAlt;
                         APData.TargetRoll = 0f;
@@ -781,6 +781,7 @@ namespace AutopilotMod
                     ResetIntegrators();
                 }
                 wasEnabled = APData.Enabled;
+                APData.UseSetValues = false;
             }
 
             try

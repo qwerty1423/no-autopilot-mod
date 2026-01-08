@@ -9,6 +9,12 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
+  <ItemDefinitionGroup>
+    <Reference>
+      <Private>False</Private>
+    </Reference>
+  </ItemDefinitionGroup>
+
   <ItemGroup>
     <!-- BepInEx & Harmony -->
     <Reference Include="BepInEx"> <HintPath>Libs/BepInEx.dll</HintPath> </Reference>

@@ -94,7 +94,7 @@ namespace AutopilotMod
         // Loop 3 (Angle)
         public static ConfigEntry<float> Conf_Angle_P, Conf_Angle_I, Conf_Angle_D, Conf_Angle_ILimit;
         // Roll
-        public static ConfigEntry<float> RollP, RollI, RollD, RollMax, RollILimit;
+        public static ConfigEntry<float> RollP, RollI, RollD, RollILimit;
         public static ConfigEntry<bool> InvertRoll, InvertPitch;
 
         public static ConfigEntry<float> Conf_Spd_P, Conf_Spd_I, Conf_Spd_D, Conf_Spd_ILimit;
@@ -171,7 +171,7 @@ namespace AutopilotMod
             // Settings
             StickDeadzone = Config.Bind("Settings", "1. Stick Deadzone", 0.5f, "Threshold");
             InvertRoll = Config.Bind("Settings", "2. Invert Roll", false, "Flip Roll");
-            InvertPitch = Config.Bind("Settings", "3. Invert Pitch", true, "Flip Pitch");
+            InvertPitch = Config.Bind("Settings", "3. Invert Pitch", false, "Flip Pitch");
 
             // Auto Jammer
             EnableAutoJammer = Config.Bind("Auto Jammer", "1. Enable Auto Jammer", true, "Allow the feature");
@@ -225,8 +225,7 @@ namespace AutopilotMod
             RollP = Config.Bind("Tuning - Roll", "1. Roll P", 0.01f, "P");
             RollI = Config.Bind("Tuning - Roll", "2. Roll I", 0.002f, "I");
             RollD = Config.Bind("Tuning - Roll", "3. Roll D", 0.001f, "D");
-            RollMax = Config.Bind("Tuning - Roll", "4. Roll Max Output", 1.0f, "Limit");
-            RollILimit = Config.Bind("Tuning - Roll", "5. Roll I Limit", 50.0f, "Limit");
+            RollILimit = Config.Bind("Tuning - Roll", "5. Roll I Limit", 1.0f, "Limit");
             Conf_Spd_P = Config.Bind("Tuning - 4. Speed", "1. Speed P", 0.05f, "Error -> Throttle");
             Conf_Spd_I = Config.Bind("Tuning - 4. Speed", "2. Speed I", 0.01f, "Hold speed");
             Conf_Spd_D = Config.Bind("Tuning - 4. Speed", "3. Speed D", 0.0f, "Dampen");
@@ -1404,7 +1403,11 @@ namespace AutopilotMod
                         else
                         {
                             if (useHumanize && isPitchSleeping) {
-                                pitchOut = (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * Plugin.HumanizeStrength.Value * 0.5f;
+                                altIntegral = Mathf.MoveTowards(altIntegral, 0f, dt * 2f);
+                                vsIntegral = Mathf.MoveTowards(vsIntegral, 0f, dt * 10f);
+                                angleIntegral = Mathf.MoveTowards(angleIntegral, 0f, dt * 5f);
+                                lastAltMeasurement = APData.CurrentAlt;
+                                lastVSError = 0f;
                             } else {
                                 float altError = APData.TargetAlt - APData.CurrentAlt;
                                 altIntegral = Mathf.Clamp(altIntegral + (altError * dt * Plugin.Conf_Alt_I.Value), -Plugin.Conf_Alt_ILimit.Value, Plugin.Conf_Alt_ILimit.Value);
@@ -1437,30 +1440,29 @@ namespace AutopilotMod
                                 float angleError = targetPitchDeg - currentPitch;
                                 angleIntegral = Mathf.Clamp(angleIntegral + (angleError * dt * Plugin.Conf_Angle_I.Value), -Plugin.Conf_Angle_ILimit.Value, Plugin.Conf_Angle_ILimit.Value);
                                 
-                                float stickRaw = (angleError * Plugin.Conf_Angle_P.Value) + angleIntegral - (pitchRate * Plugin.Conf_Angle_D.Value);
-                                
-                                pitchOut = Mathf.Clamp(stickRaw, -1f, 1f);
-                                if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
+                                pitchOut = (angleError * Plugin.Conf_Angle_P.Value) + angleIntegral - (pitchRate * Plugin.Conf_Angle_D.Value);
 
                                 if (useHumanize) pitchOut += (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
+                                if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
                             }
                         }
 
-                        // Roll Control
+                        // Roll control
                         float rollError = Mathf.DeltaAngle(APData.CurrentRoll, activeTargetRoll);
                         float rollRate = APData.PlayerRB.transform.InverseTransformDirection(APData.PlayerRB.angularVelocity).z * Mathf.Rad2Deg;
 
                         if (useHumanize && isRollSleeping) {
-                            rollOut = (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * Plugin.HumanizeStrength.Value * 0.5f;
+                            rollIntegral = Mathf.MoveTowards(rollIntegral, 0f, dt * 5f);
                         } else {
                             rollIntegral = Mathf.Clamp(rollIntegral + (rollError * dt * Plugin.RollI.Value), -Plugin.RollILimit.Value, Plugin.RollILimit.Value);
                             float rollD = (0f - rollRate) * Plugin.RollD.Value;
-                            float stickRaw = (rollError * Plugin.RollP.Value) + rollIntegral + rollD;
-                            rollOut = Mathf.Clamp(stickRaw, -Plugin.RollMax.Value, Plugin.RollMax.Value);
-                            
-                            rollOut *= Plugin.InvertRoll.Value ? -1f : 1f;
+                            rollOut = (rollError * Plugin.RollP.Value) + rollIntegral + rollD;
 
-                            if (useHumanize) rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
+                            if (Plugin.InvertRoll.Value) rollOut = -rollOut;
+
+                            if (useHumanize) {
+                                rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
+                            }
                         }
 
                         pitchOut = Mathf.Clamp(pitchOut, -1f, 1f);

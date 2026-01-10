@@ -207,7 +207,7 @@ namespace AutopilotMod
             // Tuning
             DefaultMaxClimbRate = Config.Bind("Tuning - 0. Limits", "1. Default Max Climb Rate", 40f, "Startup value");
             Conf_VS_MaxAngle = Config.Bind("Tuning - 0. Limits", "2. Max Pitch Angle", 90.0f, "useless limit");
-            DefaultCRLimit = Config.Bind("Tuning - 0. Limits", "3. Default course roll limit", 80f, "self explanatory?");
+            DefaultCRLimit = Config.Bind("Tuning - 0. Limits", "3. Default course roll limit", 45.0f, "self explanatory?");
 
             // Loops
             Conf_Alt_P = Config.Bind("Tuning - 1. Altitude", "1. Alt P", 0.5f, "Alt Error -> Target VS");
@@ -232,9 +232,9 @@ namespace AutopilotMod
             Conf_Spd_ILimit = Config.Bind("Tuning - 4. Speed", "4. Speed I Limit", 1.0f, "Max Throttle Trim");
             ThrottleMinLimit = Config.Bind("Tuning - 4. Speed", "6. Safe Min Throttle", 0.01f, "Minimum throttle when limiter is active (prevents Airbrake)");
             ThrottleMaxLimit = Config.Bind("Tuning - 4. Speed", "7. Safe Max Throttle", 0.89f, "Maximum throttle when limiter is active (prevents Afterburner)");
-            Conf_Crs_P = Config.Bind("Tuning - 5. Course", "1. Course P", 0.1f, "Course Error -> Bank Angle");
-            Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 0.04f, "Correction");
-            Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.0f, "Dampen");
+            Conf_Crs_P = Config.Bind("Tuning - 5. Course", "1. Course P", 1.0f, "Course Error -> Bank Angle");
+            Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 1.0f, "Correction");
+            Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.1f, "Dampen");
             Conf_Crs_ILimit = Config.Bind("Tuning - 5. Course", "4. Course I Limit", 70.0f, "Max Integral Bank");
             Conf_InvertCourseRoll = Config.Bind("Tuning - 5. Course", "5. Invert Bank Direction", false, "Toggle this if the plane turns the wrong way");
             

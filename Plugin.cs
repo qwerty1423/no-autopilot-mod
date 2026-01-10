@@ -403,29 +403,21 @@ namespace AutopilotMod
 
         private void SyncMenuValues()
         {
-            float currentAlt_Raw = APData.TargetAlt > 0 
-                ? APData.TargetAlt
-                : 0.0f;
-
-            _bufAlt = ModUtils.ConvertAlt_ToDisplay(currentAlt_Raw).ToString("F0");
+            _bufAlt = (APData.TargetAlt > 0) 
+                ? ModUtils.ConvertAlt_ToDisplay(APData.TargetAlt).ToString("F0") 
+                : "";
             
-            float currentVS_Raw = APData.CurrentMaxClimbRate > 0 
-                ? APData.CurrentMaxClimbRate 
-                : DefaultMaxClimbRate.Value;
+            _bufClimb = (APData.CurrentMaxClimbRate > 0) 
+                ? ModUtils.ConvertVS_ToDisplay(APData.CurrentMaxClimbRate).ToString("F0") 
+                : DefaultMaxClimbRate.Value.ToString();
 
-            _bufClimb = ModUtils.ConvertVS_ToDisplay(currentVS_Raw).ToString("F0");
+            _bufRoll = (APData.TargetRoll != -999f) ? APData.TargetRoll.ToString("F0") : "";
 
-            _bufRoll = APData.TargetRoll.ToString("F0");
+            _bufSpeed = (APData.TargetSpeed > 0) 
+                ? ModUtils.ConvertSpeed_ToDisplay(APData.TargetSpeed).ToString("F0") 
+                : "";
 
-            if (APData.TargetSpeed > 0)
-                _bufSpeed = ModUtils.ConvertSpeed_ToDisplay(APData.TargetSpeed).ToString("F0");
-            else
-                _bufSpeed = "";
-
-            if (APData.TargetCourse >= 0)
-                _bufCourse = APData.TargetCourse.ToString("F0");
-            else
-                _bufCourse = "";
+            _bufCourse = (APData.TargetCourse >= 0) ? APData.TargetCourse.ToString("F0") : "";
         }
 
         private void OnGUI()
@@ -580,10 +572,9 @@ namespace AutopilotMod
             _bufAlt = GUILayout.TextField(_bufAlt);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target altitude"));
             
-            if (GUILayout.Button(new GUIContent("HLD", "Set to current altitude"), _styleButton, GUILayout.Width(buttonWidth)))
+            if (GUILayout.Button(new GUIContent("CLR", "disable alt hold"), _styleButton, GUILayout.Width(buttonWidth)))
             {
-                APData.TargetAlt = APData.CurrentAlt;
-                _bufAlt = ModUtils.ConvertAlt_ToDisplay(APData.TargetAlt).ToString("F0");
+                APData.TargetAlt = -1f; _bufAlt = "";
                 GUI.FocusControl(null);
             }
             GUILayout.EndHorizontal();
@@ -606,10 +597,9 @@ namespace AutopilotMod
             _bufRoll = GUILayout.TextField(_bufRoll);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target bank angle"));
 
-            if (GUILayout.Button(new GUIContent("RST", "Reset to default"), _styleButton, GUILayout.Width(buttonWidth))) 
+            if (GUILayout.Button(new GUIContent("CLR", "disable roll hold"), _styleButton, GUILayout.Width(buttonWidth))) 
             {
-                APData.TargetRoll = currentRollDefault;
-                _bufRoll = $"{currentRollDefault}";
+                APData.TargetRoll = -999f; _bufRoll = "";
                 GUI.FocusControl(null);
             }
             GUILayout.EndHorizontal();
@@ -634,8 +624,7 @@ namespace AutopilotMod
             _bufCourse = GUILayout.TextField(_bufCourse);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target course"));
             if (GUILayout.Button(new GUIContent("CLR", "Disable course hold"), _styleButton, GUILayout.Width(buttonWidth))) {
-                APData.TargetCourse = -1f;
-                _bufCourse = "";
+                APData.TargetCourse = -1f; _bufCourse = "";
                 APData.TargetRoll = 0;
                 GUI.FocusControl(null);
             }
@@ -644,64 +633,62 @@ namespace AutopilotMod
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(new GUIContent("Set Values", "Applies typed values"), _styleButton))
             {
-                if (float.TryParse(_bufAlt, NumberStyles.Float, CultureInfo.InvariantCulture, out float a)) 
-                    APData.TargetAlt = ModUtils.ConvertAlt_FromDisplay(a);
-                
-                if (float.TryParse(_bufClimb, NumberStyles.Float, CultureInfo.InvariantCulture, out float c)) 
-                    APData.CurrentMaxClimbRate = Mathf.Max(0.5f, ModUtils.ConvertVS_FromDisplay(c));
-
-                if (float.TryParse(_bufSpeed, NumberStyles.Float, CultureInfo.InvariantCulture, out float s)) 
+                if (float.TryParse(_bufSpeed, out float s)) 
                     APData.TargetSpeed = ModUtils.ConvertSpeed_FromDisplay(s);
                 else 
                     APData.TargetSpeed = -1f;
 
-                if (float.TryParse(_bufCourse, NumberStyles.Float, CultureInfo.InvariantCulture, out float crs))
-                {
+                if (float.TryParse(_bufAlt, out float a)) 
+                    APData.TargetAlt = ModUtils.ConvertAlt_FromDisplay(a);
+                else 
+                    APData.TargetAlt = -1f;
+
+                if (float.TryParse(_bufCourse, out float crs))
                     APData.TargetCourse = crs;
-                    if (APData.TargetCourse < 0f)
-                        _bufRoll = $"{DefaultCRLimit.Value}";
-                }
                 else 
                     APData.TargetCourse = -1f;
 
-                if (float.TryParse(_bufRoll, NumberStyles.Float, CultureInfo.InvariantCulture, out float r)) APData.TargetRoll = r;
-                
-                APData.UseSetValues = true;
+                if (float.TryParse(_bufRoll, out float r)) 
+                {
+                    APData.TargetRoll = r;
+                }
+                else 
+                {
+                    if (APData.TargetCourse >= 0f) {
+                        APData.TargetRoll = DefaultCRLimit.Value; 
+                        _bufRoll = APData.TargetRoll.ToString("F0");
+                    } else {
+                        APData.TargetRoll = 0f;
+                        _bufRoll = "0";
+                    }
+                }
+
+                if (float.TryParse(_bufClimb, out float c)) 
+                    APData.CurrentMaxClimbRate = Mathf.Max(0.5f, ModUtils.ConvertVS_FromDisplay(c));
+
                 APData.Enabled = true;
+                APData.UseSetValues = true;
                 GUI.FocusControl(null);
             }
 
             GUI.backgroundColor = APData.Enabled ? Color.green : Color.red;
-            if (GUILayout.Button(new GUIContent(APData.Enabled ? "Disengage" : "Engage", $"Toggle autopilot. Engage sets current alt."), _styleButton))
+            if (GUILayout.Button(new GUIContent(APData.Enabled ? "Disengage" : "Engage", "toggle AP"), _styleButton))
             {
                 APData.Enabled = !APData.Enabled;
                 if (APData.Enabled)
                 {
-                    _bufAlt = $"{APData.CurrentAlt}";
-                    if (float.TryParse(_bufAlt, NumberStyles.Float, CultureInfo.InvariantCulture, out float a)) 
-                        APData.TargetAlt = ModUtils.ConvertAlt_FromDisplay(a);
-                    
-                    if (float.TryParse(_bufClimb, NumberStyles.Float, CultureInfo.InvariantCulture, out float c)) 
-                        APData.CurrentMaxClimbRate = Mathf.Max(0.5f, ModUtils.ConvertVS_FromDisplay(c));
-
-                    if (float.TryParse(_bufSpeed, NumberStyles.Float, CultureInfo.InvariantCulture, out float s)) 
-                        APData.TargetSpeed = ModUtils.ConvertSpeed_FromDisplay(s);
-                    else 
-                        APData.TargetSpeed = -1f;
-
-                    if (float.TryParse(_bufCourse, NumberStyles.Float, CultureInfo.InvariantCulture, out float crs))
-                    {
-                        APData.TargetCourse = crs;
-                        if (APData.TargetCourse < 0f)
-                            _bufRoll = $"{DefaultCRLimit.Value}";
+                    if (string.IsNullOrEmpty(_bufAlt)) {
+                        APData.TargetAlt = APData.CurrentAlt;
+                        _bufAlt = ModUtils.ConvertAlt_ToDisplay(APData.TargetAlt).ToString("F0");
                     }
-                    else
-                        APData.TargetCourse = -1f;
-
-                    if (float.TryParse(_bufRoll, NumberStyles.Float, CultureInfo.InvariantCulture, out float r)) APData.TargetRoll = r;
-                    APData.UseSetValues = true;
+                    
+                    if (string.IsNullOrEmpty(_bufCourse) && string.IsNullOrEmpty(_bufRoll)) {
+                        APData.TargetRoll = 0f;
+                        _bufRoll = "0";
+                    }
+                    
+                    APData.UseSetValues = true; 
                 }
-                GUI.FocusControl(null);
             }
             GUI.backgroundColor = Color.white;
             GUILayout.EndHorizontal();
@@ -794,8 +781,8 @@ namespace AutopilotMod
         public static bool GCASActive = false; 
         public static bool GCASWarning = false;
         public static bool AllowExtremeThrottle = false;
-        public static float TargetAlt = 0f;
-        public static float TargetRoll = 0f;
+        public static float TargetAlt = -1f;
+        public static float TargetRoll = -999f;
         public static float TargetSpeed = -1f;
         public static float TargetCourse = -1f;
         public static float CurrentAlt = 0f;
@@ -1388,7 +1375,7 @@ namespace AutopilotMod
                         }
 
                         // Pitch Control
-                        if (APData.GCASActive)
+                        if (APData.TargetAlt > 0f || APData.GCASActive)
                         {
                             float targetG = Plugin.GCAS_MaxG.Value;
                             float gError = targetG - currentG;
@@ -1447,34 +1434,34 @@ namespace AutopilotMod
                                 if (useHumanize) pitchOut += (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
                                 if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
                             }
+                            if (Plugin.f_pitch != null)
+                                Plugin.f_pitch.SetValue(inputObj, Mathf.Clamp(pitchOut, -1f, 1f));
                         }
 
                         // Roll control
-                        float rollError = Mathf.DeltaAngle(APData.CurrentRoll, activeTargetRoll);
-                        float rollRate = APData.PlayerRB.transform.InverseTransformDirection(APData.PlayerRB.angularVelocity).z * Mathf.Rad2Deg;
+                        bool isRollActive = (APData.TargetCourse >= 0f) || (APData.TargetRoll != -999f);
 
-                        if (useHumanize && isRollSleeping) {
-                            rollIntegral = Mathf.MoveTowards(rollIntegral, 0f, dt * 5f);
-                        } else {
-                            rollIntegral = Mathf.Clamp(rollIntegral + (rollError * dt * Plugin.RollI.Value), -Plugin.RollILimit.Value, Plugin.RollILimit.Value);
-                            float rollD = (0f - rollRate) * Plugin.RollD.Value;
-                            rollOut = (rollError * Plugin.RollP.Value) + rollIntegral + rollD;
+                        if (isRollActive || APData.GCASActive)
+                        {
+                            float rollError = Mathf.DeltaAngle(APData.CurrentRoll, activeTargetRoll);
+                            float rollRate = APData.PlayerRB.transform.InverseTransformDirection(APData.PlayerRB.angularVelocity).z * Mathf.Rad2Deg;
 
-                            if (Plugin.InvertRoll.Value) rollOut = -rollOut;
+                            if (useHumanize && isRollSleeping) {
+                                rollIntegral = Mathf.MoveTowards(rollIntegral, 0f, dt * 5f);
+                            } else {
+                                rollIntegral = Mathf.Clamp(rollIntegral + (rollError * dt * Plugin.RollI.Value), -Plugin.RollILimit.Value, Plugin.RollILimit.Value);
+                                float rollD = (0f - rollRate) * Plugin.RollD.Value;
+                                rollOut = (rollError * Plugin.RollP.Value) + rollIntegral + rollD;
 
-                            if (useHumanize) {
-                                rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
+                                if (Plugin.InvertRoll.Value) rollOut = -rollOut;
+
+                                if (useHumanize) {
+                                    rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
+                                }
                             }
-                        }
-
-                        pitchOut = Mathf.Clamp(pitchOut, -1f, 1f);
-                        rollOut = Mathf.Clamp(rollOut, -1f, 1f);
-
-                        if (Plugin.f_pitch != null && Plugin.f_roll != null) {
-                            Plugin.f_pitch.SetValue(inputObj, pitchOut);
-                            Plugin.f_roll.SetValue(inputObj, rollOut);
-                        }
-                        
+                            if (Plugin.f_roll != null)
+                                Plugin.f_roll.SetValue(inputObj, Mathf.Clamp(rollOut, -1f, 1f));
+                        }                 
                         stickPitch = pitchOut;
                     }
                 }

@@ -658,7 +658,8 @@ namespace AutopilotMod
                 if (float.TryParse(_bufCourse, NumberStyles.Float, CultureInfo.InvariantCulture, out float crs))
                 {
                     APData.TargetCourse = crs;
-                    _bufRoll = $"{DefaultCRLimit.Value}";
+                    if (APData.TargetCourse < 0f)
+                        _bufRoll = $"{DefaultCRLimit.Value}";
                 }
                 else 
                     APData.TargetCourse = -1f;
@@ -691,9 +692,10 @@ namespace AutopilotMod
                     if (float.TryParse(_bufCourse, NumberStyles.Float, CultureInfo.InvariantCulture, out float crs))
                     {
                         APData.TargetCourse = crs;
-                        _bufRoll = $"{DefaultCRLimit.Value}";
+                        if (APData.TargetCourse < 0f)
+                            _bufRoll = $"{DefaultCRLimit.Value}";
                     }
-                    else 
+                    else
                         APData.TargetCourse = -1f;
 
                     if (float.TryParse(_bufRoll, NumberStyles.Float, CultureInfo.InvariantCulture, out float r)) APData.TargetRoll = r;

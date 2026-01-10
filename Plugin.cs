@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Globalization;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -78,7 +79,7 @@ namespace AutopilotMod
 
         // Controls
         public static ConfigEntry<KeyCode> ToggleKey, UpKey, DownKey, BigUpKey, BigDownKey;
-        public static ConfigEntry<KeyCode> ClimbRateUpKey, ClimbRateDownKey, BankLeftKey, BankRightKey, BankLevelKey;
+        public static ConfigEntry<KeyCode> ClimbRateUpKey, ClimbRateDownKey, BankLeftKey, BankRightKey, BankLevelKey, SpeedHoldKey;
 
         // Flight Values
         public static ConfigEntry<float> AltStep, BigAltStep, ClimbRateStep, BankStep, MinAltitude;
@@ -190,9 +191,10 @@ namespace AutopilotMod
             BigDownKey = Config.Bind("Controls", "06. Altitude Down (Big)", KeyCode.RightArrow, "large decrease");
             ClimbRateUpKey = Config.Bind("Controls", "07. Climb Rate Increase", KeyCode.PageUp, "Increase Max VS");
             ClimbRateDownKey = Config.Bind("Controls", "08. Climb Rate Decrease", KeyCode.PageDown, "Decrease Max VS");
-            BankLeftKey = Config.Bind("Controls", "09. Bank Left", KeyCode.LeftBracket, "Roll Left");
-            BankRightKey = Config.Bind("Controls", "10. Bank Right", KeyCode.RightBracket, "Roll Right");
-            BankLevelKey = Config.Bind("Controls", "11. Bank Level (Reset)", KeyCode.Quote, "Reset Roll to 0");
+            BankLeftKey = Config.Bind("Controls", "09. Bank Left", KeyCode.LeftBracket, "Roll/course Left");
+            BankRightKey = Config.Bind("Controls", "10. Bank Right", KeyCode.RightBracket, "Roll/course right");
+            BankLevelKey = Config.Bind("Controls", "11. Bank Level (Reset)", KeyCode.Quote, "Reset roll/clear course");
+            SpeedHoldKey = Config.Bind("Controls", "12. Speed Hold Toggle", KeyCode.Semicolon, "speed hold/clear");
 
             // Flight Values
             AltStep = Config.Bind("Controls", "13. Altitude Increment (Small)", 0.1f, "Meters per tick");
@@ -204,7 +206,7 @@ namespace AutopilotMod
 
             // Tuning
             DefaultMaxClimbRate = Config.Bind("Tuning - 0. Limits", "1. Default Max Climb Rate", 40f, "Startup value");
-            Conf_VS_MaxAngle = Config.Bind("Tuning - 0. Limits", "2. Max Pitch Angle", 900.0f, "useless limit");
+            Conf_VS_MaxAngle = Config.Bind("Tuning - 0. Limits", "2. Max Pitch Angle", 90.0f, "useless limit");
             DefaultCRLimit = Config.Bind("Tuning - 0. Limits", "3. Default course roll limit", 80f, "self explanatory?");
 
             // Loops
@@ -215,11 +217,11 @@ namespace AutopilotMod
             Conf_VS_P = Config.Bind("Tuning - 2. VertSpeed", "1. VS P", 0.5f, "VS Error -> Target Angle");
             Conf_VS_I = Config.Bind("Tuning - 2. VertSpeed", "2. VS I", 0.1f, "Trim Angle");
             Conf_VS_D = Config.Bind("Tuning - 2. VertSpeed", "3. VS D", 0.1f, "Dampens VS Change");
-            Conf_VS_ILimit = Config.Bind("Tuning - 2. VertSpeed", "4. VS I Limit", 300.0f, "Max Trim (Deg)");
+            Conf_VS_ILimit = Config.Bind("Tuning - 2. VertSpeed", "4. VS I Limit", 90.0f, "Max Trim (Deg)");
             Conf_Angle_P = Config.Bind("Tuning - 3. Angle", "1. Angle P", 0.01f, "Angle Error -> Stick");
             Conf_Angle_I = Config.Bind("Tuning - 3. Angle", "2. Angle I", 0.0f, "Holds Angle");
             Conf_Angle_D = Config.Bind("Tuning - 3. Angle", "3. Angle D", 0.0f, "Dampens Rotation");
-            Conf_Angle_ILimit = Config.Bind("Tuning - 3. Angle", "4. Angle I Limit", 100.0f, "Max Integral (Stick)");
+            Conf_Angle_ILimit = Config.Bind("Tuning - 3. Angle", "4. Angle I Limit", 90.0f, "Max Integral (Stick)");
             RollP = Config.Bind("Tuning - Roll", "1. Roll P", 0.01f, "P");
             RollI = Config.Bind("Tuning - Roll", "2. Roll I", 0.002f, "I");
             RollD = Config.Bind("Tuning - Roll", "3. Roll D", 0.001f, "D");
@@ -231,10 +233,10 @@ namespace AutopilotMod
             Conf_Spd_ILimit = Config.Bind("Tuning - 4. Speed", "4. Speed I Limit", 1.0f, "Max Throttle Trim");
             ThrottleMinLimit = Config.Bind("Tuning - 4. Speed", "6. Safe Min Throttle", 0.01f, "Minimum throttle when limiter is active (prevents Airbrake)");
             ThrottleMaxLimit = Config.Bind("Tuning - 4. Speed", "7. Safe Max Throttle", 0.89f, "Maximum throttle when limiter is active (prevents Afterburner)");
-            Conf_Crs_P = Config.Bind("Tuning - 5. Course", "1. Course P", 0.025f, "Course Error -> Bank Angle");
-            Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 0.01f, "Correction");
+            Conf_Crs_P = Config.Bind("Tuning - 5. Course", "1. Course P", 0.1f, "Course Error -> Bank Angle");
+            Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 0.04f, "Correction");
             Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.0f, "Dampen");
-            Conf_Crs_ILimit = Config.Bind("Tuning - 5. Course", "4. Course I Limit", 90.0f, "Max Integral Bank");
+            Conf_Crs_ILimit = Config.Bind("Tuning - 5. Course", "4. Course I Limit", 70.0f, "Max Integral Bank");
             Conf_InvertCourseRoll = Config.Bind("Tuning - 5. Course", "5. Invert Bank Direction", false, "Toggle this if the plane turns the wrong way");
             
             // Auto GCAS
@@ -311,7 +313,8 @@ namespace AutopilotMod
 
                 Type wmType = typeof(Aircraft).Assembly.GetType("WeaponManager");
                 if (wmType != null) {
-                    m_Fire = wmType.GetMethod("Fire");
+                    m_Fire = wmType.GetMethod("Fire", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                    null, Type.EmptyTypes, null);
                     f_targetList = wmType.GetField("targetList", BindingFlags.NonPublic | BindingFlags.Instance);
                     f_currentWeaponStation = wmType.GetField("currentWeaponStation", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 }
@@ -360,12 +363,42 @@ namespace AutopilotMod
                     Input.GetKey(UpKey.Value) || Input.GetKey(DownKey.Value) || 
                     Input.GetKey(BigUpKey.Value) || Input.GetKey(BigDownKey.Value) ||
                     Input.GetKey(ClimbRateUpKey.Value) || Input.GetKey(ClimbRateDownKey.Value) ||
-                    Input.GetKey(BankLeftKey.Value) || Input.GetKey(BankRightKey.Value) || Input.GetKey(BankLevelKey.Value);
+                    Input.GetKey(BankLeftKey.Value) || Input.GetKey(BankRightKey.Value) || Input.GetKey(BankLevelKey.Value) || Input.GetKey(SpeedHoldKey.Value);
 
                 if (isAdjusting)
                 {
                     SyncMenuValues();
                 }
+            }
+            if (Input.GetKeyDown(Plugin.ToggleKey.Value))
+            {
+                APData.Enabled = !APData.Enabled;
+            }
+
+            if (Plugin.EnableAutoJammer.Value && Input.GetKeyDown(Plugin.AutoJammerKey.Value))
+            {
+                APData.AutoJammerActive = !APData.AutoJammerActive;
+            }
+            
+            if (Input.GetKeyDown(Plugin.ToggleGCASKey.Value))
+            {
+                APData.GCASEnabled = !APData.GCASEnabled;
+                if (!APData.GCASEnabled) { APData.GCASActive = false; APData.GCASWarning = false; }
+            }
+            if (Input.GetKeyDown(SpeedHoldKey.Value))
+            {
+                if (APData.TargetSpeed > 0)
+                {
+                    APData.TargetSpeed = -1f;
+                    _bufSpeed = "";
+                }
+                else if (APData.PlayerRB != null)
+                {
+                    float currentSpeedRaw = APData.PlayerRB.velocity.magnitude;
+                    APData.TargetSpeed = currentSpeedRaw;
+                    _bufSpeed = ModUtils.ConvertSpeed_ToDisplay(currentSpeedRaw).ToString("F0");
+                }
+                GUI.FocusControl(null);
             }
         }
 
@@ -475,6 +508,21 @@ namespace AutopilotMod
                     Event.current.Use(); 
                 }
             }
+
+            if (Event.current.type == EventType.MouseUp && _showMenu)
+            {
+                if (_windowRect.x != UI_PosX.Value || _windowRect.y != UI_PosY.Value ||
+                    _windowRect.width != UI_Width.Value || _windowRect.height != UI_Height.Value)
+                {
+                    UI_PosX.Value = _windowRect.x;
+                    UI_PosY.Value = _windowRect.y;
+                    UI_Width.Value = _windowRect.width;
+                    UI_Height.Value = _windowRect.height;
+                }
+                _isResizing = false;
+                _activeEdge = RectEdge.None;
+            }
+
             _windowRect.width = Mathf.Min(_windowRect.width, Screen.width);
             _windowRect.height = Mathf.Min(_windowRect.height, Screen.height);
 
@@ -493,20 +541,6 @@ namespace AutopilotMod
         private void DrawAPWindow(int windowID)
         {
             GUI.DragWindow(new Rect(0, 0, 10000, 25));
-
-            if (Event.current.type == EventType.Repaint)
-            {
-                if (_windowRect.x != UI_PosX.Value || _windowRect.y != UI_PosY.Value)
-                {
-                    UI_PosX.Value = _windowRect.x;
-                    UI_PosY.Value = _windowRect.y;
-                }
-                if (_windowRect.width != UI_Width.Value || _windowRect.height != UI_Height.Value)
-                {
-                    UI_Width.Value = _windowRect.width;
-                    UI_Height.Value = _windowRect.height;
-                }
-            }
 
             _scrollPos = GUILayout.BeginScrollView(_scrollPos, false, false, GUIStyle.none, GUIStyle.none, GUILayout.Height(_windowRect.height - 30));
 
@@ -540,6 +574,8 @@ namespace AutopilotMod
             float targetWidth = Mathf.Max(wAlt, wVS, wRoll, wSpd, wCrs);
             _dynamicLabelWidth = Mathf.Lerp(_dynamicLabelWidth, targetWidth, 0.15f);
 
+            float currentRollDefault = APData.TargetCourse == -1f ? 0f : DefaultCRLimit.Value;
+            
             GUILayout.BeginHorizontal();
             GUILayout.Label($"{sAlt}", _styleLabel, GUILayout.Width(_dynamicLabelWidth));
             _bufAlt = GUILayout.TextField(_bufAlt);
@@ -571,10 +607,10 @@ namespace AutopilotMod
             _bufRoll = GUILayout.TextField(_bufRoll);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target bank angle"));
 
-            if (GUILayout.Button(new GUIContent("LVL", "Set roll to 0"), _styleButton, GUILayout.Width(buttonWidth))) 
+            if (GUILayout.Button(new GUIContent("RST", "Reset to default"), _styleButton, GUILayout.Width(buttonWidth))) 
             {
-                APData.TargetRoll = 0f;
-                _bufRoll = "0";
+                APData.TargetRoll = currentRollDefault;
+                _bufRoll = $"{currentRollDefault}";
                 GUI.FocusControl(null);
             }
             GUILayout.EndHorizontal();
@@ -582,10 +618,11 @@ namespace AutopilotMod
             GUILayout.BeginHorizontal();
             GUILayout.Label($"{sSpd}", _styleLabel, GUILayout.Width(_dynamicLabelWidth));
             _bufSpeed = GUILayout.TextField(_bufSpeed);
+            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target speed"));
             Color oldCol = GUI.backgroundColor;
             if (APData.AllowExtremeThrottle) GUI.backgroundColor = Color.red; 
 
-            string limitText = "AB";
+            string limitText = APData.AllowExtremeThrottle ? "AB1" : "AB0";
             if (GUILayout.Button(new GUIContent(limitText, "Toggle afterburner/airbrake"), _styleButton, GUILayout.Width(buttonWidth))) {
                 APData.AllowExtremeThrottle = !APData.AllowExtremeThrottle;
                 GUI.FocusControl(null);
@@ -596,10 +633,11 @@ namespace AutopilotMod
             GUILayout.BeginHorizontal();
             GUILayout.Label($"{currentCourse:F0}°", _styleLabel, GUILayout.Width(_dynamicLabelWidth));
             _bufCourse = GUILayout.TextField(_bufCourse);
-            if (GUILayout.Button(new GUIContent("CRS", "Set to current course"), _styleButton, GUILayout.Width(buttonWidth))) {
-                APData.TargetCourse = currentCourse;
-                _bufCourse = currentCourse.ToString("F0");
-                APData.TargetRoll = DefaultCRLimit.Value;
+            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target course"));
+            if (GUILayout.Button(new GUIContent("CLR", "Disable course hold"), _styleButton, GUILayout.Width(buttonWidth))) {
+                APData.TargetCourse = -1f;
+                _bufCourse = "";
+                APData.TargetRoll = 0;
                 GUI.FocusControl(null);
             }
             GUILayout.EndHorizontal();
@@ -607,18 +645,18 @@ namespace AutopilotMod
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(new GUIContent("Set Values", "Applies typed values"), _styleButton))
             {
-                if (float.TryParse(_bufAlt, out float a)) 
+                if (float.TryParse(_bufAlt, NumberStyles.Float, CultureInfo.InvariantCulture, out float a)) 
                     APData.TargetAlt = ModUtils.ConvertAlt_FromDisplay(a);
                 
-                if (float.TryParse(_bufClimb, out float c)) 
+                if (float.TryParse(_bufClimb, NumberStyles.Float, CultureInfo.InvariantCulture, out float c)) 
                     APData.CurrentMaxClimbRate = Mathf.Max(0.5f, ModUtils.ConvertVS_FromDisplay(c));
 
-                if (float.TryParse(_bufSpeed, out float s)) 
+                if (float.TryParse(_bufSpeed, NumberStyles.Float, CultureInfo.InvariantCulture, out float s)) 
                     APData.TargetSpeed = ModUtils.ConvertSpeed_FromDisplay(s);
                 else 
                     APData.TargetSpeed = -1f;
 
-                if (float.TryParse(_bufCourse, out float crs))
+                if (float.TryParse(_bufCourse, NumberStyles.Float, CultureInfo.InvariantCulture, out float crs))
                 {
                     APData.TargetCourse = crs;
                     _bufRoll = $"{DefaultCRLimit.Value}";
@@ -626,7 +664,7 @@ namespace AutopilotMod
                 else 
                     APData.TargetCourse = -1f;
 
-                if (float.TryParse(_bufRoll, out float r)) APData.TargetRoll = r;
+                if (float.TryParse(_bufRoll, NumberStyles.Float, CultureInfo.InvariantCulture, out float r)) APData.TargetRoll = r;
                 
                 APData.UseSetValues = true;
                 APData.Enabled = true;
@@ -634,23 +672,24 @@ namespace AutopilotMod
             }
 
             GUI.backgroundColor = APData.Enabled ? Color.green : Color.red;
-            if (GUILayout.Button(new GUIContent(APData.Enabled ? "Disengage" : "Engage", "Toggle autopilot. Engage sets current alt."), _styleButton))
+            if (GUILayout.Button(new GUIContent(APData.Enabled ? "Disengage" : "Engage", $"Toggle autopilot. Engage sets current alt."), _styleButton))
             {
                 APData.Enabled = !APData.Enabled;
                 if (APData.Enabled)
                 {
-                    if (float.TryParse(_bufAlt, out float a)) 
-                    APData.TargetAlt = ModUtils.ConvertAlt_FromDisplay(a);
-                
-                    if (float.TryParse(_bufClimb, out float c)) 
+                    _bufAlt = $"{APData.CurrentAlt}";
+                    if (float.TryParse(_bufAlt, NumberStyles.Float, CultureInfo.InvariantCulture, out float a)) 
+                        APData.TargetAlt = ModUtils.ConvertAlt_FromDisplay(a);
+                    
+                    if (float.TryParse(_bufClimb, NumberStyles.Float, CultureInfo.InvariantCulture, out float c)) 
                         APData.CurrentMaxClimbRate = Mathf.Max(0.5f, ModUtils.ConvertVS_FromDisplay(c));
 
-                    if (float.TryParse(_bufSpeed, out float s)) 
+                    if (float.TryParse(_bufSpeed, NumberStyles.Float, CultureInfo.InvariantCulture, out float s)) 
                         APData.TargetSpeed = ModUtils.ConvertSpeed_FromDisplay(s);
                     else 
                         APData.TargetSpeed = -1f;
 
-                    if (float.TryParse(_bufCourse, out float crs))
+                    if (float.TryParse(_bufCourse, NumberStyles.Float, CultureInfo.InvariantCulture, out float crs))
                     {
                         APData.TargetCourse = crs;
                         _bufRoll = $"{DefaultCRLimit.Value}";
@@ -658,7 +697,8 @@ namespace AutopilotMod
                     else 
                         APData.TargetCourse = -1f;
 
-                    if (float.TryParse(_bufRoll, out float r)) APData.TargetRoll = r;
+                    if (float.TryParse(_bufRoll, NumberStyles.Float, CultureInfo.InvariantCulture, out float r)) APData.TargetRoll = r;
+                    APData.UseSetValues = true;
                 }
                 GUI.FocusControl(null);
             }
@@ -748,7 +788,7 @@ namespace AutopilotMod
     {
         public static bool Enabled = false;
         public static bool UseSetValues = false;
-        public static bool GCASEnabled = Plugin.EnableGCAS.Value;
+        public static bool GCASEnabled = true;
         public static bool AutoJammerActive = false;
         public static bool GCASActive = false; 
         public static bool GCASWarning = false;
@@ -849,7 +889,7 @@ namespace AutopilotMod
                 APData.CurrentAlt = altitude; 
                 if (playerVehicle != null)
                 {
-                    Component v = (Component)playerVehicle;
+                    if (playerVehicle is not Component v) return;
                     if (v.gameObject != lastVehicleObj)
                     {
                         lastVehicleObj = v.gameObject;
@@ -864,6 +904,10 @@ namespace AutopilotMod
                         APData.CurrentMaxClimbRate = -1f;
                         APData.LocalAircraft = v.GetComponent<Aircraft>();
                         APData.LocalPilot = null;
+                        APData.LocalWeaponManager = null;
+                        if (APData.LocalAircraft != null && Plugin.f_weaponManager != null) {
+                            APData.LocalWeaponManager = Plugin.f_weaponManager.GetValue(APData.LocalAircraft) as WeaponManager;
+                        }
                         if (APData.LocalAircraft != null && Plugin.f_pilots != null)
                         {
                             IList pilots = (IList)Plugin.f_pilots.GetValue(APData.LocalAircraft);
@@ -874,7 +918,7 @@ namespace AutopilotMod
                         }
                     }
 
-                    APData.CurrentRoll = v.transform.eulerAngles.z;
+                    APData.CurrentRoll = Vector3.SignedAngle(Vector3.up, v.transform.up, v.transform.forward);
                     if (APData.CurrentRoll > 180f) APData.CurrentRoll -= 360f;
 
                     var rb = v.GetComponent<Rigidbody>();
@@ -882,33 +926,6 @@ namespace AutopilotMod
                 }
             } catch (Exception ex) {
                 Plugin.Logger.LogError($"[HudPatch] Error: {ex}");
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(FlightHud), "Update")]
-    internal class InputHandlerPatch
-    {
-        private static void Postfix()
-        {
-            try {
-                if (Input.GetKeyDown(Plugin.ToggleKey.Value))
-                {
-                    APData.Enabled = !APData.Enabled;
-                }
-
-                if (Plugin.EnableAutoJammer.Value && Input.GetKeyDown(Plugin.AutoJammerKey.Value))
-                {
-                    APData.AutoJammerActive = !APData.AutoJammerActive;
-                }
-                
-                if (Input.GetKeyDown(Plugin.ToggleGCASKey.Value))
-                {
-                    APData.GCASEnabled = !APData.GCASEnabled;
-                    if (!APData.GCASEnabled) { APData.GCASActive = false; APData.GCASWarning = false; }
-                }
-            } catch (Exception ex) {
-                Plugin.Logger.LogError($"[InputHandlerPatch] Error: {ex}");
             }
         }
     }
@@ -1122,9 +1139,6 @@ namespace AutopilotMod
                 if (APData.AutoJammerActive && APData.LocalAircraft != null)
                 {
                     object wm = APData.LocalWeaponManager;
-                    if (wm == null && Plugin.f_weaponManager != null) 
-                        wm = Plugin.f_weaponManager.GetValue(APData.LocalAircraft);
-
                     if (wm != null)
                     {
                         bool fire = false;
@@ -1139,7 +1153,7 @@ namespace AutopilotMod
                                     for (int i = 0; i < wpnList.Count; i++)
                                     {
                                         object w = wpnList[i];
-                                        if (w != null && w.GetType() == Plugin.t_JammingPod)
+                                        if (w != null && Plugin.t_JammingPod != null && Plugin.t_JammingPod.IsInstanceOfType(w))
                                         {
                                             fire = true;
                                             break;
@@ -1206,6 +1220,12 @@ namespace AutopilotMod
                 // autopilot
                 if (APData.Enabled)
                 {
+                    if (APData.PlayerRB == null)
+                    {
+                        APData.Enabled = false;
+                        APData.GCASActive = false;
+                        return;
+                    }
                     if (Mathf.Abs(stickPitch) > Plugin.StickDeadzone.Value || Mathf.Abs(stickRoll) > Plugin.StickDeadzone.Value)
                     {
                         APData.Enabled = false;
@@ -1224,9 +1244,35 @@ namespace AutopilotMod
                             if (Input.GetKey(Plugin.ClimbRateUpKey.Value)) APData.CurrentMaxClimbRate += Plugin.ClimbRateStep.Value;
                             if (Input.GetKey(Plugin.ClimbRateDownKey.Value)) APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - Plugin.ClimbRateStep.Value);
 
-                            if (Input.GetKey(Plugin.BankLevelKey.Value)) APData.TargetRoll = 0f;
-                            if (Input.GetKey(Plugin.BankLeftKey.Value)) APData.TargetRoll = Mathf.Repeat(APData.TargetRoll + Plugin.BankStep.Value + 180f, 360f) - 180f;
-                            if (Input.GetKey(Plugin.BankRightKey.Value)) APData.TargetRoll = Mathf.Repeat(APData.TargetRoll - Plugin.BankStep.Value + 180f, 360f) - 180f;
+                            if (Input.GetKeyDown(Plugin.BankLevelKey.Value))
+                            {
+                                if (APData.TargetCourse >= 0f)
+                                {
+                                    APData.TargetCourse = -1f;
+                                    APData.TargetRoll = 0f;
+                                }
+                                else
+                                {
+                                    APData.TargetRoll = 0f;
+                                }
+                            }
+
+                            if (APData.TargetCourse >= 0f)
+                            {
+                                if (Input.GetKey(Plugin.BankLeftKey.Value)) 
+                                    APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - Plugin.BankStep.Value, 360f);
+                                
+                                if (Input.GetKey(Plugin.BankRightKey.Value)) 
+                                    APData.TargetCourse = Mathf.Repeat(APData.TargetCourse + Plugin.BankStep.Value, 360f);
+                            }
+                            else
+                            {
+                                if (Input.GetKey(Plugin.BankLeftKey.Value)) 
+                                    APData.TargetRoll = Mathf.Repeat(APData.TargetRoll + Plugin.BankStep.Value + 180f, 360f) - 180f;
+                                
+                                if (Input.GetKey(Plugin.BankRightKey.Value)) 
+                                    APData.TargetRoll = Mathf.Repeat(APData.TargetRoll - Plugin.BankStep.Value + 180f, 360f) - 180f;
+                            }
                         }
 
                         float dt = Mathf.Max(Time.deltaTime, 0.0001f);
@@ -1306,29 +1352,41 @@ namespace AutopilotMod
 
                         // course hold
                         float activeTargetRoll = APData.TargetRoll;
-                        if (APData.TargetCourse >= 0f && APData.PlayerRB.velocity.sqrMagnitude > 25f && !APData.GCASActive) {
-                            
+
+                        if (APData.TargetCourse >= 0f &&
+                            APData.PlayerRB.velocity.sqrMagnitude > 25f &&
+                            !APData.GCASActive)
+                        {
                             Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
-                            float curCrs = Quaternion.LookRotation(flatVel).eulerAngles.y;
-                            float cErr = Mathf.DeltaAngle(curCrs, APData.TargetCourse);
-                            
-                            crsIntegral = Mathf.Clamp(crsIntegral + (cErr * dt * Plugin.Conf_Crs_I.Value), -Plugin.Conf_Crs_ILimit.Value, Plugin.Conf_Crs_ILimit.Value);
-                            float cD = (cErr - lastCrsError) / dt;
-                            
-                            float bankReq = (cErr * Plugin.Conf_Crs_P.Value) + crsIntegral + (cD * Plugin.Conf_Crs_D.Value);
+                            if (flatVel.sqrMagnitude > 1f)
+                            {
+                                float curCrs = Quaternion.LookRotation(flatVel).eulerAngles.y;
+                                float cErr = Mathf.DeltaAngle(curCrs, APData.TargetCourse);
 
-                            if (Plugin.Conf_InvertCourseRoll.Value) bankReq = -bankReq;
+                                float crsD = (cErr - lastCrsError) / dt;
+                                lastCrsError = cErr;
 
-                            lastCrsError = cErr;
-                            float limit = Mathf.Abs(APData.TargetRoll); 
-                            if (limit < 5f) limit = Plugin.DefaultCRLimit.Value; 
+                                float desiredYawRateDeg = (cErr * Plugin.Conf_Crs_P.Value) + (crsD * Plugin.Conf_Crs_D.Value);
+                                desiredYawRateDeg = Mathf.Clamp(desiredYawRateDeg, -8f, 8f);
 
-                            activeTargetRoll = Mathf.Clamp(bankReq, -limit, limit);
+                                float speed = flatVel.magnitude;
+                                float yawRateRad = desiredYawRateDeg * Mathf.Deg2Rad;
+                                float bankRad = Mathf.Atan(yawRateRad * speed / Physics.gravity.magnitude);
+                                float bankReq = bankRad * Mathf.Rad2Deg;
+
+                                crsIntegral = Mathf.Clamp(crsIntegral + (cErr * dt * Plugin.Conf_Crs_I.Value), -Plugin.Conf_Crs_ILimit.Value, Plugin.Conf_Crs_ILimit.Value);
+                                bankReq += crsIntegral;
+
+                                if (Plugin.Conf_InvertCourseRoll.Value) bankReq = -bankReq;
+
+                                float limit = Mathf.Abs(APData.TargetRoll);
+                                if (limit < 0.5f) limit = 0.5f;
+
+                                activeTargetRoll = Mathf.Clamp(bankReq, -limit, limit);
+                            }
                         }
 
                         // Pitch Control
-                        float pInv = Plugin.InvertPitch.Value ? -1f : 1f;
-
                         if (APData.GCASActive)
                         {
                             float targetG = Plugin.GCAS_MaxG.Value;
@@ -1362,9 +1420,18 @@ namespace AutopilotMod
                                 float targetPitchDeg = Mathf.Clamp((vsError * Plugin.Conf_VS_P.Value) + vsIntegral + (vsD * Plugin.Conf_VS_D.Value), -Plugin.Conf_VS_MaxAngle.Value, Plugin.Conf_VS_MaxAngle.Value);
 
                                 Vector3 fwd = APData.PlayerRB.transform.forward;
-                                Vector3 flatFwd = Vector3.ProjectOnPlane(fwd, Vector3.up).normalized;
-                                float currentPitch = Vector3.Angle(fwd, flatFwd);
-                                if (fwd.y < 0) currentPitch = -currentPitch;
+
+                                Vector3 flatProj = Vector3.ProjectOnPlane(fwd, Vector3.up);
+                                float currentPitch;
+                                
+                                if (flatProj.sqrMagnitude < 0.0001f) {
+                                    currentPitch = (fwd.y > 0) ? 90f : -90f;
+                                } else {
+                                    Vector3 flatFwd = flatProj.normalized;
+                                    currentPitch = Vector3.Angle(fwd, flatFwd);
+                                    if (fwd.y < 0) currentPitch = -currentPitch;
+                                }
+
                                 float pitchRate = APData.PlayerRB.transform.InverseTransformDirection(APData.PlayerRB.angularVelocity).x * Mathf.Rad2Deg;
 
                                 float angleError = targetPitchDeg - currentPitch;
@@ -1380,7 +1447,6 @@ namespace AutopilotMod
                         }
 
                         // Roll Control
-                        float rInv = Plugin.InvertRoll.Value ? -1f : 1f;
                         float rollError = Mathf.DeltaAngle(APData.CurrentRoll, activeTargetRoll);
                         float rollRate = APData.PlayerRB.transform.InverseTransformDirection(APData.PlayerRB.angularVelocity).z * Mathf.Rad2Deg;
 
@@ -1392,7 +1458,7 @@ namespace AutopilotMod
                             float stickRaw = (rollError * Plugin.RollP.Value) + rollIntegral + rollD;
                             rollOut = Mathf.Clamp(stickRaw, -Plugin.RollMax.Value, Plugin.RollMax.Value);
                             
-                            if (!Plugin.InvertRoll.Value) rollOut = -rollOut;
+                            rollOut *= Plugin.InvertRoll.Value ? -1f : 1f;
 
                             if (useHumanize) rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
                         }
@@ -1448,6 +1514,9 @@ namespace AutopilotMod
                 if (_lastVehicleChecked != currentVehicleObj || _cachedFuelGauge == null)
                 {
                     _lastVehicleChecked = currentVehicleObj;
+                    lastFuelMass = 0f;
+                    fuelFlowEma = 0f;
+                    lastUpdateTime = 0f;
                     _cachedFuelGauge = __instance.GetComponentInChildren<FuelGauge>(true);
                     
                     if (timerObj) UnityEngine.Object.Destroy(timerObj);
@@ -1498,10 +1567,11 @@ namespace AutopilotMod
                 // Update Text
                 Aircraft aircraft = APData.LocalAircraft;
                 if (aircraft == null) return;
+                if (Plugin.f_fuelCapacity == null) return; 
 
                 float currentFuel = (float)Plugin.f_fuelCapacity.GetValue(aircraft) * aircraft.GetFuelLevel();
                 float time = Time.time;
-                if (lastUpdateTime != 0f) {
+                if (lastUpdateTime != 0f && lastFuelMass > 0f) {
                     float dt = time - lastUpdateTime;
                     if (dt >= Plugin.FuelUpdateInterval.Value) {
                         float burned = lastFuelMass - currentFuel;
@@ -1547,12 +1617,12 @@ namespace AutopilotMod
                     
                     string spdStr = (APData.TargetSpeed > 0) 
                         ? $"{ModUtils.ProcessGameString(UnitConverter.SpeedReading(APData.TargetSpeed), Plugin.SpeedShowUnit.Value)}" 
-                        : "----";
+                        : "null";
 
                     string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
                     string latStr = (APData.TargetCourse >= 0) 
-                        ? $"{APData.TargetCourse:F0}{degUnit}" 
-                        : $"{APData.TargetRoll:F0}{degUnit}";
+                        ? $"C{APData.TargetCourse:F0}{degUnit}" 
+                        : $"R{APData.TargetRoll:F0}{degUnit}";
 
                     string newText = $"{altStr} {climbStr}\n{spdStr} {latStr}";
 

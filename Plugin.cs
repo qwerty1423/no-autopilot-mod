@@ -1561,8 +1561,8 @@ namespace AutopilotMod
                 }
                 Place(timerObj, 0);
                 Place(rangeObj, 1);
-                Place(apObj, 2);
-                Place(ajObj, 3);
+                Place(apObj, 3);
+                Place(ajObj, 5);
 
                 // Update Text
                 Aircraft aircraft = APData.LocalAircraft;

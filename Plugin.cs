@@ -247,7 +247,7 @@ namespace AutopilotMod
             GCAS_WarnBuffer = Config.Bind("Auto GCAS", "4. Warning Buffer", 20.0f, "Seconds warning before auto-pull");
             GCAS_AutoBuffer = Config.Bind("Auto GCAS", "5. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
             GCAS_Deadzone = Config.Bind("Auto GCAS", "6. GCAS Deadzone", 0.5f, "GCAS override deadzone");
-            GCAS_ScanRadius = Config.Bind("Auto GCAS", "7. Scan Radius", 2.0f, "Width of the collision tunnel. Bigger = safer for wings.");
+            GCAS_ScanRadius = Config.Bind("Auto GCAS", "7. Scan Radius", 2.0f, "Width of the spherecast.");
             GCAS_P = Config.Bind("GCAS PID", "1. GCAS P", 0.1f, "G Error -> Stick");
             GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 1.0f, "Builds pull over time");
             GCAS_D = Config.Bind("GCAS PID", "3. GCAS D", 0.0f, "Dampens G overshoot");
@@ -950,7 +950,7 @@ namespace AutopilotMod
         private static bool isPitchSleeping = false;
         private static bool isRollSleeping = false;
         private static bool isSpdSleeping = false;
-        private static float gcasNextScan = 0f;
+        // private static float gcasNextScan = 0f;
         private static float currentAppliedThrottle = 0f;
 
         // jammer
@@ -1026,7 +1026,6 @@ namespace AutopilotMod
                 if (APData.GCASEnabled && APData.PlayerRB != null)
                 {
                     bool gearDown = false;
-                    // Safe Gear Check
                     if (acRef != null && Plugin.f_gearState != null) {
                         object gs = Plugin.f_gearState.GetValue(acRef);
                         if (gs != null && !gs.ToString().Contains("LockedRetracted")) gearDown = true;
@@ -1042,7 +1041,7 @@ namespace AutopilotMod
                     else
                     {
                         float speed = APData.PlayerRB.velocity.magnitude;
-                        if (speed > 15f && (!APData.Enabled || APData.GCASActive))
+                        if (speed > 15f)
                         {
                             Vector3 velocity = APData.PlayerRB.velocity;
                             float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
@@ -1050,7 +1049,7 @@ namespace AutopilotMod
                             float gAccel = Plugin.GCAS_MaxG.Value * 9.81f; 
                             float turnRadius = speed * speed / gAccel;
                             
-                            float reactionTime = Plugin.GCAS_AutoBuffer.Value;
+                            float reactionTime = Plugin.GCAS_AutoBuffer.Value + (Time.deltaTime * 2.0f);
                             float reactionDist = speed * reactionTime;
                             float warnDist = speed * Plugin.GCAS_WarnBuffer.Value;
 
@@ -1058,31 +1057,31 @@ namespace AutopilotMod
                             bool warningZone = false;
                             // bool isWallThreat = false;
 
-                            if (Time.time >= gcasNextScan)
-                            {
-                                gcasNextScan = Time.time + 0.1f;
-                                Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f); 
-                                float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
+                            // if (Time.time >= gcasNextScan)
+                            // {
+                            //     gcasNextScan = Time.time + 0.05f;
+                            Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f); 
+                            float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
 
-                                if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange))
+                            if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange))
+                            {
+                                if (hit.transform.root != APData.PlayerRB.transform.root)
                                 {
-                                    if (hit.transform.root != APData.PlayerRB.transform.root)
+                                    float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
+                                    float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
+                                    
+                                    if (hit.distance < (reqArc + reactionDist + 20f))
                                     {
-                                        float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
-                                        float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
-                                        
-                                        if (hit.distance < (reqArc + reactionDist + 20f))
-                                        {
-                                            dangerImminent = true;
-                                            // if (hit.normal.y < 0.7f) isWallThreat = true;
-                                        }
-                                        else if (hit.distance < (reqArc + reactionDist + warnDist))
-                                        {
-                                            warningZone = true;
-                                        }
+                                        dangerImminent = true;
+                                        // if (hit.normal.y < 0.7f) isWallThreat = true;
+                                    }
+                                    else if (hit.distance < (reqArc + reactionDist + warnDist))
+                                    {
+                                        warningZone = true;
                                     }
                                 }
                             }
+                            // }
 
                             if (descentRate > 0.1f) 
                             {
@@ -1109,7 +1108,7 @@ namespace AutopilotMod
                                 if (safeToRelease)
                                 {
                                     APData.GCASActive = false;
-                                    APData.Enabled = false; 
+                                    APData.Enabled = false;
                                 }
                                 else
                                 {

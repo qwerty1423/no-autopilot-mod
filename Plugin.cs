@@ -12,14 +12,14 @@ using UnityEngine.UI;
 
 namespace AutopilotMod
 {
-    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.12.0")]
+    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.12.1")]
     public class Plugin : BaseUnityPlugin
     {
         internal new static ManualLogSource Logger;
 
         // ap menu?
         public static ConfigEntry<KeyCode> MenuKey;
-        private Rect _windowRect = new(50, 50, 250, 450);
+        private Rect _windowRect = new(50, 50, 210, 210);
         private bool _showMenu = false;
         
         private Vector2 _scrollPos;
@@ -27,9 +27,9 @@ namespace AutopilotMod
         private RectEdge _activeEdge = RectEdge.None;
         private enum RectEdge { None, Top, Bottom, Left, Right, TopLeft, TopRight, BottomLeft, BottomRight }
         
-        private string _bufAlt = "10000";
+        private string _bufAlt = "";
         private string _bufClimb = "40";
-        private string _bufRoll = "0";
+        private string _bufRoll = "";
         private string _bufSpeed = "";
         private string _bufCourse = "";
         
@@ -98,7 +98,7 @@ namespace AutopilotMod
         public static ConfigEntry<bool> InvertRoll, InvertPitch;
 
         public static ConfigEntry<float> Conf_Spd_P, Conf_Spd_I, Conf_Spd_D, Conf_Spd_ILimit;
-        public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit;
+        public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, ThrottleSlewRate;
         public static ConfigEntry<float> Conf_Crs_P, Conf_Crs_I, Conf_Crs_D, Conf_Crs_ILimit;
         public static ConfigEntry<bool> Conf_InvertCourseRoll;
 
@@ -118,6 +118,7 @@ namespace AutopilotMod
         public static ConfigEntry<float> Hum_RollSleepMin, Hum_RollSleepMax;
         public static ConfigEntry<float> Hum_Spd_Inner, Hum_Spd_Outer;
         public static ConfigEntry<float> Hum_Spd_SleepMin, Hum_Spd_SleepMax;
+        public static ConfigEntry<float> Hum_Acc_Inner, Hum_Acc_Outer;
 
         // --- CACHED REFLECTION FIELDS ---
         internal static FieldInfo f_playerVehicle;
@@ -160,8 +161,8 @@ namespace AutopilotMod
 
             UI_PosX = Config.Bind("Visuals - UI", "1. Window Position X", -1f, "-1 = Auto Bottom Right, otherwise pixel value");
             UI_PosY = Config.Bind("Visuals - UI", "2. Window Position Y", -1f, "-1 = Auto Bottom Right, otherwise pixel value");
-            UI_Width = Config.Bind("Visuals - UI", "3. Window Width", 300f, "Saved Width");
-            UI_Height = Config.Bind("Visuals - UI", "4. Window Height", 450f, "Saved Height");
+            UI_Width = Config.Bind("Visuals - UI", "3. Window Width", 210f, "Saved Width");
+            UI_Height = Config.Bind("Visuals - UI", "4. Window Height", 210f, "Saved Height");
 
             FuelSmoothing = Config.Bind("Calculations", "1. Fuel Flow Smoothing", 0.1f, "Alpha value");
             FuelUpdateInterval = Config.Bind("Calculations", "2. Fuel Update Interval", 1.0f, "Seconds");
@@ -232,6 +233,7 @@ namespace AutopilotMod
             Conf_Spd_ILimit = Config.Bind("Tuning - 4. Speed", "4. Speed I Limit", 1.0f, "Max Throttle Trim");
             ThrottleMinLimit = Config.Bind("Tuning - 4. Speed", "6. Safe Min Throttle", 0.01f, "Minimum throttle when limiter is active (prevents Airbrake)");
             ThrottleMaxLimit = Config.Bind("Tuning - 4. Speed", "7. Safe Max Throttle", 0.89f, "Maximum throttle when limiter is active (prevents Afterburner)");
+            ThrottleSlewRate = Config.Bind("Tuning - 4. Speed", "8. Throttle Slew Rate Limit", 0.2f, "in unit of throttle bars per second");
             Conf_Crs_P = Config.Bind("Tuning - 5. Course", "1. Course P", 1.0f, "Course Error -> Bank Angle");
             Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 1.0f, "Correction");
             Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.1f, "Dampen");
@@ -269,9 +271,11 @@ namespace AutopilotMod
             Hum_RollSleepMin = Config.Bind("Settings - Humanize", "15. Roll Sleep Min", 1.5f, "Seconds");
             Hum_RollSleepMax = Config.Bind("Settings - Humanize", "16. Roll Sleep Max", 60.0f, "Seconds");
             Hum_Spd_Inner = Config.Bind("Settings - Humanize", "17. Speed Tolerance Inner", 0.5f, "Start Sleeping (m/s error)");
-            Hum_Spd_Outer = Config.Bind("Settings - Humanize", "18. Speed Tolerance Outer", 20.0f, "Wake Up (m/s error)");
+            Hum_Spd_Outer = Config.Bind("Settings - Humanize", "18. Speed Tolerance Outer", 2.0f, "Wake Up (m/s error)");
             Hum_Spd_SleepMin = Config.Bind("Settings - Humanize", "19. Speed Sleep Min", 2.0f, "Seconds");
             Hum_Spd_SleepMax = Config.Bind("Settings - Humanize", "20. Speed Sleep Max", 60.0f, "Seconds");
+            Hum_Acc_Inner = Config.Bind("Settings - Humanize", "21. Accel Tolerance Inner", 0.05f, "Start Sleeping (m/s² acceleration)");
+            Hum_Acc_Outer = Config.Bind("Settings - Humanize", "22. Accel Tolerance Outer", 0.5f, "Wake Up (m/s² acceleration)");
 
             // reflection cache
             try {
@@ -658,8 +662,8 @@ namespace AutopilotMod
                         APData.TargetRoll = DefaultCRLimit.Value; 
                         _bufRoll = APData.TargetRoll.ToString("F0");
                     } else {
-                        APData.TargetRoll = 0f;
-                        _bufRoll = "0";
+                        APData.TargetRoll = -999f;
+                        _bufRoll = "";
                     }
                 }
 
@@ -932,12 +936,13 @@ namespace AutopilotMod
 
         // Derivative States
         private static float lastAltMeasurement = 0f;
+        private static float lastSpdMeasurement = 0f;
         private static float lastVSError = 0f;
         private static float lastGError = 0f;
         private static float lastSpdError = 0f;
         private static float lastCrsError = 0f;
                 
-        // Timers & Logic
+        // other states
         private static bool wasEnabled = false;
         private static float pitchSleepUntil = 0f;
         private static float rollSleepUntil = 0f;
@@ -946,8 +951,9 @@ namespace AutopilotMod
         private static bool isRollSleeping = false;
         private static bool isSpdSleeping = false;
         private static float gcasNextScan = 0f;
+        private static float currentAppliedThrottle = 0f;
 
-        // Jammer
+        // jammer
         private static float jammerNextFireTime = 0f;
         private static float jammerNextReleaseTime = 0f;
         private static bool isJammerHoldingTrigger = false;
@@ -956,12 +962,14 @@ namespace AutopilotMod
         {
             altIntegral = vsIntegral = angleIntegral = rollIntegral = gcasIntegral = crsIntegral = 0f;
             spdIntegral = Mathf.Clamp01(currentThrottle);
-            lastAltMeasurement = APData.CurrentAlt; 
+            lastAltMeasurement = (APData.PlayerRB != null) ? APData.CurrentAlt : 0f;
+            lastSpdMeasurement = (APData.PlayerRB != null) ? APData.PlayerRB.velocity.magnitude : 0f;
             lastSpdError = 0f;
             lastVSError = 0f;
             lastCrsError = 0f;
             isPitchSleeping = isRollSleeping = isSpdSleeping = false;
             spdSleepUntil = 0f;
+            currentAppliedThrottle = currentThrottle;
         }
 
         private static void Postfix(PilotPlayerState __instance)
@@ -1206,7 +1214,7 @@ namespace AutopilotMod
                 }
 
                 // autopilot
-                if (APData.Enabled)
+                if (APData.Enabled || APData.GCASActive)
                 {
                     if (APData.PlayerRB == null)
                     {
@@ -1214,255 +1222,264 @@ namespace AutopilotMod
                         APData.GCASActive = false;
                         return;
                     }
-                    if (Mathf.Abs(stickPitch) > Plugin.StickDeadzone.Value || Mathf.Abs(stickRoll) > Plugin.StickDeadzone.Value)
+
+                    bool pilotPitch = Mathf.Abs(stickPitch) > Plugin.StickDeadzone.Value;
+                    bool pilotRoll = Mathf.Abs(stickRoll) > Plugin.StickDeadzone.Value;
+
+                    // keys
+                    if (!pilotPitch && !pilotRoll && !APData.GCASActive)
                     {
-                        APData.Enabled = false;
-                        APData.GCASActive = false;
-                        ResetIntegrators(currentThrottle);
-                    }
-                    else
-                    {                        
-                        if (!APData.GCASActive)
+                        if (Input.GetKey(Plugin.UpKey.Value)) APData.TargetAlt += Plugin.AltStep.Value;
+                        if (Input.GetKey(Plugin.DownKey.Value)) APData.TargetAlt -= Plugin.AltStep.Value;
+                        if (Input.GetKey(Plugin.BigUpKey.Value)) APData.TargetAlt += Plugin.BigAltStep.Value;
+                        if (Input.GetKey(Plugin.BigDownKey.Value)) APData.TargetAlt = Mathf.Max(APData.TargetAlt - Plugin.BigAltStep.Value, Plugin.MinAltitude.Value);
+                        
+                        if (Input.GetKey(Plugin.ClimbRateUpKey.Value)) APData.CurrentMaxClimbRate += Plugin.ClimbRateStep.Value;
+                        if (Input.GetKey(Plugin.ClimbRateDownKey.Value)) APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - Plugin.ClimbRateStep.Value);
+
+                        if (Input.GetKeyDown(Plugin.BankLevelKey.Value))
                         {
-                            if (Input.GetKey(Plugin.UpKey.Value)) APData.TargetAlt += Plugin.AltStep.Value;
-                            if (Input.GetKey(Plugin.DownKey.Value)) APData.TargetAlt -= Plugin.AltStep.Value;
-                            if (Input.GetKey(Plugin.BigUpKey.Value)) APData.TargetAlt += Plugin.BigAltStep.Value;
-                            if (Input.GetKey(Plugin.BigDownKey.Value)) APData.TargetAlt = Mathf.Max(APData.TargetAlt - Plugin.BigAltStep.Value, Plugin.MinAltitude.Value);
-                            
-                            if (Input.GetKey(Plugin.ClimbRateUpKey.Value)) APData.CurrentMaxClimbRate += Plugin.ClimbRateStep.Value;
-                            if (Input.GetKey(Plugin.ClimbRateDownKey.Value)) APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - Plugin.ClimbRateStep.Value);
-
-                            if (Input.GetKeyDown(Plugin.BankLevelKey.Value))
-                            {
-                                if (APData.TargetCourse >= 0f)
-                                {
-                                    APData.TargetCourse = -1f;
-                                    APData.TargetRoll = 0f;
-                                }
-                                else
-                                {
-                                    APData.TargetRoll = 0f;
-                                }
-                            }
-
-                            if (APData.TargetCourse >= 0f)
-                            {
-                                if (Input.GetKey(Plugin.BankLeftKey.Value)) 
-                                    APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - Plugin.BankStep.Value, 360f);
-                                
-                                if (Input.GetKey(Plugin.BankRightKey.Value)) 
-                                    APData.TargetCourse = Mathf.Repeat(APData.TargetCourse + Plugin.BankStep.Value, 360f);
-                            }
-                            else
-                            {
-                                if (Input.GetKey(Plugin.BankLeftKey.Value)) 
-                                    APData.TargetRoll = Mathf.Repeat(APData.TargetRoll + Plugin.BankStep.Value + 180f, 360f) - 180f;
-                                
-                                if (Input.GetKey(Plugin.BankRightKey.Value)) 
-                                    APData.TargetRoll = Mathf.Repeat(APData.TargetRoll - Plugin.BankStep.Value + 180f, 360f) - 180f;
-                            }
+                            if (APData.TargetCourse >= 0f) { APData.TargetCourse = -1f; APData.TargetRoll = 0f; }
+                            else { APData.TargetRoll = 0f; }
                         }
 
-                        float dt = Mathf.Max(Time.deltaTime, 0.0001f);
-                        float pitchOut = 0f;
-                        float rollOut = 0f;
-                        float noiseT = Time.time * Plugin.HumanizeSpeed.Value;
-                        bool useHumanize = Plugin.HumanizeEnabled.Value && !APData.GCASActive;
-
-                        // Humanize Logic
-                        if (useHumanize) {
-                            float altErrAbs = Mathf.Abs(APData.TargetAlt - APData.CurrentAlt);
-                            float vsAbs = (APData.PlayerRB != null) ? Mathf.Abs(APData.PlayerRB.velocity.y) : 0f;
-                            if (!isPitchSleeping) {
-                                if (altErrAbs < Plugin.Hum_Alt_Inner.Value && vsAbs < Plugin.Hum_VS_Inner.Value) {
-                                    pitchSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Hum_PitchSleepMin.Value, Plugin.Hum_PitchSleepMax.Value);
-                                    isPitchSleeping = true;
-                                }
-                            } else if (altErrAbs > Plugin.Hum_Alt_Outer.Value || vsAbs > Plugin.Hum_VS_Outer.Value || Time.time > pitchSleepUntil) {
-                                isPitchSleeping = false;
-                            }
-
-                            float rollErrAbs = Mathf.Abs(Mathf.DeltaAngle(APData.CurrentRoll, APData.TargetRoll));
-                            float rollRateAbs = (APData.PlayerRB != null) ? Mathf.Abs(APData.PlayerRB.transform.InverseTransformDirection(APData.PlayerRB.angularVelocity).z * Mathf.Rad2Deg) : 0f;
-                            if (!isRollSleeping) {
-                                if (rollErrAbs < Plugin.Hum_Roll_Inner.Value && rollRateAbs < Plugin.Hum_RollRate_Inner.Value) {
-                                    rollSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Hum_RollSleepMin.Value, Plugin.Hum_RollSleepMax.Value);
-                                    isRollSleeping = true;
-                                }
-                            } else if (rollErrAbs > Plugin.Hum_Roll_Outer.Value || rollRateAbs > Plugin.Hum_RollRate_Outer.Value || Time.time > rollSleepUntil) {
-                                isRollSleeping = false;
-                            }
-                        }
-
-                        // throttle
-                        if (APData.TargetSpeed > 0f && Plugin.f_throttle != null) 
+                        if (APData.TargetCourse >= 0f)
                         {
-                            float currentSpeed = APData.PlayerRB.velocity.magnitude;
-                            float sErr = APData.TargetSpeed - currentSpeed;
-
-                            if (Plugin.HumanizeEnabled.Value) 
-                            {
-                                float sErrAbs = Mathf.Abs(sErr);
-                                if (!isSpdSleeping) {
-                                    if (sErrAbs < Plugin.Hum_Spd_Inner.Value) {
-                                        spdSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Hum_Spd_SleepMin.Value, Plugin.Hum_Spd_SleepMax.Value);
-                                        isSpdSleeping = true;
-                                    }
-                                } else if (sErrAbs > Plugin.Hum_Spd_Outer.Value || Time.time > spdSleepUntil) {
-                                    isSpdSleeping = false;
-                                }
-                            }
-
-                            float targetLeverPos;
-                            if (isSpdSleeping) {
-                                targetLeverPos = spdIntegral; 
-                            } 
-                            else {
-                                spdIntegral += sErr * dt * Plugin.Conf_Spd_I.Value;
-                                
-                                float minT = APData.AllowExtremeThrottle ? 0f : Plugin.ThrottleMinLimit.Value;
-                                float maxT = APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value;
-
-                                spdIntegral = Mathf.Clamp(spdIntegral, minT, maxT);
-
-                                float pTerm = sErr * Plugin.Conf_Spd_P.Value;
-                                float dTerm = (sErr - lastSpdError) / dt * Plugin.Conf_Spd_D.Value;
-                                
-                                targetLeverPos = spdIntegral + pTerm + dTerm;
-                                
-                                targetLeverPos = Mathf.Clamp(targetLeverPos, minT, maxT);
-                                
-                                lastSpdError = sErr;
-                            }
-
-                            Plugin.f_throttle.SetValue(inputObj, targetLeverPos);
-                        }
-
-                        // course hold
-                        float activeTargetRoll = APData.TargetRoll;
-
-                        if (APData.TargetCourse >= 0f &&
-                            APData.PlayerRB.velocity.sqrMagnitude > 25f &&
-                            !APData.GCASActive)
-                        {
-                            Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
-                            if (flatVel.sqrMagnitude > 1f)
-                            {
-                                float curCrs = Quaternion.LookRotation(flatVel).eulerAngles.y;
-                                float cErr = Mathf.DeltaAngle(curCrs, APData.TargetCourse);
-
-                                float crsD = (cErr - lastCrsError) / dt;
-                                lastCrsError = cErr;
-
-                                float desiredYawRateDeg = (cErr * Plugin.Conf_Crs_P.Value) + (crsD * Plugin.Conf_Crs_D.Value);
-                                desiredYawRateDeg = Mathf.Clamp(desiredYawRateDeg, -8f, 8f);
-
-                                float speed = flatVel.magnitude;
-                                float yawRateRad = desiredYawRateDeg * Mathf.Deg2Rad;
-                                float bankRad = Mathf.Atan(yawRateRad * speed / Physics.gravity.magnitude);
-                                float bankReq = bankRad * Mathf.Rad2Deg;
-
-                                crsIntegral = Mathf.Clamp(crsIntegral + (cErr * dt * Plugin.Conf_Crs_I.Value), -Plugin.Conf_Crs_ILimit.Value, Plugin.Conf_Crs_ILimit.Value);
-                                bankReq += crsIntegral;
-
-                                if (Plugin.Conf_InvertCourseRoll.Value) bankReq = -bankReq;
-
-                                float limit = Mathf.Abs(APData.TargetRoll);
-                                if (limit < 0.5f) limit = 0.5f;
-
-                                activeTargetRoll = Mathf.Clamp(bankReq, -limit, limit);
-                            }
-                        }
-
-                        // Pitch Control
-                        if (APData.TargetAlt > 0f || APData.GCASActive)
-                        {
-                            float targetG = Plugin.GCAS_MaxG.Value;
-                            float gError = targetG - currentG;
-                            gcasIntegral = Mathf.Clamp(gcasIntegral + (gError * dt * Plugin.GCAS_I.Value), -Plugin.GCAS_ILimit.Value, Plugin.GCAS_ILimit.Value);
-                            
-                            float gD = (gError - lastGError) / dt;
-                            lastGError = gError;
-                            
-                            float stick = (gError * Plugin.GCAS_P.Value) + gcasIntegral + (gD * Plugin.GCAS_D.Value);
-                            
-                            pitchOut = Mathf.Clamp(stick, -1f, 1f);
-                            if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
+                            if (Input.GetKey(Plugin.BankLeftKey.Value)) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - Plugin.BankStep.Value, 360f);
+                            if (Input.GetKey(Plugin.BankRightKey.Value)) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse + Plugin.BankStep.Value, 360f);
                         }
                         else
                         {
-                            if (useHumanize && isPitchSleeping) {
-                                altIntegral = Mathf.MoveTowards(altIntegral, 0f, dt * 2f);
-                                vsIntegral = Mathf.MoveTowards(vsIntegral, 0f, dt * 10f);
-                                angleIntegral = Mathf.MoveTowards(angleIntegral, 0f, dt * 5f);
-                                lastAltMeasurement = APData.CurrentAlt;
-                                lastVSError = 0f;
-                            } else {
-                                float altError = APData.TargetAlt - APData.CurrentAlt;
-                                altIntegral = Mathf.Clamp(altIntegral + (altError * dt * Plugin.Conf_Alt_I.Value), -Plugin.Conf_Alt_ILimit.Value, Plugin.Conf_Alt_ILimit.Value);
+                            if (Input.GetKey(Plugin.BankLeftKey.Value)) APData.TargetRoll = Mathf.Repeat(APData.TargetRoll + Plugin.BankStep.Value + 180f, 360f) - 180f;
+                            if (Input.GetKey(Plugin.BankRightKey.Value)) APData.TargetRoll = Mathf.Repeat(APData.TargetRoll - Plugin.BankStep.Value + 180f, 360f) - 180f;
+                        }
+                    }
 
-                                float altD = -(APData.CurrentAlt - lastAltMeasurement) / dt;
-                                lastAltMeasurement = APData.CurrentAlt;
-                                
-                                float targetVS = Mathf.Clamp((altError * Plugin.Conf_Alt_P.Value) + altIntegral + (altD * Plugin.Conf_Alt_D.Value), -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
-                                float vsError = targetVS - APData.PlayerRB.velocity.y;
-                                vsIntegral = Mathf.Clamp(vsIntegral + (vsError * dt * Plugin.Conf_VS_I.Value), -Plugin.Conf_VS_ILimit.Value, Plugin.Conf_VS_ILimit.Value);
-                                float vsD = (vsError - lastVSError) / dt; lastVSError = vsError;
-                                
-                                float targetPitchDeg = Mathf.Clamp((vsError * Plugin.Conf_VS_P.Value) + vsIntegral + (vsD * Plugin.Conf_VS_D.Value), -Plugin.Conf_VS_MaxAngle.Value, Plugin.Conf_VS_MaxAngle.Value);
+                    float dt = Mathf.Max(Time.deltaTime, 0.0001f);
+                    float noiseT = Time.time * Plugin.HumanizeSpeed.Value;
+                    bool useHumanize = Plugin.HumanizeEnabled.Value && !APData.GCASActive;
 
-                                Vector3 fwd = APData.PlayerRB.transform.forward;
+                    // throttle control
+                    if (APData.TargetSpeed > 0f && Plugin.f_throttle != null && !APData.GCASActive) 
+                    {
+                        float currentSpeed = APData.PlayerRB.velocity.magnitude;
+                        float sErr = APData.TargetSpeed - currentSpeed;
+                        
+                        float currentAccel = Mathf.Abs(currentSpeed - lastSpdMeasurement) / dt;
+                        lastSpdMeasurement = currentSpeed;
 
-                                Vector3 flatProj = Vector3.ProjectOnPlane(fwd, Vector3.up);
-                                float currentPitch;
-                                
-                                if (flatProj.sqrMagnitude < 0.0001f) {
-                                    currentPitch = (fwd.y > 0) ? 90f : -90f;
-                                } else {
-                                    Vector3 flatFwd = flatProj.normalized;
-                                    currentPitch = Vector3.Angle(fwd, flatFwd);
-                                    if (fwd.y < 0) currentPitch = -currentPitch;
+                        if (useHumanize) 
+                        {
+                            float sErrAbs = Mathf.Abs(sErr);
+                            if (!isSpdSleeping) {
+                                if (sErrAbs < Plugin.Hum_Spd_Inner.Value && currentAccel < Plugin.Hum_Acc_Inner.Value) {
+                                    spdSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Hum_Spd_SleepMin.Value, Plugin.Hum_Spd_SleepMax.Value);
+                                    isSpdSleeping = true;
                                 }
-
-                                float pitchRate = APData.PlayerRB.transform.InverseTransformDirection(APData.PlayerRB.angularVelocity).x * Mathf.Rad2Deg;
-
-                                float angleError = targetPitchDeg - currentPitch;
-                                angleIntegral = Mathf.Clamp(angleIntegral + (angleError * dt * Plugin.Conf_Angle_I.Value), -Plugin.Conf_Angle_ILimit.Value, Plugin.Conf_Angle_ILimit.Value);
-                                
-                                pitchOut = (angleError * Plugin.Conf_Angle_P.Value) + angleIntegral - (pitchRate * Plugin.Conf_Angle_D.Value);
-
-                                if (useHumanize) pitchOut += (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
-                                if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
+                            } else if (sErrAbs > Plugin.Hum_Spd_Outer.Value || currentAccel > Plugin.Hum_Acc_Outer.Value || Time.time > spdSleepUntil) {
+                                isSpdSleeping = false;
                             }
-                            if (Plugin.f_pitch != null)
-                                Plugin.f_pitch.SetValue(inputObj, Mathf.Clamp(pitchOut, -1f, 1f));
                         }
 
-                        // Roll control
-                        bool isRollActive = (APData.TargetCourse >= 0f) || (APData.TargetRoll != -999f);
-
-                        if (isRollActive || APData.GCASActive)
+                        float desiredLeverPos;
+                        if (isSpdSleeping) 
                         {
+                            desiredLeverPos = spdIntegral; 
+                        } 
+                        else 
+                        {
+                            spdIntegral += sErr * dt * Plugin.Conf_Spd_I.Value;
+                            
+                            float minT = APData.AllowExtremeThrottle ? 0f : Plugin.ThrottleMinLimit.Value;
+                            float maxT = APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value;
+                            spdIntegral = Mathf.Clamp(spdIntegral, minT, maxT);
+
+                            float pTerm = sErr * Plugin.Conf_Spd_P.Value;
+                            float dTerm = (sErr - lastSpdError) / dt * Plugin.Conf_Spd_D.Value;
+                            
+                            desiredLeverPos = Mathf.Clamp(spdIntegral + pTerm + dTerm, minT, maxT);
+                            lastSpdError = sErr;
+                        }
+                        currentAppliedThrottle = Mathf.MoveTowards(
+                            currentAppliedThrottle, 
+                            desiredLeverPos, 
+                            Plugin.ThrottleSlewRate.Value * dt
+                        );
+                        Plugin.f_throttle.SetValue(inputObj, currentAppliedThrottle);
+                    }
+
+                    // roll control
+                    bool rollAxisActive = APData.GCASActive || APData.TargetCourse >= 0f || APData.TargetRoll != -999f;
+
+                    if (rollAxisActive)
+                    {
+                        if (pilotRoll && !APData.GCASActive)
+                        {
+                            // Only "catch" the new roll if we were already holding a roll
+                            if (APData.TargetRoll != -999f) APData.TargetRoll = APData.CurrentRoll;
+                            APData.TargetCourse = -1f;
+                            rollIntegral = 0f;
+                        }
+                        else
+                        {
+                            float activeTargetRoll = APData.TargetRoll;
+                            
+                            if (APData.TargetCourse >= 0f && APData.PlayerRB.velocity.sqrMagnitude > 25f && !APData.GCASActive)
+                            {
+                                Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
+                                if (flatVel.sqrMagnitude > 1f)
+                                {
+                                    float curCrs = Quaternion.LookRotation(flatVel).eulerAngles.y;
+                                    float cErr = Mathf.DeltaAngle(curCrs, APData.TargetCourse);
+                                    
+                                    float crsD = (cErr - lastCrsError) / dt;
+                                    lastCrsError = cErr;
+
+                                    float desiredYawRateDeg = (cErr * Plugin.Conf_Crs_P.Value) + (crsD * Plugin.Conf_Crs_D.Value);
+                                    desiredYawRateDeg = Mathf.Clamp(desiredYawRateDeg, -8f, 8f);
+
+                                    float speed = flatVel.magnitude;
+                                    float yawRateRad = desiredYawRateDeg * Mathf.Deg2Rad;
+                                    float bankRad = Mathf.Atan(yawRateRad * speed / 9.81f);
+                                    float bankReq = bankRad * Mathf.Rad2Deg;
+
+                                    crsIntegral = Mathf.Clamp(crsIntegral + (cErr * dt * Plugin.Conf_Crs_I.Value), -Plugin.Conf_Crs_ILimit.Value, Plugin.Conf_Crs_ILimit.Value);
+                                    bankReq += crsIntegral;
+
+                                    if (Plugin.Conf_InvertCourseRoll.Value) bankReq = -bankReq;
+
+                                    float limit = Mathf.Abs(APData.TargetRoll);
+                                    if (limit < 0.5f) limit = 0.5f;
+
+                                    activeTargetRoll = Mathf.Clamp(bankReq, -limit, limit);
+                                }
+                            }
+                            else if (APData.GCASActive)
+                            {
+                                activeTargetRoll = 0f;
+                            }
+
                             float rollError = Mathf.DeltaAngle(APData.CurrentRoll, activeTargetRoll);
                             float rollRate = APData.PlayerRB.transform.InverseTransformDirection(APData.PlayerRB.angularVelocity).z * Mathf.Rad2Deg;
 
+                            // Roll sleep
+                            if (useHumanize) {
+                                float rollErrAbs = Mathf.Abs(rollError);
+                                float rollRateAbs = Mathf.Abs(rollRate);
+                                if (!isRollSleeping) {
+                                    if (rollErrAbs < Plugin.Hum_Roll_Inner.Value && rollRateAbs < Plugin.Hum_RollRate_Inner.Value) {
+                                        rollSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Hum_RollSleepMin.Value, Plugin.Hum_RollSleepMax.Value);
+                                        isRollSleeping = true;
+                                    }
+                                } else if (rollErrAbs > Plugin.Hum_Roll_Outer.Value || rollRateAbs > Plugin.Hum_RollRate_Outer.Value || Time.time > rollSleepUntil) {
+                                    isRollSleeping = false;
+                                }
+                            }
+
+                            float rollOut = 0f;
                             if (useHumanize && isRollSleeping) {
                                 rollIntegral = Mathf.MoveTowards(rollIntegral, 0f, dt * 5f);
                             } else {
                                 rollIntegral = Mathf.Clamp(rollIntegral + (rollError * dt * Plugin.RollI.Value), -Plugin.RollILimit.Value, Plugin.RollILimit.Value);
-                                float rollD = (0f - rollRate) * Plugin.RollD.Value;
+                                float rollD = (0f - rollRate) * Plugin.RollD.Value; 
                                 rollOut = (rollError * Plugin.RollP.Value) + rollIntegral + rollD;
 
                                 if (Plugin.InvertRoll.Value) rollOut = -rollOut;
-
-                                if (useHumanize) {
-                                    rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
-                                }
+                                if (useHumanize) rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
                             }
+
                             if (Plugin.f_roll != null)
                                 Plugin.f_roll.SetValue(inputObj, Mathf.Clamp(rollOut, -1f, 1f));
-                        }                 
-                        stickPitch = pitchOut;
+                        }
+                    }
+
+                    // pitch control
+                    bool pitchAxisActive = APData.GCASActive || APData.TargetAlt > 0f;
+
+                    if (pitchAxisActive)
+                    {
+                        if (pilotPitch && !APData.GCASActive)
+                        {
+                            if (APData.TargetAlt > 0f) APData.TargetAlt = APData.CurrentAlt;
+                            altIntegral = 0f;
+                            vsIntegral = 0f;
+                            angleIntegral = 0f;
+                        }
+                        else
+                        {
+                            float pitchOut = 0f;
+
+                            // gcas
+                            if (APData.GCASActive)
+                            {
+                                float targetG = Plugin.GCAS_MaxG.Value;
+                                float gError = targetG - currentG;
+                                gcasIntegral = Mathf.Clamp(gcasIntegral + (gError * dt * Plugin.GCAS_I.Value), -Plugin.GCAS_ILimit.Value, Plugin.GCAS_ILimit.Value);
+                                
+                                float gD = (gError - lastGError) / dt;
+                                lastGError = gError;
+                                
+                                float stick = (gError * Plugin.GCAS_P.Value) + gcasIntegral + (gD * Plugin.GCAS_D.Value);
+                                
+                                pitchOut = Mathf.Clamp(stick, -1f, 1f);
+                                if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
+                            }
+                            // alt hold
+                            else if (APData.TargetAlt > 0f)
+                            {
+                                if (useHumanize && isPitchSleeping) {
+                                    altIntegral = Mathf.MoveTowards(altIntegral, 0f, dt * 2f);
+                                    vsIntegral = Mathf.MoveTowards(vsIntegral, 0f, dt * 10f);
+                                    angleIntegral = Mathf.MoveTowards(angleIntegral, 0f, dt * 5f);
+                                    lastAltMeasurement = APData.CurrentAlt;
+                                    lastVSError = 0f;
+                                } else {
+                                    float altError = APData.TargetAlt - APData.CurrentAlt;
+                                    altIntegral = Mathf.Clamp(altIntegral + (altError * dt * Plugin.Conf_Alt_I.Value), -Plugin.Conf_Alt_ILimit.Value, Plugin.Conf_Alt_ILimit.Value);
+
+                                    float altD = -(APData.CurrentAlt - lastAltMeasurement) / dt;
+                                    lastAltMeasurement = APData.CurrentAlt;
+                                    
+                                    float targetVS = Mathf.Clamp((altError * Plugin.Conf_Alt_P.Value) + altIntegral + (altD * Plugin.Conf_Alt_D.Value), -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
+                                    float vsError = targetVS - APData.PlayerRB.velocity.y;
+                                    
+                                    vsIntegral = Mathf.Clamp(vsIntegral + (vsError * dt * Plugin.Conf_VS_I.Value), -Plugin.Conf_VS_ILimit.Value, Plugin.Conf_VS_ILimit.Value);
+                                    float vsD = (vsError - lastVSError) / dt; 
+                                    lastVSError = vsError;
+                                    
+                                    float targetPitchDeg = Mathf.Clamp((vsError * Plugin.Conf_VS_P.Value) + vsIntegral + (vsD * Plugin.Conf_VS_D.Value), -Plugin.Conf_VS_MaxAngle.Value, Plugin.Conf_VS_MaxAngle.Value);
+
+                                    float currentPitch = Mathf.Asin(APData.PlayerRB.transform.forward.y) * Mathf.Rad2Deg;
+
+                                    // alt sleep
+                                    if (useHumanize) {
+                                        float altErrAbs = Mathf.Abs(altError);
+                                        float vsAbs = Mathf.Abs(APData.PlayerRB.velocity.y);
+                                        if (altErrAbs < Plugin.Hum_Alt_Inner.Value && vsAbs < Plugin.Hum_VS_Inner.Value) {
+                                            pitchSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Hum_PitchSleepMin.Value, Plugin.Hum_PitchSleepMax.Value);
+                                            isPitchSleeping = true;
+                                        }
+                                    }
+                                    if (useHumanize && (Mathf.Abs(altError) > Plugin.Hum_Alt_Outer.Value || Time.time > pitchSleepUntil)) {
+                                        isPitchSleeping = false;
+                                    }
+
+                                    float pitchRate = APData.PlayerRB.transform.InverseTransformDirection(APData.PlayerRB.angularVelocity).x * Mathf.Rad2Deg;
+
+                                    float angleError = targetPitchDeg - currentPitch;
+                                    angleIntegral = Mathf.Clamp(angleIntegral + (angleError * dt * Plugin.Conf_Angle_I.Value), -Plugin.Conf_Angle_ILimit.Value, Plugin.Conf_Angle_ILimit.Value);
+                                    
+                                    pitchOut = (angleError * Plugin.Conf_Angle_P.Value) + angleIntegral - (pitchRate * Plugin.Conf_Angle_D.Value);
+
+                                    if (useHumanize) pitchOut += (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
+                                    if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
+                                }
+                                pitchOut = Mathf.Clamp(pitchOut, -1f, 1f);
+                            }
+
+                            if (Plugin.f_pitch != null)
+                                Plugin.f_pitch.SetValue(inputObj, pitchOut);
+                        }
                     }
                 }
             }

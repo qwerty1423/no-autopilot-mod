@@ -170,8 +170,8 @@ namespace AutopilotMod
 
             // Settings
             StickDeadzone = Config.Bind("Settings", "1. Stick Deadzone", 0.5f, "Threshold");
-            InvertRoll = Config.Bind("Settings", "2. Invert Roll", false, "Flip Roll");
-            InvertPitch = Config.Bind("Settings", "3. Invert Pitch", false, "Flip Pitch");
+            InvertRoll = Config.Bind("Settings", "2. Invert Roll", true, "Flip Roll");
+            InvertPitch = Config.Bind("Settings", "3. Invert Pitch", true, "Flip Pitch");
 
             // Auto Jammer
             EnableAutoJammer = Config.Bind("Auto Jammer", "1. Enable Auto Jammer", true, "Allow the feature");
@@ -236,7 +236,7 @@ namespace AutopilotMod
             Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 1.0f, "Correction");
             Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.1f, "Dampen");
             Conf_Crs_ILimit = Config.Bind("Tuning - 5. Course", "4. Course I Limit", 70.0f, "Max Integral Bank");
-            Conf_InvertCourseRoll = Config.Bind("Tuning - 5. Course", "5. Invert Bank Direction", false, "Toggle this if the plane turns the wrong way");
+            Conf_InvertCourseRoll = Config.Bind("Tuning - 5. Course", "5. Invert Bank Direction", true, "Toggle this if the plane turns the wrong way");
             
             // Auto GCAS
             EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS on start", true, "GCAS off at start if disabled");

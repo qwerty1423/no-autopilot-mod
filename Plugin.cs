@@ -1308,14 +1308,13 @@ namespace AutopilotMod
                         Plugin.f_throttle.SetValue(inputObj, currentAppliedThrottle);
                     }
 
-                    // roll control
+                    // roll/course control
                     bool rollAxisActive = APData.GCASActive || APData.TargetCourse >= 0f || APData.TargetRoll != -999f;
 
                     if (rollAxisActive)
                     {
                         if (pilotRoll && !APData.GCASActive)
                         {
-                            // Only "catch" the new roll if we were already holding a roll
                             if (APData.TargetRoll != -999f) APData.TargetRoll = APData.CurrentRoll;
                             APData.TargetCourse = -1f;
                             rollIntegral = 0f;

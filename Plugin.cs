@@ -917,7 +917,7 @@ namespace AutopilotMod
                         }
                     }
 
-                    APData.CurrentRoll = Vector3.SignedAngle(Vector3.up, v.transform.up, v.transform.forward);
+                    APData.CurrentRoll = v.transform.eulerAngles.z;
                     if (APData.CurrentRoll > 180f) APData.CurrentRoll -= 360f;
 
                     var rb = v.GetComponent<Rigidbody>();

@@ -569,7 +569,7 @@ namespace AutopilotMod
             float targetWidth = Mathf.Max(wAlt, wVS, wRoll, wSpd, wCrs);
             _dynamicLabelWidth = Mathf.Lerp(_dynamicLabelWidth, targetWidth, 0.15f);
 
-            float currentRollDefault = APData.TargetCourse == -1f ? 0f : DefaultCRLimit.Value;
+            // float currentRollDefault = APData.TargetCourse == -1f ? 0f : DefaultCRLimit.Value;
             
             GUILayout.BeginHorizontal();
             GUILayout.Label($"{sAlt}", _styleLabel, GUILayout.Width(_dynamicLabelWidth));
@@ -1386,8 +1386,7 @@ namespace AutopilotMod
                                 if (useHumanize) rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
                             }
 
-                            if (Plugin.f_roll != null)
-                                Plugin.f_roll.SetValue(inputObj, Mathf.Clamp(rollOut, -1f, 1f));
+                            Plugin.f_roll?.SetValue(inputObj, Mathf.Clamp(rollOut, -1f, 1f));
                         }
                     }
 
@@ -1475,8 +1474,7 @@ namespace AutopilotMod
                                 pitchOut = Mathf.Clamp(pitchOut, -1f, 1f);
                             }
 
-                            if (Plugin.f_pitch != null)
-                                Plugin.f_pitch.SetValue(inputObj, pitchOut);
+                            Plugin.f_pitch?.SetValue(inputObj, pitchOut);
                         }
                     }
                 }

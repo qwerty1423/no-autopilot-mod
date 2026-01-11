@@ -1342,13 +1342,23 @@ namespace AutopilotMod
                                 {
                                     float curCrs = Quaternion.LookRotation(flatVel).eulerAngles.y;
                                     float cErr = Mathf.DeltaAngle(curCrs, APData.TargetCourse);
+                                    float velocity = APData.PlayerRB.velocity.magnitude;
 
-                                    float bankReq = pidCrs.Evaluate(cErr, curCrs, dt,
+                                    float desiredTurnRate = pidCrs.Evaluate(cErr, curCrs, dt,
                                         Plugin.Conf_Crs_P.Value, Plugin.Conf_Crs_I.Value, Plugin.Conf_Crs_D.Value,
                                         Plugin.Conf_Crs_ILimit.Value, true);
 
+                                    float gravity = 9.81f;
+                                    float turnRateRad = desiredTurnRate * Mathf.Deg2Rad;
+                                    float bankReq = Mathf.Atan(velocity * turnRateRad / gravity) * Mathf.Rad2Deg;
+
                                     if (Plugin.Conf_InvertCourseRoll.Value) bankReq = -bankReq;
-                                    activeTargetRoll = Mathf.Clamp(bankReq, -Mathf.Abs(APData.TargetRoll), Mathf.Abs(APData.TargetRoll));
+
+                                    float maxBank = (APData.TargetRoll != -999f && APData.TargetRoll != 0)
+                                                    ? Mathf.Abs(APData.TargetRoll)
+                                                    : Plugin.DefaultCRLimit.Value;
+
+                                    activeTargetRoll = Mathf.Clamp(bankReq, -maxBank, maxBank);
                                 }
                             }
                             else if (APData.GCASActive)

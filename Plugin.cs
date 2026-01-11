@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using System.Globalization;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -424,6 +423,7 @@ namespace AutopilotMod
             _bufCourse = (APData.TargetCourse >= 0) ? APData.TargetCourse.ToString("F0") : "";
         }
 
+        // gui
         private void OnGUI()
         {
             if (!_showMenu) return;
@@ -533,6 +533,7 @@ namespace AutopilotMod
             }
         }
 
+        // gui
         private void DrawAPWindow(int windowID)
         {
             GUI.DragWindow(new Rect(0, 0, 10000, 25));

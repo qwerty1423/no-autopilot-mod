@@ -20,13 +20,13 @@ In order of implementation, earliest first
 - Medusa auto jam on full capacitor (won’t select targets or weapons)
 - Auto-GCAS
 - simple autopilot GUI
-
+- heading hold
+- autothrottle
+  
 ### features not in the mod (yet?)
 
 In approximate likelihood of implementation order descending.
 
-- heading hold
-- autothrottle
 - waypoints and flying to them
 - separate PID values for every aircraft
 - nap of the earth flying

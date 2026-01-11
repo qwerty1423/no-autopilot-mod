@@ -12,7 +12,7 @@ using UnityEngine.UI;
 
 namespace AutopilotMod
 {
-    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.12.1")]
+    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.12.2")]
     public class Plugin : BaseUnityPlugin
     {
         internal new static ManualLogSource Logger;

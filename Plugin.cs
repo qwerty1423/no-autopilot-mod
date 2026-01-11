@@ -1533,9 +1533,13 @@ namespace AutopilotMod
                 if (__instance == null || Plugin.f_playerVehicle == null) return;
 
                 object vehicleRaw = Plugin.f_playerVehicle.GetValue(__instance);
+                UnityEngine.Object unityObj = vehicleRaw as UnityEngine.Object;
+
+                if (unityObj == null) return;
                 if (vehicleRaw is not Component vehicleComponent) return;
 
                 GameObject currentVehicleObj = vehicleComponent.gameObject;
+                if (currentVehicleObj == null) return;
 
                 if (_lastVehicleChecked != currentVehicleObj || _cachedFuelGauge == null)
                 {

@@ -960,6 +960,13 @@ namespace AutopilotMod
 
         private static float lastSpdMeasurement = 0f;
 
+        private static float lastPitchOut = 0f;
+        private static float lastRollOut = 0f;
+        private static float lastThrottleOut = 0f;
+        private static float lastBankReq = 0f;
+        private static float lastVSReq = 0f;
+        private static float lastAngleReq = 0f;
+
         private static bool wasEnabled = false;
         private static float pitchSleepUntil = 0f;
         private static float rollSleepUntil = 0f;
@@ -985,6 +992,13 @@ namespace AutopilotMod
             pidGCAS.Reset();
             pidCrs.Reset();
             pidSpd.Reset(Mathf.Clamp01(currentThrottle));
+
+            lastPitchOut = 0f;
+            lastRollOut = 0f;
+            lastThrottleOut = currentThrottle;
+            lastBankReq = 0f;
+            lastVSReq = 0f;
+            lastAngleReq = 0f;
 
             isPitchSleeping = isRollSleeping = isSpdSleeping = false;
             pitchSleepUntil = rollSleepUntil = spdSleepUntil = 0f;
@@ -1309,12 +1323,15 @@ namespace AutopilotMod
 
                         float pidOutput = pidSpd.Evaluate(sErr, currentSpeed, dt,
                             Plugin.Conf_Spd_P.Value, Plugin.Conf_Spd_I.Value, Plugin.Conf_Spd_D.Value,
-                            maxT, true);
+                            maxT, true, null,
+                            lastThrottleOut, 0.95f);
+
+                        lastThrottleOut = pidOutput;
 
                         float currentPitch = Mathf.Asin(APData.PlayerRB.transform.forward.y);
                         float pitchWorkload = Mathf.Sin(currentPitch) * Plugin.Conf_Spd_C.Value;
 
-                        float desiredLeverPos = isSpdSleeping ? pidSpd.Integral : Mathf.Clamp(pidOutput + pitchWorkload, minT, maxT);
+                        float desiredLeverPos = Mathf.Clamp((isSpdSleeping ? pidSpd.Integral : pidOutput) + pitchWorkload, minT, maxT);
 
                         currentAppliedThrottle = Mathf.MoveTowards(
                             currentAppliedThrottle,
@@ -1345,9 +1362,13 @@ namespace AutopilotMod
                                 {
                                     float curCrs = Quaternion.LookRotation(flatVel).eulerAngles.y;
                                     float cErr = Mathf.DeltaAngle(curCrs, APData.TargetCourse);
+
                                     float desiredTurnRate = pidCrs.Evaluate(cErr, curCrs, dt,
                                         Plugin.Conf_Crs_P.Value, Plugin.Conf_Crs_I.Value, Plugin.Conf_Crs_D.Value,
-                                        Plugin.Conf_Crs_ILimit.Value, true);
+                                        Plugin.Conf_Crs_ILimit.Value, true, null,
+                                        lastBankReq, 20f);
+
+                                    lastBankReq = desiredTurnRate;
 
                                     float gravity = 9.81f;
                                     float velocity = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
@@ -1356,13 +1377,8 @@ namespace AutopilotMod
 
                                     if (Plugin.Conf_InvertCourseRoll.Value) bankReq = -bankReq;
 
-                                    float maxBank = (APData.TargetRoll != -999f && APData.TargetRoll != 0)
-                                                    ? Mathf.Abs(APData.TargetRoll)
-                                                    : Plugin.DefaultCRLimit.Value;
-
-                                    // glimiter from gcas for bank?
-                                    float maxAllowedG = Plugin.GCAS_MaxG.Value;
-                                    float gLimitBank = Mathf.Acos(1f / maxAllowedG) * Mathf.Rad2Deg;
+                                    float safeMaxG = Mathf.Max(Plugin.GCAS_MaxG.Value, 1.01f);
+                                    float gLimitBank = Mathf.Acos(1f / safeMaxG) * Mathf.Rad2Deg;
 
                                     float userLimit = (APData.TargetRoll != -999f && APData.TargetRoll != 0)
                                                       ? Mathf.Abs(APData.TargetRoll)
@@ -1409,7 +1425,10 @@ namespace AutopilotMod
                             {
                                 rollOut = pidRoll.Evaluate(rollError, APData.CurrentRoll, dt,
                                     Plugin.RollP.Value, Plugin.RollI.Value, Plugin.RollD.Value,
-                                    Plugin.RollILimit.Value, false, -rollRate);
+                                    Plugin.RollILimit.Value, false, -rollRate,
+                                    lastRollOut, 0.95f);
+
+                                lastRollOut = rollOut;
 
                                 if (Plugin.InvertRoll.Value) rollOut = -rollOut;
                                 if (useRandom) rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.RandomStrength.Value;
@@ -1485,14 +1504,24 @@ namespace AutopilotMod
                                 {
                                     float targetVS = pidAlt.Evaluate(altError, APData.CurrentAlt, dt,
                                         Plugin.Conf_Alt_P.Value, Plugin.Conf_Alt_I.Value, Plugin.Conf_Alt_D.Value,
-                                        Plugin.Conf_Alt_ILimit.Value);
+                                        Plugin.Conf_Alt_ILimit.Value, false, null,
+                                        lastVSReq, APData.CurrentMaxClimbRate * 0.95f);
+
+                                    lastVSReq = targetVS;
+
+                                    float possibleAccel = Plugin.GCAS_MaxG.Value;
+                                    float maxSafeVS = Mathf.Sqrt(2f * possibleAccel * Mathf.Abs(altError));
+                                    targetVS = Mathf.Clamp(targetVS, -maxSafeVS, maxSafeVS);
 
                                     targetVS = Mathf.Clamp(targetVS, -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
                                     float vsError = targetVS - currentVS;
 
                                     float targetPitchDeg = pidVS.Evaluate(vsError, currentVS, dt,
                                         Plugin.Conf_VS_P.Value, Plugin.Conf_VS_I.Value, Plugin.Conf_VS_D.Value,
-                                        Plugin.Conf_VS_ILimit.Value, true);
+                                        Plugin.Conf_VS_ILimit.Value, true, null,
+                                        lastAngleReq, Plugin.Conf_VS_MaxAngle.Value * 0.95f);
+
+                                    lastAngleReq = targetPitchDeg;
 
                                     float currentPitch = Mathf.Asin(APData.PlayerRB.transform.forward.y) * Mathf.Rad2Deg;
                                     float angleError = targetPitchDeg - currentPitch;
@@ -1500,7 +1529,10 @@ namespace AutopilotMod
 
                                     pitchOut = pidAngle.Evaluate(angleError, currentPitch, dt,
                                         Plugin.Conf_Angle_P.Value, Plugin.Conf_Angle_I.Value, Plugin.Conf_Angle_D.Value,
-                                        Plugin.Conf_Angle_ILimit.Value, false, -pitchRate);
+                                        Plugin.Conf_Angle_ILimit.Value, false, -pitchRate,
+                                        lastPitchOut, 0.95f);
+
+                                    lastPitchOut = pitchOut;
 
                                     if (useRandom) pitchOut += (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * 2f * Plugin.RandomStrength.Value;
                                 }
@@ -1705,7 +1737,7 @@ namespace AutopilotMod
             _initialized = false;
         }
 
-        public float Evaluate(float error, float measurement, float dt, float kp, float ki, float kd, float iLimit, bool useErrorDeriv = false, float? manualDeriv = null)
+        public float Evaluate(float error, float measurement, float dt, float kp, float ki, float kd, float iLimit, bool useErrorDeriv = false, float? manualDeriv = null, float currentOutput = 0f, float limitThreshold = 0.95f)
         {
             if (dt <= 0f) return 0f;
             if (!_initialized)
@@ -1715,15 +1747,17 @@ namespace AutopilotMod
                 _initialized = true;
             }
 
-            Integral = Mathf.Clamp(Integral + (error * dt * ki), -iLimit, iLimit);
+            bool saturated = Mathf.Abs(currentOutput) >= limitThreshold;
+            bool sameDirection = Mathf.Sign(error) == Mathf.Sign(currentOutput);
 
-            float derivative;
-            if (manualDeriv.HasValue)
-                derivative = manualDeriv.Value;
-            else if (useErrorDeriv)
-                derivative = (error - _lastError) / dt;
-            else
-                derivative = -(measurement - _lastMeasurement) / dt;
+            if (!(saturated && sameDirection))
+            {
+                Integral += error * dt * ki;
+            }
+
+            Integral = Mathf.Clamp(Integral, -iLimit, iLimit);
+
+            float derivative = manualDeriv ?? (useErrorDeriv ? (error - _lastError) / dt : -(measurement - _lastMeasurement) / dt);
 
             _lastError = error;
             _lastMeasurement = measurement;

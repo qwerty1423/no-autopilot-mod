@@ -131,10 +131,7 @@ namespace AutopilotMod
         internal static FieldInfo f_fuelCapacity, f_pilots, f_gearState, f_weaponManager; // f_radarAlt;
 
         internal static FieldInfo f_powerSupply, f_charge, f_maxCharge;
-        internal delegate void FireDelegate(object instance);
-        internal delegate Vector3 GetAccelDelegate(object instance);
-        internal static FireDelegate d_Fire;
-        internal static GetAccelDelegate d_GetAccel;
+        internal static MethodInfo m_Fire, m_GetAccel;
 
         internal static Type t_JammingPod;
 
@@ -318,15 +315,14 @@ namespace AutopilotMod
                 Type pilotType = typeof(Aircraft).Assembly.GetType("Pilot");
                 if (pilotType != null)
                 {
-                    MethodInfo mGetAccel = pilotType.GetMethod("GetAccel");
-                    if (mGetAccel != null) d_GetAccel = AccessTools.MethodDelegate<GetAccelDelegate>(mGetAccel);
+                    m_GetAccel = pilotType.GetMethod("GetAccel");
                 }
 
                 Type wmType = typeof(Aircraft).Assembly.GetType("WeaponManager");
                 if (wmType != null)
                 {
-                    MethodInfo mFire = wmType.GetMethod("Fire", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    if (mFire != null) d_Fire = AccessTools.MethodDelegate<FireDelegate>(mFire);
+                    m_Fire = wmType.GetMethod("Fire", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                    null, Type.EmptyTypes, null);
                     f_targetList = wmType.GetField("targetList", BindingFlags.NonPublic | BindingFlags.Instance);
                     f_currentWeaponStation = wmType.GetField("currentWeaponStation", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 }
@@ -1040,9 +1036,9 @@ namespace AutopilotMod
                     acRef = APData.LocalAircraft;
                     if (acRef != null)
                     {
-                        if (APData.LocalPilot != null && Plugin.d_GetAccel != null)
+                        if (APData.LocalPilot != null && Plugin.m_GetAccel != null)
                         {
-                            Vector3 pAccel = (Vector3)Plugin.d_GetAccel(APData.LocalPilot);
+                            Vector3 pAccel = (Vector3)Plugin.m_GetAccel.Invoke(APData.LocalPilot, null);
                             currentG = Vector3.Dot(pAccel + Vector3.up, acRef.transform.up);
                         }
                     }
@@ -1228,8 +1224,8 @@ namespace AutopilotMod
                                         }
                                     }
 
-                                    if (isJammerHoldingTrigger && Plugin.d_Fire != null)
-                                        Plugin.d_Fire(wm);
+                                    if (isJammerHoldingTrigger && Plugin.m_Fire != null)
+                                        Plugin.m_Fire.Invoke(wm, null);
                                 }
                             }
                         }

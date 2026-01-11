@@ -131,11 +131,7 @@ namespace AutopilotMod
         internal static FieldInfo f_fuelCapacity, f_pilots, f_gearState, f_weaponManager; // f_radarAlt;
         
         internal static FieldInfo f_powerSupply, f_charge, f_maxCharge;
-        
-        internal delegate void FireDelegate(object instance);
-        internal delegate Vector3 GetAccelDelegate(object instance);
-        internal static FireDelegate d_Fire;
-        internal static GetAccelDelegate d_GetAccel;
+        internal static MethodInfo m_Fire, m_GetAccel;
         
         internal static Type t_JammingPod;
 

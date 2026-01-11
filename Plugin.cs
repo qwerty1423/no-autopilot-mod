@@ -96,7 +96,7 @@ namespace AutopilotMod
 
         public static ConfigEntry<float> RollP, RollI, RollD, RollILimit;
 
-        public static ConfigEntry<float> Conf_Spd_P, Conf_Spd_I, Conf_Spd_D, Conf_Spd_ILimit;
+        public static ConfigEntry<float> Conf_Spd_P, Conf_Spd_I, Conf_Spd_D, Conf_Spd_ILimit, Conf_Spd_C;
         public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, ThrottleSlewRate;
 
         public static ConfigEntry<float> Conf_Crs_P, Conf_Crs_I, Conf_Crs_D, Conf_Crs_ILimit;
@@ -232,6 +232,7 @@ namespace AutopilotMod
             Conf_Spd_I = Config.Bind("Tuning - 4. Speed", "2. Speed I", 0.01f, "Hold speed");
             Conf_Spd_D = Config.Bind("Tuning - 4. Speed", "3. Speed D", 0.0f, "Dampen");
             Conf_Spd_ILimit = Config.Bind("Tuning - 4. Speed", "4. Speed I Limit", 1.0f, "Max Throttle Trim");
+            Conf_Spd_C = Config.Bind("Tuning - 4. Speed", "3. Pitch compensation", 0.4f, "Multiplier for throttle pitch compensation");
             ThrottleMinLimit = Config.Bind("Tuning - 4. Speed", "6. Safe Min Throttle", 0.01f, "Minimum throttle when limiter is active (prevents Airbrake)");
             ThrottleMaxLimit = Config.Bind("Tuning - 4. Speed", "7. Safe Max Throttle", 0.89f, "Maximum throttle when limiter is active (prevents Afterburner)");
             ThrottleSlewRate = Config.Bind("Tuning - 4. Speed", "8. Throttle Slew Rate Limit", 0.2f, "in unit of throttle bars per second");
@@ -654,15 +655,18 @@ namespace AutopilotMod
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(new GUIContent("Set Values", "Applies typed values"), _styleButton))
             {
-                if (float.TryParse(_bufSpeed, out float s))
-                    APData.TargetSpeed = ModUtils.ConvertSpeed_FromDisplay(s);
-                else
-                    APData.TargetSpeed = -1f;
-
                 if (float.TryParse(_bufAlt, out float a))
                     APData.TargetAlt = ModUtils.ConvertAlt_FromDisplay(a);
                 else
                     APData.TargetAlt = -1f;
+
+                if (float.TryParse(_bufClimb, out float c))
+                    APData.CurrentMaxClimbRate = Mathf.Max(0.5f, ModUtils.ConvertVS_FromDisplay(c));
+
+                if (float.TryParse(_bufSpeed, out float s))
+                    APData.TargetSpeed = ModUtils.ConvertSpeed_FromDisplay(s);
+                else
+                    APData.TargetSpeed = -1f;
 
                 if (float.TryParse(_bufCourse, out float crs))
                     APData.TargetCourse = crs;
@@ -686,9 +690,6 @@ namespace AutopilotMod
                         _bufRoll = "";
                     }
                 }
-
-                if (float.TryParse(_bufClimb, out float c))
-                    APData.CurrentMaxClimbRate = Mathf.Max(0.5f, ModUtils.ConvertVS_FromDisplay(c));
 
                 APData.Enabled = true;
                 APData.UseSetValues = true;
@@ -1059,7 +1060,7 @@ namespace AutopilotMod
                     else
                     {
                         float speed = APData.PlayerRB.velocity.magnitude;
-                        if (speed > 15f)
+                        if (speed > 1f)
                         {
                             Vector3 velocity = APData.PlayerRB.velocity;
                             float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
@@ -1310,8 +1311,10 @@ namespace AutopilotMod
                             Plugin.Conf_Spd_P.Value, Plugin.Conf_Spd_I.Value, Plugin.Conf_Spd_D.Value,
                             maxT, true);
 
-                        float desiredLeverPos = isSpdSleeping ? pidSpd.Integral : Mathf.Clamp(pidOutput, minT, maxT);
-                        // lastSpdError = sErr; 
+                        float currentPitch = Mathf.Asin(APData.PlayerRB.transform.forward.y);
+                        float pitchWorkload = Mathf.Sin(currentPitch) * Plugin.Conf_Spd_C.Value;
+
+                        float desiredLeverPos = isSpdSleeping ? pidSpd.Integral : Mathf.Clamp(pidOutput + pitchWorkload, minT, maxT);
 
                         currentAppliedThrottle = Mathf.MoveTowards(
                             currentAppliedThrottle,
@@ -1342,13 +1345,12 @@ namespace AutopilotMod
                                 {
                                     float curCrs = Quaternion.LookRotation(flatVel).eulerAngles.y;
                                     float cErr = Mathf.DeltaAngle(curCrs, APData.TargetCourse);
-                                    float velocity = APData.PlayerRB.velocity.magnitude;
-
                                     float desiredTurnRate = pidCrs.Evaluate(cErr, curCrs, dt,
                                         Plugin.Conf_Crs_P.Value, Plugin.Conf_Crs_I.Value, Plugin.Conf_Crs_D.Value,
                                         Plugin.Conf_Crs_ILimit.Value, true);
 
                                     float gravity = 9.81f;
+                                    float velocity = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
                                     float turnRateRad = desiredTurnRate * Mathf.Deg2Rad;
                                     float bankReq = Mathf.Atan(velocity * turnRateRad / gravity) * Mathf.Rad2Deg;
 
@@ -1358,7 +1360,17 @@ namespace AutopilotMod
                                                     ? Mathf.Abs(APData.TargetRoll)
                                                     : Plugin.DefaultCRLimit.Value;
 
-                                    activeTargetRoll = Mathf.Clamp(bankReq, -maxBank, maxBank);
+                                    // glimiter from gcas for bank?
+                                    float maxAllowedG = Plugin.GCAS_MaxG.Value;
+                                    float gLimitBank = Mathf.Acos(1f / maxAllowedG) * Mathf.Rad2Deg;
+
+                                    float userLimit = (APData.TargetRoll != -999f && APData.TargetRoll != 0)
+                                                      ? Mathf.Abs(APData.TargetRoll)
+                                                      : Plugin.DefaultCRLimit.Value;
+
+                                    float finalBankLimit = Mathf.Min(userLimit, gLimitBank);
+
+                                    activeTargetRoll = Mathf.Clamp(bankReq, -finalBankLimit, finalBankLimit);
                                 }
                             }
                             else if (APData.GCASActive)

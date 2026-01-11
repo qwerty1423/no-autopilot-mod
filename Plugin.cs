@@ -67,7 +67,7 @@ namespace AutopilotMod
 
         // Settings
         public static ConfigEntry<float> StickDeadzone;
-        public static ConfigEntry<float> DisengageDelay;
+        // public static ConfigEntry<float> DisengageDelay;
         public static ConfigEntry<bool> InvertRoll, InvertPitch;
         public static ConfigEntry<bool> Conf_InvertCourseRoll;
 
@@ -110,14 +110,14 @@ namespace AutopilotMod
         // Random
         public static ConfigEntry<bool> RandomEnabled;
         public static ConfigEntry<float> RandomStrength, RandomSpeed;
-        public static ConfigEntry<float> Hum_Alt_Inner, Hum_Alt_Outer, Hum_Alt_Scale;
-        public static ConfigEntry<float> Hum_VS_Inner, Hum_VS_Outer;
-        public static ConfigEntry<float> Hum_PitchSleepMin, Hum_PitchSleepMax;
-        public static ConfigEntry<float> Hum_Roll_Inner, Hum_Roll_Outer, Hum_RollRate_Inner, Hum_RollRate_Outer;
-        public static ConfigEntry<float> Hum_RollSleepMin, Hum_RollSleepMax;
-        public static ConfigEntry<float> Hum_Spd_Inner, Hum_Spd_Outer;
-        public static ConfigEntry<float> Hum_Spd_SleepMin, Hum_Spd_SleepMax;
-        public static ConfigEntry<float> Hum_Acc_Inner, Hum_Acc_Outer;
+        public static ConfigEntry<float> Rand_Alt_Inner, Rand_Alt_Outer, Rand_Alt_Scale;
+        public static ConfigEntry<float> Rand_VS_Inner, Rand_VS_Outer;
+        public static ConfigEntry<float> Rand_PitchSleepMin, Rand_PitchSleepMax;
+        public static ConfigEntry<float> Rand_Roll_Inner, Rand_Roll_Outer, Rand_RollRate_Inner, Rand_RollRate_Outer;
+        public static ConfigEntry<float> Rand_RollSleepMin, Rand_RollSleepMax;
+        public static ConfigEntry<float> Rand_Spd_Inner, Rand_Spd_Outer;
+        public static ConfigEntry<float> Rand_Spd_SleepMin, Rand_Spd_SleepMax;
+        public static ConfigEntry<float> Rand_Acc_Inner, Rand_Acc_Outer;
 
         // reflection
         internal static FieldInfo f_playerVehicle;
@@ -169,8 +169,8 @@ namespace AutopilotMod
             FuelCritMinutes = Config.Bind("Calculations", "4. Fuel Critical Time", 5, "Minutes");
 
             // Settings
-            StickDeadzone = Config.Bind("Settings", "1. Stick Deadzone", 0.1f, "Threshold");
-            DisengageDelay = Config.Bind("Settings", "2. Disengage Delay", 10f, "Seconds of continuous input over deadzone before AP turns off");
+            StickDeadzone = Config.Bind("Settings", "1. Stick Deadzone", 0.01f, "Threshold");
+            // DisengageDelay = Config.Bind("Settings", "2. Disengage Delay", 10f, "Seconds of continuous input over deadzone before AP turns off");
             InvertRoll = Config.Bind("Settings", "3. Invert Roll", true, "Flip Roll");
             InvertPitch = Config.Bind("Settings", "4. Invert Pitch", true, "Flip Pitch");
             Conf_InvertCourseRoll = Config.Bind("Settings", "5. Invert Bank Direction", true, "Toggle if plane turns wrong way");
@@ -236,9 +236,9 @@ namespace AutopilotMod
             ThrottleMinLimit = Config.Bind("Tuning - 4. Speed", "6. Safe Min Throttle", 0.01f, "Minimum throttle when limiter is active (prevents Airbrake)");
             ThrottleMaxLimit = Config.Bind("Tuning - 4. Speed", "7. Safe Max Throttle", 0.89f, "Maximum throttle when limiter is active (prevents Afterburner)");
             ThrottleSlewRate = Config.Bind("Tuning - 4. Speed", "8. Throttle Slew Rate Limit", 0.2f, "in unit of throttle bars per second");
-            Conf_Crs_P = Config.Bind("Tuning - 5. Course", "1. Course P", 1.0f, "Course Error -> Bank Angle");
-            Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 1.0f, "Correction");
-            Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.1f, "Dampen");
+            Conf_Crs_P = Config.Bind("Tuning - 5. Course", "1. Course P", 0.5f, "Course Error -> Bank Angle");
+            Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 0.0f, "Correction");
+            Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.15f, "Dampen");
             Conf_Crs_ILimit = Config.Bind("Tuning - 5. Course", "4. Course I Limit", 70.0f, "Max Integral Bank");
 
             // Auto GCAS
@@ -255,28 +255,28 @@ namespace AutopilotMod
             GCAS_ILimit = Config.Bind("GCAS PID", "4. GCAS I Limit", 1.0f, "Max stick influence");
 
             // Random
-            RandomEnabled = Config.Bind("Settings - Random", "01. Random Enabled", true, "Add imperfections");
+            RandomEnabled = Config.Bind("Settings - Random", "01. Random Enabled", false, "Add imperfections (needs some work i think)");
             RandomStrength = Config.Bind("Settings - Random", "02. Noise Strength", 0.01f, "Jitter amount");
             RandomSpeed = Config.Bind("Settings - Random", "03. Noise Speed", 1.0f, "Jitter freq");
-            Hum_Alt_Inner = Config.Bind("Settings - Random", "04. Alt Tolerance Inner", 0.1f, "Start Sleeping (m)");
-            Hum_Alt_Outer = Config.Bind("Settings - Random", "05. Alt Tolerance Outer", 1.0f, "Wake Up (m)");
-            Hum_Alt_Scale = Config.Bind("Settings - Random", "06. Alt Scale", 0.01f, "Increase per meter alt");
-            Hum_VS_Inner = Config.Bind("Settings - Random", "07. VS Tolerance Inner", 0.01f, "Start Sleeping (m/s)");
-            Hum_VS_Outer = Config.Bind("Settings - Random", "08. VS Tolerance Outer", 5.0f, "Wake Up (m/s)");
-            Hum_PitchSleepMin = Config.Bind("Settings - Random", "09. Pitch Sleep Min", 2.0f, "Seconds");
-            Hum_PitchSleepMax = Config.Bind("Settings - Random", "10. Pitch Sleep Max", 60.0f, "Seconds");
-            Hum_Roll_Inner = Config.Bind("Settings - Random", "11. Roll Tolerance Inner", 0.1f, "Start Sleeping (deg)");
-            Hum_Roll_Outer = Config.Bind("Settings - Random", "12. Roll Tolerance Outer", 1.0f, "Wake Up (deg)");
-            Hum_RollRate_Inner = Config.Bind("Settings - Random", "13. Roll Rate Tolerance Inner", 1.0f, "Start Sleeping (deg/s)");
-            Hum_RollRate_Outer = Config.Bind("Settings - Random", "14. Roll Rate Tolerance Outer", 20.0f, "Wake Up (deg/s)");
-            Hum_RollSleepMin = Config.Bind("Settings - Random", "15. Roll Sleep Min", 1.5f, "Seconds");
-            Hum_RollSleepMax = Config.Bind("Settings - Random", "16. Roll Sleep Max", 60.0f, "Seconds");
-            Hum_Spd_Inner = Config.Bind("Settings - Random", "17. Speed Tolerance Inner", 0.5f, "Start Sleeping (m/s error)");
-            Hum_Spd_Outer = Config.Bind("Settings - Random", "18. Speed Tolerance Outer", 2.0f, "Wake Up (m/s error)");
-            Hum_Spd_SleepMin = Config.Bind("Settings - Random", "19. Speed Sleep Min", 2.0f, "Seconds");
-            Hum_Spd_SleepMax = Config.Bind("Settings - Random", "20. Speed Sleep Max", 60.0f, "Seconds");
-            Hum_Acc_Inner = Config.Bind("Settings - Random", "21. Accel Tolerance Inner", 0.05f, "Start Sleeping (m/s² acceleration)");
-            Hum_Acc_Outer = Config.Bind("Settings - Random", "22. Accel Tolerance Outer", 0.5f, "Wake Up (m/s² acceleration)");
+            Rand_Alt_Inner = Config.Bind("Settings - Random", "04. Alt Tolerance Inner", 0.1f, "Start Sleeping (m)");
+            Rand_Alt_Outer = Config.Bind("Settings - Random", "05. Alt Tolerance Outer", 1.0f, "Wake Up (m)");
+            Rand_Alt_Scale = Config.Bind("Settings - Random", "06. Alt Scale", 0.01f, "Increase per meter alt");
+            Rand_VS_Inner = Config.Bind("Settings - Random", "07. VS Tolerance Inner", 0.01f, "Start Sleeping (m/s)");
+            Rand_VS_Outer = Config.Bind("Settings - Random", "08. VS Tolerance Outer", 5.0f, "Wake Up (m/s)");
+            Rand_PitchSleepMin = Config.Bind("Settings - Random", "09. Pitch Sleep Min", 2.0f, "Seconds");
+            Rand_PitchSleepMax = Config.Bind("Settings - Random", "10. Pitch Sleep Max", 60.0f, "Seconds");
+            Rand_Roll_Inner = Config.Bind("Settings - Random", "11. Roll Tolerance Inner", 0.1f, "Start Sleeping (deg)");
+            Rand_Roll_Outer = Config.Bind("Settings - Random", "12. Roll Tolerance Outer", 1.0f, "Wake Up (deg)");
+            Rand_RollRate_Inner = Config.Bind("Settings - Random", "13. Roll Rate Tolerance Inner", 1.0f, "Start Sleeping (deg/s)");
+            Rand_RollRate_Outer = Config.Bind("Settings - Random", "14. Roll Rate Tolerance Outer", 20.0f, "Wake Up (deg/s)");
+            Rand_RollSleepMin = Config.Bind("Settings - Random", "15. Roll Sleep Min", 1.5f, "Seconds");
+            Rand_RollSleepMax = Config.Bind("Settings - Random", "16. Roll Sleep Max", 60.0f, "Seconds");
+            Rand_Spd_Inner = Config.Bind("Settings - Random", "17. Speed Tolerance Inner", 0.5f, "Start Sleeping (m/s error)");
+            Rand_Spd_Outer = Config.Bind("Settings - Random", "18. Speed Tolerance Outer", 2.0f, "Wake Up (m/s error)");
+            Rand_Spd_SleepMin = Config.Bind("Settings - Random", "19. Speed Sleep Min", 2.0f, "Seconds");
+            Rand_Spd_SleepMax = Config.Bind("Settings - Random", "20. Speed Sleep Max", 60.0f, "Seconds");
+            Rand_Acc_Inner = Config.Bind("Settings - Random", "21. Accel Tolerance Inner", 0.05f, "Start Sleeping (m/s² acceleration)");
+            Rand_Acc_Outer = Config.Bind("Settings - Random", "22. Accel Tolerance Outer", 0.5f, "Wake Up (m/s² acceleration)");
 
             // reflection cache
             try
@@ -1292,13 +1292,13 @@ namespace AutopilotMod
                             float sErrAbs = Mathf.Abs(sErr);
                             if (!isSpdSleeping)
                             {
-                                if (sErrAbs < Plugin.Hum_Spd_Inner.Value && currentAccel < Plugin.Hum_Acc_Inner.Value)
+                                if (sErrAbs < Plugin.Rand_Spd_Inner.Value && currentAccel < Plugin.Rand_Acc_Inner.Value)
                                 {
-                                    spdSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Hum_Spd_SleepMin.Value, Plugin.Hum_Spd_SleepMax.Value);
+                                    spdSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Rand_Spd_SleepMin.Value, Plugin.Rand_Spd_SleepMax.Value);
                                     isSpdSleeping = true;
                                 }
                             }
-                            else if (sErrAbs > Plugin.Hum_Spd_Outer.Value || currentAccel > Plugin.Hum_Acc_Outer.Value || Time.time > spdSleepUntil)
+                            else if (sErrAbs > Plugin.Rand_Spd_Outer.Value || currentAccel > Plugin.Rand_Acc_Outer.Value || Time.time > spdSleepUntil)
                             {
                                 isSpdSleeping = false;
                             }
@@ -1388,13 +1388,13 @@ namespace AutopilotMod
                                 float rollRateAbs = Mathf.Abs(rollRate);
                                 if (!isRollSleeping)
                                 {
-                                    if (rollErrAbs < Plugin.Hum_Roll_Inner.Value && rollRateAbs < Plugin.Hum_RollRate_Inner.Value)
+                                    if (rollErrAbs < Plugin.Rand_Roll_Inner.Value && rollRateAbs < Plugin.Rand_RollRate_Inner.Value)
                                     {
-                                        rollSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Hum_RollSleepMin.Value, Plugin.Hum_RollSleepMax.Value);
+                                        rollSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Rand_RollSleepMin.Value, Plugin.Rand_RollSleepMax.Value);
                                         isRollSleeping = true;
                                     }
                                 }
-                                else if (rollErrAbs > Plugin.Hum_Roll_Outer.Value || rollRateAbs > Plugin.Hum_RollRate_Outer.Value || Time.time > rollSleepUntil)
+                                else if (rollErrAbs > Plugin.Rand_Roll_Outer.Value || rollRateAbs > Plugin.Rand_RollRate_Outer.Value || Time.time > rollSleepUntil)
                                 {
                                     isRollSleeping = false;
                                 }
@@ -1459,16 +1459,16 @@ namespace AutopilotMod
                                     if (!isPitchSleeping)
                                     {
                                         // start sleep check
-                                        if (altErrAbs < Plugin.Hum_Alt_Inner.Value && vsAbs < Plugin.Hum_VS_Inner.Value)
+                                        if (altErrAbs < Plugin.Rand_Alt_Inner.Value && vsAbs < Plugin.Rand_VS_Inner.Value)
                                         {
-                                            pitchSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Hum_PitchSleepMin.Value, Plugin.Hum_PitchSleepMax.Value);
+                                            pitchSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Rand_PitchSleepMin.Value, Plugin.Rand_PitchSleepMax.Value);
                                             isPitchSleeping = true;
                                         }
                                     }
                                     else
                                     {
                                         // wake up check
-                                        if (altErrAbs > Plugin.Hum_Alt_Outer.Value || vsAbs > Plugin.Hum_VS_Outer.Value || Time.time > pitchSleepUntil)
+                                        if (altErrAbs > Plugin.Rand_Alt_Outer.Value || vsAbs > Plugin.Rand_VS_Outer.Value || Time.time > pitchSleepUntil)
                                         {
                                             isPitchSleeping = false;
                                         }

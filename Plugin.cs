@@ -72,7 +72,7 @@ namespace AutopilotMod
         public static ConfigEntry<bool> EnableAutoJammer;
         public static ConfigEntry<KeyCode> AutoJammerKey;
         public static ConfigEntry<float> AutoJammerThreshold;
-        public static ConfigEntry<bool> AutoJammerHumanize;
+        public static ConfigEntry<bool> AutoJammerRandom;
         public static ConfigEntry<float> AutoJammerMinDelay, AutoJammerMaxDelay;
         public static ConfigEntry<float> AutoJammerReleaseMin, AutoJammerReleaseMax;
 
@@ -86,18 +86,17 @@ namespace AutopilotMod
         // Tuning
         public static ConfigEntry<float> DefaultMaxClimbRate, Conf_VS_MaxAngle, DefaultCRLimit;
 
-        // Loop 1 (Alt)
+        // pid
         public static ConfigEntry<float> Conf_Alt_P, Conf_Alt_I, Conf_Alt_D, Conf_Alt_ILimit;
-        // Loop 2 (VS)
         public static ConfigEntry<float> Conf_VS_P, Conf_VS_I, Conf_VS_D, Conf_VS_ILimit;
-        // Loop 3 (Angle)
         public static ConfigEntry<float> Conf_Angle_P, Conf_Angle_I, Conf_Angle_D, Conf_Angle_ILimit;
-        // Roll
+
         public static ConfigEntry<float> RollP, RollI, RollD, RollILimit;
         public static ConfigEntry<bool> InvertRoll, InvertPitch;
 
         public static ConfigEntry<float> Conf_Spd_P, Conf_Spd_I, Conf_Spd_D, Conf_Spd_ILimit;
         public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, ThrottleSlewRate;
+
         public static ConfigEntry<float> Conf_Crs_P, Conf_Crs_I, Conf_Crs_D, Conf_Crs_ILimit;
         public static ConfigEntry<bool> Conf_InvertCourseRoll;
 
@@ -107,9 +106,9 @@ namespace AutopilotMod
         public static ConfigEntry<float> GCAS_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
         public static ConfigEntry<float> GCAS_P, GCAS_I, GCAS_D, GCAS_ILimit;
 
-        // Humanize
-        public static ConfigEntry<bool> HumanizeEnabled;
-        public static ConfigEntry<float> HumanizeStrength, HumanizeSpeed;
+        // Random
+        public static ConfigEntry<bool> RandomEnabled;
+        public static ConfigEntry<float> RandomStrength, RandomSpeed;
         public static ConfigEntry<float> Hum_Alt_Inner, Hum_Alt_Outer, Hum_Alt_Scale;
         public static ConfigEntry<float> Hum_VS_Inner, Hum_VS_Outer;
         public static ConfigEntry<float> Hum_PitchSleepMin, Hum_PitchSleepMax;
@@ -119,7 +118,7 @@ namespace AutopilotMod
         public static ConfigEntry<float> Hum_Spd_SleepMin, Hum_Spd_SleepMax;
         public static ConfigEntry<float> Hum_Acc_Inner, Hum_Acc_Outer;
 
-        // --- CACHED REFLECTION FIELDS ---
+        // reflection
         internal static FieldInfo f_playerVehicle;
         internal static FieldInfo f_controlInputs;
         internal static FieldInfo f_pitch, f_roll;
@@ -177,7 +176,7 @@ namespace AutopilotMod
             EnableAutoJammer = Config.Bind("Auto Jammer", "1. Enable Auto Jammer", true, "Allow the feature");
             AutoJammerKey = Config.Bind("Auto Jammer", "2. Toggle Key", KeyCode.Slash, "Key to toggle jamming");
             AutoJammerThreshold = Config.Bind("Auto Jammer", "3. Energy Threshold", 0.99f, "Fire when energy > this %");
-            AutoJammerHumanize = Config.Bind("Auto Jammer", "4. Humanize Delay", true, "Add random delay");
+            AutoJammerRandom = Config.Bind("Auto Jammer", "4. Random Delay", true, "Add random delay");
             AutoJammerMinDelay = Config.Bind("Auto Jammer", "5. Delay Min", 0.02f, "Seconds");
             AutoJammerMaxDelay = Config.Bind("Auto Jammer", "6. Delay Max", 0.04f, "Seconds");
             AutoJammerReleaseMin = Config.Bind("Auto Jammer", "7. Release Delay Min", 0.02f, "Seconds");
@@ -252,29 +251,29 @@ namespace AutopilotMod
             GCAS_D = Config.Bind("GCAS PID", "3. GCAS D", 0.0f, "Dampens G overshoot");
             GCAS_ILimit = Config.Bind("GCAS PID", "4. GCAS I Limit", 1.0f, "Max stick influence");
 
-            // Humanize
-            HumanizeEnabled = Config.Bind("Settings - Humanize", "01. Humanize Enabled", true, "Add imperfections");
-            HumanizeStrength = Config.Bind("Settings - Humanize", "02. Noise Strength", 0.01f, "Jitter amount");
-            HumanizeSpeed = Config.Bind("Settings - Humanize", "03. Noise Speed", 1.0f, "Jitter freq");
-            Hum_Alt_Inner = Config.Bind("Settings - Humanize", "04. Alt Tolerance Inner", 0.1f, "Start Sleeping (m)");
-            Hum_Alt_Outer = Config.Bind("Settings - Humanize", "05. Alt Tolerance Outer", 1.0f, "Wake Up (m)");
-            Hum_Alt_Scale = Config.Bind("Settings - Humanize", "06. Alt Scale", 0.01f, "Increase per meter alt");
-            Hum_VS_Inner = Config.Bind("Settings - Humanize", "07. VS Tolerance Inner", 0.01f, "Start Sleeping (m/s)");
-            Hum_VS_Outer = Config.Bind("Settings - Humanize", "08. VS Tolerance Outer", 5.0f, "Wake Up (m/s)");
-            Hum_PitchSleepMin = Config.Bind("Settings - Humanize", "09. Pitch Sleep Min", 2.0f, "Seconds");
-            Hum_PitchSleepMax = Config.Bind("Settings - Humanize", "10. Pitch Sleep Max", 60.0f, "Seconds");
-            Hum_Roll_Inner = Config.Bind("Settings - Humanize", "11. Roll Tolerance Inner", 0.1f, "Start Sleeping (deg)");
-            Hum_Roll_Outer = Config.Bind("Settings - Humanize", "12. Roll Tolerance Outer", 1.0f, "Wake Up (deg)");
-            Hum_RollRate_Inner = Config.Bind("Settings - Humanize", "13. Roll Rate Tolerance Inner", 1.0f, "Start Sleeping (deg/s)");
-            Hum_RollRate_Outer = Config.Bind("Settings - Humanize", "14. Roll Rate Tolerance Outer", 20.0f, "Wake Up (deg/s)");
-            Hum_RollSleepMin = Config.Bind("Settings - Humanize", "15. Roll Sleep Min", 1.5f, "Seconds");
-            Hum_RollSleepMax = Config.Bind("Settings - Humanize", "16. Roll Sleep Max", 60.0f, "Seconds");
-            Hum_Spd_Inner = Config.Bind("Settings - Humanize", "17. Speed Tolerance Inner", 0.5f, "Start Sleeping (m/s error)");
-            Hum_Spd_Outer = Config.Bind("Settings - Humanize", "18. Speed Tolerance Outer", 2.0f, "Wake Up (m/s error)");
-            Hum_Spd_SleepMin = Config.Bind("Settings - Humanize", "19. Speed Sleep Min", 2.0f, "Seconds");
-            Hum_Spd_SleepMax = Config.Bind("Settings - Humanize", "20. Speed Sleep Max", 60.0f, "Seconds");
-            Hum_Acc_Inner = Config.Bind("Settings - Humanize", "21. Accel Tolerance Inner", 0.05f, "Start Sleeping (m/s² acceleration)");
-            Hum_Acc_Outer = Config.Bind("Settings - Humanize", "22. Accel Tolerance Outer", 0.5f, "Wake Up (m/s² acceleration)");
+            // Random
+            RandomEnabled = Config.Bind("Settings - Random", "01. Random Enabled", true, "Add imperfections");
+            RandomStrength = Config.Bind("Settings - Random", "02. Noise Strength", 0.01f, "Jitter amount");
+            RandomSpeed = Config.Bind("Settings - Random", "03. Noise Speed", 1.0f, "Jitter freq");
+            Hum_Alt_Inner = Config.Bind("Settings - Random", "04. Alt Tolerance Inner", 0.1f, "Start Sleeping (m)");
+            Hum_Alt_Outer = Config.Bind("Settings - Random", "05. Alt Tolerance Outer", 1.0f, "Wake Up (m)");
+            Hum_Alt_Scale = Config.Bind("Settings - Random", "06. Alt Scale", 0.01f, "Increase per meter alt");
+            Hum_VS_Inner = Config.Bind("Settings - Random", "07. VS Tolerance Inner", 0.01f, "Start Sleeping (m/s)");
+            Hum_VS_Outer = Config.Bind("Settings - Random", "08. VS Tolerance Outer", 5.0f, "Wake Up (m/s)");
+            Hum_PitchSleepMin = Config.Bind("Settings - Random", "09. Pitch Sleep Min", 2.0f, "Seconds");
+            Hum_PitchSleepMax = Config.Bind("Settings - Random", "10. Pitch Sleep Max", 60.0f, "Seconds");
+            Hum_Roll_Inner = Config.Bind("Settings - Random", "11. Roll Tolerance Inner", 0.1f, "Start Sleeping (deg)");
+            Hum_Roll_Outer = Config.Bind("Settings - Random", "12. Roll Tolerance Outer", 1.0f, "Wake Up (deg)");
+            Hum_RollRate_Inner = Config.Bind("Settings - Random", "13. Roll Rate Tolerance Inner", 1.0f, "Start Sleeping (deg/s)");
+            Hum_RollRate_Outer = Config.Bind("Settings - Random", "14. Roll Rate Tolerance Outer", 20.0f, "Wake Up (deg/s)");
+            Hum_RollSleepMin = Config.Bind("Settings - Random", "15. Roll Sleep Min", 1.5f, "Seconds");
+            Hum_RollSleepMax = Config.Bind("Settings - Random", "16. Roll Sleep Max", 60.0f, "Seconds");
+            Hum_Spd_Inner = Config.Bind("Settings - Random", "17. Speed Tolerance Inner", 0.5f, "Start Sleeping (m/s error)");
+            Hum_Spd_Outer = Config.Bind("Settings - Random", "18. Speed Tolerance Outer", 2.0f, "Wake Up (m/s error)");
+            Hum_Spd_SleepMin = Config.Bind("Settings - Random", "19. Speed Sleep Min", 2.0f, "Seconds");
+            Hum_Spd_SleepMax = Config.Bind("Settings - Random", "20. Speed Sleep Max", 60.0f, "Seconds");
+            Hum_Acc_Inner = Config.Bind("Settings - Random", "21. Accel Tolerance Inner", 0.05f, "Start Sleeping (m/s² acceleration)");
+            Hum_Acc_Outer = Config.Bind("Settings - Random", "22. Accel Tolerance Outer", 0.5f, "Wake Up (m/s² acceleration)");
 
             // reflection cache
             try
@@ -794,7 +793,6 @@ namespace AutopilotMod
         }
     }
 
-    // --- SHARED DATA ---
     public static class APData
     {
         public static bool Enabled = false;
@@ -817,7 +815,6 @@ namespace AutopilotMod
         public static WeaponManager LocalWeaponManager;
     }
 
-    // --- HELPERS ---
     public static class ModUtils
     {
         private static readonly Regex _rxSpaces = new(@"\s+");
@@ -888,8 +885,6 @@ namespace AutopilotMod
             return match.Success ? match.Value : clean;
         }
     }
-
-    // --- PATCHES ---
 
     [HarmonyPatch(typeof(FlightHud), "SetHUDInfo")]
     internal class HudPatch
@@ -1208,7 +1203,7 @@ namespace AutopilotMod
                                         if (!isJammerHoldingTrigger)
                                         {
                                             if (jammerNextFireTime == 0f)
-                                                jammerNextFireTime = Time.time + (Plugin.AutoJammerHumanize.Value ? UnityEngine.Random.Range(Plugin.AutoJammerMinDelay.Value, Plugin.AutoJammerMaxDelay.Value) : 0f);
+                                                jammerNextFireTime = Time.time + (Plugin.AutoJammerRandom.Value ? UnityEngine.Random.Range(Plugin.AutoJammerMinDelay.Value, Plugin.AutoJammerMaxDelay.Value) : 0f);
 
                                             if (Time.time >= jammerNextFireTime) { isJammerHoldingTrigger = true; jammerNextFireTime = 0f; }
                                         }
@@ -1218,7 +1213,7 @@ namespace AutopilotMod
                                         if (isJammerHoldingTrigger)
                                         {
                                             if (jammerNextReleaseTime == 0f)
-                                                jammerNextReleaseTime = Time.time + (Plugin.AutoJammerHumanize.Value ? UnityEngine.Random.Range(Plugin.AutoJammerReleaseMin.Value, Plugin.AutoJammerReleaseMax.Value) : 0f);
+                                                jammerNextReleaseTime = Time.time + (Plugin.AutoJammerRandom.Value ? UnityEngine.Random.Range(Plugin.AutoJammerReleaseMin.Value, Plugin.AutoJammerReleaseMax.Value) : 0f);
 
                                             if (Time.time >= jammerNextReleaseTime) { isJammerHoldingTrigger = false; jammerNextReleaseTime = 0f; }
                                         }
@@ -1280,8 +1275,8 @@ namespace AutopilotMod
                     }
 
                     float dt = Mathf.Max(Time.deltaTime, 0.0001f);
-                    float noiseT = Time.time * Plugin.HumanizeSpeed.Value;
-                    bool useHumanize = Plugin.HumanizeEnabled.Value && !APData.GCASActive;
+                    float noiseT = Time.time * Plugin.RandomSpeed.Value;
+                    bool useRandom = Plugin.RandomEnabled.Value && !APData.GCASActive;
 
                     // throttle control
                     if (APData.TargetSpeed > 0f && Plugin.f_throttle != null && !APData.GCASActive)
@@ -1292,7 +1287,7 @@ namespace AutopilotMod
                         float currentAccel = Mathf.Abs(currentSpeed - lastSpdMeasurement) / dt;
                         lastSpdMeasurement = currentSpeed;
 
-                        if (useHumanize)
+                        if (useRandom)
                         {
                             float sErrAbs = Mathf.Abs(sErr);
                             if (!isSpdSleeping)
@@ -1367,7 +1362,7 @@ namespace AutopilotMod
                             float rollRate = APData.PlayerRB.transform.InverseTransformDirection(APData.PlayerRB.angularVelocity).z * Mathf.Rad2Deg;
 
                             // Roll sleep
-                            if (useHumanize)
+                            if (useRandom)
                             {
                                 float rollErrAbs = Mathf.Abs(rollError);
                                 float rollRateAbs = Mathf.Abs(rollRate);
@@ -1386,7 +1381,7 @@ namespace AutopilotMod
                             }
 
                             float rollOut = 0f;
-                            if (useHumanize && isRollSleeping)
+                            if (useRandom && isRollSleeping)
                             {
                                 pidRoll.Integral = Mathf.MoveTowards(pidRoll.Integral, 0f, dt * 5f);
                             }
@@ -1397,7 +1392,7 @@ namespace AutopilotMod
                                     Plugin.RollILimit.Value, false, -rollRate);
 
                                 if (Plugin.InvertRoll.Value) rollOut = -rollOut;
-                                if (useHumanize) rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
+                                if (useRandom) rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.RandomStrength.Value;
                             }
 
                             Plugin.f_roll?.SetValue(inputObj, Mathf.Clamp(rollOut, -1f, 1f));
@@ -1437,7 +1432,7 @@ namespace AutopilotMod
                                 float currentVS = APData.PlayerRB.velocity.y;
 
                                 // pitch sleep
-                                if (useHumanize)
+                                if (useRandom)
                                 {
                                     float altErrAbs = Mathf.Abs(altError);
                                     float vsAbs = Mathf.Abs(currentVS);
@@ -1461,7 +1456,7 @@ namespace AutopilotMod
                                     }
                                 }
 
-                                if (useHumanize && isPitchSleeping)
+                                if (useRandom && isPitchSleeping)
                                 {
                                     pidAlt.Integral = Mathf.MoveTowards(pidAlt.Integral, 0f, dt * 2f);
                                     pidVS.Integral = Mathf.MoveTowards(pidVS.Integral, 0f, dt * 10f);
@@ -1488,7 +1483,7 @@ namespace AutopilotMod
                                         Plugin.Conf_Angle_P.Value, Plugin.Conf_Angle_I.Value, Plugin.Conf_Angle_D.Value,
                                         Plugin.Conf_Angle_ILimit.Value, false, -pitchRate);
 
-                                    if (useHumanize) pitchOut += (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * 2f * Plugin.HumanizeStrength.Value;
+                                    if (useRandom) pitchOut += (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * 2f * Plugin.RandomStrength.Value;
                                 }
 
                                 if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;

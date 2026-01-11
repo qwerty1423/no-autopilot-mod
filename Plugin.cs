@@ -54,7 +54,7 @@ namespace AutopilotMod
 
         // Visuals
         public static ConfigEntry<string> ColorAPOn, ColorAPOff, ColorGood, ColorWarn, ColorCrit, ColorInfo;
-        public static ConfigEntry<float> FuelOffsetY, FuelLineSpacing, FuelSmoothing, FuelUpdateInterval;
+        public static ConfigEntry<float> OverlayOffsetX, OverlayOffsetY, FuelSmoothing, FuelUpdateInterval;
         public static ConfigEntry<int> FuelWarnMinutes, FuelCritMinutes;
         public static ConfigEntry<bool> ShowExtraInfo;
         public static ConfigEntry<bool> ShowAPOverlay;
@@ -67,6 +67,9 @@ namespace AutopilotMod
 
         // Settings
         public static ConfigEntry<float> StickDeadzone;
+        public static ConfigEntry<float> DisengageDelay;
+        public static ConfigEntry<bool> InvertRoll, InvertPitch;
+        public static ConfigEntry<bool> Conf_InvertCourseRoll;
 
         // Auto Jammer
         public static ConfigEntry<bool> EnableAutoJammer;
@@ -92,13 +95,11 @@ namespace AutopilotMod
         public static ConfigEntry<float> Conf_Angle_P, Conf_Angle_I, Conf_Angle_D, Conf_Angle_ILimit;
 
         public static ConfigEntry<float> RollP, RollI, RollD, RollILimit;
-        public static ConfigEntry<bool> InvertRoll, InvertPitch;
 
         public static ConfigEntry<float> Conf_Spd_P, Conf_Spd_I, Conf_Spd_D, Conf_Spd_ILimit;
         public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, ThrottleSlewRate;
 
         public static ConfigEntry<float> Conf_Crs_P, Conf_Crs_I, Conf_Crs_D, Conf_Crs_ILimit;
-        public static ConfigEntry<bool> Conf_InvertCourseRoll;
 
         // Auto GCAS
         public static ConfigEntry<bool> EnableGCAS;
@@ -145,8 +146,8 @@ namespace AutopilotMod
             ColorWarn = Config.Bind("Visuals - Colors", "4. Color Warning", "#FFFF00", "Yellow");
             ColorCrit = Config.Bind("Visuals - Colors", "5. Color Critical", "#FF0000", "Red");
             ColorInfo = Config.Bind("Visuals - Colors", "6. Color Info", "#00FFFF", "Cyan");
-            FuelOffsetY = Config.Bind("Visuals - Layout", "1. Stack Start Y", -20f, "Vertical position");
-            FuelLineSpacing = Config.Bind("Visuals - Layout", "2. Line Spacing", 20f, "Vertical gap");
+            OverlayOffsetX = Config.Bind("Visuals - Layout", "1. Stack Start X", 20f, "HUD Horizontal position");
+            OverlayOffsetY = Config.Bind("Visuals - Layout", "2. Stack Start Y", -20f, "HUD Vertical position");
             ShowExtraInfo = Config.Bind("Visuals", "Show Fuel/AP Info", true, "Show extra info on Fuel Gauge");
             ShowAPOverlay = Config.Bind("Visuals", "Show AP Overlay", true, "Draw AP status text on the HUD. Turn off if you want, there's a window now.");
             ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show the GCAS OFF message");
@@ -168,9 +169,11 @@ namespace AutopilotMod
             FuelCritMinutes = Config.Bind("Calculations", "4. Fuel Critical Time", 5, "Minutes");
 
             // Settings
-            StickDeadzone = Config.Bind("Settings", "1. Stick Deadzone", 0.5f, "Threshold");
-            InvertRoll = Config.Bind("Settings", "2. Invert Roll", true, "Flip Roll");
-            InvertPitch = Config.Bind("Settings", "3. Invert Pitch", true, "Flip Pitch");
+            StickDeadzone = Config.Bind("Settings", "1. Stick Deadzone", 0.1f, "Threshold");
+            DisengageDelay = Config.Bind("Settings", "2. Disengage Delay", 10f, "Seconds of continuous input over deadzone before AP turns off");
+            InvertRoll = Config.Bind("Settings", "3. Invert Roll", true, "Flip Roll");
+            InvertPitch = Config.Bind("Settings", "4. Invert Pitch", true, "Flip Pitch");
+            Conf_InvertCourseRoll = Config.Bind("Settings", "5. Invert Bank Direction", true, "Toggle if plane turns wrong way");
 
             // Auto Jammer
             EnableAutoJammer = Config.Bind("Auto Jammer", "1. Enable Auto Jammer", true, "Allow the feature");
@@ -236,7 +239,6 @@ namespace AutopilotMod
             Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 1.0f, "Correction");
             Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.1f, "Dampen");
             Conf_Crs_ILimit = Config.Bind("Tuning - 5. Course", "4. Course I Limit", 70.0f, "Max Integral Bank");
-            Conf_InvertCourseRoll = Config.Bind("Tuning - 5. Course", "5. Invert Bank Direction", true, "Toggle this if the plane turns the wrong way");
 
             // Auto GCAS
             EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS on start", true, "GCAS off at start if disabled");
@@ -401,13 +403,15 @@ namespace AutopilotMod
                 {
                     APData.TargetSpeed = -1f;
                     _bufSpeed = "";
+                    if (APData.TargetAlt <= 0 && APData.TargetRoll == -999f && APData.TargetCourse < 0)
+                        APData.Enabled = false;
                 }
                 else if (APData.PlayerRB != null)
                 {
                     float currentSpeedRaw = APData.PlayerRB.velocity.magnitude;
                     APData.TargetSpeed = currentSpeedRaw;
                     _bufSpeed = ModUtils.ConvertSpeed_ToDisplay(currentSpeedRaw).ToString("F0");
-                    if (!APData.Enabled) APData.Enabled = true;
+                    APData.Enabled = true;
                 }
                 GUI.FocusControl(null);
             }
@@ -963,7 +967,7 @@ namespace AutopilotMod
         private static bool isRollSleeping = false;
         private static bool isSpdSleeping = false;
         // private static float gcasNextScan = 0f; 
-        private static bool apStateBeforeGCAS = false;
+        public static bool apStateBeforeGCAS = false;
         private static float currentAppliedThrottle = 0f;
 
         // jammer
@@ -1010,11 +1014,6 @@ namespace AutopilotMod
                 {
                     if (APData.Enabled)
                     {
-                        if (!APData.GCASActive && !APData.UseSetValues)
-                        {
-                            APData.TargetAlt = APData.CurrentAlt;
-                            APData.TargetRoll = 0f;
-                        }
                         ResetIntegrators(currentThrottle);
                     }
                     wasEnabled = APData.Enabled;
@@ -1329,15 +1328,14 @@ namespace AutopilotMod
                     {
                         if (pilotRoll && !APData.GCASActive)
                         {
-                            if (APData.TargetRoll != -999f) APData.TargetRoll = APData.CurrentRoll;
-                            APData.TargetCourse = -1f;
                             pidRoll.Reset();
+                            pidCrs.Reset();
                         }
                         else
                         {
                             float activeTargetRoll = APData.TargetRoll;
 
-                            if (APData.TargetCourse >= 0f && APData.PlayerRB.velocity.sqrMagnitude > 25f && !APData.GCASActive)
+                            if (APData.TargetCourse >= 0f && APData.PlayerRB.velocity.sqrMagnitude > 1f && !APData.GCASActive)
                             {
                                 Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
                                 if (flatVel.sqrMagnitude > 1f)
@@ -1406,7 +1404,6 @@ namespace AutopilotMod
                     {
                         if (pilotPitch && !APData.GCASActive)
                         {
-                            if (APData.TargetAlt > 0f) APData.TargetAlt = APData.CurrentAlt;
                             pidAlt.Reset();
                             pidVS.Reset();
                             pidAngle.Reset();
@@ -1506,8 +1503,9 @@ namespace AutopilotMod
     [HarmonyPatch(typeof(FlightHud), "Update")]
     internal class HUDVisualsPatch
     {
-        private static GameObject timerObj, rangeObj, apObj, ajObj;
-        private static Text tText, rText, aText, jText;
+        private static GameObject infoOverlayObj;
+        private static Text overlayText;
+
         private static float lastFuelMass = 0f;
         private static float fuelFlowEma = 0f;
         private static float lastUpdateTime = 0f;
@@ -1525,13 +1523,9 @@ namespace AutopilotMod
                 if (__instance == null || Plugin.f_playerVehicle == null) return;
 
                 object vehicleRaw = Plugin.f_playerVehicle.GetValue(__instance);
-                UnityEngine.Object unityObj = vehicleRaw as UnityEngine.Object;
-
-                if (unityObj == null) return;
                 if (vehicleRaw is not Component vehicleComponent) return;
 
                 GameObject currentVehicleObj = vehicleComponent.gameObject;
-                if (currentVehicleObj == null) return;
 
                 if (_lastVehicleChecked != currentVehicleObj || _cachedFuelGauge == null)
                 {
@@ -1541,11 +1535,8 @@ namespace AutopilotMod
                     lastUpdateTime = 0f;
                     _cachedFuelGauge = __instance.GetComponentInChildren<FuelGauge>(true);
 
-                    if (timerObj) UnityEngine.Object.Destroy(timerObj);
-                    if (rangeObj) UnityEngine.Object.Destroy(rangeObj);
-                    if (apObj) UnityEngine.Object.Destroy(apObj);
-                    if (ajObj) UnityEngine.Object.Destroy(ajObj);
-                    timerObj = null; rangeObj = null; apObj = null; ajObj = null;
+                    if (infoOverlayObj) UnityEngine.Object.Destroy(infoOverlayObj);
+                    infoOverlayObj = null;
 
                     if (_cachedFuelGauge != null)
                     {
@@ -1555,45 +1546,27 @@ namespace AutopilotMod
 
                 if (_cachedFuelGauge == null || _cachedRefLabel == null) return;
 
-                if (!timerObj)
+                if (!infoOverlayObj)
                 {
-                    GameObject Spawn(string name)
-                    {
-                        GameObject go = UnityEngine.Object.Instantiate(_cachedRefLabel.gameObject, __instance.transform);
-                        go.name = name;
-                        go.SetActive(true);
-                        return go;
-                    }
-                    timerObj = Spawn("AP_Timer");
-                    rangeObj = Spawn("AP_Range");
-                    apObj = Spawn("AP_Status");
-                    ajObj = Spawn("AP_Jammer");
+                    infoOverlayObj = UnityEngine.Object.Instantiate(_cachedRefLabel.gameObject, __instance.transform);
+                    infoOverlayObj.name = "AP_CombinedOverlay";
 
-                    tText = timerObj.GetComponent<Text>();
-                    rText = rangeObj.GetComponent<Text>();
-                    aText = apObj.GetComponent<Text>();
-                    jText = ajObj.GetComponent<Text>();
+                    overlayText = infoOverlayObj.GetComponent<Text>();
+
+                    overlayText.supportRichText = true;
+                    overlayText.alignment = TextAnchor.UpperLeft;
+                    overlayText.horizontalOverflow = HorizontalWrapMode.Overflow;
+                    overlayText.verticalOverflow = VerticalWrapMode.Overflow;
+
+                    infoOverlayObj.SetActive(true);
                 }
 
-                float startY = Plugin.FuelOffsetY.Value;
-                float gap = Plugin.FuelLineSpacing.Value;
-                Vector3 basePos = _cachedRefLabel.transform.position;
+                infoOverlayObj.transform.position = _cachedRefLabel.transform.position
+                + (_cachedRefLabel.transform.right * Plugin.OverlayOffsetX.Value)
+                + (_cachedRefLabel.transform.up * Plugin.OverlayOffsetY.Value);
 
-                void Place(GameObject obj, int index)
-                {
-                    if (!obj) return;
-                    obj.transform.position = basePos + (obj.transform.up * (startY - (gap * index)));
-                    if (!obj.activeSelf) obj.SetActive(true);
-                }
-                Place(timerObj, 0);
-                Place(rangeObj, 1);
-                Place(apObj, 3);
-                Place(ajObj, 5);
-
-                // Update Text
                 Aircraft aircraft = APData.LocalAircraft;
                 if (aircraft == null) return;
-                if (Plugin.f_fuelCapacity == null) return;
 
                 float currentFuel = (float)Plugin.f_fuelCapacity.GetValue(aircraft) * aircraft.GetFuelLevel();
                 float time = Time.time;
@@ -1611,75 +1584,80 @@ namespace AutopilotMod
                 }
                 else { lastUpdateTime = time; lastFuelMass = currentFuel; }
 
+                string content = "";
+
                 if (currentFuel <= 1f)
                 {
-                    tText.text = "00:00"; tText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
-                    rText.text = "-"; rText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
+                    content += $"<color={Plugin.ColorCrit.Value}>TIME: 00:00\nRNG: -</color>\n";
                 }
                 else
                 {
                     float calcFlow = Mathf.Max(fuelFlowEma, 0.0001f);
                     float secs = currentFuel / calcFlow;
-
                     string sTime = TimeSpan.FromSeconds(Mathf.Min(secs, 359999f)).ToString("hh\\:mm");
-                    if (tText.text != sTime) tText.text = sTime;
-
                     float mins = secs / 60f;
-                    if (mins < Plugin.FuelCritMinutes.Value) tText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
-                    else if (mins < Plugin.FuelWarnMinutes.Value) tText.color = ModUtils.GetColor(Plugin.ColorWarn.Value, Color.yellow);
-                    else tText.color = ModUtils.GetColor(Plugin.ColorGood.Value, Color.green);
+
+                    string fuelCol = Plugin.ColorGood.Value;
+                    if (mins < Plugin.FuelCritMinutes.Value) fuelCol = Plugin.ColorCrit.Value;
+                    else if (mins < Plugin.FuelWarnMinutes.Value) fuelCol = Plugin.ColorWarn.Value;
+
+                    content += $"<color={fuelCol}>{sTime}</color>\n";
 
                     float spd = (aircraft.rb != null) ? aircraft.rb.velocity.magnitude : 0f;
                     float distMeters = secs * spd;
+
                     if (distMeters > 99999000f) distMeters = 99999000f;
 
                     string sRange = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters), Plugin.DistShowUnit.Value);
-                    if (rText.text != sRange) rText.text = sRange;
-
-                    rText.color = ModUtils.GetColor(Plugin.ColorInfo.Value, Color.cyan);
+                    content += $"<color={Plugin.ColorInfo.Value}>{sRange}</color>\n";
                 }
+
+                content += "\n";
 
                 if (APData.GCASActive)
                 {
-                    aText.text = "AUTO-GCAS"; aText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
+                    content += $"<color={Plugin.ColorCrit.Value}>A-GCAS</color>\n";
                 }
                 else if (APData.GCASWarning)
                 {
-                    aText.text = "PULL UP"; aText.color = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
-                }
-                else if (APData.Enabled && Plugin.ShowAPOverlay.Value)
-                {
-                    string altStr = ModUtils.ProcessGameString(UnitConverter.AltitudeReading(Mathf.Round(APData.TargetAlt)), Plugin.AltShowUnit.Value);
-                    string climbStr = ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(Mathf.Round(APData.CurrentMaxClimbRate)), Plugin.VertSpeedShowUnit.Value);
-
-                    string spdStr = (APData.TargetSpeed > 0)
-                        ? $"{ModUtils.ProcessGameString(UnitConverter.SpeedReading(APData.TargetSpeed), Plugin.SpeedShowUnit.Value)}"
-                        : "null";
-
-                    string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
-                    string latStr = (APData.TargetCourse >= 0)
-                        ? $"C{APData.TargetCourse:F0}{degUnit}"
-                        : $"R{APData.TargetRoll:F0}{degUnit}";
-
-                    string newText = $"{altStr} {climbStr}\n{spdStr} {latStr}";
-
-                    if (aText.text != newText) aText.text = newText;
-                    aText.color = ModUtils.GetColor(Plugin.ColorAPOn.Value, Color.green);
+                    content += $"<color={Plugin.ColorCrit.Value}>PULL UP</color>\n";
                 }
                 else if (!APData.GCASEnabled && Plugin.ShowGCASOff.Value)
                 {
-                    aText.text = "GCAS OFF"; aText.color = ModUtils.GetColor(Plugin.ColorWarn.Value, Color.yellow);
+                    content += $"<color={Plugin.ColorWarn.Value}>GCAS-</color>\n";
                 }
-                else
+
+                // (AP was on before GCAS) OR (AP is on and no GCAS)
+                bool showAPInfo = (ControlOverridePatch.apStateBeforeGCAS && APData.GCASActive) || (APData.Enabled && !APData.GCASActive);
+
+                if (showAPInfo && Plugin.ShowAPOverlay.Value)
                 {
-                    aText.text = "";
+                    string altStr = (APData.TargetAlt > 0)
+                        ? ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.TargetAlt), Plugin.AltShowUnit.Value)
+                        : "A-";
+                    string climbStr = ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(APData.CurrentMaxClimbRate), Plugin.VertSpeedShowUnit.Value);
+                    string spdStr = (APData.TargetSpeed > 0)
+                        ? ModUtils.ProcessGameString(UnitConverter.SpeedReading(APData.TargetSpeed), Plugin.SpeedShowUnit.Value)
+                        : "S-";
+                    string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
+                    string degStr;
+
+                    if (APData.TargetCourse >= 0)
+                        degStr = $"C{APData.TargetCourse:F0}{degUnit}";
+                    else if (APData.TargetRoll != -999f)
+                        degStr = $"R{APData.TargetRoll:F0}{degUnit}";
+                    else
+                        degStr = "CR-";
+
+                    content += $"<color={Plugin.ColorAPOn.Value}>{altStr} {climbStr}\n{spdStr} {degStr}</color>\n";
                 }
 
                 if (APData.AutoJammerActive)
                 {
-                    jText.text = "AJ ON"; jText.color = ModUtils.GetColor(Plugin.ColorAPOn.Value, Color.green);
+                    content += $"<color={Plugin.ColorAPOn.Value}>AJ</color>";
                 }
-                else { jText.text = ""; }
+
+                overlayText.text = content;
             }
             catch (Exception ex)
             {
@@ -1687,44 +1665,44 @@ namespace AutopilotMod
             }
         }
     }
-}
 
-public class PIDController
-{
-    public float Integral;
-    private float _lastError, _lastMeasurement;
-    private bool _initialized;
-
-    public void Reset(float currentIntegral = 0f)
+    public class PIDController
     {
-        Integral = currentIntegral;
-        _lastError = 0; _lastMeasurement = 0;
-        _initialized = false;
-    }
+        public float Integral;
+        private float _lastError, _lastMeasurement;
+        private bool _initialized;
 
-    public float Evaluate(float error, float measurement, float dt, float kp, float ki, float kd, float iLimit, bool useErrorDeriv = false, float? manualDeriv = null)
-    {
-        if (dt <= 0f) return 0f;
-        if (!_initialized)
+        public void Reset(float currentIntegral = 0f)
         {
-            _lastError = error;
-            _lastMeasurement = measurement;
-            _initialized = true;
+            Integral = currentIntegral;
+            _lastError = 0; _lastMeasurement = 0;
+            _initialized = false;
         }
 
-        Integral = Mathf.Clamp(Integral + (error * dt * ki), -iLimit, iLimit);
+        public float Evaluate(float error, float measurement, float dt, float kp, float ki, float kd, float iLimit, bool useErrorDeriv = false, float? manualDeriv = null)
+        {
+            if (dt <= 0f) return 0f;
+            if (!_initialized)
+            {
+                _lastError = error;
+                _lastMeasurement = measurement;
+                _initialized = true;
+            }
 
-        float derivative;
-        if (manualDeriv.HasValue)
-            derivative = manualDeriv.Value;
-        else if (useErrorDeriv)
-            derivative = (error - _lastError) / dt;
-        else
-            derivative = -(measurement - _lastMeasurement) / dt;
+            Integral = Mathf.Clamp(Integral + (error * dt * ki), -iLimit, iLimit);
 
-        _lastError = error;
-        _lastMeasurement = measurement;
+            float derivative;
+            if (manualDeriv.HasValue)
+                derivative = manualDeriv.Value;
+            else if (useErrorDeriv)
+                derivative = (error - _lastError) / dt;
+            else
+                derivative = -(measurement - _lastMeasurement) / dt;
 
-        return (error * kp) + Integral + (derivative * kd);
+            _lastError = error;
+            _lastMeasurement = measurement;
+
+            return (error * kp) + Integral + (derivative * kd);
+        }
     }
 }

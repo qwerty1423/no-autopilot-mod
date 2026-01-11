@@ -20,7 +20,7 @@ In order of implementation, earliest first
 - Medusa auto jam on full capacitor (won’t select targets or weapons)
 - Auto-GCAS
 - simple autopilot GUI
-- heading hold
+- course hold
 - autothrottle
   
 ### features not in the mod (yet?)

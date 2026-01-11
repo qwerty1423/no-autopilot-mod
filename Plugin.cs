@@ -131,7 +131,11 @@ namespace AutopilotMod
         internal static FieldInfo f_fuelCapacity, f_pilots, f_gearState, f_weaponManager; // f_radarAlt;
         
         internal static FieldInfo f_powerSupply, f_charge, f_maxCharge;
-        internal static MethodInfo m_Fire, m_GetAccel;
+        
+        internal delegate void FireDelegate(object instance);
+        internal delegate Vector3 GetAccelDelegate(object instance);
+        internal static FireDelegate d_Fire;
+        internal static GetAccelDelegate d_GetAccel;
         
         internal static Type t_JammingPod;
 
@@ -1646,5 +1650,45 @@ namespace AutopilotMod
                 Plugin.Logger.LogError($"[HUDVisualsPatch] Error: {ex}");
             }
         }
+    }
+}
+
+public class PIDController
+{
+    private float _integral;
+    private float _lastError;
+    private float _lastMeasurement; // For derivative on measurement to avoid kick
+    private bool _initialized;
+
+    public void Reset()
+    {
+        _integral = 0f;
+        _lastError = 0f;
+        _lastMeasurement = 0f;
+        _initialized = false;
+    }
+
+    public void SetIntegral(float val) => _integral = val;
+
+    public float Evaluate(float error, float currentMeasurement, float dt, float kp, float ki, float kd, float iLimit)
+    {
+        if (dt <= 0f) return 0f;
+        
+        if (!_initialized)
+        {
+            _lastMeasurement = currentMeasurement;
+            _lastError = error;
+            _initialized = true;
+        }
+
+        // Integral
+        _integral += error * dt * ki;
+        _integral = Mathf.Clamp(_integral, -iLimit, iLimit);
+
+        // Derivative (using derivative of measurement to prevent derivative kick on setpoint change)
+        float derivative = -(currentMeasurement - _lastMeasurement) / dt;
+        _lastMeasurement = currentMeasurement;
+
+        return (error * kp) + _integral + (derivative * kd);
     }
 }

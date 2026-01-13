@@ -75,13 +75,10 @@ Will pull up if you are going to hit the ground and warns you a while before. Ca
 
 If you are making large inputs, it will not pull up.
 
-## Usage example with Medusa
+## Waypoints
+(video is svtav1 cq63 preset 8, so the quality is really low)
 
-After take-off, throttle kept at 100% for climb. Autopilot set to 10000m target altitude, 50 m/s climb rate and 30 degrees bank angle. Autopilot displays `A: 10000 50 30`.
-
-After the plane levels out at around 10000m, throttle reduced to 30%. Plane continues to fly in circles.
-
-Weapon is switched to jammer, and auto jammer enabled. when target is selected, it is auto jammed.
+<https://github.com/user-attachments/assets/1ac109a4-bc84-49ed-8141-55bc9a217607>
 
 ## Default Controls
 

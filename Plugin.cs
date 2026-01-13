@@ -220,7 +220,7 @@ namespace AutopilotMod
             // Tuning
             DefaultMaxClimbRate = Config.Bind("Tuning - 0. Limits", "1. Default Max Climb Rate", 40f, "Startup value");
             Conf_VS_MaxAngle = Config.Bind("Tuning - 0. Limits", "2. Max Pitch Angle", 90.0f, "useless limit");
-            DefaultCRLimit = Config.Bind("Tuning - 0. Limits", "3. Default course roll limit", 45.0f, "self explanatory?");
+            DefaultCRLimit = Config.Bind("Tuning - 0. Limits", "3. Default course roll limit", 70.0f, "roll limit when turning in course/nav mode");
 
             // Loops
             Conf_Alt_P = Config.Bind("Tuning - 1. Altitude", "1. Alt P", 0.5f, "Alt Error -> Target VS");

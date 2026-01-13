@@ -36,7 +36,7 @@ namespace AutopilotMod
         private string _bufNavInput = "";
         public static ConfigEntry<float> NavReachDistance, NavPassedDistance;
         public static ConfigEntry<string> ColorNav;
-        public static ConfigEntry<bool> NavAutoAdvance;
+        public static ConfigEntry<bool> NavCycle;
 
         private GUIStyle _styleWindow;
         private GUIStyle _styleLabel;
@@ -185,7 +185,7 @@ namespace AutopilotMod
             // nav
             NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 1000f, "Distance in meters to consider a waypoint reached.");
             NavPassedDistance = Config.Bind("Settings - Navigation", "2. Passed Distance", 10000f, "Distance in meters after waypoint is behind plane to consider it reached");
-            NavAutoAdvance = Config.Bind("Settings - Navigation", "3. Auto Advance", true, "If true, moves to next WP. If false, disables NAV mode upon reaching a point.");
+            NavCycle = Config.Bind("Settings - Navigation", "3. Cycle WP", true, "On: cycles to next WP upon reaching WP, Off: Deletes WP upon reaching WP");
 
             // Auto Jammer
             EnableAutoJammer = Config.Bind("Auto Jammer", "1. Enable Auto Jammer", true, "Allow the feature");
@@ -599,8 +599,9 @@ namespace AutopilotMod
 
             // float currentRollDefault = APData.TargetCourse == -1f ? 0f : DefaultCRLimit.Value;
 
+            // altitude
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"{sAlt}", _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            GUILayout.Label(new GUIContent($"{sAlt}", "Current altitude"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
             _bufAlt = GUILayout.TextField(_bufAlt);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target altitude"));
 
@@ -611,8 +612,9 @@ namespace AutopilotMod
             }
             GUILayout.EndHorizontal();
 
+            // vertical speed
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"{sVS}", _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            GUILayout.Label(new GUIContent($"{sVS}", "Current climb/descent rate"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
             _bufClimb = GUILayout.TextField(_bufClimb);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Max vertical speed"));
 
@@ -624,10 +626,11 @@ namespace AutopilotMod
             }
             GUILayout.EndHorizontal();
 
+            // bank angle
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"{sRoll}", _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            GUILayout.Label(new GUIContent($"{sRoll}", "Current bank angle"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
             _bufRoll = GUILayout.TextField(_bufRoll);
-            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target bank angle"));
+            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target/limit bank angle"));
 
             if (GUILayout.Button(new GUIContent("CLR", "disable roll hold"), _styleButton, GUILayout.Width(buttonWidth)))
             {
@@ -636,8 +639,9 @@ namespace AutopilotMod
             }
             GUILayout.EndHorizontal();
 
+            // speed
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"{sSpd}", _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            GUILayout.Label(new GUIContent($"{sSpd}", "Current speed"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
             _bufSpeed = GUILayout.TextField(_bufSpeed);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target speed"));
             Color oldCol = GUI.backgroundColor;
@@ -652,8 +656,9 @@ namespace AutopilotMod
             GUI.backgroundColor = oldCol;
             GUILayout.EndHorizontal();
 
+            // course
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"{currentCourse:F0}°", _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            GUILayout.Label(new GUIContent($"{sCrs}", "Current course"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
             _bufCourse = GUILayout.TextField(_bufCourse);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target course"));
             if (GUILayout.Button(new GUIContent("CLR", "Disable course hold"), _styleButton, GUILayout.Width(buttonWidth)))
@@ -664,6 +669,7 @@ namespace AutopilotMod
             }
             GUILayout.EndHorizontal();
 
+            // set values
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(new GUIContent("Set Values", "Applies typed values"), _styleButton))
             {
@@ -708,6 +714,7 @@ namespace AutopilotMod
                 GUI.FocusControl(null);
             }
 
+            // engage/disengage
             GUI.backgroundColor = APData.Enabled ? Color.green : Color.red;
             if (GUILayout.Button(new GUIContent(APData.Enabled ? "Disengage" : "Engage", "toggle AP"), _styleButton))
             {
@@ -732,8 +739,8 @@ namespace AutopilotMod
             GUI.backgroundColor = Color.white;
             GUILayout.EndHorizontal();
 
+            // auto jam/gcas
             GUILayout.BeginHorizontal();
-
             string ajText = "AJ: " + (APData.AutoJammerActive ? "ON" : "OFF");
             if (GUILayout.Button(new GUIContent(ajText, "Toggle Auto Jammer"), _styleButton))
             {
@@ -749,15 +756,20 @@ namespace AutopilotMod
             }
 
             GUILayout.EndHorizontal();
+
             GUILayout.Space(5);
+
+            // nav
             GUILayout.BeginHorizontal();
-            APData.NavEnabled = GUILayout.Toggle(APData.NavEnabled, "Nav mode");
-            if (GUILayout.Button("CLR", _styleButton, GUILayout.Width(buttonWidth))) APData.NavQueue.Clear();
+            APData.NavEnabled = GUILayout.Toggle(APData.NavEnabled, new GUIContent("Nav mode", "switch for waypoint ap mode. overrides course hold."));
+            NavCycle.Value = GUILayout.Toggle(NavCycle.Value, new GUIContent("Cycle WP", "On: cycles to next WP upon reaching WP, Off: Deletes upon reaching WP"));
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
             _bufNavInput = GUILayout.TextField(_bufNavInput);
-            if (GUILayout.Button("ADD", _styleButton, GUILayout.Width(buttonWidth)))
+            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Enter Grid (B1), Subgrid (Aa01), or Coords (X,Z)"));
+
+            if (GUILayout.Button(new GUIContent("ADD", "Add location to flight plan"), _styleButton, GUILayout.Width(buttonWidth)))
             {
                 if (_bufNavInput.Contains(","))
                 {
@@ -790,15 +802,15 @@ namespace AutopilotMod
                 GUILayout.Label($"Distance to WP: {distStr}", _styleLabel);
 
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Skip WP", _styleButton))
+                if (GUILayout.Button(new GUIContent("Skip WP", "Remove the current target and fly to the next one"), _styleButton))
                 {
                     APData.NavQueue.RemoveAt(0);
-                    RefreshNavVisuals();
+                    Plugin.RefreshNavVisuals();
                 }
-                if (GUILayout.Button("Clear all", _styleButton))
+                if (GUILayout.Button(new GUIContent("Clear", "Clear the entire flight plan"), _styleButton))
                 {
                     APData.NavQueue.Clear();
-                    RefreshNavVisuals();
+                    Plugin.RefreshNavVisuals();
                 }
                 GUILayout.EndHorizontal();
             }
@@ -1503,10 +1515,19 @@ namespace AutopilotMod
                         float passedThreshold = Plugin.NavPassedDistance.Value;
                         if (distSq < (threshold * threshold) || (passed && distSq < passedThreshold * passedThreshold))
                         {
+                            Vector3 reachedPoint = APData.NavQueue[0];
                             APData.NavQueue.RemoveAt(0);
+
+                            if (Plugin.NavCycle.Value)
+                            {
+                                // Put the reached point at the back of the line
+                                APData.NavQueue.Add(reachedPoint);
+                            }
+
                             Plugin.RefreshNavVisuals();
 
-                            if (APData.NavQueue.Count == 0 || !Plugin.NavAutoAdvance.Value)
+                            // If we aren't cycling and ran out of points, turn off Nav
+                            if (APData.NavQueue.Count == 0)
                             {
                                 APData.NavEnabled = false;
                             }

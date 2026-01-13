@@ -22,6 +22,7 @@ In order of implementation, earliest first
 - simple autopilot GUI
 - course hold
 - autothrottle
+- waypoints
   
 ### features not in the mod (yet?)
 

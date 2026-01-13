@@ -817,43 +817,48 @@ namespace AutopilotMod
             // Nav waypoint list
             if (APData.NavQueue.Count > 0)
             {
-                // ema
                 float rawSpeed = (APData.PlayerRB != null) ? APData.PlayerRB.velocity.magnitude : 0f;
                 float alpha = 0.05f;
                 APData.SpeedEma = (alpha * rawSpeed) + ((1f - alpha) * APData.SpeedEma);
 
-                // distances
                 Vector3 playerPos = (APData.PlayerRB != null) ? APData.PlayerRB.position.ToGlobalPosition().AsVector3() : Vector3.zero;
                 float distNext = Vector3.Distance(playerPos, APData.NavQueue[0]);
 
-                float distTotal = distNext;
-                for (int i = 0; i < APData.NavQueue.Count - 1; i++)
-                {
-                    distTotal += Vector3.Distance(APData.NavQueue[i], APData.NavQueue[i + 1]);
-                }
+                // next wp row
+                GUILayout.BeginHorizontal();
 
-                // display
                 string nextDistStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distNext), Plugin.DistShowUnit.Value);
-                string totalDistStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distTotal), Plugin.DistShowUnit.Value);
-
                 GUILayout.Label(new GUIContent($"Next: {nextDistStr}", "Distance to next wp"), _styleLabel);
 
-                if (APData.SpeedEma > 2f)
+                if (APData.SpeedEma < 0.0001f) APData.SpeedEma = 0.0001f;
+
+                float etaNext = distNext / APData.SpeedEma;
+                string sEtaNext = (etaNext > 3600) ? TimeSpan.FromSeconds(etaNext).ToString(@"h\:mm\:ss") : TimeSpan.FromSeconds(etaNext).ToString(@"mm\:ss");
+                GUILayout.Label($" ETA: {sEtaNext}", _styleLabel);
+
+                GUILayout.EndHorizontal();
+
+                // total row
+                if (APData.NavQueue.Count > 1)
                 {
-                    float etaNext = distNext / APData.SpeedEma;
-                    float etaTotal = distTotal / APData.SpeedEma;
-
-                    string sEtaNext = (etaNext > 3600) ? TimeSpan.FromSeconds(etaNext).ToString(@"h\:mm\:ss") : TimeSpan.FromSeconds(etaNext).ToString(@"mm\:ss");
-                    string sEtaTotal = (etaTotal > 3600) ? TimeSpan.FromSeconds(etaTotal).ToString(@"h\:mm\:ss") : TimeSpan.FromSeconds(etaTotal).ToString(@"mm\:ss");
-
-                    GUILayout.Label($" ETA: {sEtaNext}", _styleLabel);
-
-                    if (APData.NavQueue.Count > 1)
+                    float distTotal = distNext;
+                    for (int i = 0; i < APData.NavQueue.Count - 1; i++)
                     {
-                        GUILayout.Label(new GUIContent($"Total: {totalDistStr} ETA: {sEtaTotal}", "seems self explanatory?"), _styleLabel);
+                        distTotal += Vector3.Distance(APData.NavQueue[i], APData.NavQueue[i + 1]);
                     }
+
+                    GUILayout.BeginHorizontal();
+                    string totalDistStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distTotal), Plugin.DistShowUnit.Value);
+                    GUILayout.Label(new GUIContent($"Total: {totalDistStr}", "Total distance of flight plan"), _styleLabel);
+
+                    float etaTotal = distTotal / APData.SpeedEma;
+                    string sEtaTotal = (etaTotal > 3600) ? TimeSpan.FromSeconds(etaTotal).ToString(@"h\:mm\:ss") : TimeSpan.FromSeconds(etaTotal).ToString(@"mm\:ss");
+                    GUILayout.Label($" ETA: {sEtaTotal}", _styleLabel);
+
+                    GUILayout.EndHorizontal();
                 }
 
+                // nav control row
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(new GUIContent("Skip wp", "delete next point"), _styleButton))
                 {
@@ -869,7 +874,9 @@ namespace AutopilotMod
             }
             else
             {
-                GUILayout.Label("<i>No flight plan (Right-click map)</i>", _styleLabel);
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("RMB the map to set wp.\nShift+RMB for multiple.", _styleLabel);
+                GUILayout.EndHorizontal();
             }
 
             GUILayout.EndVertical();

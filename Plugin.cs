@@ -416,14 +416,23 @@ namespace AutopilotMod
                 {
                     APData.TargetSpeed = -1f;
                     _bufSpeed = "";
-                    if (APData.TargetAlt <= 0 && APData.TargetRoll == -999f && APData.TargetCourse < 0)
-                        APData.Enabled = false;
                 }
                 else if (APData.PlayerRB != null)
                 {
                     float currentSpeedRaw = APData.PlayerRB.velocity.magnitude;
-                    APData.TargetSpeed = currentSpeedRaw;
-                    _bufSpeed = ModUtils.ConvertSpeed_ToDisplay(currentSpeedRaw).ToString("F0");
+
+                    if (APData.SpeedHoldIsMach)
+                    {
+                        float sos = LevelInfo.GetSpeedofSound(APData.PlayerRB.position.y);
+                        APData.TargetSpeed = currentSpeedRaw / sos;
+                        _bufSpeed = APData.TargetSpeed.ToString("F2");
+                    }
+                    else
+                    {
+                        APData.TargetSpeed = currentSpeedRaw;
+                        _bufSpeed = ModUtils.ConvertSpeed_ToDisplay(currentSpeedRaw).ToString("F0");
+                    }
+
                     APData.Enabled = true;
                 }
                 GUI.FocusControl(null);
@@ -442,9 +451,17 @@ namespace AutopilotMod
 
             _bufRoll = (APData.TargetRoll != -999f) ? APData.TargetRoll.ToString("F0") : "";
 
-            _bufSpeed = (APData.TargetSpeed > 0)
-                ? ModUtils.ConvertSpeed_ToDisplay(APData.TargetSpeed).ToString("F0")
-                : "";
+            if (APData.TargetSpeed > 0)
+            {
+                if (APData.SpeedHoldIsMach)
+                    _bufSpeed = APData.TargetSpeed.ToString("F2");
+                else
+                    _bufSpeed = ModUtils.ConvertSpeed_ToDisplay(APData.TargetSpeed).ToString("F0");
+            }
+            else
+            {
+                _bufSpeed = "";
+            }
 
             _bufCourse = (APData.TargetCourse >= 0) ? APData.TargetCourse.ToString("F0") : "";
         }
@@ -644,6 +661,40 @@ namespace AutopilotMod
             GUILayout.Label(new GUIContent($"{sSpd}", "Current speed"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
             _bufSpeed = GUILayout.TextField(_bufSpeed);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target speed"));
+            // Mach Hold Button
+            string machText = APData.SpeedHoldIsMach ? "M" : "Spd";
+            if (GUILayout.Button(new GUIContent(machText, "Mach Hold / TAS Hold"), _styleButton, GUILayout.Width(buttonWidth)))
+            {
+                float currentAlt = (APData.PlayerRB != null) ? APData.PlayerRB.position.y : 0f;
+                float sos = LevelInfo.GetSpeedofSound(currentAlt);
+
+                if (float.TryParse(_bufSpeed, out float val))
+                {
+                    if (!APData.SpeedHoldIsMach)
+                    {
+                        // Convert Display Units -> Mach
+                        float ms = ModUtils.ConvertSpeed_FromDisplay(val);
+                        float mach = ms / sos;
+                        _bufSpeed = mach.ToString("F2");
+
+                        // If AP is running, update the live target immediately
+                        if (APData.TargetSpeed > 0) APData.TargetSpeed = mach;
+                    }
+                    else
+                    {
+                        // Convert Mach -> Display Units
+                        float ms = val * sos;
+                        float display = ModUtils.ConvertSpeed_ToDisplay(ms);
+                        _bufSpeed = display.ToString("F0");
+
+                        // If AP is running, update the live target immediately
+                        if (APData.TargetSpeed > 0) APData.TargetSpeed = ms;
+                    }
+                }
+
+                APData.SpeedHoldIsMach = !APData.SpeedHoldIsMach;
+                GUI.FocusControl(null);
+            }
             Color oldCol = GUI.backgroundColor;
             if (APData.AllowExtremeThrottle) GUI.backgroundColor = Color.red;
 
@@ -682,7 +733,9 @@ namespace AutopilotMod
                     APData.CurrentMaxClimbRate = Mathf.Max(0.5f, ModUtils.ConvertVS_FromDisplay(c));
 
                 if (float.TryParse(_bufSpeed, out float s))
-                    APData.TargetSpeed = ModUtils.ConvertSpeed_FromDisplay(s);
+                {
+                    APData.TargetSpeed = APData.SpeedHoldIsMach ? s : ModUtils.ConvertSpeed_FromDisplay(s);
+                }
                 else
                     APData.TargetSpeed = -1f;
 
@@ -1059,6 +1112,7 @@ namespace AutopilotMod
         public static float CurrentAlt = 0f;
         public static float CurrentRoll = 0f;
         public static float CurrentMaxClimbRate = -1f;
+        public static bool SpeedHoldIsMach = false;
         public static List<Vector3> NavQueue = [];
         public static List<GameObject> NavVisuals = [];
         public static bool NavEnabled = false;
@@ -1477,7 +1531,19 @@ namespace AutopilotMod
                     if (APData.TargetSpeed > 0f && Plugin.f_throttle != null && !APData.GCASActive)
                     {
                         float currentSpeed = APData.PlayerRB.velocity.magnitude;
-                        float sErr = APData.TargetSpeed - currentSpeed;
+                        float targetSpeedMS;
+
+                        if (APData.SpeedHoldIsMach)
+                        {
+                            float sos = LevelInfo.GetSpeedofSound(APData.PlayerRB.position.y);
+                            targetSpeedMS = APData.TargetSpeed * sos;
+                        }
+                        else
+                        {
+                            targetSpeedMS = APData.TargetSpeed;
+                        }
+
+                        float sErr = targetSpeedMS - currentSpeed;
 
                         float currentAccel = Mathf.Abs(currentSpeed - lastSpdMeasurement) / dt;
                         lastSpdMeasurement = currentSpeed;
@@ -1910,9 +1976,18 @@ namespace AutopilotMod
                         ? ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.TargetAlt), Plugin.AltShowUnit.Value)
                         : "A-";
                     string climbStr = ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(APData.CurrentMaxClimbRate), Plugin.VertSpeedShowUnit.Value);
-                    string spdStr = (APData.TargetSpeed > 0)
-                        ? ModUtils.ProcessGameString(UnitConverter.SpeedReading(APData.TargetSpeed), Plugin.SpeedShowUnit.Value)
-                        : "S-";
+                    string spdStr;
+                    if (APData.TargetSpeed > 0)
+                    {
+                        if (APData.SpeedHoldIsMach)
+                            spdStr = $"M{APData.TargetSpeed:F2}";
+                        else
+                            spdStr = ModUtils.ProcessGameString(UnitConverter.SpeedReading(APData.TargetSpeed), Plugin.SpeedShowUnit.Value);
+                    }
+                    else
+                    {
+                        spdStr = "S-";
+                    }
                     string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
                     string degStr;
 

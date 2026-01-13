@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using BepInEx;
@@ -31,6 +32,7 @@ namespace AutopilotMod
         private string _bufRoll = "";
         private string _bufSpeed = "";
         private string _bufCourse = "";
+        private string _bufNavInput = "";
 
         private GUIStyle _styleWindow;
         private GUIStyle _styleLabel;
@@ -738,6 +740,39 @@ namespace AutopilotMod
 
             GUILayout.EndHorizontal();
 
+            GUILayout.Space(5);
+            GUILayout.Label("NAV", _styleLabel);
+            GUILayout.BeginHorizontal();
+            APData.NavEnabled = GUILayout.Toggle(APData.NavEnabled, "NAV MODE");
+            if (GUILayout.Button("CLR", _styleButton, GUILayout.Width(buttonWidth))) APData.NavQueue.Clear();
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            _bufNavInput = GUILayout.TextField(_bufNavInput);
+            if (GUILayout.Button("ADD", _styleButton, GUILayout.Width(buttonWidth)))
+            {
+                if (_bufNavInput.Contains(","))
+                {
+                    string[] s = _bufNavInput.Split(',');
+                    if (s.Length == 2) APData.NavQueue.Add(new Vector3(float.Parse(s[0]), 0, float.Parse(s[1])));
+                }
+                else
+                {
+                    Vector3 p = ModUtils.ParseGridToPos(_bufNavInput);
+                    if (p != Vector3.zero)
+                    {
+                        APData.NavQueue.Add(p);
+                        APData.NavEnabled = true;
+                    }
+                }
+                _bufNavInput = "";
+                GUI.FocusControl(null);
+            }
+            GUILayout.EndHorizontal();
+
+            if (APData.NavQueue.Count > 0)
+                GUILayout.Label($"WP 1: {Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]) / 1000f:F1}km ({APData.NavQueue.Count} in queue)");
+
             GUILayout.EndVertical();
 
             GUILayout.EndScrollView();
@@ -814,6 +849,8 @@ namespace AutopilotMod
         public static float CurrentAlt = 0f;
         public static float CurrentRoll = 0f;
         public static float CurrentMaxClimbRate = -1f;
+        public static List<Vector3> NavQueue = [];
+        public static bool NavEnabled = false;
         public static Rigidbody PlayerRB;
         public static Aircraft LocalAircraft;
         public static object LocalPilot;
@@ -888,6 +925,36 @@ namespace AutopilotMod
             // remove units
             var match = _rxNumber.Match(clean);
             return match.Success ? match.Value : clean;
+        }
+
+        public static Vector3 ParseGridToPos(string grid)
+        {
+            try
+            {
+                grid = grid.Trim();
+                float x = 0, z = 0;
+                float offX = 80000f; // offsetX from GridLabels class
+                float offY = 80000f; // offsetY also
+
+                if (grid.Length == 2)
+                { // 1 letter, 1 number
+                    int majY = char.ToUpper(grid[0]) - 'A';
+                    int majX = int.Parse(grid[1].ToString());
+                    x = (majX * 10000f) + 5000f - offX;
+                    z = offY - ((majY * 10000f) + 5000f);
+                }
+                else if (grid.Length == 4)
+                { // 2 letter, 2 num
+                    int majY = char.ToUpper(grid[0]) - 'A';
+                    int minY = char.ToLower(grid[1]) - 'a';
+                    int majX = int.Parse(grid[2].ToString());
+                    int minX = int.Parse(grid[3].ToString());
+                    x = (majX * 10000f) + (minX * 1000f) + 500f - offX;
+                    z = offY - ((majY * 10000f) + (minY * 1000f) + 500f);
+                }
+                return new Vector3(x, 0, z);
+            }
+            catch { return Vector3.zero; }
         }
     }
 
@@ -1341,6 +1408,26 @@ namespace AutopilotMod
                         Plugin.f_throttle.SetValue(inputObj, currentAppliedThrottle);
                     }
 
+                    if (APData.NavEnabled && APData.NavQueue.Count > 0)
+                    {
+                        Vector3 targetPos = APData.NavQueue[0];
+                        Vector3 playerPos = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+                        Vector3 diff = targetPos - playerPos;
+
+                        float bearing = Mathf.Atan2(diff.x, diff.z) * Mathf.Rad2Deg;
+                        APData.TargetCourse = (bearing + 360f) % 360f;
+
+                        // <500m distance OR it's behind us and <10km
+                        float distSq = new Vector2(diff.x, diff.z).sqrMagnitude;
+                        bool passed = Vector3.Dot(APData.PlayerRB.transform.forward, diff.normalized) < 0;
+
+                        if (distSq < 250000f || (passed && distSq < 10000000f))
+                        {
+                            APData.NavQueue.RemoveAt(0);
+                            if (APData.NavQueue.Count == 0) APData.NavEnabled = false;
+                        }
+                    }
+
                     // roll/course control
                     bool rollAxisActive = APData.GCASActive || APData.TargetCourse >= 0f || APData.TargetRoll != -999f;
 
@@ -1720,6 +1807,23 @@ namespace AutopilotMod
             catch (Exception ex)
             {
                 Plugin.Logger.LogError($"[HUDVisualsPatch] Error: {ex}");
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(DynamicMap), "MapControls")]
+    internal class MapInteractionPatch
+    {
+        static void Postfix(DynamicMap __instance)
+        {
+            if (DynamicMap.mapMaximized && Input.GetMouseButtonDown(1))
+            {
+                if (APData.LocalAircraft != null)
+                {
+                    if (!Input.GetKey(KeyCode.LeftShift)) APData.NavQueue.Clear();
+                    APData.NavQueue.Add(__instance.GetCursorCoordinates().AsVector3());
+                    APData.NavEnabled = true;
+                }
             }
         }
     }

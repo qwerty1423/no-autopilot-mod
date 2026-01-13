@@ -889,63 +889,48 @@ namespace AutopilotMod
             var map = SceneSingleton<DynamicMap>.i;
             if (APData.NavQueue.Count == 0 || map == null || APData.PlayerRB == null) return;
 
-            float internalFactor = 900f / map.mapDimension;
-            float currentZoom = map.mapImage.transform.localScale.x;
+            float factor = 900f / map.mapDimension;
+            float zoom = map.mapImage.transform.localScale.x;
             Color navCol = ModUtils.GetColor(Plugin.ColorNav.Value, Color.cyan);
 
-            // Get Player position in Map Local Space
-            Vector3 playerPosG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
-            Vector3 lastPoint = new(playerPosG.x * internalFactor, playerPosG.z * internalFactor, 0f);
+            Vector3 pPosG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+            Vector3 lastPoint = new(pPosG.x * factor, pPosG.z * factor, 0f);
 
-            void DrawLine(Vector3 start, Vector3 end, bool isLoopLine = false)
+            void DrawLine(Vector3 start, Vector3 end, string name, bool isLoop = false)
             {
-                // Parent to mapImage so it pans/zooms automatically
                 GameObject line = Instantiate(map.mapWaypointVector, map.mapImage.transform);
-                line.name = isLoopLine ? "AP_NavLine_Loop" : "AP_NavLine";
-
-                // Midpoint placement
-                line.transform.localPosition = (start + end) / 2f;
-
-                // Rotation
+                line.name = name;
+                line.transform.localPosition = start + end;
                 float angle = -Mathf.Atan2(end.x - start.x, end.y - start.y) * Mathf.Rad2Deg;
                 line.transform.eulerAngles = new Vector3(0, 0, angle);
-
-                // Scale: Y is the length. We divide X and Z by currentZoom so the dots don't get huge.
-                float length = Vector3.Distance(start, end);
-                line.transform.localScale = new Vector3(4f / currentZoom, length, 4f / currentZoom);
+                line.transform.localScale = new Vector3(4f / zoom, Vector3.Distance(start, end), 4f / zoom);
 
                 if (line.TryGetComponent(out Image img))
                 {
-                    img.color = isLoopLine ? new Color(navCol.r, navCol.g, navCol.b, navCol.a * 0.4f) : navCol;
+                    img.color = isLoop ? new Color(navCol.r, navCol.g, navCol.b, navCol.a * 0.4f) : navCol;
                 }
                 APData.NavVisuals.Add(line);
             }
 
             for (int i = 0; i < APData.NavQueue.Count; i++)
             {
-                Vector3 currentG = APData.NavQueue[i];
-                Vector3 currentMap = new Vector3(currentG.x * internalFactor, currentG.z * internalFactor, 0f);
+                Vector3 currentMap = new(APData.NavQueue[i].x * factor, APData.NavQueue[i].z * factor, 0f);
 
-                // Draw Marker
                 GameObject marker = Instantiate(map.mapWaypoint, map.mapImage.transform);
                 marker.name = "AP_NavMarker";
                 marker.transform.localPosition = currentMap;
-
-                // Keep marker size consistent regardless of zoom
-                marker.transform.localScale = Vector3.one * (1f / currentZoom);
-
+                marker.transform.localScale = Vector3.one * (1f / zoom);
                 if (marker.TryGetComponent(out Image mImg)) mImg.color = navCol;
                 APData.NavVisuals.Add(marker);
 
-                DrawLine(lastPoint, currentMap);
+                DrawLine(lastPoint, currentMap, (i == 0) ? "AP_NavLine_Player" : "AP_NavLine");
                 lastPoint = currentMap;
             }
 
             if (NavCycle.Value && APData.NavQueue.Count > 1)
             {
-                Vector3 firstG = APData.NavQueue[0];
-                Vector3 firstMap = new(firstG.x * internalFactor, firstG.z * internalFactor, 0f);
-                DrawLine(lastPoint, firstMap, true);
+                Vector3 firstMap = new(APData.NavQueue[0].x * factor, APData.NavQueue[0].z * factor, 0f);
+                DrawLine(lastPoint, firstMap, "AP_NavLine_Loop", true);
             }
         }
     }
@@ -1989,34 +1974,30 @@ namespace AutopilotMod
             foreach (var obj in APData.NavVisuals)
             {
                 if (obj == null) continue;
-
-                if (obj.name == "AP_NavMarker")
-                {
-                    obj.transform.localScale = Vector3.one * invZoom;
-                }
-                else if (obj.name.StartsWith("AP_NavLine"))
+                if (obj.name == "AP_NavMarker") obj.transform.localScale = Vector3.one * invZoom;
+                else
                 {
                     Vector3 s = obj.transform.localScale;
                     obj.transform.localScale = new Vector3(4f * invZoom, s.y, 4f * invZoom);
                 }
             }
 
-            // Update the first line segment to follow the player's nose
-            if (APData.NavQueue.Count > 0 && APData.PlayerRB != null)
+            if (APData.NavVisuals.Count >= 2 && APData.PlayerRB != null)
             {
-                float internalFactor = 900f / map.mapDimension;
-                Vector3 pPosG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
-                Vector3 pMap = new(pPosG.x * internalFactor, pPosG.z * internalFactor, 0f);
+                GameObject firstMarker = APData.NavVisuals[0];
+                GameObject playerLine = APData.NavVisuals[1];
 
-                GameObject firstLine = APData.NavVisuals.Find(x => x.name == "AP_NavLine");
-                GameObject firstMarker = APData.NavVisuals.Find(x => x.name == "AP_NavMarker");
-
-                if (firstLine != null && firstMarker != null)
+                if (playerLine != null && firstMarker != null && playerLine.name == "AP_NavLine_Player")
                 {
+                    float factor = 900f / map.mapDimension;
+                    Vector3 pG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+                    Vector3 pMap = new(pG.x * factor, pG.z * factor, 0f);
                     Vector3 targetMap = firstMarker.transform.localPosition;
-                    firstLine.transform.localPosition = (pMap + targetMap) / 2f;
-                    firstLine.transform.eulerAngles = new Vector3(0, 0, -Mathf.Atan2(targetMap.x - pMap.x, targetMap.y - pMap.y) * Mathf.Rad2Deg);
-                    firstLine.transform.localScale = new Vector3(4f / zoom, Vector3.Distance(pMap, targetMap), 4f / zoom);
+
+                    playerLine.transform.localPosition = pMap + targetMap;
+                    float angle = -Mathf.Atan2(targetMap.x - pMap.x, targetMap.y - pMap.y) * Mathf.Rad2Deg + 180f;
+                    playerLine.transform.eulerAngles = new Vector3(0, 0, angle);
+                    playerLine.transform.localScale = new Vector3(4f * invZoom, Vector3.Distance(pMap, targetMap), 4f * invZoom);
                 }
             }
         }

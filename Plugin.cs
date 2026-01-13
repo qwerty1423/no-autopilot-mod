@@ -905,7 +905,8 @@ namespace AutopilotMod
 
                 float angle = -Mathf.Atan2(end.x - start.x, end.y - start.y) * Mathf.Rad2Deg + 180f;
 
-                line.transform.eulerAngles = new Vector3(0, 0, angle);
+                line.transform.localEulerAngles = new Vector3(0, 0, angle);
+
                 line.transform.localScale = new Vector3(4f / zoom, Vector3.Distance(start, end), 4f / zoom);
 
                 if (line.TryGetComponent(out Image img))
@@ -2003,7 +2004,7 @@ namespace AutopilotMod
 
                 float angle = -Mathf.Atan2(targetMap.x - pMap.x, targetMap.y - pMap.y) * Mathf.Rad2Deg + 180f;
 
-                playerLine.transform.eulerAngles = new Vector3(0, 0, angle);
+                playerLine.transform.localEulerAngles = new Vector3(0, 0, angle);
 
                 playerLine.transform.localScale = new Vector3(4f * invZoom, Vector3.Distance(pMap, targetMap), 4f * invZoom);
             }

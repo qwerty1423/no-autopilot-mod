@@ -843,7 +843,7 @@ namespace AutopilotMod
                 if (APData.SpeedEma < 0.0001f) APData.SpeedEma = 0.0001f;
 
                 float etaNext = distNext / APData.SpeedEma;
-                string sEtaNext = (etaNext > 3600) ? TimeSpan.FromSeconds(etaNext).ToString(@"h\:mm\:ss") : TimeSpan.FromSeconds(etaNext).ToString(@"mm\:ss");
+                string sEtaNext = (etaNext > 3599) ? TimeSpan.FromSeconds(etaNext).ToString(@"h\:mm\:ss") : TimeSpan.FromSeconds(etaNext).ToString(@"mm\:ss");
                 GUILayout.Label($" ETA: {sEtaNext}", _styleLabel);
 
                 GUILayout.EndHorizontal();
@@ -862,7 +862,7 @@ namespace AutopilotMod
                     GUILayout.Label(new GUIContent($"Total: {totalDistStr}", "Total distance of flight plan"), _styleLabel);
 
                     float etaTotal = distTotal / APData.SpeedEma;
-                    string sEtaTotal = (etaTotal > 3600) ? TimeSpan.FromSeconds(etaTotal).ToString(@"h\:mm\:ss") : TimeSpan.FromSeconds(etaTotal).ToString(@"mm\:ss");
+                    string sEtaTotal = (etaTotal > 3599) ? TimeSpan.FromSeconds(etaTotal).ToString(@"h\:mm\:ss") : TimeSpan.FromSeconds(etaTotal).ToString(@"mm\:ss");
                     GUILayout.Label($" ETA: {sEtaTotal}", _styleLabel);
 
 

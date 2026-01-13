@@ -19,7 +19,7 @@ namespace AutopilotMod
 
         // ap menu?
         public static ConfigEntry<KeyCode> MenuKey;
-        private Rect _windowRect = new(50, 50, 210, 210);
+        private Rect _windowRect = new(50, 50, 227, 312);
         private bool _showMenu = false;
 
         private Vector2 _scrollPos;
@@ -167,8 +167,8 @@ namespace AutopilotMod
 
             UI_PosX = Config.Bind("Visuals - UI", "1. Window Position X", -1f, "-1 = Auto Bottom Right, otherwise pixel value");
             UI_PosY = Config.Bind("Visuals - UI", "2. Window Position Y", -1f, "-1 = Auto Bottom Right, otherwise pixel value");
-            UI_Width = Config.Bind("Visuals - UI", "3. Window Width", 210f, "Saved Width");
-            UI_Height = Config.Bind("Visuals - UI", "4. Window Height", 210f, "Saved Height");
+            UI_Width = Config.Bind("Visuals - UI", "3. Window Width", 227f, "Saved Width");
+            UI_Height = Config.Bind("Visuals - UI", "4. Window Height", 312f, "Saved Height");
 
             FuelSmoothing = Config.Bind("Calculations", "1. Fuel Flow Smoothing", 0.1f, "Alpha value");
             FuelUpdateInterval = Config.Bind("Calculations", "2. Fuel Update Interval", 1.0f, "Seconds");
@@ -183,7 +183,7 @@ namespace AutopilotMod
             Conf_InvertCourseRoll = Config.Bind("Settings", "5. Invert Bank Direction", true, "Toggle if plane turns wrong way");
 
             // nav
-            NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 1000f, "Distance in meters to consider a waypoint reached.");
+            NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f, "Distance in meters to consider a waypoint reached.");
             NavPassedDistance = Config.Bind("Settings - Navigation", "2. Passed Distance", 25000f, "Distance in meters after waypoint is behind plane to consider it reached");
             NavCycle = Config.Bind("Settings - Navigation", "3. Cycle WP", true, "On: cycles to next WP upon reaching WP, Off: Deletes WP upon reaching WP");
 
@@ -482,8 +482,8 @@ namespace AutopilotMod
                 else if (Event.current.type == EventType.MouseDrag)
                 {
                     Vector2 delta = Event.current.delta;
-                    float minW = 210f;
-                    float minH = 210f;
+                    float minW = 227f;
+                    float minH = 312f;
 
                     if (_activeEdge == RectEdge.Right || _activeEdge == RectEdge.TopRight || _activeEdge == RectEdge.BottomRight)
                         _windowRect.width = Mathf.Max(minW, _windowRect.width + delta.x);
@@ -512,8 +512,8 @@ namespace AutopilotMod
             {
                 float x = UI_PosX.Value;
                 float y = UI_PosY.Value;
-                float w = Mathf.Max(210f, UI_Width.Value);
-                float h = Mathf.Max(210f, UI_Height.Value);
+                float w = Mathf.Max(227f, UI_Width.Value);
+                float h = Mathf.Max(312f, UI_Height.Value);
 
                 if (x < 0) x = Screen.width - w - 20;
                 if (y < 0) y = Screen.height - h - 50;

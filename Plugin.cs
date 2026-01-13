@@ -900,8 +900,11 @@ namespace AutopilotMod
             {
                 GameObject line = Instantiate(map.mapWaypointVector, map.mapImage.transform);
                 line.name = name;
-                line.transform.localPosition = start + end;
-                float angle = -Mathf.Atan2(end.x - start.x, end.y - start.y) * Mathf.Rad2Deg;
+
+                line.transform.localPosition = end;
+
+                float angle = -Mathf.Atan2(end.x - start.x, end.y - start.y) * Mathf.Rad2Deg + 180f;
+
                 line.transform.eulerAngles = new Vector3(0, 0, angle);
                 line.transform.localScale = new Vector3(4f / zoom, Vector3.Distance(start, end), 4f / zoom);
 
@@ -916,12 +919,15 @@ namespace AutopilotMod
             {
                 Vector3 currentMap = new(APData.NavQueue[i].x * factor, APData.NavQueue[i].z * factor, 0f);
 
-                GameObject marker = Instantiate(map.mapWaypoint, map.mapImage.transform);
-                marker.name = "AP_NavMarker";
-                marker.transform.localPosition = currentMap;
-                marker.transform.localScale = Vector3.one * (1f / zoom);
-                if (marker.TryGetComponent(out Image mImg)) mImg.color = navCol;
-                APData.NavVisuals.Add(marker);
+                if (i == APData.NavQueue.Count - 1)
+                {
+                    GameObject marker = Instantiate(map.mapWaypoint, map.mapImage.transform);
+                    marker.name = "AP_NavMarker";
+                    marker.transform.localPosition = currentMap;
+                    marker.transform.localScale = Vector3.one * (1f / zoom);
+                    if (marker.TryGetComponent(out Image mImg)) mImg.color = navCol;
+                    APData.NavVisuals.Add(marker);
+                }
 
                 DrawLine(lastPoint, currentMap, (i == 0) ? "AP_NavLine_Player" : "AP_NavLine");
                 lastPoint = currentMap;
@@ -1965,11 +1971,14 @@ namespace AutopilotMod
     {
         static void Postfix()
         {
-            if (!DynamicMap.mapMaximized || APData.NavVisuals.Count == 0) return;
+            if (APData.NavVisuals.Count == 0 || APData.PlayerRB == null) return;
 
             var map = SceneSingleton<DynamicMap>.i;
             float zoom = map.mapImage.transform.localScale.x;
             float invZoom = 1f / zoom;
+            float factor = 900f / map.mapDimension;
+
+            GameObject playerLine = null;
 
             foreach (var obj in APData.NavVisuals)
             {
@@ -1977,28 +1986,23 @@ namespace AutopilotMod
                 if (obj.name == "AP_NavMarker") obj.transform.localScale = Vector3.one * invZoom;
                 else
                 {
-                    Vector3 s = obj.transform.localScale;
-                    obj.transform.localScale = new Vector3(4f * invZoom, s.y, 4f * invZoom);
+                    obj.transform.localScale = new Vector3(4f * invZoom, obj.transform.localScale.y, 4f * invZoom);
+                    if (obj.name == "AP_NavLine_Player") playerLine = obj;
                 }
             }
 
-            if (APData.NavVisuals.Count >= 2 && APData.PlayerRB != null)
+            if (playerLine != null && APData.NavQueue.Count > 0)
             {
-                GameObject firstMarker = APData.NavVisuals[0];
-                GameObject playerLine = APData.NavVisuals[1];
+                Vector3 pG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+                Vector3 pMap = new(pG.x * factor, pG.z * factor, 0f);
+                Vector3 targetMap = new(APData.NavQueue[0].x * factor, APData.NavQueue[0].z * factor, 0f);
 
-                if (playerLine != null && firstMarker != null && playerLine.name == "AP_NavLine_Player")
-                {
-                    float factor = 900f / map.mapDimension;
-                    Vector3 pG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
-                    Vector3 pMap = new(pG.x * factor, pG.z * factor, 0f);
-                    Vector3 targetMap = firstMarker.transform.localPosition;
+                playerLine.transform.localPosition = pMap;
 
-                    playerLine.transform.localPosition = pMap + targetMap;
-                    float angle = -Mathf.Atan2(targetMap.x - pMap.x, targetMap.y - pMap.y) * Mathf.Rad2Deg + 180f;
-                    playerLine.transform.eulerAngles = new Vector3(0, 0, angle);
-                    playerLine.transform.localScale = new Vector3(4f * invZoom, Vector3.Distance(pMap, targetMap), 4f * invZoom);
-                }
+                float angle = -Mathf.Atan2(targetMap.x - pMap.x, targetMap.y - pMap.y) * Mathf.Rad2Deg;
+
+                playerLine.transform.localEulerAngles = new Vector3(0, 0, angle);
+                playerLine.transform.localScale = new Vector3(4f * invZoom, Vector3.Distance(pMap, targetMap), 4f * invZoom);
             }
         }
     }

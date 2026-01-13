@@ -825,8 +825,6 @@ namespace AutopilotMod
                 float distNext = Vector3.Distance(playerPos, APData.NavQueue[0]);
 
                 // next wp row
-                GUILayout.BeginHorizontal();
-
                 string nextDistStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distNext), Plugin.DistShowUnit.Value);
                 GUILayout.Label(new GUIContent($"Next: {nextDistStr}", "Distance to next wp"), _styleLabel);
 

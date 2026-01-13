@@ -587,7 +587,11 @@ namespace AutopilotMod
             GUILayout.BeginVertical();
 
             float currentVS = (APData.PlayerRB != null) ? APData.PlayerRB.velocity.y : 0f;
+
+            float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
+            float sos = LevelInfo.GetSpeedofSound(currentAlt);
             float currentSpeed = (APData.PlayerRB != null) ? APData.PlayerRB.velocity.magnitude : 0f;
+
             float currentCourse = 0f;
             if (APData.PlayerRB != null && APData.PlayerRB.velocity.sqrMagnitude > 1f)
             {
@@ -598,7 +602,18 @@ namespace AutopilotMod
             string sAlt = ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.CurrentAlt), true);
             string sVS = ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(currentVS), true);
             string sRoll = $"{APData.CurrentRoll:F0}°";
-            string sSpd = ModUtils.ProcessGameString(UnitConverter.SpeedReading(currentSpeed), true);
+
+            string sSpd;
+            if (APData.SpeedHoldIsMach)
+            {
+                float currentMach = currentSpeed / Mathf.Max(sos, 1f);
+                sSpd = $"M{currentMach:F2}";
+            }
+            else
+            {
+                sSpd = ModUtils.ProcessGameString(UnitConverter.SpeedReading(currentSpeed), true);
+            }
+
             string sCrs = $"{currentCourse:F0}°";
 
             _measuringContent.text = sAlt;
@@ -667,9 +682,6 @@ namespace AutopilotMod
             string machText = APData.SpeedHoldIsMach ? "M" : "Spd";
             if (GUILayout.Button(new GUIContent(machText, "Mach Hold / TAS Hold"), _styleButton, GUILayout.Width(buttonWidth)))
             {
-                float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
-                float sos = LevelInfo.GetSpeedofSound(currentAlt);
-
                 if (float.TryParse(_bufSpeed, out float val))
                 {
                     if (!APData.SpeedHoldIsMach)

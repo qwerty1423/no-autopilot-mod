@@ -837,6 +837,7 @@ namespace AutopilotMod
                 GUILayout.EndHorizontal();
 
                 // total row
+                GUILayout.BeginHorizontal();
                 if (APData.NavQueue.Count > 1)
                 {
                     float distTotal = distNext;
@@ -845,7 +846,6 @@ namespace AutopilotMod
                         distTotal += Vector3.Distance(APData.NavQueue[i], APData.NavQueue[i + 1]);
                     }
 
-                    GUILayout.BeginHorizontal();
                     string totalDistStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distTotal), Plugin.DistShowUnit.Value);
                     GUILayout.Label(new GUIContent($"Total: {totalDistStr}", "Total distance of flight plan"), _styleLabel);
 
@@ -853,9 +853,9 @@ namespace AutopilotMod
                     string sEtaTotal = (etaTotal > 3600) ? TimeSpan.FromSeconds(etaTotal).ToString(@"h\:mm\:ss") : TimeSpan.FromSeconds(etaTotal).ToString(@"mm\:ss");
                     GUILayout.Label($" ETA: {sEtaTotal}", _styleLabel);
 
-                    GUILayout.EndHorizontal();
-                }
 
+                }
+                GUILayout.EndHorizontal();
                 // nav control row
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(new GUIContent("Skip wp", "delete next point"), _styleButton))
@@ -872,7 +872,6 @@ namespace AutopilotMod
             }
             else
             {
-                GUILayout.BeginHorizontal();
                 GUILayout.Label("RMB the map to set wp.\nShift+RMB for multiple.", _styleLabel);
                 GUILayout.EndHorizontal();
             }

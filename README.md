@@ -28,7 +28,6 @@ In order of implementation, earliest first
 
 In approximate likelihood of implementation order descending.
 
-- separate PID values for every aircraft
 - nap of the earth flying
 - proper helicopter support
 - auto take-off and landing

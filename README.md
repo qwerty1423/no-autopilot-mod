@@ -77,7 +77,7 @@ Will pull up if you are going to hit the ground and warns you a while before. Ca
 If you are making large inputs, it will not pull up.
 
 ## Waypoints
-(video recorded with svtav1 cq63 preset 8, so the quality is really low)
+(video encoded with svtav1 cq63 preset 8, so the quality is really low (not a reencode, just straight from obs))
 
 <https://github.com/user-attachments/assets/1ac109a4-bc84-49ed-8141-55bc9a217607>
 

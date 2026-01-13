@@ -1967,13 +1967,15 @@ namespace AutopilotMod
     }
 
     [HarmonyPatch(typeof(DynamicMap), "UpdateMap")]
-    internal class MapZoomFixPatch
+    internal class MapWaypointPatch
     {
         static void Postfix()
         {
             if (APData.NavVisuals.Count == 0 || APData.PlayerRB == null) return;
 
             var map = SceneSingleton<DynamicMap>.i;
+            if (map == null || map.mapImage == null) return;
+
             float zoom = map.mapImage.transform.localScale.x;
             float invZoom = 1f / zoom;
             float factor = 900f / map.mapDimension;
@@ -1997,11 +1999,12 @@ namespace AutopilotMod
                 Vector3 pMap = new(pG.x * factor, pG.z * factor, 0f);
                 Vector3 targetMap = new(APData.NavQueue[0].x * factor, APData.NavQueue[0].z * factor, 0f);
 
-                playerLine.transform.localPosition = pMap;
+                playerLine.transform.localPosition = targetMap;
 
-                float angle = -Mathf.Atan2(targetMap.x - pMap.x, targetMap.y - pMap.y) * Mathf.Rad2Deg;
+                float angle = -Mathf.Atan2(targetMap.x - pMap.x, targetMap.y - pMap.y) * Mathf.Rad2Deg + 180f;
 
-                playerLine.transform.localEulerAngles = new Vector3(0, 0, angle);
+                playerLine.transform.eulerAngles = new Vector3(0, 0, angle);
+
                 playerLine.transform.localScale = new Vector3(4f * invZoom, Vector3.Distance(pMap, targetMap), 4f * invZoom);
             }
         }

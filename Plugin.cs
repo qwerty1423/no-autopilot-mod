@@ -419,8 +419,6 @@ namespace AutopilotMod
                 }
                 else if (APData.PlayerRB != null)
                 {
-                    float currentSpeedRaw = APData.PlayerRB.velocity.magnitude;
-
                     if (APData.SpeedHoldIsMach)
                     {
                         float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;

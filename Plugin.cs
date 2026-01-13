@@ -32,7 +32,11 @@ namespace AutopilotMod
         private string _bufRoll = "";
         private string _bufSpeed = "";
         private string _bufCourse = "";
+
         private string _bufNavInput = "";
+        public static ConfigEntry<float> NavReachDistance, NavPassedDistance;
+        public static ConfigEntry<string> ColorNav;
+        public static ConfigEntry<bool> NavAutoAdvance;
 
         private GUIStyle _styleWindow;
         private GUIStyle _styleLabel;
@@ -148,6 +152,7 @@ namespace AutopilotMod
             ColorWarn = Config.Bind("Visuals - Colors", "4. Color Warning", "#FFFF00", "Yellow");
             ColorCrit = Config.Bind("Visuals - Colors", "5. Color Critical", "#FF0000", "Red");
             ColorInfo = Config.Bind("Visuals - Colors", "6. Color Info", "#00FFFF", "Cyan");
+            ColorNav = Config.Bind("Visuals - Colors", "7. Navigation Color", "#ff00ffcc", "color for flight path lines.");
             OverlayOffsetX = Config.Bind("Visuals - Layout", "1. Stack Start X", 20f, "HUD Horizontal position");
             OverlayOffsetY = Config.Bind("Visuals - Layout", "2. Stack Start Y", -20f, "HUD Vertical position");
             ShowExtraInfo = Config.Bind("Visuals", "Show Fuel/AP Info", true, "Show extra info on Fuel Gauge");
@@ -176,6 +181,11 @@ namespace AutopilotMod
             InvertRoll = Config.Bind("Settings", "3. Invert Roll", true, "Flip Roll");
             InvertPitch = Config.Bind("Settings", "4. Invert Pitch", true, "Flip Pitch");
             Conf_InvertCourseRoll = Config.Bind("Settings", "5. Invert Bank Direction", true, "Toggle if plane turns wrong way");
+
+            // nav
+            NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 1000f, "Distance in meters to consider a waypoint reached.");
+            NavPassedDistance = Config.Bind("Settings - Navigation", "2. Passed Distance", 10000f, "Distance in meters after waypoint is behind plane to consider it reached");
+            NavAutoAdvance = Config.Bind("Settings - Navigation", "3. Auto Advance", true, "If true, moves to next WP. If false, disables NAV mode upon reaching a point.");
 
             // Auto Jammer
             EnableAutoJammer = Config.Bind("Auto Jammer", "1. Enable Auto Jammer", true, "Allow the feature");
@@ -739,11 +749,9 @@ namespace AutopilotMod
             }
 
             GUILayout.EndHorizontal();
-
             GUILayout.Space(5);
-            GUILayout.Label("NAV", _styleLabel);
             GUILayout.BeginHorizontal();
-            APData.NavEnabled = GUILayout.Toggle(APData.NavEnabled, "NAV MODE");
+            APData.NavEnabled = GUILayout.Toggle(APData.NavEnabled, "Nav mode");
             if (GUILayout.Button("CLR", _styleButton, GUILayout.Width(buttonWidth))) APData.NavQueue.Clear();
             GUILayout.EndHorizontal();
 
@@ -754,7 +762,11 @@ namespace AutopilotMod
                 if (_bufNavInput.Contains(","))
                 {
                     string[] s = _bufNavInput.Split(',');
-                    if (s.Length == 2) APData.NavQueue.Add(new Vector3(float.Parse(s[0]), 0, float.Parse(s[1])));
+                    if (s.Length == 2 && float.TryParse(s[0], out float x) && float.TryParse(s[1], out float z))
+                    {
+                        APData.NavQueue.Add(new Vector3(x, 0, z));
+                        APData.NavEnabled = true;
+                    }
                 }
                 else
                 {
@@ -767,11 +779,29 @@ namespace AutopilotMod
                 }
                 _bufNavInput = "";
                 GUI.FocusControl(null);
+                RefreshNavVisuals();
             }
             GUILayout.EndHorizontal();
 
             if (APData.NavQueue.Count > 0)
-                GUILayout.Label($"WP 1: {Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]) / 1000f:F1}km ({APData.NavQueue.Count} in queue)");
+            {
+                float distToWp = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
+                string distStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distToWp), DistShowUnit.Value);
+                GUILayout.Label($"Distance to WP: {distStr}", _styleLabel);
+
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("Skip WP", _styleButton))
+                {
+                    APData.NavQueue.RemoveAt(0);
+                    RefreshNavVisuals();
+                }
+                if (GUILayout.Button("Clear all", _styleButton))
+                {
+                    APData.NavQueue.Clear();
+                    RefreshNavVisuals();
+                }
+                GUILayout.EndHorizontal();
+            }
 
             GUILayout.EndVertical();
 
@@ -831,30 +861,50 @@ namespace AutopilotMod
                 GUI.Box(tooltipRect, content, style);
             }
         }
-    }
 
-    public static class APData
-    {
-        public static bool Enabled = false;
-        public static bool UseSetValues = false;
-        public static bool GCASEnabled = true;
-        public static bool AutoJammerActive = false;
-        public static bool GCASActive = false;
-        public static bool GCASWarning = false;
-        public static bool AllowExtremeThrottle = false;
-        public static float TargetAlt = -1f;
-        public static float TargetRoll = -999f;
-        public static float TargetSpeed = -1f;
-        public static float TargetCourse = -1f;
-        public static float CurrentAlt = 0f;
-        public static float CurrentRoll = 0f;
-        public static float CurrentMaxClimbRate = -1f;
-        public static List<Vector3> NavQueue = [];
-        public static bool NavEnabled = false;
-        public static Rigidbody PlayerRB;
-        public static Aircraft LocalAircraft;
-        public static object LocalPilot;
-        public static WeaponManager LocalWeaponManager;
+        public static void RefreshNavVisuals()
+        {
+            // clear existing
+            foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
+            APData.NavVisuals.Clear();
+
+            if (APData.NavQueue.Count == 0 || SceneSingleton<DynamicMap>.i == null || APData.PlayerRB == null) return;
+
+            Vector3 lastPos = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+
+            for (int i = 0; i < APData.NavQueue.Count; i++)
+            {
+                Vector3 currentPos = APData.NavQueue[i];
+
+                // create marker
+                GameObject marker = GameObject.Instantiate(SceneSingleton<DynamicMap>.i.mapWaypoint, SceneSingleton<DynamicMap>.i.iconLayer.transform);
+                marker.transform.localPosition = new Vector3(currentPos.x, currentPos.z, 0) * SceneSingleton<DynamicMap>.i.mapDisplayFactor;
+                marker.name = "AP_Waypoint_Marker";
+                APData.NavVisuals.Add(marker);
+
+                // create line
+                GameObject line = GameObject.Instantiate(SceneSingleton<DynamicMap>.i.mapWaypointVector, SceneSingleton<DynamicMap>.i.iconLayer.transform);
+                Vector3 start = new Vector3(lastPos.x, lastPos.z, 0) * SceneSingleton<DynamicMap>.i.mapDisplayFactor;
+                Vector3 end = marker.transform.localPosition;
+
+                Color navCol = ModUtils.GetColor(Plugin.ColorNav.Value, Color.cyan);
+
+                var mImg = marker.GetComponent<UnityEngine.UI.Image>();
+                if (mImg != null) mImg.color = navCol;
+
+                var lImg = line.GetComponent<UnityEngine.UI.Image>();
+                if (lImg != null) lImg.color = navCol;
+
+                line.transform.localPosition = start;
+                float angle = -Mathf.Atan2(end.x - start.x, end.y - start.y) * Mathf.Rad2Deg + 180f;
+                line.transform.eulerAngles = new Vector3(0, 0, angle);
+                line.transform.localScale = new Vector3(4f, (end - start).magnitude, 4f);
+                line.name = "AP_Waypoint_Line";
+
+                APData.NavVisuals.Add(line);
+                lastPos = currentPos;
+            }
+        }
     }
 
     public static class ModUtils
@@ -934,7 +984,7 @@ namespace AutopilotMod
                 grid = grid.Trim();
                 float x = 0, z = 0;
                 float offX = 80000f; // offsetX from GridLabels class
-                float offY = 80000f; // offsetY also
+                float offY = 80000f; // offsetY also from GL class
 
                 if (grid.Length == 2)
                 { // 1 letter, 1 number
@@ -956,6 +1006,31 @@ namespace AutopilotMod
             }
             catch { return Vector3.zero; }
         }
+    }
+
+    public static class APData
+    {
+        public static bool Enabled = false;
+        public static bool UseSetValues = false;
+        public static bool GCASEnabled = true;
+        public static bool AutoJammerActive = false;
+        public static bool GCASActive = false;
+        public static bool GCASWarning = false;
+        public static bool AllowExtremeThrottle = false;
+        public static float TargetAlt = -1f;
+        public static float TargetRoll = -999f;
+        public static float TargetSpeed = -1f;
+        public static float TargetCourse = -1f;
+        public static float CurrentAlt = 0f;
+        public static float CurrentRoll = 0f;
+        public static float CurrentMaxClimbRate = -1f;
+        public static List<Vector3> NavQueue = [];
+        public static List<GameObject> NavVisuals = [];
+        public static bool NavEnabled = false;
+        public static Rigidbody PlayerRB;
+        public static Aircraft LocalAircraft;
+        public static object LocalPilot;
+        public static WeaponManager LocalWeaponManager;
     }
 
     [HarmonyPatch(typeof(FlightHud), "SetHUDInfo")]
@@ -998,6 +1073,10 @@ namespace AutopilotMod
                                 APData.LocalPilot = pilots[0];
                             }
                         }
+                        APData.NavEnabled = false;
+                        APData.NavQueue.Clear();
+                        foreach (var obj in APData.NavVisuals) if (obj != null) UnityEngine.Object.Destroy(obj);
+                        APData.NavVisuals.Clear();
                     }
 
                     APData.CurrentRoll = v.transform.eulerAngles.z;
@@ -1417,14 +1496,20 @@ namespace AutopilotMod
                         float bearing = Mathf.Atan2(diff.x, diff.z) * Mathf.Rad2Deg;
                         APData.TargetCourse = (bearing + 360f) % 360f;
 
-                        // <500m distance OR it's behind us and <10km
                         float distSq = new Vector2(diff.x, diff.z).sqrMagnitude;
                         bool passed = Vector3.Dot(APData.PlayerRB.transform.forward, diff.normalized) < 0;
 
-                        if (distSq < 250000f || (passed && distSq < 10000000f))
+                        float threshold = Plugin.NavReachDistance.Value;
+                        float passedThreshold = Plugin.NavPassedDistance.Value;
+                        if (distSq < (threshold * threshold) || (passed && distSq < passedThreshold * passedThreshold))
                         {
                             APData.NavQueue.RemoveAt(0);
-                            if (APData.NavQueue.Count == 0) APData.NavEnabled = false;
+                            Plugin.RefreshNavVisuals();
+
+                            if (APData.NavQueue.Count == 0 || !Plugin.NavAutoAdvance.Value)
+                            {
+                                APData.NavEnabled = false;
+                            }
                         }
                     }
 
@@ -1794,7 +1879,14 @@ namespace AutopilotMod
                     else
                         degStr = "CR-";
 
-                    content += $"<color={Plugin.ColorAPOn.Value}>{altStr} {climbStr}\n{spdStr} {degStr}</color>\n";
+                    string navStr = "";
+                    if (APData.NavEnabled && APData.NavQueue.Count > 0)
+                    {
+                        float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
+                        navStr = " > " + ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value);
+                    }
+
+                    content += $"<color={Plugin.ColorAPOn.Value}>{altStr} {climbStr}\n{spdStr} {degStr}{navStr}</color>\n";
                 }
 
                 if (APData.AutoJammerActive)
@@ -1823,6 +1915,37 @@ namespace AutopilotMod
                     if (!Input.GetKey(KeyCode.LeftShift)) APData.NavQueue.Clear();
                     APData.NavQueue.Add(__instance.GetCursorCoordinates().AsVector3());
                     APData.NavEnabled = true;
+                    Plugin.RefreshNavVisuals();
+                }
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(DynamicMap), "UpdateMap")]
+    internal class MapZoomFixPatch
+    {
+        static void Postfix()
+        {
+            if (!DynamicMap.mapMaximized || APData.NavVisuals.Count == 0) return;
+
+            float scale = 1f / SceneSingleton<DynamicMap>.i.mapImage.transform.localScale.x;
+            for (int i = APData.NavVisuals.Count - 1; i >= 0; i--)
+            {
+                var obj = APData.NavVisuals[i];
+                if (obj == null)
+                {
+                    APData.NavVisuals.RemoveAt(i);
+                    continue;
+                }
+
+                if (obj.name == "AP_Waypoint_Marker")
+                {
+                    obj.transform.localScale = Vector3.one * scale;
+                }
+                else
+                {
+                    Vector3 s = obj.transform.localScale;
+                    obj.transform.localScale = new Vector3(4f * scale, s.y, 4f * scale);
                 }
             }
         }

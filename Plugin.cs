@@ -19,7 +19,7 @@ namespace AutopilotMod
 
         // ap menu?
         public static ConfigEntry<KeyCode> MenuKey;
-        private Rect _windowRect = new(50, 50, 300, 300);
+        private Rect _windowRect = new(50, 50, 210, 210);
         private bool _showMenu = false;
 
         private Vector2 _scrollPos;
@@ -167,8 +167,8 @@ namespace AutopilotMod
 
             UI_PosX = Config.Bind("Visuals - UI", "1. Window Position X", -1f, "-1 = Auto Bottom Right, otherwise pixel value");
             UI_PosY = Config.Bind("Visuals - UI", "2. Window Position Y", -1f, "-1 = Auto Bottom Right, otherwise pixel value");
-            UI_Width = Config.Bind("Visuals - UI", "3. Window Width", 300f, "Saved Width");
-            UI_Height = Config.Bind("Visuals - UI", "4. Window Height", 300f, "Saved Height");
+            UI_Width = Config.Bind("Visuals - UI", "3. Window Width", 210f, "Saved Width");
+            UI_Height = Config.Bind("Visuals - UI", "4. Window Height", 210f, "Saved Height");
 
             FuelSmoothing = Config.Bind("Calculations", "1. Fuel Flow Smoothing", 0.1f, "Alpha value");
             FuelUpdateInterval = Config.Bind("Calculations", "2. Fuel Update Interval", 1.0f, "Seconds");
@@ -461,8 +461,8 @@ namespace AutopilotMod
                 else if (Event.current.type == EventType.MouseDrag)
                 {
                     Vector2 delta = Event.current.delta;
-                    float minW = 300f;
-                    float minH = 300f;
+                    float minW = 210f;
+                    float minH = 210f;
 
                     if (_activeEdge == RectEdge.Right || _activeEdge == RectEdge.TopRight || _activeEdge == RectEdge.BottomRight)
                         _windowRect.width = Mathf.Max(minW, _windowRect.width + delta.x);
@@ -491,8 +491,8 @@ namespace AutopilotMod
             {
                 float x = UI_PosX.Value;
                 float y = UI_PosY.Value;
-                float w = Mathf.Max(300f, UI_Width.Value);
-                float h = Mathf.Max(300f, UI_Height.Value);
+                float w = Mathf.Max(210f, UI_Width.Value);
+                float h = Mathf.Max(210f, UI_Height.Value);
 
                 if (x < 0) x = Screen.width - w - 20;
                 if (y < 0) y = Screen.height - h - 50;
@@ -797,9 +797,16 @@ namespace AutopilotMod
 
             if (APData.NavQueue.Count > 0)
             {
-                float distToWp = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
-                string distStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distToWp), DistShowUnit.Value);
-                GUILayout.Label($"Distance to WP: {distStr}", _styleLabel);
+                if (APData.PlayerRB != null)
+                {
+                    float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
+                    string distStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value);
+                    GUILayout.Label($"Distance to WP: {distStr}", _styleLabel);
+                }
+                else
+                {
+                    GUILayout.Label("Distance to WP: --", _styleLabel);
+                }
 
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(new GUIContent("Skip WP", "Remove the current target and fly to the next one"), _styleButton))
@@ -876,6 +883,7 @@ namespace AutopilotMod
 
         public static void RefreshNavVisuals()
         {
+            if (APData.PlayerRB == null) return;
             // clear existing
             foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
             APData.NavVisuals.Clear();
@@ -908,7 +916,7 @@ namespace AutopilotMod
                 if (lImg != null) lImg.color = navCol;
 
                 line.transform.localPosition = start;
-                float angle = -Mathf.Atan2(end.x - start.x, end.y - start.y) * Mathf.Rad2Deg + 180f;
+                float angle = -Mathf.Atan2(end.x - start.x, end.y - start.y) * Mathf.Rad2Deg;
                 line.transform.eulerAngles = new Vector3(0, 0, angle);
                 line.transform.localScale = new Vector3(4f, (end - start).magnitude, 4f);
                 line.name = "AP_Waypoint_Line";

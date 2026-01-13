@@ -854,14 +854,13 @@ namespace AutopilotMod
                     }
                 }
 
-                // 4. Controls
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button(new GUIContent("Skip WP", "Fly to the next point"), _styleButton))
+                if (GUILayout.Button(new GUIContent("Skip wp", "delete next point"), _styleButton))
                 {
                     APData.NavQueue.RemoveAt(0);
                     RefreshNavVisuals();
                 }
-                if (GUILayout.Button(new GUIContent("Clear All", "Clear flight plan"), _styleButton))
+                if (GUILayout.Button(new GUIContent("Clear all", "delete all points"), _styleButton))
                 {
                     APData.NavQueue.Clear();
                     RefreshNavVisuals();

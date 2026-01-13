@@ -33,7 +33,6 @@ namespace AutopilotMod
         private string _bufSpeed = "";
         private string _bufCourse = "";
 
-        private string _bufNavInput = "";
         public static ConfigEntry<float> NavReachDistance, NavPassedDistance;
         public static ConfigEntry<string> ColorNav;
         public static ConfigEntry<bool> NavCycle;
@@ -185,7 +184,7 @@ namespace AutopilotMod
             // nav
             NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f, "Distance in meters to consider a waypoint reached.");
             NavPassedDistance = Config.Bind("Settings - Navigation", "2. Passed Distance", 25000f, "Distance in meters after waypoint is behind plane to consider it reached");
-            NavCycle = Config.Bind("Settings - Navigation", "3. Cycle WP", true, "On: cycles to next WP upon reaching WP, Off: Deletes WP upon reaching WP");
+            NavCycle = Config.Bind("Settings - Navigation", "3. Cycle wp", true, "On: cycles to next wp upon reaching wp, Off: Deletes wp upon reaching wp");
 
             // Auto Jammer
             EnableAutoJammer = Config.Bind("Auto Jammer", "1. Enable Auto Jammer", true, "Allow the feature");
@@ -811,64 +810,67 @@ namespace AutopilotMod
             // nav
             GUILayout.BeginHorizontal();
             APData.NavEnabled = GUILayout.Toggle(APData.NavEnabled, new GUIContent("Nav mode", "switch for waypoint ap mode. overrides course hold."));
-            NavCycle.Value = GUILayout.Toggle(NavCycle.Value, new GUIContent("Cycle WP", "On: cycles to next WP upon reaching WP, Off: Deletes upon reaching WP"));
+            NavCycle.Value = GUILayout.Toggle(NavCycle.Value, new GUIContent("Cycle wp", "On: cycles to next wp upon reaching wp, Off: Deletes upon reaching wp"));
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            _bufNavInput = GUILayout.TextField(_bufNavInput);
-            GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Enter Grid (B1), Subgrid (Aa01), or Coords (X,Z)"));
-
-            if (GUILayout.Button(new GUIContent("ADD", "Add location to flight plan"), _styleButton, GUILayout.Width(buttonWidth)))
-            {
-                if (_bufNavInput.Contains(","))
-                {
-                    string[] s = _bufNavInput.Split(',');
-                    if (s.Length == 2 && float.TryParse(s[0], out float x) && float.TryParse(s[1], out float z))
-                    {
-                        APData.NavQueue.Add(new Vector3(x, 0, z));
-                        APData.NavEnabled = true;
-                    }
-                }
-                else
-                {
-                    Vector3 p = ModUtils.ParseGridToPos(_bufNavInput);
-                    if (p != Vector3.zero)
-                    {
-                        APData.NavQueue.Add(p);
-                        APData.NavEnabled = true;
-                    }
-                }
-                _bufNavInput = "";
-                GUI.FocusControl(null);
-                RefreshNavVisuals();
-            }
-            GUILayout.EndHorizontal();
-
+            // Nav waypoint list
             if (APData.NavQueue.Count > 0)
             {
-                if (APData.PlayerRB != null)
+                // ema
+                float rawSpeed = (APData.PlayerRB != null) ? APData.PlayerRB.velocity.magnitude : 0f;
+                float alpha = 0.05f;
+                APData.SpeedEma = (alpha * rawSpeed) + ((1f - alpha) * APData.SpeedEma);
+
+                // distances
+                Vector3 playerPos = (APData.PlayerRB != null) ? APData.PlayerRB.position.ToGlobalPosition().AsVector3() : Vector3.zero;
+                float distNext = Vector3.Distance(playerPos, APData.NavQueue[0]);
+
+                float distTotal = distNext;
+                for (int i = 0; i < APData.NavQueue.Count - 1; i++)
                 {
-                    float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
-                    string distStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value);
-                    GUILayout.Label($"Distance to WP: {distStr}", _styleLabel);
-                }
-                else
-                {
-                    GUILayout.Label("Distance to WP: --", _styleLabel);
+                    distTotal += Vector3.Distance(APData.NavQueue[i], APData.NavQueue[i + 1]);
                 }
 
+                // display
+                string nextDistStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distNext), Plugin.DistShowUnit.Value);
+                string totalDistStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distTotal), Plugin.DistShowUnit.Value);
+
+                GUILayout.Label(new GUIContent($"Next: {nextDistStr}", "Distance to next wp"), _styleLabel);
+
+                if (APData.SpeedEma > 2f)
+                {
+                    float etaNext = distNext / APData.SpeedEma;
+                    float etaTotal = distTotal / APData.SpeedEma;
+
+                    string sEtaNext = (etaNext > 3600) ? TimeSpan.FromSeconds(etaNext).ToString(@"h\:mm\:ss") : TimeSpan.FromSeconds(etaNext).ToString(@"mm\:ss");
+                    string sEtaTotal = (etaTotal > 3600) ? TimeSpan.FromSeconds(etaTotal).ToString(@"h\:mm\:ss") : TimeSpan.FromSeconds(etaTotal).ToString(@"mm\:ss");
+
+                    GUILayout.Label($" ETA: {sEtaNext}", _styleLabel);
+
+                    if (APData.NavQueue.Count > 1)
+                    {
+                        GUILayout.Label(new GUIContent($"Total: {totalDistStr} ETA: {sEtaTotal}", "seems self explanatory?"), _styleLabel);
+                    }
+                }
+
+                // 4. Controls
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button(new GUIContent("Skip WP", "Remove the current target and fly to the next one"), _styleButton))
+                if (GUILayout.Button(new GUIContent("Skip WP", "Fly to the next point"), _styleButton))
                 {
                     APData.NavQueue.RemoveAt(0);
                     RefreshNavVisuals();
                 }
-                if (GUILayout.Button(new GUIContent("Clear", "Clear the entire flight plan"), _styleButton))
+                if (GUILayout.Button(new GUIContent("Clear All", "Clear flight plan"), _styleButton))
                 {
                     APData.NavQueue.Clear();
                     RefreshNavVisuals();
                 }
                 GUILayout.EndHorizontal();
+            }
+            else
+            {
+                GUILayout.Label("<i>No flight plan (Right-click map)</i>", _styleLabel);
             }
 
             GUILayout.EndVertical();
@@ -1111,6 +1113,7 @@ namespace AutopilotMod
         public static bool SpeedHoldIsMach = false;
         public static List<Vector3> NavQueue = [];
         public static List<GameObject> NavVisuals = [];
+        public static float SpeedEma = 0f;
         public static bool NavEnabled = false;
         public static Rigidbody PlayerRB;
         public static Aircraft LocalAircraft;

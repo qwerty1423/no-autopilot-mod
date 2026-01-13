@@ -1997,6 +1997,19 @@ namespace AutopilotMod
                     Vector3 s = obj.transform.localScale;
                     obj.transform.localScale = new Vector3(4f * scale, s.y, 4f * scale);
                 }
+
+                // update first line
+                if (obj.name == "AP_NavLine" && i == 1)
+                {
+                    Vector3 pPosG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+                    Vector3 pMap = new Vector3(pPosG.x, pPosG.z, 0) * SceneSingleton<DynamicMap>.i.mapDisplayFactor;
+
+                    Vector3 targetMap = APData.NavVisuals[i - 1].transform.localPosition;
+
+                    obj.transform.localPosition = (pMap + targetMap) / 2f;
+                    obj.transform.eulerAngles = new Vector3(0, 0, -Mathf.Atan2(targetMap.x - pMap.x, targetMap.y - pMap.y) * Mathf.Rad2Deg);
+                    obj.transform.localScale = new Vector3(4f * scale, Vector3.Distance(pMap, targetMap), 4f * scale);
+                }
             }
         }
     }

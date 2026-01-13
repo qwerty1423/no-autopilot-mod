@@ -883,46 +883,65 @@ namespace AutopilotMod
 
         public static void RefreshNavVisuals()
         {
-            if (APData.PlayerRB == null) return;
             // clear existing
             foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
             APData.NavVisuals.Clear();
 
-            if (APData.NavQueue.Count == 0 || SceneSingleton<DynamicMap>.i == null || APData.PlayerRB == null) return;
+            var map = SceneSingleton<DynamicMap>.i;
+            if (APData.NavQueue.Count == 0 || map == null || APData.PlayerRB == null) return;
 
-            Vector3 lastPos = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+            // constants
+            float displayFactor = map.mapDisplayFactor;
+            float mapScale = 1f / map.mapImage.transform.localScale.x;
+            Color navCol = ModUtils.GetColor(Plugin.ColorNav.Value, Color.cyan);
+
+            // positions
+            Vector3 playerPosG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+            Vector3 playerMapPos = new Vector3(playerPosG.x, playerPosG.z, 0) * displayFactor;
+            Vector3 lastPoint = playerMapPos;
+
+            void DrawLine(Vector3 start, Vector3 end, bool isLoopLine = false)
+            {
+                GameObject line = Instantiate(map.mapWaypointVector, map.iconLayer.transform);
+                line.name = isLoopLine ? "AP_NavLine_Loop" : "AP_NavLine";
+                line.transform.localPosition = (start + end) / 2f;
+                line.transform.eulerAngles = new Vector3(0, 0, -Mathf.Atan2(end.x - start.x, end.y - start.y) * Mathf.Rad2Deg);
+                line.transform.localScale = new Vector3(4f * mapScale, Vector3.Distance(start, end), 4f * mapScale);
+
+                var img = line.GetComponent<Image>();
+                if (img != null)
+                {
+                    img.color = navCol;
+                    if (isLoopLine) img.color = new Color(navCol.r, navCol.g, navCol.b, navCol.a * 0.4f);
+                }
+                APData.NavVisuals.Add(line);
+            }
 
             for (int i = 0; i < APData.NavQueue.Count; i++)
             {
-                Vector3 currentPos = APData.NavQueue[i];
+                Vector3 currentG = APData.NavQueue[i];
+                Vector3 currentMap = new Vector3(currentG.x, currentG.z, 0) * displayFactor;
 
-                // create marker
-                GameObject marker = GameObject.Instantiate(SceneSingleton<DynamicMap>.i.mapWaypoint, SceneSingleton<DynamicMap>.i.iconLayer.transform);
-                marker.transform.localPosition = new Vector3(currentPos.x, currentPos.z, 0) * SceneSingleton<DynamicMap>.i.mapDisplayFactor;
-                marker.name = "AP_Waypoint_Marker";
+                // draw marker
+                GameObject marker = Instantiate(map.mapWaypoint, map.iconLayer.transform);
+                marker.name = "AP_NavMarker";
+                marker.transform.localPosition = currentMap;
+                marker.transform.localScale = Vector3.one * mapScale;
+                if (marker.TryGetComponent(out Image mImg)) mImg.color = navCol;
                 APData.NavVisuals.Add(marker);
 
-                // create line
-                GameObject line = GameObject.Instantiate(SceneSingleton<DynamicMap>.i.mapWaypointVector, SceneSingleton<DynamicMap>.i.iconLayer.transform);
-                Vector3 start = new Vector3(lastPos.x, lastPos.z, 0) * SceneSingleton<DynamicMap>.i.mapDisplayFactor;
-                Vector3 end = marker.transform.localPosition;
+                // line from previous point to this marker
+                DrawLine(lastPoint, currentMap);
 
-                Color navCol = ModUtils.GetColor(Plugin.ColorNav.Value, Color.cyan);
+                lastPoint = currentMap;
+            }
 
-                var mImg = marker.GetComponent<UnityEngine.UI.Image>();
-                if (mImg != null) mImg.color = navCol;
-
-                var lImg = line.GetComponent<UnityEngine.UI.Image>();
-                if (lImg != null) lImg.color = navCol;
-
-                line.transform.localPosition = start;
-                float angle = -Mathf.Atan2(end.x - start.x, end.y - start.y) * Mathf.Rad2Deg;
-                line.transform.eulerAngles = new Vector3(0, 0, angle);
-                line.transform.localScale = new Vector3(4f, (end - start).magnitude, 4f);
-                line.name = "AP_Waypoint_Line";
-
-                APData.NavVisuals.Add(line);
-                lastPos = currentPos;
+            if (NavCycle.Value && APData.NavQueue.Count > 1)
+            {
+                // line from the last waypoint back to the first waypoint
+                Vector3 firstG = APData.NavQueue[0];
+                Vector3 firstMap = new Vector3(firstG.x, firstG.z, 0) * displayFactor;
+                DrawLine(lastPoint, firstMap, true);
             }
         }
     }
@@ -1937,6 +1956,8 @@ namespace AutopilotMod
     {
         static void Postfix(DynamicMap __instance)
         {
+            if (__instance.selectedIcons.Count > 0) return;
+
             if (DynamicMap.mapMaximized && Input.GetMouseButtonDown(1))
             {
                 if (APData.LocalAircraft != null)

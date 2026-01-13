@@ -292,66 +292,85 @@ namespace AutopilotMod
             // reflection cache
             try
             {
+                static void Check(object obj, string name)
+                {
+                    if (obj == null) throw new Exception($"[Reflection] missing: {name}");
+                }
+
+                BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+
                 f_playerVehicle = typeof(FlightHud).GetField("playerVehicle", BindingFlags.NonPublic | BindingFlags.Instance);
+                Check(f_playerVehicle, "f_playerVehicle");
 
                 f_controlInputs = typeof(PilotPlayerState).GetField("controlInputs", BindingFlags.NonPublic | BindingFlags.Instance);
                 if (f_controlInputs == null && typeof(PilotPlayerState).BaseType != null)
                 {
                     f_controlInputs = typeof(PilotPlayerState).BaseType.GetField("controlInputs", BindingFlags.NonPublic | BindingFlags.Instance);
                 }
+                Check(f_controlInputs, "f_controlInputs");
 
-                if (f_controlInputs != null)
-                {
-                    Type inputType = f_controlInputs.FieldType;
-                    BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-                    f_pitch = inputType.GetField("pitch", flags);
-                    f_roll = inputType.GetField("roll", flags);
-                    f_throttle = inputType.GetField("throttle", flags);
-                }
+                Type inputType = f_controlInputs.FieldType;
+                f_pitch = inputType.GetField("pitch", flags);
+                f_roll = inputType.GetField("roll", flags);
+                f_throttle = inputType.GetField("throttle", flags);
 
-                BindingFlags allFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+                Check(f_pitch, "f_pitch");
+                Check(f_roll, "f_roll");
+                Check(f_throttle, "f_throttle");
 
-                f_fuelCapacity = typeof(Aircraft).GetField("fuelCapacity", allFlags);
-                f_pilots = typeof(Aircraft).GetField("pilots", allFlags);
-                f_gearState = typeof(Aircraft).GetField("gearState", allFlags);
-                f_weaponManager = typeof(Aircraft).GetField("weaponManager", allFlags);
-                // f_radarAlt = typeof(Aircraft).GetField("radarAlt", allFlags); 
+                f_fuelCapacity = typeof(Aircraft).GetField("fuelCapacity", flags);
+                f_pilots = typeof(Aircraft).GetField("pilots", flags);
+                f_gearState = typeof(Aircraft).GetField("gearState", flags);
+                f_weaponManager = typeof(Aircraft).GetField("weaponManager", flags);
+
+                Check(f_fuelCapacity, "f_fuelCapacity");
+                Check(f_pilots, "f_pilots");
+                Check(f_gearState, "f_gearState");
+                Check(f_weaponManager, "f_weaponManager");
 
                 Type psType = typeof(Aircraft).Assembly.GetType("PowerSupply");
-                if (psType != null)
-                {
-                    f_charge = psType.GetField("charge", allFlags);
-                    f_maxCharge = psType.GetField("maxCharge", allFlags);
-                    f_powerSupply = typeof(Aircraft).GetField("powerSupply", allFlags);
-                }
+                Check(psType, "PowerSupply Type");
+
+                f_charge = psType.GetField("charge", flags);
+                f_maxCharge = psType.GetField("maxCharge", flags);
+                f_powerSupply = typeof(Aircraft).GetField("powerSupply", flags);
+
+                Check(f_charge, "f_charge");
+                Check(f_maxCharge, "f_maxCharge");
+                Check(f_powerSupply, "f_powerSupply");
 
                 Type pilotType = typeof(Aircraft).Assembly.GetType("Pilot");
-                if (pilotType != null)
-                {
-                    m_GetAccel = pilotType.GetMethod("GetAccel");
-                }
+                Check(pilotType, "Pilot Type");
+
+                m_GetAccel = pilotType.GetMethod("GetAccel");
+                Check(m_GetAccel, "m_GetAccel Method");
 
                 Type wmType = typeof(Aircraft).Assembly.GetType("WeaponManager");
-                if (wmType != null)
-                {
-                    m_Fire = wmType.GetMethod("Fire", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                    null, Type.EmptyTypes, null);
-                    f_targetList = wmType.GetField("targetList", BindingFlags.NonPublic | BindingFlags.Instance);
-                    f_currentWeaponStation = wmType.GetField("currentWeaponStation", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                }
+                Check(wmType, "WeaponManager Type");
+
+                m_Fire = wmType.GetMethod("Fire", flags, null, Type.EmptyTypes, null);
+                f_targetList = wmType.GetField("targetList", BindingFlags.NonPublic | BindingFlags.Instance);
+                f_currentWeaponStation = wmType.GetField("currentWeaponStation", flags);
+
+                Check(m_Fire, "m_Fire Method");
+                Check(f_targetList, "f_targetList");
+                Check(f_currentWeaponStation, "f_currentWeaponStation");
 
                 Type wsType = typeof(Aircraft).Assembly.GetType("WeaponStation");
-                if (wsType != null)
-                {
-                    f_stationWeapons = wsType.GetField("Weapons", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                }
+                Check(wsType, "WeaponStation Type");
+
+                f_stationWeapons = wsType.GetField("Weapons", flags);
+                Check(f_stationWeapons, "f_stationWeapons");
 
                 t_JammingPod = typeof(Aircraft).Assembly.GetType("JammingPod");
-
+                Check(t_JammingPod, "JammingPod Type");
             }
             catch (Exception ex)
             {
-                Logger.LogError("Failed to cache reflection fields! Mod might break. " + ex);
+                Logger.LogFatal("Failed to cache reflection fields! " + ex);
+                Logger.LogFatal("The mod will now disable itself to prevent further issues.");
+                enabled = false;
+                return;
             }
 
             new Harmony("com.qwerty1423.noautopilotmod").PatchAll();
@@ -1923,6 +1942,7 @@ namespace AutopilotMod
                 Aircraft aircraft = APData.LocalAircraft;
                 if (aircraft == null) return;
 
+                if (Plugin.f_fuelCapacity == null) return;
                 float currentFuel = (float)Plugin.f_fuelCapacity.GetValue(aircraft) * aircraft.GetFuelLevel();
                 float time = Time.time;
                 if (lastUpdateTime != 0f && lastFuelMass > 0f)

@@ -36,9 +36,7 @@ Large altitude adjustment key has minimum limit to reduce crashes when sea skimm
 Keys and UI colours are configurable in the BepInEx config file.
 The [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager) is recommended for changing PID values and other settings in game.
 
-## features
-
-Currently the autopilot is rather basic. There are some additional features, such as EW auto jam (currently just an auto fire mode, it won't select targets automatically or anything, it will only save your finger).
+## random screenshot of an old version
 
 ![imperialap](https://github.com/user-attachments/assets/23580e9d-2ea9-441d-8079-a181dab5c0cc)
 
@@ -74,7 +72,7 @@ In approximate likelihood of implementation order descending.
 
 <https://github.com/user-attachments/assets/3d2eaeaa-b810-4353-a4b6-90a1107e3cb9>
 
-Autopilot controls roll and pitch. Any aircraft works if it flies like a plane (helicopters somehow work, but probably require small ascent/descent rate limits).
+Autopilot controls roll and pitch. (helicopters somehow work, but probably require small ascent/descent rate limits).
 
 Ascent/descent rate limits and target altitude can be configured with keyboard while flying. There is also GUI that opens with F8 key by default.
 

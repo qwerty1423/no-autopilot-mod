@@ -3,12 +3,12 @@
 ## Installation
 
 1. Install BepInEx 5 mono.
-  - [their github has install instructions](https://github.com/BepInEx/BepInEx/)
-  - run the game once, quit
-  - edit BepInEx.cfg in BepInEx/config to enable hiding the game manager or whatever
+   - [their github has install instructions](https://github.com/BepInEx/BepInEx/)
+   - run the game once, quit
+   - edit BepInEx.cfg in BepInEx/config to enable hiding the game manager or whatever
 2. (Recommended) Install BepInEx Configuration Manager.
-  - download [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager)
-  - place extracted folder in BepInEx/plugins
+   - download [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager)
+   - place extracted folder in BepInEx/plugins
 3. Download  `NOAutopilotMod.zip` from releases (to the right if you are on pc) and extract the dll.
 4. Place the dll into your `BepInEx/plugins/` folder.
 5. Run the game once to generate the config file.
@@ -25,18 +25,18 @@ copy the contents of [README.md](https://raw.githubusercontent.com/qwerty1423/no
 The autopilot can be configured using only the `F8` gui window and the map, so `F8` is probably the most important keybind to remember.
 Leave blank the text boxes that you don't want to be controlled by the autopilot, then click set values (a few times just in case).
 
-| Action | Key | Description |
-| :--- | :--- | :--- |
-| Toggle Autopilot | `=` (Equals) | Self-explanatory. |
-| Toggle Auto-Jammer | `/` (Slash) | ^^^ |
-| Target Alt Small Adjustment | `Up` / `Down` Arrow | Small adjustments (0.1m default) |
-| Target Alt Large Adjustment | `Left` / `Right` Arrow | Large adjustments (100m default) |
-| Max Climb Rate +/- | `PageUp` / `PageDown` | Limit vertical speed |
-| Bank Left/Right | `[` and `]` | Adjust roll angle |
-| Reset Bank | `'` (Quote) | Level the wings, sets roll to 0 |
-| Toggle GCAS | `\` (Backslash) | added just in case |
-| Toggle autothrottle | `;` | will write current speed to ui/delete it |
-| **Toggle AP GUI** | `F8` | **opens/closes the GUI** |
+| Action                      | Key                    | Description                              |
+| :-------------------------- | :--------------------- | :--------------------------------------- |
+| Toggle Autopilot            | `=` (Equals)           | Self-explanatory.                        |
+| Toggle Auto-Jammer          | `/` (Slash)            | ^^^                                      |
+| Target Alt Small Adjustment | `Up` / `Down` Arrow    | Small adjustments (0.1m default)         |
+| Target Alt Large Adjustment | `Left` / `Right` Arrow | Large adjustments (100m default)         |
+| Max Climb Rate +/-          | `PageUp` / `PageDown`  | Limit vertical speed                     |
+| Bank Left/Right             | `[` and `]`            | Adjust roll angle                        |
+| Reset Bank                  | `'` (Quote)            | Level the wings, sets roll to 0          |
+| Toggle GCAS                 | `\` (Backslash)        | added just in case                       |
+| Toggle autothrottle         | `;`                    | will write current speed to ui/delete it |
+| **Toggle AP GUI**           | `F8`                   | **opens/closes the GUI**                 |
 
 Large altitude adjustment key has minimum limit to reduce crashes when sea skimming if the key is accidentally pressed.
 
@@ -117,7 +117,7 @@ If you are making large inputs, it will not pull up.
 
 <https://github.com/user-attachments/assets/1ac109a4-bc84-49ed-8141-55bc9a217607>
 
-simple how to use guide: 
+simple how to use guide:
 right click / shift + right click on the map to make a path, then press equals and f8. hover mouse over the UI for tooltips.
 
 ## Building from source

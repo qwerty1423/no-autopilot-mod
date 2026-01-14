@@ -44,9 +44,7 @@ Target bank angle can be set so that plane turns in a circle. Should be useful f
 
 Large stick inputs will disengage the autopilot.
 
-Displays current settings on the HUD. The format is `A: [Target Altitude] [Max Climb Rate] [Target Bank Angle]`. For example, autopilot set to 3m altitude, at 40m/s climb rate, at 0 degrees bank angle will show up as `A: 3 40 0` on the HUD.
-
-Has humanlike options that will help reduce its effectiveness. You can probably configure it so that it cannot sea skim at 2m ASL so easily.
+Displays current settings on the HUD. The format is `[Target Altitude] [Max Climb Rate]\n[Target speed] [Target Bank Angle/course] [distance to next wp]`. For example, autopilot set to 3m altitude, at 40m/s climb rate, at 0 degrees bank angle will show up as `3 40 S- R0` on the HUD.
 
 PID values can be tuned further if you like, but the defaults should be quite effective. They may not work in all situations or in all aircraft, however.
 
@@ -57,8 +55,6 @@ Use this mod at your own risk.
 ## Auto Jammer
 
 There is also an auto jammer mode for Medusa, that will jam if capacitor is full. The auto jammer will hit the fire button if there is a target selected and the jammer pods are selected.
-
-Also has humanlike options that can reduce its reaction time and randomise it.
 
 ## Fuel time and range display
 

@@ -36,7 +36,7 @@ Large altitude adjustment key has minimum limit to reduce crashes when sea skimm
 Keys and UI colours are configurable in the BepInEx config file.
 The [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager) is recommended for changing PID values and other settings in game.
 
-## features and stuff?
+## features
 
 Currently the autopilot is rather basic. There are some additional features, such as EW auto jam (currently just an auto fire mode, it won't select targets automatically or anything, it will only save your finger).
 

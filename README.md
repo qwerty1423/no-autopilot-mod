@@ -36,7 +36,7 @@ Large altitude adjustment key has minimum limit to reduce crashes when sea skimm
 Keys and UI colours are configurable in the BepInEx config file.
 The [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager) is recommended for changing PID values and other settings in game.
 
-## random screenshot of an old version
+## screenshot of an old version?
 
 ![imperialap](https://github.com/user-attachments/assets/23580e9d-2ea9-441d-8079-a181dab5c0cc)
 

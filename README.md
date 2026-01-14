@@ -16,6 +16,10 @@
 folder structure after install:
 (wip)
 
+### if you really don't know what to do
+
+copy the contents of README.md above and give it to your preferred llm. (chatgpt, gemini, whatever) and ask it what to do to install.
+
 ## Default Controls
 
 The autopilot can be configured using only the `F8` gui window and the map, so `F8` is probably the most important keybind to remember.

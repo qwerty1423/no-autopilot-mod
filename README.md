@@ -9,7 +9,7 @@
 2. (Recommended) Install BepInEx Configuration Manager.
    - download [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager)
    - place extracted folder in BepInEx/plugins
-3. Download  `NOAutopilotMod.zip` from releases (to the right if you are on pc) and extract the dll.
+3. Download  `com.qwerty1423.NOAutopilot-{version}.zip` from releases (to the right if you are on pc) and extract the dll.
 4. Place the dll into your `BepInEx/plugins/` folder.
 5. Run the game once to generate the config file.
 

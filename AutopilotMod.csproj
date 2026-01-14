@@ -37,8 +37,8 @@
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DebugType>portable</DebugType>
-    <DebugSymbols>true</DebugSymbols>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
     <GenerateDependencyFile>false</GenerateDependencyFile>
     <Optimize>true</Optimize>
     <PathMap>$(MSBuildProjectDirectory)=.</PathMap>

@@ -14,7 +14,8 @@
 5. Run the game once to generate the config file.
 
 folder structure after install:
-(wip)
+
+![no-folder-structure](https://github.com/user-attachments/assets/ff161a5b-676d-48eb-9eac-944afdeedb6c)
 
 ### if you really don't know what to do
 

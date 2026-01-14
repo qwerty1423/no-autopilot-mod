@@ -17,10 +17,6 @@ folder structure after install:
 
 ![no-folder-structure](https://github.com/user-attachments/assets/ff161a5b-676d-48eb-9eac-944afdeedb6c)
 
-### if you really don't know what to do
-
-copy the contents of [README.md](https://raw.githubusercontent.com/qwerty1423/no-autopilot-mod/refs/heads/main/README.md) and give it to your preferred llm (chatgpt, gemini, whatever) and ask it how to install/use.
-
 ## Default Controls
 
 The autopilot can be configured using only the `F8` gui window and the map, so `F8` is probably the most important keybind to remember.

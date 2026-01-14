@@ -13,9 +13,13 @@ using UnityEngine.SceneManagement;
 
 namespace NOAutopilot
 {
-    [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
+    [BepInPlugin(GUID, Name, Version)]
     public class Plugin : BaseUnityPlugin
     {
+        public const string GUID = MyPluginInfo.PLUGIN_GUID;
+        public const string Name = MyPluginInfo.PLUGIN_NAME;
+        public const string Version = MyPluginInfo.PLUGIN_VERSION;
+
         internal new static ManualLogSource Logger;
         private Harmony harmony;
 
@@ -385,12 +389,12 @@ namespace NOAutopilot
             harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
             harmony.PatchAll();
             SceneManager.sceneUnloaded += OnSceneUnloaded;
-            Logger.LogInfo("Mod loaded.");
+            Logger.LogInfo($"v{Version} loaded.");
         }
 
         private void OnDestroy()
         {
-            Logger.LogInfo("Unloading mod.");
+            Logger.LogInfo("Unloading...");
 
             harmony?.UnpatchSelf();
 
@@ -403,7 +407,7 @@ namespace NOAutopilot
             MapInteractionPatch.Reset();
             MapWaypointPatch.Reset();
 
-            Logger.LogInfo("Cleanup complete.");
+            Logger.LogInfo("Unloading complete.");
         }
 
         private void InitStyles()

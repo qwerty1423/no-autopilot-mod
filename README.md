@@ -2,13 +2,22 @@
 
 ## Installation
 
-1. Install BepInEx.
-2. (Recommended) Install BepInEx Configuration Manager.
-3. Download  `NOAutopilotMod.zip` and extract the dll.
+1. Install BepInEx. (go search up some how to guide, should be quite easy)
+  - download correct bepinex
+  - extract it in game folder correctly
+  - run the game once, quit
+  - edit BepInEx.cfg in BepInEx/config to enable hiding the game manager or whatever
+2. (Recommended) Install BepInEx Configuration Manager. (again google is very helpful for this)
+  - download [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager)
+  - place extracted folder in BepInEx/plugins
+3. Download  `NOAutopilotMod.zip` from releases (to the right if you are on pc) and extract the dll.
 4. Place the dll into your `BepInEx/plugins/` folder.
 5. Run the game once to generate the config file.
 
 ## Default Controls
+
+The autopilot can be configured using only the `F8` gui window and the map, so `F8` is probably the most important keybind to remember.
+Leave blank the text boxes that you don't want to be controlled by the autopilot, then click set values (a few times just in case).
 
 | Action | Key | Description |
 | :--- | :--- | :--- |
@@ -21,9 +30,7 @@
 | Reset Bank | `'` (Quote) | Level the wings, sets roll to 0 |
 | Toggle GCAS | `\` (Backslash) | added just in case |
 | Toggle autothrottle | `;` | will write current speed to ui/delete it |
-| **Toggle AP GUI** | **`F8`** | opens/closes the GUI |
-
-The autopilot can be configured using only the f8 gui window and the map, so f8 is probably the most important keybind to remember.
+| **Toggle AP GUI** | `F8` | **opens/closes the GUI** |
 
 Large altitude adjustment key has minimum limit to reduce crashes when sea skimming if the key is accidentally pressed.
 

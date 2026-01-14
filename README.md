@@ -13,6 +13,9 @@
 4. Place the dll into your `BepInEx/plugins/` folder.
 5. Run the game once to generate the config file.
 
+folder structure after install:
+(wip)
+
 ## Default Controls
 
 The autopilot can be configured using only the `F8` gui window and the map, so `F8` is probably the most important keybind to remember.

@@ -133,16 +133,18 @@ namespace AutopilotMod
         internal static FieldInfo f_currentWeaponStation;
         internal static FieldInfo f_stationWeapons;
 
-        internal static FieldInfo f_fuelCapacity, f_pilots, f_gearState, f_weaponManager; // f_radarAlt;
+        internal static FieldInfo f_fuelLabel, f_fuelCapacity;
+        internal static FieldInfo f_pilots, f_gearState, f_weaponManager; // f_radarAlt;
 
         internal static FieldInfo f_powerSupply, f_charge, f_maxCharge;
+
         internal static MethodInfo m_Fire, m_GetAccel;
 
         internal static Type t_JammingPod;
 
         private void Awake()
         {
-            Plugin.Logger = base.Logger;
+            Logger = base.Logger;
 
             // Visuals
             ColorAPOn = Config.Bind("Visuals - Colors", "1. Color AP On", "#00FF00", "Green");
@@ -299,13 +301,13 @@ namespace AutopilotMod
 
                 BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
-                f_playerVehicle = typeof(FlightHud).GetField("playerVehicle", BindingFlags.NonPublic | BindingFlags.Instance);
+                f_playerVehicle = typeof(FlightHud).GetField("playerVehicle", flags);
                 Check(f_playerVehicle, "f_playerVehicle");
 
-                f_controlInputs = typeof(PilotPlayerState).GetField("controlInputs", BindingFlags.NonPublic | BindingFlags.Instance);
+                f_controlInputs = typeof(PilotPlayerState).GetField("controlInputs", flags);
                 if (f_controlInputs == null && typeof(PilotPlayerState).BaseType != null)
                 {
-                    f_controlInputs = typeof(PilotPlayerState).BaseType.GetField("controlInputs", BindingFlags.NonPublic | BindingFlags.Instance);
+                    f_controlInputs = typeof(PilotPlayerState).BaseType.GetField("controlInputs", flags);
                 }
                 Check(f_controlInputs, "f_controlInputs");
 
@@ -339,31 +341,36 @@ namespace AutopilotMod
                 Check(f_maxCharge, "f_maxCharge");
                 Check(f_powerSupply, "f_powerSupply");
 
-                Type pilotType = typeof(Aircraft).Assembly.GetType("Pilot");
-                Check(pilotType, "Pilot Type");
+                Type t_Pilot = typeof(Aircraft).Assembly.GetType("Pilot");
+                Check(t_Pilot, "t_Pilot");
 
-                m_GetAccel = pilotType.GetMethod("GetAccel");
-                Check(m_GetAccel, "m_GetAccel Method");
+                m_GetAccel = t_Pilot.GetMethod("GetAccel");
+                Check(m_GetAccel, "m_GetAccel");
 
-                Type wmType = typeof(Aircraft).Assembly.GetType("WeaponManager");
-                Check(wmType, "WeaponManager Type");
+                Type t_WeaponManager = typeof(Aircraft).Assembly.GetType("WeaponManager");
+                Check(t_WeaponManager, "t_WeaponManager");
 
-                m_Fire = wmType.GetMethod("Fire", flags, null, Type.EmptyTypes, null);
-                f_targetList = wmType.GetField("targetList", BindingFlags.NonPublic | BindingFlags.Instance);
-                f_currentWeaponStation = wmType.GetField("currentWeaponStation", flags);
+                m_Fire = t_WeaponManager.GetMethod("Fire", flags, null, Type.EmptyTypes, null);
+                f_targetList = t_WeaponManager.GetField("targetList", flags);
+                f_currentWeaponStation = t_WeaponManager.GetField("currentWeaponStation", flags);
 
-                Check(m_Fire, "m_Fire Method");
+                Check(m_Fire, "m_Fire");
                 Check(f_targetList, "f_targetList");
                 Check(f_currentWeaponStation, "f_currentWeaponStation");
 
-                Type wsType = typeof(Aircraft).Assembly.GetType("WeaponStation");
-                Check(wsType, "WeaponStation Type");
+                Type t_WeaponStation = typeof(Aircraft).Assembly.GetType("WeaponStation");
+                Check(t_WeaponStation, "t_WeaponStation");
 
-                f_stationWeapons = wsType.GetField("Weapons", flags);
+                f_stationWeapons = t_WeaponStation.GetField("Weapons", flags);
                 Check(f_stationWeapons, "f_stationWeapons");
 
                 t_JammingPod = typeof(Aircraft).Assembly.GetType("JammingPod");
-                Check(t_JammingPod, "JammingPod Type");
+                Check(t_JammingPod, "t_JammingPod");
+
+                Type t_FuelGauge = typeof(Aircraft).Assembly.GetType("FuelGauge");
+                Check(t_FuelGauge, "t_FuelGauge");
+                f_fuelLabel = t_FuelGauge.GetField("fuelLabel", flags);
+                Check(f_fuelLabel, "f_fuelLabel");
             }
             catch (Exception ex)
             {
@@ -374,6 +381,8 @@ namespace AutopilotMod
             }
 
             new Harmony("com.qwerty1423.noautopilotmod").PatchAll();
+
+            UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
         }
 
         private void InitStyles()
@@ -968,7 +977,7 @@ namespace AutopilotMod
 
         public static void RefreshNavVisuals()
         {
-            foreach (var obj in APData.NavVisuals) if (obj != null) UnityEngine.Object.Destroy(obj);
+            foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
             APData.NavVisuals.Clear();
 
             var map = SceneSingleton<DynamicMap>.i;
@@ -976,7 +985,7 @@ namespace AutopilotMod
 
             float factor = 900f / map.mapDimension;
             float zoom = map.mapImage.transform.localScale.x;
-            Color navCol = ModUtils.GetColor(Plugin.ColorNav.Value, Color.cyan);
+            Color navCol = ModUtils.GetColor(ColorNav.Value, Color.cyan);
 
             Vector3 pPosG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
             Vector3 lastPoint = new(pPosG.x * factor, pPosG.z * factor, 0f);
@@ -1025,13 +1034,28 @@ namespace AutopilotMod
                 DrawLine(lastPoint, firstMap, "AP_NavLine_Loop", true);
             }
         }
+
+        private void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene)
+        {
+            APData.Enabled = false;
+            APData.GCASActive = false;
+            APData.LocalAircraft = null;
+            APData.PlayerRB = null;
+            APData.PlayerTransform = null;
+            APData.LocalPilot = null;
+            APData.LocalWeaponManager = null;
+
+            APData.NavQueue.Clear();
+            foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
+            APData.NavVisuals.Clear();
+        }
     }
 
     public static class ModUtils
     {
-        private static readonly Regex _rxSpaces = new(@"\s+");
-        private static readonly Regex _rxDecimals = new(@"[\.]\d+");
-        private static readonly Regex _rxNumber = new(@"-?\d+");
+        private static readonly Regex _rxSpaces = new(@"\s+", RegexOptions.Compiled);
+        private static readonly Regex _rxDecimals = new(@"[\.]\d+", RegexOptions.Compiled);
+        private static readonly Regex _rxNumber = new(@"-?\d+", RegexOptions.Compiled);
 
         public static Color GetColor(string hex, Color fallback)
         {
@@ -1137,6 +1161,8 @@ namespace AutopilotMod
         public static bool GCASActive = false;
         public static bool GCASWarning = false;
         public static bool AllowExtremeThrottle = false;
+        public static bool SpeedHoldIsMach = false;
+        public static bool NavEnabled = false;
         public static float TargetAlt = -1f;
         public static float TargetRoll = -999f;
         public static float TargetSpeed = -1f;
@@ -1144,14 +1170,13 @@ namespace AutopilotMod
         public static float CurrentAlt = 0f;
         public static float CurrentRoll = 0f;
         public static float CurrentMaxClimbRate = -1f;
-        public static bool SpeedHoldIsMach = false;
+        public static float SpeedEma = 0f;
+        public static object LocalPilot;
         public static List<Vector3> NavQueue = [];
         public static List<GameObject> NavVisuals = [];
-        public static float SpeedEma = 0f;
-        public static bool NavEnabled = false;
+        public static Transform PlayerTransform;
         public static Rigidbody PlayerRB;
         public static Aircraft LocalAircraft;
-        public static object LocalPilot;
         public static WeaponManager LocalWeaponManager;
     }
 
@@ -1165,53 +1190,49 @@ namespace AutopilotMod
             try
             {
                 APData.CurrentAlt = altitude;
-                if (playerVehicle != null)
+                if (playerVehicle == null || playerVehicle is not Component v) return;
+
+                if (v.gameObject != lastVehicleObj)
                 {
-                    if (playerVehicle is not Component v) return;
-                    if (v.gameObject != lastVehicleObj)
+                    lastVehicleObj = v.gameObject;
+
+                    APData.PlayerTransform = v.transform;
+                    APData.PlayerRB = v.GetComponent<Rigidbody>();
+                    APData.LocalAircraft = v.GetComponent<Aircraft>();
+
+                    APData.Enabled = false;
+                    APData.UseSetValues = false;
+                    APData.GCASEnabled = Plugin.EnableGCAS.Value;
+                    APData.AutoJammerActive = false;
+                    APData.GCASActive = false;
+                    APData.GCASWarning = false;
+                    APData.TargetAlt = altitude;
+                    APData.TargetRoll = 0f;
+                    APData.CurrentMaxClimbRate = -1f;
+
+                    APData.LocalPilot = null;
+                    APData.LocalWeaponManager = null;
+                    if (APData.LocalAircraft != null)
                     {
-                        lastVehicleObj = v.gameObject;
-                        APData.Enabled = false;
-                        APData.UseSetValues = false;
-                        APData.GCASEnabled = Plugin.EnableGCAS.Value;
-                        APData.AutoJammerActive = false;
-                        APData.GCASActive = false;
-                        APData.GCASWarning = false;
-                        APData.TargetAlt = altitude;
-                        APData.TargetRoll = 0f;
-                        APData.CurrentMaxClimbRate = -1f;
-                        APData.LocalAircraft = v.GetComponent<Aircraft>();
-                        APData.LocalPilot = null;
-                        APData.LocalWeaponManager = null;
-                        if (APData.LocalAircraft != null && Plugin.f_weaponManager != null)
-                        {
+                        if (Plugin.f_weaponManager != null)
                             APData.LocalWeaponManager = Plugin.f_weaponManager.GetValue(APData.LocalAircraft) as WeaponManager;
-                        }
-                        if (APData.LocalAircraft != null && Plugin.f_pilots != null)
+
+                        if (Plugin.f_pilots != null)
                         {
                             IList pilots = (IList)Plugin.f_pilots.GetValue(APData.LocalAircraft);
-                            if (pilots != null && pilots.Count > 0)
-                            {
-                                APData.LocalPilot = pilots[0];
-                            }
+                            if (pilots != null && pilots.Count > 0) APData.LocalPilot = pilots[0];
                         }
-                        APData.NavEnabled = false;
-                        APData.NavQueue.Clear();
-                        foreach (var obj in APData.NavVisuals) if (obj != null) UnityEngine.Object.Destroy(obj);
-                        APData.NavVisuals.Clear();
                     }
-
-                    APData.CurrentRoll = v.transform.eulerAngles.z;
-                    if (APData.CurrentRoll > 180f) APData.CurrentRoll -= 360f;
-
-                    var rb = v.GetComponent<Rigidbody>();
-                    if (APData.PlayerRB != rb) APData.PlayerRB = rb;
+                    APData.NavEnabled = false;
+                    APData.NavQueue.Clear();
+                    foreach (var obj in APData.NavVisuals) if (obj != null) UnityEngine.Object.Destroy(obj);
+                    APData.NavVisuals.Clear();
                 }
+
+                APData.CurrentRoll = APData.PlayerTransform.eulerAngles.z;
+                if (APData.CurrentRoll > 180f) APData.CurrentRoll -= 360f;
             }
-            catch (Exception ex)
-            {
-                Plugin.Logger.LogError($"[HudPatch] Error: {ex}");
-            }
+            catch (Exception ex) { Plugin.Logger.LogError($"[HudPatch] Error: {ex}"); }
         }
     }
 
@@ -1242,7 +1263,7 @@ namespace AutopilotMod
         private static bool isPitchSleeping = false;
         private static bool isRollSleeping = false;
         private static bool isSpdSleeping = false;
-        // private static float gcasNextScan = 0f; 
+        private static float gcasNextScan = 0f;
         public static bool apStateBeforeGCAS = false;
         private static float currentAppliedThrottle = 0f;
 
@@ -1275,6 +1296,13 @@ namespace AutopilotMod
 
         private static void Postfix(PilotPlayerState __instance)
         {
+            if (APData.LocalAircraft == null || APData.PlayerRB == null || APData.PlayerTransform == null)
+            {
+                APData.Enabled = false;
+                APData.GCASActive = false;
+                return;
+            }
+
             if (APData.CurrentMaxClimbRate < 0f) APData.CurrentMaxClimbRate = Plugin.DefaultMaxClimbRate.Value;
 
             if (Plugin.f_controlInputs == null || Plugin.f_pitch == null || Plugin.f_roll == null || Plugin.f_throttle == null) return;
@@ -1282,16 +1310,24 @@ namespace AutopilotMod
             try
             {
                 object inputObj = Plugin.f_controlInputs.GetValue(__instance);
-
                 if (inputObj == null) return;
-
                 float stickPitch = 0f;
                 float stickRoll = 0f;
                 float currentThrottle = 0f;
-
                 stickPitch = (float)Plugin.f_pitch.GetValue(inputObj);
                 stickRoll = (float)Plugin.f_roll.GetValue(inputObj);
                 currentThrottle = (float)Plugin.f_throttle.GetValue(inputObj);
+
+                Vector3 pForward = APData.PlayerTransform.forward;
+                Vector3 pUp = APData.PlayerTransform.up;
+                Vector3 pEuler = APData.PlayerTransform.eulerAngles;
+                Vector3 localAngVel = APData.PlayerTransform.InverseTransformDirection(APData.PlayerRB.angularVelocity);
+
+                float dt = Mathf.Max(Time.deltaTime, 0.0001f);
+                float noiseT = Time.time * Plugin.RandomSpeed.Value;
+                bool useRandom = Plugin.RandomEnabled.Value && !APData.GCASActive;
+                APData.GCASWarning = false;
+                float currentG = 1f;
 
                 if (APData.Enabled != wasEnabled)
                 {
@@ -1303,28 +1339,18 @@ namespace AutopilotMod
                     APData.UseSetValues = false;
                 }
 
-                APData.GCASWarning = false;
-
-                float currentG = 1f;
-                Aircraft acRef = null;
-
-                if (APData.PlayerRB != null)
+                // can a plane have no pilot?
+                if (APData.LocalPilot != null && Plugin.m_GetAccel != null)
                 {
-                    acRef = APData.LocalAircraft;
-                    if (acRef != null)
-                    {
-                        if (APData.LocalPilot != null && Plugin.m_GetAccel != null)
-                        {
-                            Vector3 pAccel = (Vector3)Plugin.m_GetAccel.Invoke(APData.LocalPilot, null);
-                            currentG = Vector3.Dot(pAccel + Vector3.up, acRef.transform.up);
-                        }
-                    }
+                    Vector3 pAccel = (Vector3)Plugin.m_GetAccel.Invoke(APData.LocalPilot, null);
+                    currentG = Vector3.Dot(pAccel + Vector3.up, pUp);
                 }
 
                 // gcas
-                if (APData.GCASEnabled && APData.PlayerRB != null)
+                if (APData.GCASEnabled)
                 {
                     bool gearDown = false;
+                    Aircraft acRef = APData.LocalAircraft;
                     if (acRef != null && Plugin.f_gearState != null)
                     {
                         object gs = Plugin.f_gearState.GetValue(acRef);
@@ -1358,31 +1384,31 @@ namespace AutopilotMod
                             bool warningZone = false;
                             // bool isWallThreat = false;
 
-                            // if (Time.time >= gcasNextScan)
-                            // {
-                            //     gcasNextScan = Time.time + 0.05f;
-                            Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f);
-                            float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
-
-                            if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange))
+                            if (Time.time >= gcasNextScan)
                             {
-                                if (hit.transform.root != APData.PlayerRB.transform.root)
-                                {
-                                    float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
-                                    float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
+                                gcasNextScan = Time.time + 0.02f;
+                                Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f);
+                                float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
 
-                                    if (hit.distance < (reqArc + reactionDist + 20f))
+                                if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange))
+                                {
+                                    if (hit.transform.root != APData.PlayerTransform.root)
                                     {
-                                        dangerImminent = true;
-                                        // if (hit.normal.y < 0.7f) isWallThreat = true;
-                                    }
-                                    else if (hit.distance < (reqArc + reactionDist + warnDist))
-                                    {
-                                        warningZone = true;
+                                        float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
+                                        float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
+
+                                        if (hit.distance < (reqArc + reactionDist + 20f))
+                                        {
+                                            dangerImminent = true;
+                                            // if (hit.normal.y < 0.7f) isWallThreat = true;
+                                        }
+                                        else if (hit.distance < (reqArc + reactionDist + warnDist))
+                                        {
+                                            warningZone = true;
+                                        }
                                     }
                                 }
                             }
-                            // }
 
                             if (descentRate > 0.1f)
                             {
@@ -1433,7 +1459,7 @@ namespace AutopilotMod
                 }
 
                 // auto jam
-                if (APData.AutoJammerActive && APData.LocalAircraft != null)
+                if (APData.LocalWeaponManager != null && APData.AutoJammerActive)
                 {
                     object wm = APData.LocalWeaponManager;
                     if (wm != null)
@@ -1517,13 +1543,6 @@ namespace AutopilotMod
                 // autopilot
                 if (APData.Enabled || APData.GCASActive)
                 {
-                    if (APData.PlayerRB == null)
-                    {
-                        APData.Enabled = false;
-                        APData.GCASActive = false;
-                        return;
-                    }
-
                     bool pilotPitch = Mathf.Abs(stickPitch) > Plugin.StickDeadzone.Value;
                     bool pilotRoll = Mathf.Abs(stickRoll) > Plugin.StickDeadzone.Value;
 
@@ -1556,10 +1575,6 @@ namespace AutopilotMod
                         }
                     }
 
-                    float dt = Mathf.Max(Time.deltaTime, 0.0001f);
-                    float noiseT = Time.time * Plugin.RandomSpeed.Value;
-                    bool useRandom = Plugin.RandomEnabled.Value && !APData.GCASActive;
-
                     // throttle control
                     if (APData.TargetSpeed > 0f && Plugin.f_throttle != null && !APData.GCASActive)
                     {
@@ -1568,7 +1583,7 @@ namespace AutopilotMod
 
                         if (APData.SpeedHoldIsMach)
                         {
-                            float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : APData.PlayerRB.position.y;
+                            float currentAlt = APData.LocalAircraft.GlobalPosition().y;
                             float sos = LevelInfo.GetSpeedofSound(currentAlt);
                             targetSpeedMS = APData.TargetSpeed * sos;
                         }
@@ -1609,7 +1624,7 @@ namespace AutopilotMod
 
                         lastThrottleOut = pidOutput;
 
-                        float currentPitch = Mathf.Asin(APData.PlayerRB.transform.forward.y);
+                        float currentPitch = Mathf.Asin(pForward.y);
                         float pitchWorkload = Mathf.Sin(currentPitch) * Plugin.Conf_Spd_C.Value;
 
                         float desiredLeverPos = Mathf.Clamp((isSpdSleeping ? pidSpd.Integral : pidOutput) + pitchWorkload, minT, maxT);
@@ -1632,7 +1647,7 @@ namespace AutopilotMod
                         APData.TargetCourse = (bearing + 360f) % 360f;
 
                         float distSq = new Vector2(diff.x, diff.z).sqrMagnitude;
-                        bool passed = Vector3.Dot(APData.PlayerRB.transform.forward, diff.normalized) < 0;
+                        bool passed = Vector3.Dot(pForward, diff.normalized) < 0;
 
                         float threshold = Plugin.NavReachDistance.Value;
                         float passedThreshold = Plugin.NavPassedDistance.Value;
@@ -1711,7 +1726,7 @@ namespace AutopilotMod
                             }
 
                             float rollError = Mathf.DeltaAngle(APData.CurrentRoll, activeTargetRoll);
-                            float rollRate = APData.PlayerRB.transform.InverseTransformDirection(APData.PlayerRB.angularVelocity).z * Mathf.Rad2Deg;
+                            float rollRate = localAngVel.z * Mathf.Rad2Deg;
 
                             // Roll sleep
                             if (useRandom)
@@ -1839,9 +1854,9 @@ namespace AutopilotMod
 
                                     lastAngleReq = targetPitchDeg;
 
-                                    float currentPitch = Mathf.Asin(APData.PlayerRB.transform.forward.y) * Mathf.Rad2Deg;
+                                    float currentPitch = Mathf.Asin(pForward.y) * Mathf.Rad2Deg;
                                     float angleError = targetPitchDeg - currentPitch;
-                                    float pitchRate = APData.PlayerRB.transform.InverseTransformDirection(APData.PlayerRB.angularVelocity).x * Mathf.Rad2Deg;
+                                    float pitchRate = localAngVel.x * Mathf.Rad2Deg;
 
                                     pitchOut = pidAngle.Evaluate(angleError, currentPitch, dt,
                                         Plugin.Conf_Angle_P.Value, Plugin.Conf_Angle_I.Value, Plugin.Conf_Angle_D.Value,
@@ -1914,7 +1929,7 @@ namespace AutopilotMod
 
                     if (_cachedFuelGauge != null)
                     {
-                        _cachedRefLabel = Traverse.Create(_cachedFuelGauge).Field("fuelLabel").GetValue<Text>();
+                        _cachedRefLabel = (Text)Plugin.f_fuelLabel.GetValue(_cachedFuelGauge);
                     }
                 }
 

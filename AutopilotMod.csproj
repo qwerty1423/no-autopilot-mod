@@ -85,7 +85,6 @@
     
     <ItemGroup>
       <PluginFiles Include="$(OutputPath)$(AssemblyName).dll" />
-      <PluginFiles Include="$(OutputPath)$(AssemblyName).pdb" />
     </ItemGroup>
 
     <Message Text="Deploying plugin to: $(PluginDeployPath)" Importance="high" />

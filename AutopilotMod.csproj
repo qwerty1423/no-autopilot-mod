@@ -28,7 +28,7 @@
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
     <GenerateDependencyFile>false</GenerateDependencyFile>
-    <Optimize>false</Optimize>
+    <Optimize>true</Optimize>
     <PathMap>$(MSBuildProjectDirectory)=.</PathMap>
     <EmbedAllSources>false</EmbedAllSources>
     <EmbedUntrackedSources>false</EmbedUntrackedSources>
@@ -52,7 +52,7 @@
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.*" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
-    <PackageReference Include="HarmonyX" Version="2.9.0" />
+    <!-- <PackageReference Include="HarmonyX" Version="2.9.0" /> -->
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
@@ -81,10 +81,11 @@
     <PluginDeployPath Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' ">C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option\BepInEx\plugins</PluginDeployPath>
   </PropertyGroup>
 
-  <Target Name="DeployPlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Release' AND '$(PluginDeployPath)' != ''">
+  <Target Name="DeployPlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' AND '$(PluginDeployPath)' != ''">
     
     <ItemGroup>
       <PluginFiles Include="$(OutputPath)$(AssemblyName).dll" />
+      <PluginFiles Include="$(OutputPath)$(AssemblyName).pdb" />
     </ItemGroup>
 
     <Message Text="Deploying plugin to: $(PluginDeployPath)" Importance="high" />

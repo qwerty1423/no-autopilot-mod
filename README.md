@@ -2,7 +2,7 @@
 
 ## Installation
 
-1. Install BepInEx.
+1. Install BepInEx 5 mono.
   - [their github has install instructions](https://github.com/BepInEx/BepInEx/)
   - run the game once, quit
   - edit BepInEx.cfg in BepInEx/config to enable hiding the game manager or whatever

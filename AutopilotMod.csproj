@@ -76,7 +76,37 @@
     <Reference Include="UnityEngine.UI"> <HintPath>Libs/UnityEngine.UI.dll</HintPath> </Reference>
   </ItemGroup>
 
-  <Target Name="CreateZip" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="7z a -tzip -mx=9 -mtc=off -mta=off -mtm=off &quot;$(OutputPath)$(AssemblyName)-$(Version).zip&quot; &quot;$(OutputPath)$(AssemblyName).dll&quot;" />
+  <PropertyGroup>
+    <PluginDeployPath Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' OR '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' ">$(HOME)/.local/share/Steam/steamapps/common/Nuclear Option/BepInEx/scripts</PluginDeployPath>
+    <!-- <PluginDeployPath Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' ">C:\Path\To\Your\Plugin\Folder</PluginDeployPath> -->
+  </PropertyGroup>
+
+  <Target Name="DeployPlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Release' AND '$(PluginDeployPath)' != ''">
+    
+    <ItemGroup>
+      <PluginFiles Include="$(OutputPath)$(AssemblyName).dll" />
+      <PluginFiles Include="$(OutputPath)$(AssemblyName).pdb" />
+    </ItemGroup>
+
+    <Message Text="Deploying plugin to: $(PluginDeployPath)" Importance="high" />
+    
+    <Copy
+      SourceFiles="@(PluginFiles)"
+      DestinationFolder="$(PluginDeployPath)"
+      SkipUnchangedFiles="true"
+    />
+  </Target>
+
+  <Target Name="CreateZip"
+        AfterTargets="Build"
+        Condition="'$(Configuration)' == 'Release'"
+        Inputs="$(OutputPath)$(AssemblyName).dll"
+        Outputs="$(OutputPath)$(AssemblyName)-$(Version).zip">
+
+  <Message Text="Creating ZIP archive for $(AssemblyName)..." Importance="high" />
+
+  <Exec
+    Command="7z a -tzip -mx=9 -mtc=off -mta=off -mtm=off &quot;$(AssemblyName)-$(Version).zip&quot; &quot;$(AssemblyName).dll&quot;"
+    WorkingDirectory="$(OutputPath)" />
   </Target>
 </Project>

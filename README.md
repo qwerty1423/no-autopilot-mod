@@ -13,7 +13,7 @@
 4. Place the dll into your `BepInEx/plugins/` folder.
 5. Run the game once to generate the config file.
 
-folder structure after install:
+folder structure after install (the names are wrong now but the locations are the same):
 
 ![no-folder-structure](https://github.com/user-attachments/assets/ff161a5b-676d-48eb-9eac-944afdeedb6c)
 

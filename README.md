@@ -2,9 +2,8 @@
 
 ## Installation
 
-1. Install BepInEx. (go search up some how to guide, should be quite easy)
-  - download correct bepinex
-  - extract it in game folder correctly
+1. Install BepInEx. 
+  their github has install instructions
   - run the game once, quit
   - edit BepInEx.cfg in BepInEx/config to enable hiding the game manager or whatever
 2. (Recommended) Install BepInEx Configuration Manager. (again google is very helpful for this)

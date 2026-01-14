@@ -18,7 +18,7 @@ folder structure after install:
 
 ### if you really don't know what to do
 
-copy the contents of [README.md](https://github.com/qwerty1423/no-autopilot-mod/blob/main/README.md)  and give it to your preferred llm (chatgpt, gemini, whatever) and ask it how to install/use.
+copy the contents of [README.md](https://raw.githubusercontent.com/qwerty1423/no-autopilot-mod/refs/heads/main/README.md) and give it to your preferred llm (chatgpt, gemini, whatever) and ask it how to install/use.
 
 ## Default Controls
 

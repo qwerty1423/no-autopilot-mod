@@ -1,5 +1,37 @@
 # Nuclear Option Autopilot Mod
 
+## Installation
+
+1. Install BepInEx.
+2. (Recommended) Install BepInEx Configuration Manager.
+3. Download  `NOAutopilotMod.zip` and extract the dll.
+4. Place the dll into your `BepInEx/plugins/` folder.
+5. Run the game once to generate the config file.
+
+## Default Controls
+
+| Action | Key | Description |
+| :--- | :--- | :--- |
+| Toggle Autopilot | `=` (Equals) | Self-explanatory. |
+| Toggle Auto-Jammer | `/` (Slash) | ^^^ |
+| Target Alt Small Adjustment | `Up` / `Down` Arrow | Small adjustments (0.1m default) |
+| Target Alt Large Adjustment | `Left` / `Right` Arrow | Large adjustments (100m default) |
+| Max Climb Rate +/- | `PageUp` / `PageDown` | Limit vertical speed |
+| Bank Left/Right | `[` and `]` | Adjust roll angle |
+| Reset Bank | `'` (Quote) | Level the wings, sets roll to 0 |
+| Toggle GCAS | `\` (Backslash) | added just in case |
+| Toggle autothrottle | `;` | will write current speed to ui/delete it |
+| **Toggle AP GUI** | **`F8`** | opens/closes the GUI |
+
+The autopilot can be configured using only the f8 gui window and the map, so f8 is probably the most important keybind to remember.
+
+Large altitude adjustment key has minimum limit to reduce crashes when sea skimming if the key is accidentally pressed.
+
+Keys and UI colours are configurable in the BepInEx config file.
+The [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager) is recommended for changing PID values and other settings in game.
+
+## features and stuff?
+
 Currently the autopilot is rather basic. There are some additional features, such as EW auto jam (currently just an auto fire mode, it won't select targets automatically or anything, it will only save your finger).
 
 ![imperialap](https://github.com/user-attachments/assets/23580e9d-2ea9-441d-8079-a181dab5c0cc)
@@ -76,33 +108,6 @@ If you are making large inputs, it will not pull up.
 
 simple how to use guide: 
 right click / shift + right click on the map to make a path, then press equals and f8. hover mouse over the UI for tooltips.
-
-## Default Controls
-
-| Action | Key | Description |
-| :--- | :--- | :--- |
-| **Toggle Autopilot** | `=` (Equals) | Self-explanatory. |
-| **Toggle Auto-Jammer** | `/` (Slash) | ^^^ |
-| **Target Alt Small Adjustment** | `Up` / `Down` Arrow | Small adjustments (0.1m default) |
-| **Target Alt Large Adjustment** | `Left` / `Right` Arrow | Large adjustments (100m default) |
-| **Max Climb Rate +/-** | `PageUp` / `PageDown` | Limit vertical speed |
-| **Bank Left/Right** | `[` and `]` | Adjust roll angle |
-| **Reset Bank** | `'` (Quote) | Level the wings, sets roll to 0 |
-| **Toggle GCAS** | `\` (Backslash) | added just in case |
-| **Toggle AP GUI** | `F8` | opens/closes the GUI |
-
-Large altitude adjustment key has minimum limit to reduce crashes when sea skimming if the key is accidentally pressed.
-
-Keys and UI colours are configurable in the BepInEx config file.
-The [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager) is recommended for changing PID values and other settings in game.
-
-## Installation
-
-1. Install BepInEx.
-2. (Recommended) Install BepInEx Configuration Manager.
-3. Download  `NOAutopilotMod.zip` and extract the dll.
-4. Place the dll into your `BepInEx/plugins/` folder.
-5. Run the game once to generate the config file.
 
 ## Building from source
 

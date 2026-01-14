@@ -2,11 +2,11 @@
 
 ## Installation
 
-1. Install BepInEx. 
-  their github has install instructions
+1. Install BepInEx.
+  - [their github has install instructions](https://github.com/BepInEx/BepInEx/)
   - run the game once, quit
   - edit BepInEx.cfg in BepInEx/config to enable hiding the game manager or whatever
-2. (Recommended) Install BepInEx Configuration Manager. (again google is very helpful for this)
+2. (Recommended) Install BepInEx Configuration Manager.
   - download [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager)
   - place extracted folder in BepInEx/plugins
 3. Download  `NOAutopilotMod.zip` from releases (to the right if you are on pc) and extract the dll.

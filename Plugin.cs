@@ -9,13 +9,15 @@ using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
-namespace AutopilotMod
+namespace NOAutopilot
 {
-    [BepInPlugin("com.qwerty1423.noautopilotmod", "NOAutopilotMod", "4.13.2")]
+    [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
     public class Plugin : BaseUnityPlugin
     {
         internal new static ManualLogSource Logger;
+        private Harmony harmony;
 
         // ap menu?
         public static ConfigEntry<KeyCode> MenuKey;
@@ -380,9 +382,28 @@ namespace AutopilotMod
                 return;
             }
 
-            new Harmony("com.qwerty1423.noautopilotmod").PatchAll();
+            harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
+            harmony.PatchAll();
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
+            Logger.LogInfo("Mod loaded.");
+        }
 
-            UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+        private void OnDestroy()
+        {
+            Logger.LogInfo("Unloading mod.");
+
+            harmony?.UnpatchSelf();
+
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
+
+            APData.Reset();
+            ControlOverridePatch.Reset();
+            HUDVisualsPatch.Reset();
+            HudPatch.Reset();
+            MapInteractionPatch.Reset();
+            MapWaypointPatch.Reset();
+
+            Logger.LogInfo("Cleanup complete.");
         }
 
         private void InitStyles()
@@ -1035,19 +1056,22 @@ namespace AutopilotMod
             }
         }
 
-        private void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene)
+        private void OnSceneUnloaded(Scene scene)
         {
-            APData.Enabled = false;
-            APData.GCASActive = false;
-            APData.LocalAircraft = null;
-            APData.PlayerRB = null;
-            APData.PlayerTransform = null;
-            APData.LocalPilot = null;
-            APData.LocalWeaponManager = null;
+            if (!string.Equals(scene.name, "GameWorld", StringComparison.OrdinalIgnoreCase))
+            {
+                APData.Enabled = false;
+                APData.GCASActive = false;
+                APData.LocalAircraft = null;
+                APData.PlayerRB = null;
+                APData.PlayerTransform = null;
+                APData.LocalPilot = null;
+                APData.LocalWeaponManager = null;
 
-            APData.NavQueue.Clear();
-            foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
-            APData.NavVisuals.Clear();
+                APData.NavQueue.Clear();
+                foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
+                APData.NavVisuals.Clear();
+            }
         }
     }
 
@@ -1178,12 +1202,50 @@ namespace AutopilotMod
         public static Rigidbody PlayerRB;
         public static Aircraft LocalAircraft;
         public static WeaponManager LocalWeaponManager;
+
+        public static void Reset()
+        {
+            Enabled = false;
+            UseSetValues = false;
+            GCASEnabled = true;
+            AutoJammerActive = false;
+            GCASActive = false;
+            GCASWarning = false;
+            AllowExtremeThrottle = false;
+            SpeedHoldIsMach = false;
+            NavEnabled = false;
+            TargetAlt = -1f;
+            TargetRoll = -999f;
+            TargetSpeed = -1f;
+            TargetCourse = -1f;
+            CurrentAlt = 0f;
+            CurrentRoll = 0f;
+            CurrentMaxClimbRate = -1f;
+            SpeedEma = 0f;
+            LocalPilot = null;
+            PlayerTransform = null;
+            PlayerRB = null;
+            LocalAircraft = null;
+            LocalWeaponManager = null;
+
+            NavQueue.Clear();
+            foreach (var obj in NavVisuals)
+            {
+                if (obj != null) UnityEngine.Object.Destroy(obj);
+            }
+            NavVisuals.Clear();
+        }
     }
 
     [HarmonyPatch(typeof(FlightHud), "SetHUDInfo")]
     internal class HudPatch
     {
         private static GameObject lastVehicleObj;
+
+        public static void Reset()
+        {
+            lastVehicleObj = null;
+        }
 
         private static void Postfix(object playerVehicle, float altitude)
         {
@@ -1267,10 +1329,43 @@ namespace AutopilotMod
         public static bool apStateBeforeGCAS = false;
         private static float currentAppliedThrottle = 0f;
 
-        // jammer
         private static float jammerNextFireTime = 0f;
         private static float jammerNextReleaseTime = 0f;
         private static bool isJammerHoldingTrigger = false;
+
+        public static void Reset()
+        {
+            pidAlt.Reset();
+            pidVS.Reset();
+            pidAngle.Reset();
+            pidRoll.Reset();
+            pidGCAS.Reset();
+            pidSpd.Reset();
+            pidCrs.Reset();
+
+            lastSpdMeasurement = 0f;
+            lastPitchOut = 0f;
+            lastRollOut = 0f;
+            lastThrottleOut = 0f;
+            lastBankReq = 0f;
+            lastVSReq = 0f;
+            lastAngleReq = 0f;
+
+            wasEnabled = false;
+            pitchSleepUntil = 0f;
+            rollSleepUntil = 0f;
+            spdSleepUntil = 0f;
+            isPitchSleeping = false;
+            isRollSleeping = false;
+            isSpdSleeping = false;
+            gcasNextScan = 0f;
+            apStateBeforeGCAS = false;
+            currentAppliedThrottle = 0f;
+
+            jammerNextFireTime = 0f;
+            jammerNextReleaseTime = 0f;
+            isJammerHoldingTrigger = false;
+        }
 
         private static void ResetIntegrators(float currentThrottle)
         {
@@ -1899,6 +1994,22 @@ namespace AutopilotMod
         private static Text _cachedRefLabel;
         private static GameObject _lastVehicleChecked;
 
+        public static void Reset()
+        {
+            if (infoOverlayObj != null)
+            {
+                UnityEngine.Object.Destroy(infoOverlayObj);
+            }
+            infoOverlayObj = null;
+            overlayText = null;
+            lastFuelMass = 0f;
+            fuelFlowEma = 0f;
+            lastUpdateTime = 0f;
+            _cachedFuelGauge = null;
+            _cachedRefLabel = null;
+            _lastVehicleChecked = null;
+        }
+
         private static void Postfix(FlightHud __instance)
         {
             if (!Plugin.ShowExtraInfo.Value) return;
@@ -2075,6 +2186,7 @@ namespace AutopilotMod
     [HarmonyPatch(typeof(DynamicMap), "MapControls")]
     internal class MapInteractionPatch
     {
+        public static void Reset() { }
         static void Postfix(DynamicMap __instance)
         {
             if (__instance.selectedIcons.Count > 0) return;
@@ -2095,6 +2207,7 @@ namespace AutopilotMod
     [HarmonyPatch(typeof(DynamicMap), "UpdateMap")]
     internal class MapWaypointPatch
     {
+        public static void Reset() { }
         static void Postfix()
         {
             if (APData.NavVisuals.Count == 0 || APData.PlayerRB == null) return;

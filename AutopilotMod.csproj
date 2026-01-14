@@ -2,11 +2,20 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>NOAutopilotMod</AssemblyName>
-    <Description>no autopilot mod</Description>
+    <AssemblyName>com.qwerty1423.NOAutopilot</AssemblyName>
+    <Product>NOAutopilot</Product>
+    <Description>no autopilot?</Description>
     <Version>4.13.2</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json;
+      https://nuget.samboy.dev/v3/index.json
+    </RestoreAdditionalProjectSources>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <RootNamespace>NOAutopilot</RootNamespace>
   </PropertyGroup>
 
   <ItemDefinitionGroup>
@@ -15,12 +24,45 @@
     </Reference>
   </ItemDefinitionGroup>
 
-  <ItemGroup>
-    <!-- BepInEx & Harmony -->
-    <Reference Include="BepInEx"> <HintPath>Libs/BepInEx.dll</HintPath> </Reference>
-    <Reference Include="0Harmony"> <HintPath>Libs/0Harmony.dll</HintPath> </Reference>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <Optimize>false</Optimize>
+    <PathMap>$(MSBuildProjectDirectory)=.</PathMap>
+    <EmbedAllSources>false</EmbedAllSources>
+    <EmbedUntrackedSources>false</EmbedUntrackedSources>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
 
-    <!-- Unity Libraries -->
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <Optimize>true</Optimize>
+    <PathMap>$(MSBuildProjectDirectory)=.</PathMap>
+    <EmbedAllSources>false</EmbedAllSources>
+    <EmbedUntrackedSources>false</EmbedUntrackedSources>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.*" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+    <!-- <PackageReference Include="HarmonyX" Version="2.9.0" /> -->
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- <Reference Include="BepInEx"> <HintPath>Libs/BepInEx.dll</HintPath> </Reference>
+    <Reference Include="0Harmony"> <HintPath>Libs/0Harmony.dll</HintPath> </Reference> -->
+
     <Reference Include="UnityEngine"> <HintPath>Libs/UnityEngine.dll</HintPath> </Reference>
     <Reference Include="UnityEngine.CoreModule"> <HintPath>Libs/UnityEngine.CoreModule.dll</HintPath> </Reference>
     <Reference Include="UnityEngine.UI"> <HintPath>Libs/UnityEngine.UI.dll</HintPath> </Reference>
@@ -28,10 +70,13 @@
     <Reference Include="UnityEngine.PhysicsModule"> <HintPath>Libs/UnityEngine.PhysicsModule.dll</HintPath> </Reference>
     <Reference Include="UnityEngine.TextRenderingModule"> <HintPath>Libs/UnityEngine.TextRenderingModule.dll</HintPath> </Reference>
     <Reference Include="UnityEngine.IMGUIModule"> <HintPath>Libs/UnityEngine.IMGUIModule.dll</HintPath> </Reference>
-    
-    <!-- Game Libraries -->
+
     <Reference Include="Assembly-CSharp"> <HintPath>Libs/Assembly-CSharp.dll</HintPath> </Reference>
     <Reference Include="Mirage"> <HintPath>Libs/Mirage.dll</HintPath> </Reference>
+    <Reference Include="UnityEngine.UI"> <HintPath>Libs/UnityEngine.UI.dll</HintPath> </Reference>
   </ItemGroup>
 
+  <Target Name="CreateZip" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <Exec Command="7z a -tzip -mx=9 -mtc=off -mta=off -mtm=off &quot;$(OutputPath)$(AssemblyName)-$(Version).zip&quot; &quot;$(OutputPath)$(AssemblyName).dll&quot;" />
+  </Target>
 </Project>

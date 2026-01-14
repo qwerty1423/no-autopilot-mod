@@ -126,9 +126,9 @@ prerequisites
 
 steps
 
-1. clone the repo, cd no-autopilot-mod
+1. clone the repo, cd no-autopilot-mod, checkout a release version.
 2. create /Libs folder next to source code
 3. copy dependencies into /Libs folder from game files. (mainly in /Nuclear Option/NuclearOption_Data/Managed). the list is in the `.csproj`.
 4. `dotnet build -c Release`
 
-releases >3.13.3 reproducible (probably). Getting the correct versions of the dlls shouldn't be too difficult, but I might look into using stripped game dlls later.
+releases >3.13.3 reproducible (probably). Getting the correct versions of the dlls might be difficult. You also have to clone the repo and checkout the correct version.

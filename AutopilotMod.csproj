@@ -78,7 +78,7 @@
 
   <PropertyGroup>
     <PluginDeployPath Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' OR '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' ">$(HOME)/.local/share/Steam/steamapps/common/Nuclear Option/BepInEx/scripts</PluginDeployPath>
-    <!-- <PluginDeployPath Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' ">C:\Path\To\Your\Plugin\Folder</PluginDeployPath> -->
+    <PluginDeployPath Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' ">C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option\BepInEx\plugins</PluginDeployPath>
   </PropertyGroup>
 
   <Target Name="DeployPlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Release' AND '$(PluginDeployPath)' != ''">

@@ -1545,6 +1545,7 @@ namespace NOAutopilot
                                     pidAlt.Reset();
                                     pidVS.Reset();
                                     pidAngle.Reset();
+                                    APData.TargetAlt = APData.CurrentAlt * 1.1f;
                                 }
                                 else
                                 {

@@ -1545,7 +1545,6 @@ namespace NOAutopilot
                                     pidAlt.Reset();
                                     pidVS.Reset();
                                     pidAngle.Reset();
-                                    APData.LastOverrideInputTime = Time.time;
                                 }
                                 else
                                 {
@@ -1897,8 +1896,7 @@ namespace NOAutopilot
                             pidAlt.Reset();
                             pidVS.Reset();
                             pidAngle.Reset();
-                            APData.TargetAlt = -1f;
-                            // we just disengage alt AP upon input
+                            APData.TargetAlt = APData.CurrentAlt;
                         }
                         else
                         {

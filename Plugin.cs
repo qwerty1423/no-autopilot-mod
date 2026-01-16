@@ -2177,7 +2177,7 @@ namespace NOAutopilot
                 bool isOverridden = overrideRemaining > 0;
                 if (APData.Enabled && isOverridden)
                 {
-                    content += $"<color={Plugin.ColorWarn.Value}>Override {overrideRemaining:F0}s</color>\n";
+                    content += $"<color={Plugin.ColorWarn.Value}>Override {overrideRemaining:F1}s</color>\n";
                 }
                 else if (APData.GCASActive)
                 {

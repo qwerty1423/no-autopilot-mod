@@ -1558,7 +1558,6 @@ namespace NOAutopilot
                                 {
                                     APData.GCASWarning = true;
                                     APData.TargetRoll = 0f;
-                                    APData.TargetAlt = APData.CurrentAlt * 1.1f;
                                 }
                             }
                             else if (dangerImminent)

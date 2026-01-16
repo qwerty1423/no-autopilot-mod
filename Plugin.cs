@@ -24,20 +24,16 @@ namespace NOAutopilot
         private Harmony harmony;
 
         // controls table
-        private readonly string table = $"""
-    | Action                      | Key                    | Description                              |
-    | :-------------------------- | :--------------------- | :--------------------------------------- |
-    | Toggle Autopilot            | `=` (Equals)           | Self-explanatory.                        |
-    | Toggle Auto-Jammer          | `/` (Slash)            | ^^^                                      |
-    | Target Alt Small Adjustment | `Up` / `Down` Arrow    | Small adjustments (0.1m default)         |
-    | Target Alt Large Adjustment | `Left` / `Right` Arrow | Large adjustments (100m default)         |
-    | Max Climb Rate +/-          | `PageUp` / `PageDown`  | Limit vertical speed                     |
-    | Bank Left/Right             | `[` and `]`            | Adjust roll angle                        |
-    | clear crs/roll/alt          | `'` (Quote)            | Resets in that order, one per keystroke  |
-    | Toggle GCAS                 | `\` (Backslash)        | added just in case                       |
-    | Toggle autothrottle         | `;`                    | will write current speed to ui/delete it |
-    | **Toggle AP GUI**           | `F8`                   | **opens/closes the GUI**                 |
-    """;
+        private readonly string table = $"<b>Toggle Autopilot:</b> = (Equals) — Self-explanatory.\n" +
+                    $"<b>Toggle Auto-Jammer:</b> / (Slash) — Self-explanatory.\n" +
+                    $"<b>Target Alt Small:</b> Up / Down Arrow — Small adj (0.1m)\n" +
+                    $"<b>Target Alt Large:</b> Left / Right Arrow — Large adj (100m)\n" +
+                    $"<b>Max Climb Rate:</b> PageUp / PageDown — Limit vertical speed\n" +
+                    $"<b>Bank Left/Right:</b> [ and ] — Adjust roll angle\n" +
+                    $"<b>Clear Crs/Roll/Alt:</b> ' (Quote) — Resets in order\n" +
+                    $"<b>Toggle GCAS:</b> \\ (Backslash) — Added just in case\n" +
+                    $"<b>Toggle Autothrottle:</b> ; — Writes speed to UI\n" +
+                    $"<b>Toggle AP GUI:</b> F8 — Opens/closes the GUI";
 
         // ap menu?
         public static ConfigEntry<KeyCode> MenuKey;
@@ -435,7 +431,8 @@ namespace NOAutopilot
 
             _styleLabel = new GUIStyle(GUI.skin.label)
             {
-                alignment = TextAnchor.MiddleLeft
+                alignment = TextAnchor.UpperLeft,
+                richText = true
             };
 
             _styleButton = new GUIStyle(GUI.skin.button);
@@ -639,7 +636,7 @@ namespace NOAutopilot
             _windowRect.height = Mathf.Min(_windowRect.height, Screen.height);
 
             GUI.depth = 0;
-            _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, new GUIContent("Autopilot controls", table), _styleWindow);
+            _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, "Autopilot controls", _styleWindow);
 
             float clampedX = Mathf.Clamp(_windowRect.x, 0, Screen.width - _windowRect.width);
             float clampedY = Mathf.Clamp(_windowRect.y, 0, Screen.height - _windowRect.height);
@@ -958,6 +955,7 @@ namespace NOAutopilot
                     RefreshNavVisuals();
                 }
                 GUILayout.EndHorizontal();
+                GUILayout.Label(new GUIContent("(Hover for controls)", table), _styleLabel);
             }
             else
             {
@@ -965,7 +963,7 @@ namespace NOAutopilot
                 GUILayout.EndHorizontal();
                 GUILayout.Label(new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.", "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the item."), _styleLabel);
 
-                GUILayout.Label(new GUIContent("(Hover above for some info)\n(Hover on this text for controls)", table), _styleLabel);
+                GUILayout.Label(new GUIContent("(Hover above for some info)\n(Hover here for controls)", table), _styleLabel);
             }
 
             GUILayout.EndVertical();

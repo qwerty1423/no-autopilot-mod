@@ -186,7 +186,7 @@ namespace NOAutopilot
             // Settings
             StickDeadzone = Config.Bind("Settings", "1. Stick Deadzone", 0.01f, "Threshold");
             // DisengageDelay = Config.Bind("Settings", "2. Disengage Delay", 10f, "Seconds of continuous input over deadzone before AP turns off");
-            ReengageDelay = Config.Bind("Settings", "2. Reengage Delay", 0.4f, "Seconds to wait after stick release before AP resumes control");
+            ReengageDelay = Config.Bind("Settings", "2. Reengage Delay", 2f, "Seconds to wait after stick release before AP resumes control");
             InvertRoll = Config.Bind("Settings", "3. Invert Roll", true, "Flip Roll");
             InvertPitch = Config.Bind("Settings", "4. Invert Pitch", true, "Flip Pitch");
             Conf_InvertCourseRoll = Config.Bind("Settings", "5. Invert Bank Direction", true, "Toggle if plane turns wrong way");
@@ -1205,7 +1205,7 @@ namespace NOAutopilot
         public static float CurrentRoll = 0f;
         public static float CurrentMaxClimbRate = -1f;
         public static float SpeedEma = 0f;
-        public static float LastPilotInputTime = -999f;
+        public static float LastOverrideInputTime = -999f;
         public static object LocalPilot;
         public static List<Vector3> NavQueue = [];
         public static List<GameObject> NavVisuals = [];
@@ -1234,7 +1234,7 @@ namespace NOAutopilot
             CurrentRoll = 0f;
             CurrentMaxClimbRate = -1f;
             SpeedEma = 0f;
-            LastPilotInputTime = -999f;
+            LastOverrideInputTime = -999f;
             LocalPilot = null;
             PlayerTransform = null;
             PlayerRB = null;
@@ -1287,7 +1287,7 @@ namespace NOAutopilot
                     APData.TargetSpeed = -1f;
                     APData.TargetCourse = -1f;
                     APData.CurrentMaxClimbRate = -1f;
-                    APData.LastPilotInputTime = -999f;
+                    APData.LastOverrideInputTime = -999f;
                     APData.LocalPilot = null;
                     APData.LocalWeaponManager = null;
                     if (APData.LocalAircraft != null)
@@ -1560,6 +1560,7 @@ namespace NOAutopilot
                                         APData.TargetAlt = APData.OriginalTargetAlt;
                                     }
                                     pidGCAS.Reset();
+                                    APData.LastOverrideInputTime = Time.time;
                                 }
                                 else
                                 {
@@ -1671,10 +1672,10 @@ namespace NOAutopilot
 
                 if (pilotPitch || pilotRoll)
                 {
-                    APData.LastPilotInputTime = Time.time;
+                    APData.LastOverrideInputTime = Time.time;
                 }
 
-                bool isWaitingToReengage = (Time.time - APData.LastPilotInputTime) < Plugin.ReengageDelay.Value;
+                bool isWaitingToReengage = (Time.time - APData.LastOverrideInputTime) < Plugin.ReengageDelay.Value;
 
                 // autopilot
                 if (APData.Enabled || APData.GCASActive)
@@ -1812,7 +1813,7 @@ namespace NOAutopilot
 
                     if (rollAxisActive)
                     {
-                        if (pilotRoll || isWaitingToReengage)
+                        if ((pilotRoll || isWaitingToReengage) && !APData.GCASActive)
                         {
                             pidRoll.Reset();
                             pidCrs.Reset();
@@ -1909,7 +1910,7 @@ namespace NOAutopilot
 
                     if (pitchAxisActive)
                     {
-                        if (pilotPitch || isWaitingToReengage)
+                        if ((pilotPitch || isWaitingToReengage) && !APData.GCASActive)
                         {
                             pidAlt.Reset();
                             pidVS.Reset();
@@ -1926,6 +1927,7 @@ namespace NOAutopilot
                                 pidAlt.Reset();
                                 pidVS.Reset();
                                 pidAngle.Reset();
+                                pidRoll.Reset();
                                 float targetG = 5f;
                                 if (apStateBeforeGCAS)
                                 {
@@ -2218,7 +2220,7 @@ namespace NOAutopilot
                     content += $"<color={Plugin.ColorAPOn.Value}>{altStr} {climbStr} {spdStr}\n{degStr} {navStr}</color>\n";
                 }
 
-                float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastPilotInputTime);
+                float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastOverrideInputTime);
                 bool isOverridden = overrideRemaining > 0;
                 if (APData.Enabled && isOverridden)
                 {

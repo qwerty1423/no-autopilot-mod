@@ -1284,6 +1284,8 @@ namespace NOAutopilot
                     APData.TargetAlt = altitude;
                     APData.OriginalTargetAlt = -1f;
                     APData.TargetRoll = 0f;
+                    APData.TargetSpeed = -1f;
+                    APData.TargetCourse = -1f;
                     APData.CurrentMaxClimbRate = -1f;
                     APData.LastPilotInputTime = -999f;
                     APData.LocalPilot = null;
@@ -1557,6 +1559,7 @@ namespace NOAutopilot
                                     {
                                         APData.TargetAlt = APData.OriginalTargetAlt;
                                     }
+                                    pidGCAS.Reset();
                                 }
                                 else
                                 {
@@ -1920,6 +1923,9 @@ namespace NOAutopilot
                             // gcas
                             if (APData.GCASActive)
                             {
+                                pidAlt.Reset();
+                                pidVS.Reset();
+                                pidAngle.Reset();
                                 float targetG = 5f;
                                 if (apStateBeforeGCAS)
                                 {

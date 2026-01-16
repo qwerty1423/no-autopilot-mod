@@ -1496,6 +1496,9 @@ namespace NOAutopilot
                             {
                                 gcasNextScan = Time.time + 0.02f;
 
+                                dangerImminent = false;
+                                warningZone = false;
+
                                 Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f);
                                 float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
 

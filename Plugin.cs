@@ -79,6 +79,7 @@ namespace NOAutopilot
         // Settings
         public static ConfigEntry<float> StickDeadzone;
         // public static ConfigEntry<float> DisengageDelay;
+        public static ConfigEntry<float> ReengageDelay;
         public static ConfigEntry<bool> InvertRoll, InvertPitch;
         public static ConfigEntry<bool> Conf_InvertCourseRoll;
 
@@ -185,6 +186,7 @@ namespace NOAutopilot
             // Settings
             StickDeadzone = Config.Bind("Settings", "1. Stick Deadzone", 0.01f, "Threshold");
             // DisengageDelay = Config.Bind("Settings", "2. Disengage Delay", 10f, "Seconds of continuous input over deadzone before AP turns off");
+            ReengageDelay = Config.Bind("Settings", "2. Reengage Delay", 2.0f, "Seconds to wait after stick release before AP resumes control");
             InvertRoll = Config.Bind("Settings", "3. Invert Roll", true, "Flip Roll");
             InvertPitch = Config.Bind("Settings", "4. Invert Pitch", true, "Flip Pitch");
             Conf_InvertCourseRoll = Config.Bind("Settings", "5. Invert Bank Direction", true, "Toggle if plane turns wrong way");
@@ -1200,6 +1202,7 @@ namespace NOAutopilot
         public static float CurrentRoll = 0f;
         public static float CurrentMaxClimbRate = -1f;
         public static float SpeedEma = 0f;
+        public static float LastPilotInputTime = -999f;
         public static object LocalPilot;
         public static List<Vector3> NavQueue = [];
         public static List<GameObject> NavVisuals = [];
@@ -1227,6 +1230,7 @@ namespace NOAutopilot
             CurrentRoll = 0f;
             CurrentMaxClimbRate = -1f;
             SpeedEma = 0f;
+            LastPilotInputTime = -999f;
             LocalPilot = null;
             PlayerTransform = null;
             PlayerRB = null;
@@ -1276,7 +1280,7 @@ namespace NOAutopilot
                     APData.TargetAlt = altitude;
                     APData.TargetRoll = 0f;
                     APData.CurrentMaxClimbRate = -1f;
-
+                    APData.LastPilotInputTime = -999f;
                     APData.LocalPilot = null;
                     APData.LocalWeaponManager = null;
                     if (APData.LocalAircraft != null)
@@ -1645,6 +1649,13 @@ namespace NOAutopilot
                     bool pilotPitch = Mathf.Abs(stickPitch) > Plugin.StickDeadzone.Value;
                     bool pilotRoll = Mathf.Abs(stickRoll) > Plugin.StickDeadzone.Value;
 
+                    if (pilotPitch || pilotRoll)
+                    {
+                        APData.LastPilotInputTime = Time.time;
+                    }
+
+                    bool isWaitingToReengage = (Time.time - APData.LastPilotInputTime) < Plugin.ReengageDelay.Value;
+
                     // keys
                     if (!pilotPitch && !pilotRoll && !APData.GCASActive)
                     {
@@ -1776,7 +1787,7 @@ namespace NOAutopilot
 
                     if (rollAxisActive)
                     {
-                        if (pilotRoll && !APData.GCASActive)
+                        if (pilotRoll || isWaitingToReengage)
                         {
                             pidRoll.Reset();
                             pidCrs.Reset();
@@ -1873,7 +1884,7 @@ namespace NOAutopilot
 
                     if (pitchAxisActive)
                     {
-                        if (pilotPitch && !APData.GCASActive)
+                        if (pilotPitch || isWaitingToReengage)
                         {
                             pidAlt.Reset();
                             pidVS.Reset();
@@ -2118,19 +2129,6 @@ namespace NOAutopilot
 
                 content += "\n";
 
-                if (APData.GCASActive)
-                {
-                    content += $"<color={Plugin.ColorCrit.Value}>A-GCAS</color>\n";
-                }
-                else if (APData.GCASWarning)
-                {
-                    content += $"<color={Plugin.ColorCrit.Value}>PULL UP</color>\n";
-                }
-                else if (!APData.GCASEnabled && Plugin.ShowGCASOff.Value)
-                {
-                    content += $"<color={Plugin.ColorWarn.Value}>GCAS-</color>\n";
-                }
-
                 // (AP was on before GCAS) OR (AP is on and no GCAS)
                 bool showAPInfo = (ControlOverridePatch.apStateBeforeGCAS && APData.GCASActive) || (APData.Enabled && !APData.GCASActive);
 
@@ -2166,10 +2164,31 @@ namespace NOAutopilot
                     if (APData.NavEnabled && APData.NavQueue.Count > 0)
                     {
                         float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
-                        navStr = " > " + ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value);
+                        navStr = "W>" + ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value);
                     }
+                    else
+                        navStr = "W-";
 
-                    content += $"<color={Plugin.ColorAPOn.Value}>{altStr} {climbStr}\n{spdStr} {degStr}{navStr}</color>\n";
+                    content += $"<color={Plugin.ColorAPOn.Value}>{altStr} {climbStr} {spdStr}\n{degStr} {navStr}</color>\n";
+                }
+
+                float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastPilotInputTime);
+                bool isOverridden = overrideRemaining > 0;
+                if (APData.Enabled && isOverridden)
+                {
+                    content += $"<color={Plugin.ColorWarn.Value}>Override {overrideRemaining:F0}s</color>\n";
+                }
+                else if (APData.GCASActive)
+                {
+                    content += $"<color={Plugin.ColorCrit.Value}>A-GCAS</color>\n";
+                }
+                else if (APData.GCASWarning)
+                {
+                    content += $"<color={Plugin.ColorCrit.Value}>PULL UP</color>\n";
+                }
+                else if (!APData.GCASEnabled && Plugin.ShowGCASOff.Value)
+                {
+                    content += $"<color={Plugin.ColorWarn.Value}>GCAS-</color>\n";
                 }
 
                 if (APData.AutoJammerActive)

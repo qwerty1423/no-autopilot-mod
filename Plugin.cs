@@ -217,7 +217,7 @@ namespace NOAutopilot
             ClimbRateDownKey = Config.Bind("Controls", "08. Climb Rate Decrease", KeyCode.PageDown, "Decrease Max VS");
             BankLeftKey = Config.Bind("Controls", "09. Bank Left", KeyCode.LeftBracket, "Roll/course Left");
             BankRightKey = Config.Bind("Controls", "10. Bank Right", KeyCode.RightBracket, "Roll/course right");
-            ClearKey = Config.Bind("Controls", "11. reset roll/clear alt/clear crs", KeyCode.Quote, "every click will clear first thing it sees isn't clear from right to left");
+            ClearKey = Config.Bind("Controls", "11. clear alt/reset roll/clear crs", KeyCode.Quote, "every click will clear first thing it sees isn't clear from right to left");
             SpeedHoldKey = Config.Bind("Controls", "12. Speed Hold Toggle", KeyCode.Semicolon, "speed hold/clear");
 
             // Flight Values
@@ -1705,13 +1705,13 @@ namespace NOAutopilot
                             {
                                 APData.TargetCourse = -1f;
                             }
-                            else if (APData.TargetAlt >= 0f)
+                            else if (APData.TargetRoll != 0f)
                             {
-                                APData.TargetAlt = -1f;
+                                APData.TargetRoll = 0f;
                             }
                             else
                             {
-                                APData.TargetRoll = 0f;
+                                APData.TargetAlt = -1f;
                             }
                         }
 

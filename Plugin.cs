@@ -1337,6 +1337,8 @@ namespace NOAutopilot
         private static bool isRollSleeping = false;
         private static bool isSpdSleeping = false;
         private static float gcasNextScan = 0f;
+        private static bool dangerImminent = false;
+        private static bool warningZone = false;
         public static bool apStateBeforeGCAS = false;
         private static float currentAppliedThrottle = 0f;
 
@@ -1491,9 +1493,6 @@ namespace NOAutopilot
                             if (Time.time >= gcasNextScan)
                             {
                                 gcasNextScan = Time.time + 0.02f;
-
-                                bool dangerImminent = false;
-                                bool warningZone = false;
 
                                 Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f);
                                 float scanRange = (turnRadius * 1.5f) + warnDist + 500f;

@@ -1372,6 +1372,8 @@ namespace NOAutopilot
             isRollSleeping = false;
             isSpdSleeping = false;
             gcasNextScan = 0f;
+            dangerImminent = false;
+            warningZone = false;
             apStateBeforeGCAS = false;
             currentAppliedThrottle = 0f;
 

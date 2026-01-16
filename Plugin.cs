@@ -2204,7 +2204,7 @@ namespace NOAutopilot
                     float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastOverrideInputTime);
                     if (overrideRemaining > 0)
                     {
-                        content += $"<color={Plugin.ColorInfo.Value}>Override {overrideRemaining:F1}s</color>\n";
+                        content += $"<color={Plugin.ColorInfo.Value}>{overrideRemaining:F1}s</color>\n";
                     }
                 }
 

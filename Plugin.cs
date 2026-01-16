@@ -24,16 +24,16 @@ namespace NOAutopilot
         private Harmony harmony;
 
         // controls table
-        private readonly string table = $"<b>Toggle Autopilot:</b> = (Equals) — Self-explanatory.\n" +
-                    $"<b>Toggle Auto-Jammer:</b> / (Slash) — Self-explanatory.\n" +
-                    $"<b>Target Alt Small:</b> Up / Down Arrow — Small adj (0.1m)\n" +
-                    $"<b>Target Alt Large:</b> Left / Right Arrow — Large adj (100m)\n" +
-                    $"<b>Max Climb Rate:</b> PageUp / PageDown — Limit vertical speed\n" +
-                    $"<b>Bank Left/Right:</b> [ and ] — Adjust roll angle\n" +
-                    $"<b>Clear Crs/Roll/Alt:</b> ' (Quote) — Resets in order\n" +
-                    $"<b>Toggle GCAS:</b> \\ (Backslash) — Added just in case\n" +
-                    $"<b>Toggle Autothrottle:</b> ; — Writes speed to UI\n" +
-                    $"<b>Toggle AP GUI:</b> F8 — Opens/closes the GUI";
+        private readonly string table = $"<b>Toggle Autopilot:</b> = (Equals) | Self-explanatory.\n" +
+                    $"<b>Toggle Auto-Jammer:</b> / (Slash) | Self-explanatory.\n" +
+                    $"<b>Target Alt Small:</b> Up / Down Arrow | Small adj (0.1m)\n" +
+                    $"<b>Target Alt Large:</b> Left / Right Arrow | Large adj (100m)\n" +
+                    $"<b>Max Climb Rate:</b> PageUp / PageDown | Limit vertical speed\n" +
+                    $"<b>Bank Left/Right:</b> [ and ] (Brackets) | Adjust roll angle\n" +
+                    $"<b>Clear Crs/Roll/Alt:</b> ' (Quote) | Resets in order\n" +
+                    $"<b>Toggle GCAS:</b> \\ (Backslash) | Added just in case\n" +
+                    $"<b>Toggle Autothrottle:</b> ; (Semicolon) | Writes speed to UI\n" +
+                    $"<b>Toggle AP GUI:</b> F8 | Opens/closes the GUI";
 
         // ap menu?
         public static ConfigEntry<KeyCode> MenuKey;

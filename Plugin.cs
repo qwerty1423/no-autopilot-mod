@@ -30,7 +30,7 @@ namespace NOAutopilot
                     $"<b>Target Alt Large:</b> Left / Right Arrow | Large adj (100m)\n" +
                     $"<b>Max Climb Rate:</b> PageUp / PageDown | Limit vertical speed\n" +
                     $"<b>Bank Left/Right:</b> [ and ] (Brackets) | Adjust roll angle\n" +
-                    $"<b>Clear Crs/Roll/Alt:</b> ' (Quote) | Resets in order\n" +
+                    $"<b>Clear Crs/Roll/Alt/Roll:</b> ' (Quote) | Resets in order\n" +
                     $"<b>Toggle GCAS:</b> \\ (Backslash) | Added just in case\n" +
                     $"<b>Toggle Autothrottle:</b> ; (Semicolon) | Writes speed to UI\n" +
                     $"<b>Toggle AP GUI:</b> F8 | Opens/closes the GUI";
@@ -229,7 +229,7 @@ namespace NOAutopilot
             ClimbRateDownKey = Config.Bind("Controls", "08. Climb Rate Decrease", KeyCode.PageDown, "Decrease Max VS");
             BankLeftKey = Config.Bind("Controls", "09. Bank Left", KeyCode.LeftBracket, "Roll/course Left");
             BankRightKey = Config.Bind("Controls", "10. Bank Right", KeyCode.RightBracket, "Roll/course right");
-            ClearKey = Config.Bind("Controls", "11. clear alt/reset roll/clear crs", KeyCode.Quote, "every click will clear first thing it sees isn't clear from right to left");
+            ClearKey = Config.Bind("Controls", "11. clear crs/roll/alt/roll", KeyCode.Quote, "every click will clear/reset first thing it sees isn't clear from left to right");
             SpeedHoldKey = Config.Bind("Controls", "12. Speed Hold Toggle", KeyCode.Semicolon, "speed hold/clear");
 
             // Flight Values
@@ -1718,7 +1718,7 @@ namespace NOAutopilot
 
                         if (Input.GetKeyDown(Plugin.ClearKey.Value))
                         {
-                            if (APData.TargetCourse >= 0f)
+                            if (APData.TargetCourse != -1f)
                             {
                                 APData.TargetCourse = -1f;
                             }
@@ -1726,9 +1726,13 @@ namespace NOAutopilot
                             {
                                 APData.TargetRoll = 0f;
                             }
-                            else
+                            else if (APData.TargetAlt != -1f)
                             {
                                 APData.TargetAlt = -1f;
+                            }
+                            else
+                            {
+                                APData.TargetRoll = -999f;
                             }
                         }
 

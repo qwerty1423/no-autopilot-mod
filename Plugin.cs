@@ -116,7 +116,7 @@ namespace NOAutopilot
         // Auto GCAS
         public static ConfigEntry<bool> EnableGCAS;
         public static ConfigEntry<KeyCode> ToggleGCASKey;
-        public static ConfigEntry<float> GCAS_MaxG, GCAS_AP_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
+        public static ConfigEntry<float> GCAS_MaxG, GCAS_AP_MaxG, Autopilot_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
         public static ConfigEntry<float> GCAS_P, GCAS_I, GCAS_D, GCAS_ILimit;
 
         // Random
@@ -266,11 +266,12 @@ namespace NOAutopilot
             EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS on start", true, "GCAS off at start if disabled");
             ToggleGCASKey = Config.Bind("Auto GCAS", "2. Toggle GCAS Key", KeyCode.Backslash, "Turn Auto-GCAS on/off");
             GCAS_MaxG = Config.Bind("Auto GCAS", "3. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
-            GCAS_AP_MaxG = Config.Bind("Auto GCAS", "4. Max G for tf", 1.5f, "Max G for... gcas based TF??");
-            GCAS_WarnBuffer = Config.Bind("Auto GCAS", "5. Warning Buffer", 20.0f, "Seconds warning before auto-pull");
-            GCAS_AutoBuffer = Config.Bind("Auto GCAS", "6. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
-            GCAS_Deadzone = Config.Bind("Auto GCAS", "7. GCAS Deadzone", 0.5f, "GCAS override deadzone");
-            GCAS_ScanRadius = Config.Bind("Auto GCAS", "8. Scan Radius", 2.0f, "Width of the spherecast.");
+            GCAS_AP_MaxG = Config.Bind("Auto GCAS", "4. GCAS Max G on autopilot", 2f, "Max G for... gcas based TF??");
+            Autopilot_MaxG = Config.Bind("Auto GCAS", "5. AP Max G", 1.5f, "max G for autopilot maneuvers");
+            GCAS_WarnBuffer = Config.Bind("Auto GCAS", "6. Warning Buffer", 20.0f, "Seconds warning before auto-pull");
+            GCAS_AutoBuffer = Config.Bind("Auto GCAS", "7. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
+            GCAS_Deadzone = Config.Bind("Auto GCAS", "8. GCAS Deadzone", 0.5f, "GCAS override deadzone");
+            GCAS_ScanRadius = Config.Bind("Auto GCAS", "9. Scan Radius", 2.0f, "Width of the spherecast.");
             GCAS_P = Config.Bind("GCAS PID", "1. GCAS P", 0.1f, "G Error -> Stick");
             GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 1.0f, "Builds pull over time");
             GCAS_D = Config.Bind("GCAS PID", "3. GCAS D", 0.0f, "Dampens G overshoot");
@@ -1481,8 +1482,16 @@ namespace NOAutopilot
                             Vector3 velocity = APData.PlayerRB.velocity;
                             float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
 
-                            float gAccel = Plugin.GCAS_MaxG.Value * 9.81f;
-                            float turnRadius = speed * speed / gAccel;
+                            float gAccel = 5f;
+                            if (apStateBeforeGCAS)
+                            {
+                                gAccel = Plugin.GCAS_AP_MaxG.Value;
+                            }
+                            else
+                            {
+                                gAccel = Plugin.GCAS_MaxG.Value;
+                            }
+                            float turnRadius = speed * speed / (gAccel * 9.81f);
 
                             float reactionTime = Plugin.GCAS_AutoBuffer.Value + (Time.deltaTime * 2.0f);
                             float reactionDist = speed * reactionTime;
@@ -1831,7 +1840,7 @@ namespace NOAutopilot
 
                                     if (Plugin.Conf_InvertCourseRoll.Value) bankReq = -bankReq;
 
-                                    float safeMaxG = Mathf.Max(Plugin.GCAS_AP_MaxG.Value, 1.01f);
+                                    float safeMaxG = Mathf.Max(Plugin.GCAS_MaxG.Value, 1.01f);
                                     float gLimitBank = Mathf.Acos(1f / safeMaxG) * Mathf.Rad2Deg;
 
                                     float userLimit = (APData.TargetRoll != -999f && APData.TargetRoll != 0)
@@ -1974,7 +1983,8 @@ namespace NOAutopilot
                                     float possibleAccel = 5f;
                                     if (apStateBeforeGCAS)
                                     {
-                                        possibleAccel = Plugin.GCAS_AP_MaxG.Value;
+                                        // use normal pitch maxg if not gcas
+                                        possibleAccel = Plugin.Autopilot_MaxG.Value;
                                     }
                                     else
                                     {

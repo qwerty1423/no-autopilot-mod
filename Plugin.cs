@@ -116,7 +116,7 @@ namespace NOAutopilot
         // Auto GCAS
         public static ConfigEntry<bool> EnableGCAS;
         public static ConfigEntry<KeyCode> ToggleGCASKey;
-        public static ConfigEntry<float> GCAS_MaxG, GCAS_AP_MaxG, Autopilot_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
+        public static ConfigEntry<float> GCAS_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
         public static ConfigEntry<float> GCAS_P, GCAS_I, GCAS_D, GCAS_ILimit;
 
         // Random
@@ -186,7 +186,7 @@ namespace NOAutopilot
             // Settings
             StickDeadzone = Config.Bind("Settings", "1. Stick Deadzone", 0.01f, "Threshold");
             // DisengageDelay = Config.Bind("Settings", "2. Disengage Delay", 10f, "Seconds of continuous input over deadzone before AP turns off");
-            ReengageDelay = Config.Bind("Settings", "2. Reengage Delay", 2f, "Seconds to wait after stick release before AP resumes control");
+            ReengageDelay = Config.Bind("Settings", "2. Reengage Delay", 0.4f, "Seconds to wait after stick release before AP resumes control");
             InvertRoll = Config.Bind("Settings", "3. Invert Roll", true, "Flip Roll");
             InvertPitch = Config.Bind("Settings", "4. Invert Pitch", true, "Flip Pitch");
             Conf_InvertCourseRoll = Config.Bind("Settings", "5. Invert Bank Direction", true, "Toggle if plane turns wrong way");
@@ -266,12 +266,10 @@ namespace NOAutopilot
             EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS on start", true, "GCAS off at start if disabled");
             ToggleGCASKey = Config.Bind("Auto GCAS", "2. Toggle GCAS Key", KeyCode.Backslash, "Turn Auto-GCAS on/off");
             GCAS_MaxG = Config.Bind("Auto GCAS", "3. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
-            GCAS_AP_MaxG = Config.Bind("Auto GCAS", "4. GCAS Max G on autopilot", 3f, "Max G for... gcas based TF??");
-            Autopilot_MaxG = Config.Bind("Auto GCAS", "5. AP Max G", 1.5f, "max G for autopilot maneuvers");
-            GCAS_WarnBuffer = Config.Bind("Auto GCAS", "6. Warning Buffer", 20.0f, "Seconds warning before auto-pull");
-            GCAS_AutoBuffer = Config.Bind("Auto GCAS", "7. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
-            GCAS_Deadzone = Config.Bind("Auto GCAS", "8. GCAS Deadzone", 0.5f, "GCAS override deadzone");
-            GCAS_ScanRadius = Config.Bind("Auto GCAS", "9. Scan Radius", 2.0f, "Width of the spherecast.");
+            GCAS_WarnBuffer = Config.Bind("Auto GCAS", "4. Warning Buffer", 20.0f, "Seconds warning before auto-pull");
+            GCAS_AutoBuffer = Config.Bind("Auto GCAS", "5. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
+            GCAS_Deadzone = Config.Bind("Auto GCAS", "6. GCAS Deadzone", 0.5f, "GCAS override deadzone");
+            GCAS_ScanRadius = Config.Bind("Auto GCAS", "7. Scan Radius", 2.0f, "Width of the spherecast.");
             GCAS_P = Config.Bind("GCAS PID", "1. GCAS P", 0.1f, "G Error -> Stick");
             GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 1.0f, "Builds pull over time");
             GCAS_D = Config.Bind("GCAS PID", "3. GCAS D", 0.0f, "Dampens G overshoot");
@@ -1197,8 +1195,6 @@ namespace NOAutopilot
         public static bool SpeedHoldIsMach = false;
         public static bool NavEnabled = false;
         public static float TargetAlt = -1f;
-        public static float OriginalTargetAlt = -1f;
-        public static float WorkingTargetAlt = -1f;
         public static float TargetRoll = -999f;
         public static float TargetSpeed = -1f;
         public static float TargetCourse = -1f;
@@ -1206,7 +1202,7 @@ namespace NOAutopilot
         public static float CurrentRoll = 0f;
         public static float CurrentMaxClimbRate = -1f;
         public static float SpeedEma = 0f;
-        public static float LastOverrideInputTime = -999f;
+        public static float LastPilotInputTime = -999f;
         public static object LocalPilot;
         public static List<Vector3> NavQueue = [];
         public static List<GameObject> NavVisuals = [];
@@ -1227,8 +1223,6 @@ namespace NOAutopilot
             SpeedHoldIsMach = false;
             NavEnabled = false;
             TargetAlt = -1f;
-            OriginalTargetAlt = -1f;
-            WorkingTargetAlt = -1f;
             TargetRoll = -999f;
             TargetSpeed = -1f;
             TargetCourse = -1f;
@@ -1236,7 +1230,7 @@ namespace NOAutopilot
             CurrentRoll = 0f;
             CurrentMaxClimbRate = -1f;
             SpeedEma = 0f;
-            LastOverrideInputTime = -999f;
+            LastPilotInputTime = -999f;
             LocalPilot = null;
             PlayerTransform = null;
             PlayerRB = null;
@@ -1284,12 +1278,9 @@ namespace NOAutopilot
                     APData.GCASActive = false;
                     APData.GCASWarning = false;
                     APData.TargetAlt = altitude;
-                    APData.OriginalTargetAlt = -1f;
                     APData.TargetRoll = 0f;
-                    APData.TargetSpeed = -1f;
-                    APData.TargetCourse = -1f;
                     APData.CurrentMaxClimbRate = -1f;
-                    APData.LastOverrideInputTime = -999f;
+                    APData.LastPilotInputTime = -999f;
                     APData.LocalPilot = null;
                     APData.LocalWeaponManager = null;
                     if (APData.LocalAircraft != null)
@@ -1334,7 +1325,6 @@ namespace NOAutopilot
         private static float lastThrottleOut = 0f;
         private static float lastBankReq = 0f;
         private static float lastVSReq = 0f;
-        private static float lastFrameTargetVS = 0f;
         private static float lastAngleReq = 0f;
 
         private static bool wasEnabled = false;
@@ -1368,7 +1358,6 @@ namespace NOAutopilot
             lastThrottleOut = 0f;
             lastBankReq = 0f;
             lastVSReq = 0f;
-            lastFrameTargetVS = 0f;
             lastAngleReq = 0f;
 
             wasEnabled = false;
@@ -1402,9 +1391,7 @@ namespace NOAutopilot
             lastThrottleOut = currentThrottle;
             lastBankReq = 0f;
             lastVSReq = 0f;
-            lastFrameTargetVS = APData.PlayerRB.velocity.y;
             lastAngleReq = 0f;
-            APData.WorkingTargetAlt = APData.CurrentAlt;
 
             isPitchSleeping = isRollSleeping = isSpdSleeping = false;
             pitchSleepUntil = rollSleepUntil = spdSleepUntil = 0f;
@@ -1490,16 +1477,8 @@ namespace NOAutopilot
                             Vector3 velocity = APData.PlayerRB.velocity;
                             float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
 
-                            float gAccel = 5f;
-                            if (apStateBeforeGCAS)
-                            {
-                                gAccel = Plugin.GCAS_AP_MaxG.Value;
-                            }
-                            else
-                            {
-                                gAccel = Plugin.GCAS_MaxG.Value;
-                            }
-                            float turnRadius = speed * speed / (gAccel * 9.81f);
+                            float gAccel = Plugin.GCAS_MaxG.Value * 9.81f;
+                            float turnRadius = speed * speed / gAccel;
 
                             float reactionTime = Plugin.GCAS_AutoBuffer.Value + (Time.deltaTime * 2.0f);
                             float reactionDist = speed * reactionTime;
@@ -1560,15 +1539,6 @@ namespace NOAutopilot
                                 {
                                     APData.GCASActive = false;
                                     APData.Enabled = apStateBeforeGCAS;
-
-                                    if (APData.OriginalTargetAlt > 0)
-                                    {
-                                        APData.TargetAlt = APData.OriginalTargetAlt;
-                                        APData.WorkingTargetAlt = APData.CurrentAlt;
-                                    }
-                                    pidGCAS.Reset();
-                                    APData.LastOverrideInputTime = Time.time;
-                                    lastFrameTargetVS = APData.PlayerRB.velocity.y;
                                 }
                                 else
                                 {
@@ -1580,7 +1550,6 @@ namespace NOAutopilot
                             else if (dangerImminent)
                             {
                                 apStateBeforeGCAS = APData.Enabled;
-                                APData.OriginalTargetAlt = APData.TargetAlt;
                                 APData.Enabled = true;
                                 APData.GCASActive = true;
                                 APData.TargetRoll = 0f;
@@ -1680,10 +1649,10 @@ namespace NOAutopilot
 
                 if (pilotPitch || pilotRoll)
                 {
-                    APData.LastOverrideInputTime = Time.time;
+                    APData.LastPilotInputTime = Time.time;
                 }
 
-                bool isWaitingToReengage = (Time.time - APData.LastOverrideInputTime) < Plugin.ReengageDelay.Value;
+                bool isWaitingToReengage = (Time.time - APData.LastPilotInputTime) < Plugin.ReengageDelay.Value;
 
                 // autopilot
                 if (APData.Enabled || APData.GCASActive)
@@ -1715,8 +1684,6 @@ namespace NOAutopilot
                             if (Input.GetKey(Plugin.BankLeftKey.Value)) APData.TargetRoll = Mathf.Repeat(APData.TargetRoll + Plugin.BankStep.Value + 180f, 360f) - 180f;
                             if (Input.GetKey(Plugin.BankRightKey.Value)) APData.TargetRoll = Mathf.Repeat(APData.TargetRoll - Plugin.BankStep.Value + 180f, 360f) - 180f;
                         }
-
-                        APData.OriginalTargetAlt = APData.TargetAlt;
                     }
 
                     // throttle control
@@ -1821,7 +1788,7 @@ namespace NOAutopilot
 
                     if (rollAxisActive)
                     {
-                        if ((pilotRoll || isWaitingToReengage) && !APData.GCASActive)
+                        if (pilotRoll || isWaitingToReengage)
                         {
                             pidRoll.Reset();
                             pidCrs.Reset();
@@ -1918,13 +1885,12 @@ namespace NOAutopilot
 
                     if (pitchAxisActive)
                     {
-                        if ((pilotPitch || isWaitingToReengage) && !APData.GCASActive)
+                        if (pilotPitch || isWaitingToReengage)
                         {
                             pidAlt.Reset();
                             pidVS.Reset();
                             pidAngle.Reset();
-                            APData.WorkingTargetAlt = APData.CurrentAlt;
-                            lastFrameTargetVS = APData.PlayerRB.velocity.y;
+                            APData.TargetAlt = APData.CurrentAlt;
                         }
                         else
                         {
@@ -1933,19 +1899,7 @@ namespace NOAutopilot
                             // gcas
                             if (APData.GCASActive)
                             {
-                                pidAlt.Reset();
-                                pidVS.Reset();
-                                pidAngle.Reset();
-                                pidRoll.Reset();
-                                float targetG = 5f;
-                                if (apStateBeforeGCAS)
-                                {
-                                    targetG = Plugin.GCAS_AP_MaxG.Value;
-                                }
-                                else
-                                {
-                                    targetG = Plugin.GCAS_MaxG.Value;
-                                }
+                                float targetG = Plugin.GCAS_MaxG.Value;
                                 float gError = targetG - currentG;
                                 pitchOut = pidGCAS.Evaluate(gError, currentG, dt,
                                     Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,
@@ -1954,12 +1908,7 @@ namespace NOAutopilot
                             // alt hold
                             else if (APData.TargetAlt > 0f)
                             {
-                                float transitionSpeed = 30f;
-                                if (APData.WorkingTargetAlt < 0) APData.WorkingTargetAlt = APData.CurrentAlt;
-
-                                APData.WorkingTargetAlt = Mathf.MoveTowards(APData.WorkingTargetAlt, APData.TargetAlt, transitionSpeed * dt);
-
-                                float altError = APData.WorkingTargetAlt - APData.CurrentAlt;
+                                float altError = APData.TargetAlt - APData.CurrentAlt;
                                 float currentVS = APData.PlayerRB.velocity.y;
 
                                 // pitch sleep
@@ -1995,20 +1944,16 @@ namespace NOAutopilot
                                 }
                                 else
                                 {
-                                    float possibleG = APData.GCASActive ? Plugin.GCAS_MaxG.Value : Plugin.Autopilot_MaxG.Value;
-                                    float maxSafeVS = Mathf.Sqrt(2f * possibleG * 9.81f * Mathf.Abs(altError));
-
-                                    float rawPIDTargetVS = pidAlt.Evaluate(altError, APData.CurrentAlt, dt,
+                                    float targetVS = pidAlt.Evaluate(altError, APData.CurrentAlt, dt,
                                         Plugin.Conf_Alt_P.Value, Plugin.Conf_Alt_I.Value, Plugin.Conf_Alt_D.Value,
                                         Plugin.Conf_Alt_ILimit.Value, false, null,
                                         lastVSReq, APData.CurrentMaxClimbRate * 0.95f);
 
-                                    float clampedTargetVS = Mathf.Clamp(rawPIDTargetVS, -maxSafeVS, maxSafeVS);
+                                    lastVSReq = targetVS;
 
-                                    float maxChangeAllowed = possibleG * 9.81f * dt;
-                                    float targetVS = Mathf.MoveTowards(lastFrameTargetVS, clampedTargetVS, maxChangeAllowed);
-
-                                    lastFrameTargetVS = targetVS;
+                                    float possibleAccel = Plugin.GCAS_MaxG.Value;
+                                    float maxSafeVS = Mathf.Sqrt(2f * possibleAccel * Mathf.Abs(altError));
+                                    targetVS = Mathf.Clamp(targetVS, -maxSafeVS, maxSafeVS);
 
                                     targetVS = Mathf.Clamp(targetVS, -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
                                     float vsError = targetVS - currentVS;
@@ -2228,7 +2173,7 @@ namespace NOAutopilot
                     content += $"<color={Plugin.ColorAPOn.Value}>{altStr} {climbStr} {spdStr}\n{degStr} {navStr}</color>\n";
                 }
 
-                float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastOverrideInputTime);
+                float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastPilotInputTime);
                 bool isOverridden = overrideRemaining > 0;
                 if (APData.Enabled && isOverridden)
                 {

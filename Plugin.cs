@@ -1912,7 +1912,7 @@ namespace NOAutopilot
                             if (APData.GCASActive)
                             {
                                 float targetG = 5f;
-                                if (APData.Enabled)
+                                if (apStateBeforeGCAS)
                                 {
                                     targetG = Plugin.GCAS_AP_MaxG.Value;
                                 }
@@ -1972,7 +1972,7 @@ namespace NOAutopilot
                                     lastVSReq = targetVS;
 
                                     float possibleAccel = 5f;
-                                    if (APData.Enabled)
+                                    if (apStateBeforeGCAS)
                                     {
                                         possibleAccel = Plugin.GCAS_AP_MaxG.Value;
                                     }

@@ -53,6 +53,7 @@ namespace NOAutopilot
         private bool _firstWindowInit = true;
 
         private string _currentHoverTarget = "";
+        private string _lastActiveTooltip = "";
         private Vector2 _stationaryPos;
         private float _stationaryTimer = 0f;
         private bool _isTooltipVisible = false;
@@ -621,9 +622,8 @@ namespace NOAutopilot
             _windowRect.width = Mathf.Min(_windowRect.width, Screen.width);
             _windowRect.height = Mathf.Min(_windowRect.height, Screen.height);
 
+            GUI.depth = 0;
             _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, "Autopilot controls", _styleWindow);
-
-            DrawCustomTooltip();
 
             float clampedX = Mathf.Clamp(_windowRect.x, 0, Screen.width - _windowRect.width);
             float clampedY = Mathf.Clamp(_windowRect.y, 0, Screen.height - _windowRect.height);
@@ -633,6 +633,9 @@ namespace NOAutopilot
                 _windowRect.x = clampedX;
                 _windowRect.y = clampedY;
             }
+
+            GUI.depth = -1;
+            DrawCustomTooltip();
         }
 
         // gui
@@ -942,20 +945,31 @@ namespace NOAutopilot
             }
             else
             {
-                GUILayout.Label(new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.", "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the button."), _styleLabel);
+                GUILayout.Label(new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.", "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the item."), _styleLabel);
                 GUILayout.EndHorizontal();
             }
 
             GUILayout.EndVertical();
 
             GUILayout.EndScrollView();
+
+            if (Event.current.type == EventType.Repaint && !string.IsNullOrEmpty(GUI.tooltip))
+            {
+                _lastActiveTooltip = GUI.tooltip;
+            }
         }
 
         private void DrawCustomTooltip()
         {
-            // works similarly to firefox?
+            if (Event.current.type != EventType.Repaint) return;
 
-            string tooltipUnderMouse = GUI.tooltip;
+            string tooltipUnderMouse = _lastActiveTooltip;
+
+            if (!_windowRect.Contains(Event.current.mousePosition))
+            {
+                tooltipUnderMouse = "";
+            }
+
             Vector2 mousePos = Event.current.mousePosition;
             float now = Time.realtimeSinceStartup;
 
@@ -1002,9 +1016,9 @@ namespace NOAutopilot
                 if (tooltipRect.xMax > Screen.width) tooltipRect.x = mousePos.x - size.x - 5;
                 if (tooltipRect.yMax > Screen.height) tooltipRect.y = mousePos.y - size.y - 5;
 
-                GUI.depth = 0;
                 GUI.Box(tooltipRect, content, style);
             }
+            if (Event.current.type == EventType.Repaint) _lastActiveTooltip = "";
         }
 
         public static void RefreshNavVisuals()

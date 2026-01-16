@@ -266,7 +266,7 @@ namespace NOAutopilot
             EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS on start", true, "GCAS off at start if disabled");
             ToggleGCASKey = Config.Bind("Auto GCAS", "2. Toggle GCAS Key", KeyCode.Backslash, "Turn Auto-GCAS on/off");
             GCAS_MaxG = Config.Bind("Auto GCAS", "3. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
-            GCAS_AP_MaxG = Config.Bind("Auto GCAS", "4. Max G on autopilot", 1.5f, "Max G for... gcas based TFR??");
+            GCAS_AP_MaxG = Config.Bind("Auto GCAS", "4. Max G for tf", 1.5f, "Max G for... gcas based TF??");
             GCAS_WarnBuffer = Config.Bind("Auto GCAS", "5. Warning Buffer", 20.0f, "Seconds warning before auto-pull");
             GCAS_AutoBuffer = Config.Bind("Auto GCAS", "6. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
             GCAS_Deadzone = Config.Bind("Auto GCAS", "7. GCAS Deadzone", 0.5f, "GCAS override deadzone");
@@ -1971,7 +1971,16 @@ namespace NOAutopilot
 
                                     lastVSReq = targetVS;
 
-                                    float possibleAccel = Plugin.GCAS_MaxG.Value;
+                                    float possibleAccel = 5f;
+                                    if (APData.Enabled)
+                                    {
+                                        possibleAccel = Plugin.GCAS_AP_MaxG.Value;
+                                    }
+                                    else
+                                    {
+                                        possibleAccel = Plugin.GCAS_MaxG.Value;
+                                    }
+
                                     float maxSafeVS = Mathf.Sqrt(2f * possibleAccel * Mathf.Abs(altError));
                                     targetVS = Mathf.Clamp(targetVS, -maxSafeVS, maxSafeVS);
 

@@ -2199,7 +2199,7 @@ namespace NOAutopilot
                     content += $"<color={Plugin.ColorInfo.Value}>GCAS-</color>\n";
                 }
 
-                if (Plugin.ShowOverride.Value)
+                if (Plugin.ShowOverride.Value && APData.Enabled && !APData.GCASActive)
                 {
                     float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastOverrideInputTime);
                     if (overrideRemaining > 0)

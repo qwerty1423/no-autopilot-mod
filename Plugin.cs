@@ -79,6 +79,7 @@ namespace NOAutopilot
         // Settings
         public static ConfigEntry<float> StickDeadzone;
         // public static ConfigEntry<float> DisengageDelay;
+        public static ConfigEntry<float> ReengageDelay;
         public static ConfigEntry<bool> InvertRoll, InvertPitch;
         public static ConfigEntry<bool> Conf_InvertCourseRoll;
 
@@ -185,6 +186,7 @@ namespace NOAutopilot
             // Settings
             StickDeadzone = Config.Bind("Settings", "1. Stick Deadzone", 0.01f, "Threshold");
             // DisengageDelay = Config.Bind("Settings", "2. Disengage Delay", 10f, "Seconds of continuous input over deadzone before AP turns off");
+            ReengageDelay = Config.Bind("Settings", "2. Reengage Delay", 0.4f, "Seconds to wait after stick release before AP resumes control");
             InvertRoll = Config.Bind("Settings", "3. Invert Roll", true, "Flip Roll");
             InvertPitch = Config.Bind("Settings", "4. Invert Pitch", true, "Flip Pitch");
             Conf_InvertCourseRoll = Config.Bind("Settings", "5. Invert Bank Direction", true, "Toggle if plane turns wrong way");
@@ -447,17 +449,18 @@ namespace NOAutopilot
                     SyncMenuValues();
                 }
             }
-            if (Input.GetKeyDown(Plugin.ToggleKey.Value))
+            if (Input.GetKeyDown(ToggleKey.Value))
             {
                 APData.Enabled = !APData.Enabled;
+                APData.TargetAlt = APData.CurrentAlt;
             }
 
-            if (Plugin.EnableAutoJammer.Value && Input.GetKeyDown(Plugin.AutoJammerKey.Value))
+            if (EnableAutoJammer.Value && Input.GetKeyDown(AutoJammerKey.Value))
             {
                 APData.AutoJammerActive = !APData.AutoJammerActive;
             }
 
-            if (Input.GetKeyDown(Plugin.ToggleGCASKey.Value))
+            if (Input.GetKeyDown(ToggleGCASKey.Value))
             {
                 APData.GCASEnabled = !APData.GCASEnabled;
                 if (!APData.GCASEnabled) { APData.GCASActive = false; APData.GCASWarning = false; }
@@ -1199,6 +1202,7 @@ namespace NOAutopilot
         public static float CurrentRoll = 0f;
         public static float CurrentMaxClimbRate = -1f;
         public static float SpeedEma = 0f;
+        public static float LastPilotInputTime = -999f;
         public static object LocalPilot;
         public static List<Vector3> NavQueue = [];
         public static List<GameObject> NavVisuals = [];
@@ -1226,6 +1230,7 @@ namespace NOAutopilot
             CurrentRoll = 0f;
             CurrentMaxClimbRate = -1f;
             SpeedEma = 0f;
+            LastPilotInputTime = -999f;
             LocalPilot = null;
             PlayerTransform = null;
             PlayerRB = null;
@@ -1275,7 +1280,7 @@ namespace NOAutopilot
                     APData.TargetAlt = altitude;
                     APData.TargetRoll = 0f;
                     APData.CurrentMaxClimbRate = -1f;
-
+                    APData.LastPilotInputTime = -999f;
                     APData.LocalPilot = null;
                     APData.LocalWeaponManager = null;
                     if (APData.LocalAircraft != null)
@@ -1329,7 +1334,7 @@ namespace NOAutopilot
         private static bool isPitchSleeping = false;
         private static bool isRollSleeping = false;
         private static bool isSpdSleeping = false;
-        private static float gcasNextScan = 0f;
+        // private static float gcasNextScan = 0f;
         public static bool apStateBeforeGCAS = false;
         private static float currentAppliedThrottle = 0f;
 
@@ -1362,7 +1367,7 @@ namespace NOAutopilot
             isPitchSleeping = false;
             isRollSleeping = false;
             isSpdSleeping = false;
-            gcasNextScan = 0f;
+            // gcasNextScan = 0f;
             apStateBeforeGCAS = false;
             currentAppliedThrottle = 0f;
 
@@ -1483,28 +1488,27 @@ namespace NOAutopilot
                             bool warningZone = false;
                             // bool isWallThreat = false;
 
-                            if (Time.time >= gcasNextScan)
+                            // if (Time.time >= gcasNextScan)
+                            // {
+                            // gcasNextScan = Time.time + 0.02f;
+                            Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f);
+                            float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
+
+                            if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange))
                             {
-                                gcasNextScan = Time.time + 0.02f;
-                                Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f);
-                                float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
-
-                                if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange))
+                                if (hit.transform.root != APData.PlayerTransform.root)
                                 {
-                                    if (hit.transform.root != APData.PlayerTransform.root)
-                                    {
-                                        float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
-                                        float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
+                                    float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
+                                    float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
 
-                                        if (hit.distance < (reqArc + reactionDist + 20f))
-                                        {
-                                            dangerImminent = true;
-                                            // if (hit.normal.y < 0.7f) isWallThreat = true;
-                                        }
-                                        else if (hit.distance < (reqArc + reactionDist + warnDist))
-                                        {
-                                            warningZone = true;
-                                        }
+                                    if (hit.distance < (reqArc + reactionDist + 20f))
+                                    {
+                                        dangerImminent = true;
+                                        // if (hit.normal.y < 0.7f) isWallThreat = true;
+                                    }
+                                    else if (hit.distance < (reqArc + reactionDist + warnDist))
+                                    {
+                                        warningZone = true;
                                     }
                                 }
                             }
@@ -1540,6 +1544,7 @@ namespace NOAutopilot
                                 {
                                     APData.GCASWarning = true;
                                     APData.TargetRoll = 0f;
+                                    APData.TargetAlt = APData.CurrentAlt * 1.1f;
                                 }
                             }
                             else if (dangerImminent)
@@ -1639,12 +1644,19 @@ namespace NOAutopilot
                     }
                 }
 
+                bool pilotPitch = Mathf.Abs(stickPitch) > Plugin.StickDeadzone.Value;
+                bool pilotRoll = Mathf.Abs(stickRoll) > Plugin.StickDeadzone.Value;
+
+                if (pilotPitch || pilotRoll)
+                {
+                    APData.LastPilotInputTime = Time.time;
+                }
+
+                bool isWaitingToReengage = (Time.time - APData.LastPilotInputTime) < Plugin.ReengageDelay.Value;
+
                 // autopilot
                 if (APData.Enabled || APData.GCASActive)
                 {
-                    bool pilotPitch = Mathf.Abs(stickPitch) > Plugin.StickDeadzone.Value;
-                    bool pilotRoll = Mathf.Abs(stickRoll) > Plugin.StickDeadzone.Value;
-
                     // keys
                     if (!pilotPitch && !pilotRoll && !APData.GCASActive)
                     {
@@ -1675,7 +1687,7 @@ namespace NOAutopilot
                     }
 
                     // throttle control
-                    if (APData.TargetSpeed > 0f && Plugin.f_throttle != null && !APData.GCASActive)
+                    if (APData.TargetSpeed > 0f && Plugin.f_throttle != null)
                     {
                         float currentSpeed = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
                         float targetSpeedMS;
@@ -1776,7 +1788,7 @@ namespace NOAutopilot
 
                     if (rollAxisActive)
                     {
-                        if (pilotRoll && !APData.GCASActive)
+                        if (pilotRoll || isWaitingToReengage)
                         {
                             pidRoll.Reset();
                             pidCrs.Reset();
@@ -1873,11 +1885,12 @@ namespace NOAutopilot
 
                     if (pitchAxisActive)
                     {
-                        if (pilotPitch && !APData.GCASActive)
+                        if (pilotPitch || isWaitingToReengage)
                         {
                             pidAlt.Reset();
                             pidVS.Reset();
                             pidAngle.Reset();
+                            APData.TargetAlt = APData.CurrentAlt;
                         }
                         else
                         {
@@ -1891,7 +1904,6 @@ namespace NOAutopilot
                                 pitchOut = pidGCAS.Evaluate(gError, currentG, dt,
                                     Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,
                                     Plugin.GCAS_ILimit.Value, true);
-                                if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
                             }
                             // alt hold
                             else if (APData.TargetAlt > 0f)
@@ -1966,11 +1978,10 @@ namespace NOAutopilot
 
                                     if (useRandom) pitchOut += (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * 2f * Plugin.RandomStrength.Value;
                                 }
-
-                                if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
-                                pitchOut = Mathf.Clamp(pitchOut, -1f, 1f);
                             }
 
+                            if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
+                            pitchOut = Mathf.Clamp(pitchOut, -1f, 1f);
                             Plugin.f_pitch?.SetValue(inputObj, pitchOut);
                         }
                     }
@@ -2119,19 +2130,6 @@ namespace NOAutopilot
 
                 content += "\n";
 
-                if (APData.GCASActive)
-                {
-                    content += $"<color={Plugin.ColorCrit.Value}>A-GCAS</color>\n";
-                }
-                else if (APData.GCASWarning)
-                {
-                    content += $"<color={Plugin.ColorCrit.Value}>PULL UP</color>\n";
-                }
-                else if (!APData.GCASEnabled && Plugin.ShowGCASOff.Value)
-                {
-                    content += $"<color={Plugin.ColorWarn.Value}>GCAS-</color>\n";
-                }
-
                 // (AP was on before GCAS) OR (AP is on and no GCAS)
                 bool showAPInfo = (ControlOverridePatch.apStateBeforeGCAS && APData.GCASActive) || (APData.Enabled && !APData.GCASActive);
 
@@ -2167,10 +2165,31 @@ namespace NOAutopilot
                     if (APData.NavEnabled && APData.NavQueue.Count > 0)
                     {
                         float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
-                        navStr = " > " + ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value);
+                        navStr = "W>" + ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value);
                     }
+                    else
+                        navStr = "W-";
 
-                    content += $"<color={Plugin.ColorAPOn.Value}>{altStr} {climbStr}\n{spdStr} {degStr}{navStr}</color>\n";
+                    content += $"<color={Plugin.ColorAPOn.Value}>{altStr} {climbStr} {spdStr}\n{degStr} {navStr}</color>\n";
+                }
+
+                float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastPilotInputTime);
+                bool isOverridden = overrideRemaining > 0;
+                if (APData.Enabled && isOverridden)
+                {
+                    content += $"<color={Plugin.ColorWarn.Value}>Override {overrideRemaining:F1}s</color>\n";
+                }
+                else if (APData.GCASActive)
+                {
+                    content += $"<color={Plugin.ColorCrit.Value}>A-GCAS</color>\n";
+                }
+                else if (APData.GCASWarning)
+                {
+                    content += $"<color={Plugin.ColorCrit.Value}>PULL UP</color>\n";
+                }
+                else if (!APData.GCASEnabled && Plugin.ShowGCASOff.Value)
+                {
+                    content += $"<color={Plugin.ColorWarn.Value}>GCAS-</color>\n";
                 }
 
                 if (APData.AutoJammerActive)

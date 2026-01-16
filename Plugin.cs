@@ -945,8 +945,22 @@ namespace NOAutopilot
             }
             else
             {
-                GUILayout.Label(new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.", "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the item."), _styleLabel);
+                // display massive tooltips??
                 GUILayout.EndHorizontal();
+                GUILayout.Label(new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.", "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the item."), _styleLabel);
+
+                string table = $"<b>Action</b><pos=40%><b>Key</b><pos=70%><b>Description</b>\n" +
+               $"Toggle Autopilot<pos=40%>`=` (Equals)<pos=70%>Self-explanatory.\n" +
+               $"Toggle Auto-Jammer<pos=40%>`/` (Slash)<pos=70%>^^^\n" +
+               $"Target Alt Small<pos=40%>`Up`/`Down`<pos=70%>Small adj. (0.1m)\n" +
+               $"Target Alt Large<pos=40%>`Left`/`Right`<pos=70%>Large adj. (100m)\n" +
+               $"Max Climb Rate<pos=40%>`PgUp`/`PgDn`<pos=70%>Limit vertical speed\n" +
+               $"Bank Left/Right<pos=40%>`[` and `]`<pos=70%>Adjust roll angle\n" +
+               $"clear crs/roll/alt<pos=40%>`'` (Quote)<pos=70%>Resets in order\n" +
+               $"Toggle GCAS<pos=40%>`\\` (Backslash)<pos=70%>added just in case\n" +
+               $"Toggle autothrottle<pos=40%>`;`<pos=70%>write current speed\n" +
+               $"<b>Toggle AP GUI</b><pos=40%><b>F8</b><pos=70%><b>opens/closes GUI</b>";
+                GUILayout.Label(new GUIContent("(Hover above for some info)\n(Hover on this text for controls)", table), _styleLabel);
             }
 
             GUILayout.EndVertical();

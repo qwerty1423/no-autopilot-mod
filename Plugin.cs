@@ -23,6 +23,22 @@ namespace NOAutopilot
         internal new static ManualLogSource Logger;
         private Harmony harmony;
 
+        // controls table
+        private readonly string table = $"""
+    | Action                      | Key                    | Description                              |
+    | :-------------------------- | :--------------------- | :--------------------------------------- |
+    | Toggle Autopilot            | `=` (Equals)           | Self-explanatory.                        |
+    | Toggle Auto-Jammer          | `/` (Slash)            | ^^^                                      |
+    | Target Alt Small Adjustment | `Up` / `Down` Arrow    | Small adjustments (0.1m default)         |
+    | Target Alt Large Adjustment | `Left` / `Right` Arrow | Large adjustments (100m default)         |
+    | Max Climb Rate +/-          | `PageUp` / `PageDown`  | Limit vertical speed                     |
+    | Bank Left/Right             | `[` and `]`            | Adjust roll angle                        |
+    | clear crs/roll/alt          | `'` (Quote)            | Resets in that order, one per keystroke  |
+    | Toggle GCAS                 | `\` (Backslash)        | added just in case                       |
+    | Toggle autothrottle         | `;`                    | will write current speed to ui/delete it |
+    | **Toggle AP GUI**           | `F8`                   | **opens/closes the GUI**                 |
+    """;
+
         // ap menu?
         public static ConfigEntry<KeyCode> MenuKey;
         private Rect _windowRect = new(50, 50, 227, 312);
@@ -623,7 +639,7 @@ namespace NOAutopilot
             _windowRect.height = Mathf.Min(_windowRect.height, Screen.height);
 
             GUI.depth = 0;
-            _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, "Autopilot controls", _styleWindow);
+            _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, new GUIContent("Autopilot controls", table), _styleWindow);
 
             float clampedX = Mathf.Clamp(_windowRect.x, 0, Screen.width - _windowRect.width);
             float clampedY = Mathf.Clamp(_windowRect.y, 0, Screen.height - _windowRect.height);
@@ -949,17 +965,6 @@ namespace NOAutopilot
                 GUILayout.EndHorizontal();
                 GUILayout.Label(new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.", "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the item."), _styleLabel);
 
-                string table = $"<b>Action</b><pos=40%><b>Key</b><pos=70%><b>Description</b>\n" +
-               $"Toggle Autopilot<pos=40%>`=` (Equals)<pos=70%>Self-explanatory.\n" +
-               $"Toggle Auto-Jammer<pos=40%>`/` (Slash)<pos=70%>^^^\n" +
-               $"Target Alt Small<pos=40%>`Up`/`Down`<pos=70%>Small adj. (0.1m)\n" +
-               $"Target Alt Large<pos=40%>`Left`/`Right`<pos=70%>Large adj. (100m)\n" +
-               $"Max Climb Rate<pos=40%>`PgUp`/`PgDn`<pos=70%>Limit vertical speed\n" +
-               $"Bank Left/Right<pos=40%>`[` and `]`<pos=70%>Adjust roll angle\n" +
-               $"clear crs/roll/alt<pos=40%>`'` (Quote)<pos=70%>Resets in order\n" +
-               $"Toggle GCAS<pos=40%>`\\` (Backslash)<pos=70%>added just in case\n" +
-               $"Toggle autothrottle<pos=40%>`;`<pos=70%>write current speed\n" +
-               $"<b>Toggle AP GUI</b><pos=40%><b>F8</b><pos=70%><b>opens/closes GUI</b>";
                 GUILayout.Label(new GUIContent("(Hover above for some info)\n(Hover on this text for controls)", table), _styleLabel);
             }
 

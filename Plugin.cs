@@ -1544,6 +1544,7 @@ namespace NOAutopilot
                                 {
                                     APData.GCASWarning = true;
                                     APData.TargetRoll = 0f;
+                                    APData.TargetAlt = APData.CurrentAlt;
                                 }
                             }
                             else if (dangerImminent)
@@ -1686,7 +1687,7 @@ namespace NOAutopilot
                     }
 
                     // throttle control
-                    if (APData.TargetSpeed > 0f && Plugin.f_throttle != null && !APData.GCASActive)
+                    if (APData.TargetSpeed > 0f && Plugin.f_throttle != null)
                     {
                         float currentSpeed = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
                         float targetSpeedMS;

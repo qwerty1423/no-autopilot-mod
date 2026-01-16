@@ -1011,10 +1011,10 @@ namespace NOAutopilot
                 GUIStyle style = GUI.skin.box;
                 Vector2 size = style.CalcSize(content);
 
-                Rect tooltipRect = new(mousePos.x + 12, mousePos.y + 12, size.x, size.y);
+                Rect tooltipRect = new(_stationaryPos.x + 12, _stationaryPos.y + 12, size.x, size.y);
 
-                if (tooltipRect.xMax > Screen.width) tooltipRect.x = mousePos.x - size.x - 5;
-                if (tooltipRect.yMax > Screen.height) tooltipRect.y = mousePos.y - size.y - 5;
+                if (tooltipRect.xMax > Screen.width) tooltipRect.x = _stationaryPos.x - size.x - 5;
+                if (tooltipRect.yMax > Screen.height) tooltipRect.y = _stationaryPos.y - size.y - 5;
 
                 GUI.Box(tooltipRect, content, style);
             }

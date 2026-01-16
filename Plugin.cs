@@ -1644,19 +1644,19 @@ namespace NOAutopilot
                     }
                 }
 
+                bool pilotPitch = Mathf.Abs(stickPitch) > Plugin.StickDeadzone.Value;
+                bool pilotRoll = Mathf.Abs(stickRoll) > Plugin.StickDeadzone.Value;
+
+                if (pilotPitch || pilotRoll)
+                {
+                    APData.LastPilotInputTime = Time.time;
+                }
+
+                bool isWaitingToReengage = (Time.time - APData.LastPilotInputTime) < Plugin.ReengageDelay.Value;
+
                 // autopilot
                 if (APData.Enabled || APData.GCASActive)
                 {
-                    bool pilotPitch = Mathf.Abs(stickPitch) > Plugin.StickDeadzone.Value;
-                    bool pilotRoll = Mathf.Abs(stickRoll) > Plugin.StickDeadzone.Value;
-
-                    if (pilotPitch || pilotRoll)
-                    {
-                        APData.LastPilotInputTime = Time.time;
-                    }
-
-                    bool isWaitingToReengage = (Time.time - APData.LastPilotInputTime) < Plugin.ReengageDelay.Value;
-
                     // keys
                     if (!pilotPitch && !pilotRoll && !APData.GCASActive)
                     {

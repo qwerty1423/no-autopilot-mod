@@ -64,12 +64,12 @@ namespace NOAutopilot
         private readonly float buttonWidth = 40f;
 
         // Visuals
-        public static ConfigEntry<string> ColorAPOn, ColorAPOff, ColorGood, ColorWarn, ColorCrit, ColorInfo;
+        public static ConfigEntry<string> ColorAPOn, ColorInfo, ColorGood, ColorWarn, ColorCrit, ColorRange;
         public static ConfigEntry<float> OverlayOffsetX, OverlayOffsetY, FuelSmoothing, FuelUpdateInterval;
         public static ConfigEntry<int> FuelWarnMinutes, FuelCritMinutes;
         public static ConfigEntry<bool> ShowExtraInfo;
         public static ConfigEntry<bool> ShowAPOverlay;
-        public static ConfigEntry<bool> ShowGCASOff;
+        public static ConfigEntry<bool> ShowGCASOff, ShowOverride;
         public static ConfigEntry<bool> AltShowUnit;
         public static ConfigEntry<bool> DistShowUnit;
         public static ConfigEntry<bool> VertSpeedShowUnit;
@@ -155,18 +155,18 @@ namespace NOAutopilot
 
             // Visuals
             ColorAPOn = Config.Bind("Visuals - Colors", "1. Color AP On", "#00FF00", "Green");
-            ColorAPOff = Config.Bind("Visuals - Colors", "2. Color AP Off", "#ffffffff", "White");
+            ColorInfo = Config.Bind("Visuals - Colors", "2. Color Info", "#ffffff80", "color for override, gcas off");
             ColorGood = Config.Bind("Visuals - Colors", "3. Color Good", "#00FF00", "Green");
             ColorWarn = Config.Bind("Visuals - Colors", "4. Color Warning", "#FFFF00", "Yellow");
             ColorCrit = Config.Bind("Visuals - Colors", "5. Color Critical", "#FF0000", "Red");
-            ColorInfo = Config.Bind("Visuals - Colors", "6. Color Info", "#00FFFF", "Cyan");
+            ColorRange = Config.Bind("Visuals - Colors", "6. Range display color", "#00FFFF", "color for range");
             ColorNav = Config.Bind("Visuals - Colors", "7. Navigation Color", "#ff00ffcc", "color for flight path lines.");
             OverlayOffsetX = Config.Bind("Visuals - Layout", "1. Stack Start X", 20f, "HUD Horizontal position");
             OverlayOffsetY = Config.Bind("Visuals - Layout", "2. Stack Start Y", -20f, "HUD Vertical position");
             ShowExtraInfo = Config.Bind("Visuals", "Show Fuel/AP Info", true, "Show extra info on Fuel Gauge");
             ShowAPOverlay = Config.Bind("Visuals", "Show AP Overlay", true, "Draw AP status text on the HUD. Turn off if you want, there's a window now.");
-            ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show the GCAS OFF message");
-
+            ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show GCAS OFF on HUD");
+            ShowOverride = Config.Bind("Settings", "Show Override Delay", true, "Show Override on HUD");
             AltShowUnit = Config.Bind("Visuals - Units", "1. Show unit for alt", false, "(example) on: 10m, off: 10");
             DistShowUnit = Config.Bind("Visuals - Units", "2. Show unit for dist", true, "(example) on: 10km, off: 10");
             VertSpeedShowUnit = Config.Bind("Visuals - Units", "3. Show unit for vertical speed", false, "(example) on: 10m/s, off: 10");
@@ -2139,7 +2139,7 @@ namespace NOAutopilot
                     if (distMeters > 99999000f) distMeters = 99999000f;
 
                     string sRange = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters), Plugin.DistShowUnit.Value);
-                    content += $"<color={Plugin.ColorInfo.Value}>{sRange}</color>\n";
+                    content += $"<color={Plugin.ColorRange.Value}>{sRange}</color>\n";
                 }
 
                 content += "\n";
@@ -2193,17 +2193,20 @@ namespace NOAutopilot
                 }
                 else if (APData.GCASWarning)
                 {
-                    content += $"<color={Plugin.ColorCrit.Value}>PULL UP</color>\n";
+                    content += $"<color={Plugin.ColorWarn.Value}>PULL UP</color>\n";
                 }
                 else if (!APData.GCASEnabled && Plugin.ShowGCASOff.Value)
                 {
-                    content += $"<color={Plugin.ColorWarn.Value}>GCAS-</color>\n";
+                    content += $"<color={Plugin.ColorInfo.Value}>GCAS-</color>\n";
                 }
 
-                float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastOverrideInputTime);
-                if (overrideRemaining > 0)
+                if (Plugin.ShowOverride.Value)
                 {
-                    content += $"<color={Plugin.ColorWarn.Value}>Override {overrideRemaining:F1}s</color>\n";
+                    float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastOverrideInputTime);
+                    if (overrideRemaining > 0)
+                    {
+                        content += $"<color={Plugin.ColorInfo.Value}>Override {overrideRemaining:F1}s</color>\n";
+                    }
                 }
 
                 if (APData.AutoJammerActive)

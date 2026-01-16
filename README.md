@@ -22,18 +22,18 @@ folder structure after install (the names are wrong now but the locations are th
 The autopilot can be configured using only the `F8` gui window and the map, so `F8` is probably the most important keybind to remember.
 Leave blank the text boxes that you don't want to be controlled by the autopilot, then click set values (a few times just in case).
 
-| Action                      | Key                    | Description                              |
-| :-------------------------- | :--------------------- | :--------------------------------------- |
+| Action                      | Key                    | Description                                  |
+| :-------------------------- | :--------------------- | :------------------------------------------- |
 | Toggle Autopilot            | `=` (Equals)           | Self-explanatory.                            |
-| Toggle Auto-Jammer          | `/` (Slash)            | ^^^                                      |
-| Target Alt Small Adjustment | `Up` / `Down` Arrow    | Small adjustments (0.1m default)         |
-| Target Alt Large Adjustment | `Left` / `Right` Arrow | Large adjustments (100m default)         |
-| Max Climb Rate +/-          | `PageUp` / `PageDown`  | Limit vertical speed                     |
+| Toggle Auto-Jammer          | `/` (Slash)            | ^^^                                          |
+| Target Alt Small Adjustment | `Up` / `Down` Arrow    | Small adjustments (0.1m default)             |
+| Target Alt Large Adjustment | `Left` / `Right` Arrow | Large adjustments (100m default)             |
+| Max Climb Rate +/-          | `PageUp` / `PageDown`  | Limit vertical speed                         |
 | Bank Left/Right             | `[` and `]`            | Adjust roll angle                            |
 | C Crs/R Roll/C Alt/C Roll   | `'` (Quote)            | clear/reset in that order, one per keystroke |
 | Toggle GCAS                 | `\` (Backslash)        | added just in case                           |
-| Toggle autothrottle         | `;`                    | will write current speed to ui/delete it |
-| **Toggle AP GUI**           | `F8`                   | **opens/closes the GUI**                 |
+| Toggle autothrottle         | `;`                    | will write current speed to ui/delete it     |
+| **Toggle AP GUI**           | `F8`                   | **opens/closes the GUI**                     |
 
 Large altitude adjustment key has minimum limit to reduce crashes when sea skimming if the key is accidentally pressed.
 

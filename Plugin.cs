@@ -93,7 +93,7 @@ namespace NOAutopilot
 
         // Controls
         public static ConfigEntry<KeyCode> ToggleKey, UpKey, DownKey, BigUpKey, BigDownKey;
-        public static ConfigEntry<KeyCode> ClimbRateUpKey, ClimbRateDownKey, BankLeftKey, BankRightKey, BankLevelKey, SpeedHoldKey;
+        public static ConfigEntry<KeyCode> ClimbRateUpKey, ClimbRateDownKey, BankLeftKey, BankRightKey, ClearKey, SpeedHoldKey;
 
         // Flight Values
         public static ConfigEntry<float> AltStep, BigAltStep, ClimbRateStep, BankStep, MinAltitude;
@@ -216,7 +216,7 @@ namespace NOAutopilot
             ClimbRateDownKey = Config.Bind("Controls", "08. Climb Rate Decrease", KeyCode.PageDown, "Decrease Max VS");
             BankLeftKey = Config.Bind("Controls", "09. Bank Left", KeyCode.LeftBracket, "Roll/course Left");
             BankRightKey = Config.Bind("Controls", "10. Bank Right", KeyCode.RightBracket, "Roll/course right");
-            BankLevelKey = Config.Bind("Controls", "11. Bank Level (Reset)", KeyCode.Quote, "Reset roll/clear course");
+            ClearKey = Config.Bind("Controls", "11. reset roll/clear alt/clear crs", KeyCode.Quote, "every click will clear first thing it sees isn't clear from right to left");
             SpeedHoldKey = Config.Bind("Controls", "12. Speed Hold Toggle", KeyCode.Semicolon, "speed hold/clear");
 
             // Flight Values
@@ -442,7 +442,7 @@ namespace NOAutopilot
                     Input.GetKey(UpKey.Value) || Input.GetKey(DownKey.Value) ||
                     Input.GetKey(BigUpKey.Value) || Input.GetKey(BigDownKey.Value) ||
                     Input.GetKey(ClimbRateUpKey.Value) || Input.GetKey(ClimbRateDownKey.Value) ||
-                    Input.GetKey(BankLeftKey.Value) || Input.GetKey(BankRightKey.Value) || Input.GetKey(BankLevelKey.Value) || Input.GetKey(SpeedHoldKey.Value);
+                    Input.GetKey(BankLeftKey.Value) || Input.GetKey(BankRightKey.Value) || Input.GetKey(ClearKey.Value) || Input.GetKey(SpeedHoldKey.Value);
 
                 if (isAdjusting)
                 {
@@ -622,6 +622,8 @@ namespace NOAutopilot
             _windowRect.height = Mathf.Min(_windowRect.height, Screen.height);
 
             _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, "Autopilot controls", _styleWindow);
+
+            DrawCustomTooltip();
 
             float clampedX = Mathf.Clamp(_windowRect.x, 0, Screen.width - _windowRect.width);
             float clampedY = Mathf.Clamp(_windowRect.y, 0, Screen.height - _windowRect.height);
@@ -931,7 +933,7 @@ namespace NOAutopilot
                     APData.NavQueue.RemoveAt(0);
                     RefreshNavVisuals();
                 }
-                if (GUILayout.Button(new GUIContent("Clear all", "delete all points"), _styleButton))
+                if (GUILayout.Button(new GUIContent("Clear all", "delete all points. (much self explanatory)"), _styleButton))
                 {
                     APData.NavQueue.Clear();
                     RefreshNavVisuals();
@@ -940,15 +942,18 @@ namespace NOAutopilot
             }
             else
             {
-                GUILayout.Label("RMB the map to set wp.\nShift+RMB for multiple.", _styleLabel);
+                GUILayout.Label(new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.", "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the button."), _styleLabel);
                 GUILayout.EndHorizontal();
             }
 
             GUILayout.EndVertical();
 
             GUILayout.EndScrollView();
+        }
 
-            if (Event.current.type != EventType.Repaint) return;
+        private void DrawCustomTooltip()
+        {
+            // works similarly to firefox?
 
             string tooltipUnderMouse = GUI.tooltip;
             Vector2 mousePos = Event.current.mousePosition;
@@ -964,7 +969,6 @@ namespace NOAutopilot
             }
 
             float distFromStart = Vector2.Distance(mousePos, _stationaryPos);
-
             if (distFromStart > _jitterThreshold)
             {
                 if (!_isTooltipVisible)
@@ -995,8 +999,8 @@ namespace NOAutopilot
 
                 Rect tooltipRect = new(mousePos.x + 12, mousePos.y + 12, size.x, size.y);
 
-                if (tooltipRect.xMax > _windowRect.width) tooltipRect.x = mousePos.x - size.x - 5;
-                if (tooltipRect.yMax > _windowRect.height) tooltipRect.y = mousePos.y - size.y - 5;
+                if (tooltipRect.xMax > Screen.width) tooltipRect.x = mousePos.x - size.x - 5;
+                if (tooltipRect.yMax > Screen.height) tooltipRect.y = mousePos.y - size.y - 5;
 
                 GUI.depth = 0;
                 GUI.Box(tooltipRect, content, style);
@@ -1681,10 +1685,20 @@ namespace NOAutopilot
                         if (Input.GetKey(Plugin.ClimbRateUpKey.Value)) APData.CurrentMaxClimbRate += Plugin.ClimbRateStep.Value;
                         if (Input.GetKey(Plugin.ClimbRateDownKey.Value)) APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - Plugin.ClimbRateStep.Value);
 
-                        if (Input.GetKeyDown(Plugin.BankLevelKey.Value))
+                        if (Input.GetKeyDown(Plugin.ClearKey.Value))
                         {
-                            if (APData.TargetCourse >= 0f) { APData.TargetCourse = -1f; APData.TargetRoll = 0f; }
-                            else { APData.TargetRoll = 0f; }
+                            if (APData.TargetCourse >= 0f)
+                            {
+                                APData.TargetCourse = -1f;
+                            }
+                            else if (APData.TargetAlt >= 0f)
+                            {
+                                APData.TargetAlt = -1f;
+                            }
+                            else
+                            {
+                                APData.TargetRoll = 0f;
+                            }
                         }
 
                         if (APData.TargetCourse >= 0f)

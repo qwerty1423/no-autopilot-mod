@@ -447,17 +447,18 @@ namespace NOAutopilot
                     SyncMenuValues();
                 }
             }
-            if (Input.GetKeyDown(Plugin.ToggleKey.Value))
+            if (Input.GetKeyDown(ToggleKey.Value))
             {
                 APData.Enabled = !APData.Enabled;
+                APData.TargetAlt = APData.CurrentAlt;
             }
 
-            if (Plugin.EnableAutoJammer.Value && Input.GetKeyDown(Plugin.AutoJammerKey.Value))
+            if (EnableAutoJammer.Value && Input.GetKeyDown(AutoJammerKey.Value))
             {
                 APData.AutoJammerActive = !APData.AutoJammerActive;
             }
 
-            if (Input.GetKeyDown(Plugin.ToggleGCASKey.Value))
+            if (Input.GetKeyDown(ToggleGCASKey.Value))
             {
                 APData.GCASEnabled = !APData.GCASEnabled;
                 if (!APData.GCASEnabled) { APData.GCASActive = false; APData.GCASWarning = false; }
@@ -1329,7 +1330,7 @@ namespace NOAutopilot
         private static bool isPitchSleeping = false;
         private static bool isRollSleeping = false;
         private static bool isSpdSleeping = false;
-        private static float gcasNextScan = 0f;
+        // private static float gcasNextScan = 0f;
         public static bool apStateBeforeGCAS = false;
         private static float currentAppliedThrottle = 0f;
 
@@ -1362,7 +1363,7 @@ namespace NOAutopilot
             isPitchSleeping = false;
             isRollSleeping = false;
             isSpdSleeping = false;
-            gcasNextScan = 0f;
+            // gcasNextScan = 0f;
             apStateBeforeGCAS = false;
             currentAppliedThrottle = 0f;
 
@@ -1483,28 +1484,27 @@ namespace NOAutopilot
                             bool warningZone = false;
                             // bool isWallThreat = false;
 
-                            if (Time.time >= gcasNextScan)
+                            // if (Time.time >= gcasNextScan)
+                            // {
+                            // gcasNextScan = Time.time + 0.02f;
+                            Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f);
+                            float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
+
+                            if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange))
                             {
-                                gcasNextScan = Time.time + 0.02f;
-                                Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f);
-                                float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
-
-                                if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange))
+                                if (hit.transform.root != APData.PlayerTransform.root)
                                 {
-                                    if (hit.transform.root != APData.PlayerTransform.root)
-                                    {
-                                        float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
-                                        float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
+                                    float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
+                                    float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
 
-                                        if (hit.distance < (reqArc + reactionDist + 20f))
-                                        {
-                                            dangerImminent = true;
-                                            // if (hit.normal.y < 0.7f) isWallThreat = true;
-                                        }
-                                        else if (hit.distance < (reqArc + reactionDist + warnDist))
-                                        {
-                                            warningZone = true;
-                                        }
+                                    if (hit.distance < (reqArc + reactionDist + 20f))
+                                    {
+                                        dangerImminent = true;
+                                        // if (hit.normal.y < 0.7f) isWallThreat = true;
+                                    }
+                                    else if (hit.distance < (reqArc + reactionDist + warnDist))
+                                    {
+                                        warningZone = true;
                                     }
                                 }
                             }
@@ -1878,6 +1878,7 @@ namespace NOAutopilot
                             pidAlt.Reset();
                             pidVS.Reset();
                             pidAngle.Reset();
+                            APData.TargetAlt = APData.CurrentAlt;
                         }
                         else
                         {
@@ -1891,7 +1892,6 @@ namespace NOAutopilot
                                 pitchOut = pidGCAS.Evaluate(gError, currentG, dt,
                                     Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,
                                     Plugin.GCAS_ILimit.Value, true);
-                                if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
                             }
                             // alt hold
                             else if (APData.TargetAlt > 0f)
@@ -1966,11 +1966,10 @@ namespace NOAutopilot
 
                                     if (useRandom) pitchOut += (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * 2f * Plugin.RandomStrength.Value;
                                 }
-
-                                if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
-                                pitchOut = Mathf.Clamp(pitchOut, -1f, 1f);
                             }
 
+                            if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
+                            pitchOut = Mathf.Clamp(pitchOut, -1f, 1f);
                             Plugin.f_pitch?.SetValue(inputObj, pitchOut);
                         }
                     }

@@ -184,9 +184,9 @@ namespace NOAutopilot
             FuelCritMinutes = Config.Bind("Calculations", "4. Fuel Critical Time", 5, "Minutes");
 
             // Settings
-            StickDeadzone = Config.Bind("Settings", "1. Stick Deadzone", 0.01f, "Threshold");
+            StickDeadzone = Config.Bind("Settings", "1. Disengage Stick Deadzone", 0.01f, "for AP temporary disengage via manual input");
             // DisengageDelay = Config.Bind("Settings", "2. Disengage Delay", 10f, "Seconds of continuous input over deadzone before AP turns off");
-            ReengageDelay = Config.Bind("Settings", "2. Reengage Delay", 2.0f, "Seconds to wait after stick release before AP resumes control");
+            ReengageDelay = Config.Bind("Settings", "2. Reengage Delay", 0.4f, "Seconds to wait after stick release before AP resumes control");
             InvertRoll = Config.Bind("Settings", "3. Invert Roll", true, "Flip Roll");
             InvertPitch = Config.Bind("Settings", "4. Invert Pitch", true, "Flip Pitch");
             Conf_InvertCourseRoll = Config.Bind("Settings", "5. Invert Bank Direction", true, "Toggle if plane turns wrong way");

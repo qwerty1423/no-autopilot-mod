@@ -116,7 +116,7 @@ namespace NOAutopilot
         // Auto GCAS
         public static ConfigEntry<bool> EnableGCAS;
         public static ConfigEntry<KeyCode> ToggleGCASKey;
-        public static ConfigEntry<float> GCAS_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
+        public static ConfigEntry<float> GCAS_MaxG, GCAS_AP_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
         public static ConfigEntry<float> GCAS_P, GCAS_I, GCAS_D, GCAS_ILimit;
 
         // Random
@@ -266,10 +266,11 @@ namespace NOAutopilot
             EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS on start", true, "GCAS off at start if disabled");
             ToggleGCASKey = Config.Bind("Auto GCAS", "2. Toggle GCAS Key", KeyCode.Backslash, "Turn Auto-GCAS on/off");
             GCAS_MaxG = Config.Bind("Auto GCAS", "3. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
-            GCAS_WarnBuffer = Config.Bind("Auto GCAS", "4. Warning Buffer", 20.0f, "Seconds warning before auto-pull");
-            GCAS_AutoBuffer = Config.Bind("Auto GCAS", "5. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
-            GCAS_Deadzone = Config.Bind("Auto GCAS", "6. GCAS Deadzone", 0.5f, "GCAS override deadzone");
-            GCAS_ScanRadius = Config.Bind("Auto GCAS", "7. Scan Radius", 2.0f, "Width of the spherecast.");
+            GCAS_AP_MaxG = Config.Bind("Auto GCAS", "4. Max G on autopilot", 1.5f, "Max G for... gcas based TFR??");
+            GCAS_WarnBuffer = Config.Bind("Auto GCAS", "5. Warning Buffer", 20.0f, "Seconds warning before auto-pull");
+            GCAS_AutoBuffer = Config.Bind("Auto GCAS", "6. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
+            GCAS_Deadzone = Config.Bind("Auto GCAS", "7. GCAS Deadzone", 0.5f, "GCAS override deadzone");
+            GCAS_ScanRadius = Config.Bind("Auto GCAS", "8. Scan Radius", 2.0f, "Width of the spherecast.");
             GCAS_P = Config.Bind("GCAS PID", "1. GCAS P", 0.1f, "G Error -> Stick");
             GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 1.0f, "Builds pull over time");
             GCAS_D = Config.Bind("GCAS PID", "3. GCAS D", 0.0f, "Dampens G overshoot");
@@ -1195,6 +1196,7 @@ namespace NOAutopilot
         public static bool SpeedHoldIsMach = false;
         public static bool NavEnabled = false;
         public static float TargetAlt = -1f;
+        public static float OriginalTargetAlt = -1f;
         public static float TargetRoll = -999f;
         public static float TargetSpeed = -1f;
         public static float TargetCourse = -1f;
@@ -1223,6 +1225,7 @@ namespace NOAutopilot
             SpeedHoldIsMach = false;
             NavEnabled = false;
             TargetAlt = -1f;
+            OriginalTargetAlt = -1f;
             TargetRoll = -999f;
             TargetSpeed = -1f;
             TargetCourse = -1f;
@@ -1278,6 +1281,7 @@ namespace NOAutopilot
                     APData.GCASActive = false;
                     APData.GCASWarning = false;
                     APData.TargetAlt = altitude;
+                    APData.OriginalTargetAlt = -1f;
                     APData.TargetRoll = 0f;
                     APData.CurrentMaxClimbRate = -1f;
                     APData.LastPilotInputTime = -999f;
@@ -1539,6 +1543,11 @@ namespace NOAutopilot
                                 {
                                     APData.GCASActive = false;
                                     APData.Enabled = apStateBeforeGCAS;
+
+                                    if (APData.OriginalTargetAlt > 0)
+                                    {
+                                        APData.TargetAlt = APData.OriginalTargetAlt;
+                                    }
                                 }
                                 else
                                 {
@@ -1550,6 +1559,7 @@ namespace NOAutopilot
                             else if (dangerImminent)
                             {
                                 apStateBeforeGCAS = APData.Enabled;
+                                APData.OriginalTargetAlt = APData.TargetAlt;
                                 APData.Enabled = true;
                                 APData.GCASActive = true;
                                 APData.TargetRoll = 0f;
@@ -1684,6 +1694,8 @@ namespace NOAutopilot
                             if (Input.GetKey(Plugin.BankLeftKey.Value)) APData.TargetRoll = Mathf.Repeat(APData.TargetRoll + Plugin.BankStep.Value + 180f, 360f) - 180f;
                             if (Input.GetKey(Plugin.BankRightKey.Value)) APData.TargetRoll = Mathf.Repeat(APData.TargetRoll - Plugin.BankStep.Value + 180f, 360f) - 180f;
                         }
+
+                        APData.OriginalTargetAlt = APData.TargetAlt;
                     }
 
                     // throttle control
@@ -1819,7 +1831,7 @@ namespace NOAutopilot
 
                                     if (Plugin.Conf_InvertCourseRoll.Value) bankReq = -bankReq;
 
-                                    float safeMaxG = Mathf.Max(Plugin.GCAS_MaxG.Value, 1.01f);
+                                    float safeMaxG = Mathf.Max(Plugin.GCAS_AP_MaxG.Value, 1.01f);
                                     float gLimitBank = Mathf.Acos(1f / safeMaxG) * Mathf.Rad2Deg;
 
                                     float userLimit = (APData.TargetRoll != -999f && APData.TargetRoll != 0)
@@ -1899,7 +1911,15 @@ namespace NOAutopilot
                             // gcas
                             if (APData.GCASActive)
                             {
-                                float targetG = Plugin.GCAS_MaxG.Value;
+                                float targetG = 5f;
+                                if (APData.Enabled)
+                                {
+                                    targetG = Plugin.GCAS_AP_MaxG.Value;
+                                }
+                                else
+                                {
+                                    targetG = Plugin.GCAS_MaxG.Value;
+                                }
                                 float gError = targetG - currentG;
                                 pitchOut = pidGCAS.Evaluate(gError, currentG, dt,
                                     Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,

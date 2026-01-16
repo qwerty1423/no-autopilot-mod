@@ -2187,13 +2187,7 @@ namespace NOAutopilot
                     content += $"<color={Plugin.ColorAPOn.Value}>{altStr} {climbStr} {spdStr}\n{degStr} {navStr}</color>\n";
                 }
 
-                float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastOverrideInputTime);
-                bool isOverridden = overrideRemaining > 0;
-                if (APData.Enabled && isOverridden)
-                {
-                    content += $"<color={Plugin.ColorWarn.Value}>Override {overrideRemaining:F1}s</color>\n";
-                }
-                else if (APData.GCASActive)
+                if (APData.GCASActive)
                 {
                     content += $"<color={Plugin.ColorCrit.Value}>A-GCAS</color>\n";
                 }
@@ -2204,6 +2198,12 @@ namespace NOAutopilot
                 else if (!APData.GCASEnabled && Plugin.ShowGCASOff.Value)
                 {
                     content += $"<color={Plugin.ColorWarn.Value}>GCAS-</color>\n";
+                }
+
+                float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastOverrideInputTime);
+                if (overrideRemaining > 0)
+                {
+                    content += $"<color={Plugin.ColorWarn.Value}>Override {overrideRemaining:F1}s</color>\n";
                 }
 
                 if (APData.AutoJammerActive)

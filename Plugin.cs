@@ -1336,7 +1336,7 @@ namespace NOAutopilot
         private static bool isPitchSleeping = false;
         private static bool isRollSleeping = false;
         private static bool isSpdSleeping = false;
-        // private static float gcasNextScan = 0f;
+        private static float gcasNextScan = 0f;
         public static bool apStateBeforeGCAS = false;
         private static float currentAppliedThrottle = 0f;
 
@@ -1369,7 +1369,7 @@ namespace NOAutopilot
             isPitchSleeping = false;
             isRollSleeping = false;
             isSpdSleeping = false;
-            // gcasNextScan = 0f;
+            gcasNextScan = 0f;
             apStateBeforeGCAS = false;
             currentAppliedThrottle = 0f;
 
@@ -1486,31 +1486,34 @@ namespace NOAutopilot
                             float reactionDist = speed * reactionTime;
                             float warnDist = speed * Plugin.GCAS_WarnBuffer.Value;
 
-                            bool dangerImminent = false;
-                            bool warningZone = false;
                             // bool isWallThreat = false;
 
-                            // if (Time.time >= gcasNextScan)
-                            // {
-                            // gcasNextScan = Time.time + 0.02f;
-                            Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f);
-                            float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
-
-                            if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange))
+                            if (Time.time >= gcasNextScan)
                             {
-                                if (hit.transform.root != APData.PlayerTransform.root)
-                                {
-                                    float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
-                                    float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
+                                gcasNextScan = Time.time + 0.02f;
 
-                                    if (hit.distance < (reqArc + reactionDist + 20f))
+                                bool dangerImminent = false;
+                                bool warningZone = false;
+
+                                Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f);
+                                float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
+
+                                if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange))
+                                {
+                                    if (hit.transform.root != APData.PlayerTransform.root)
                                     {
-                                        dangerImminent = true;
-                                        // if (hit.normal.y < 0.7f) isWallThreat = true;
-                                    }
-                                    else if (hit.distance < (reqArc + reactionDist + warnDist))
-                                    {
-                                        warningZone = true;
+                                        float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
+                                        float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
+
+                                        if (hit.distance < (reqArc + reactionDist + 20f))
+                                        {
+                                            dangerImminent = true;
+                                            // if (hit.normal.y < 0.7f) isWallThreat = true;
+                                        }
+                                        else if (hit.distance < (reqArc + reactionDist + warnDist))
+                                        {
+                                            warningZone = true;
+                                        }
                                     }
                                 }
                             }

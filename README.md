@@ -24,14 +24,14 @@ Leave blank the text boxes that you don't want to be controlled by the autopilot
 
 | Action                      | Key                    | Description                              |
 | :-------------------------- | :--------------------- | :--------------------------------------- |
-| Toggle Autopilot            | `=` (Equals)           | Self-explanatory.                        |
+| Toggle Autopilot            | `=` (Equals)           | Self-explanatory.                            |
 | Toggle Auto-Jammer          | `/` (Slash)            | ^^^                                      |
 | Target Alt Small Adjustment | `Up` / `Down` Arrow    | Small adjustments (0.1m default)         |
 | Target Alt Large Adjustment | `Left` / `Right` Arrow | Large adjustments (100m default)         |
 | Max Climb Rate +/-          | `PageUp` / `PageDown`  | Limit vertical speed                     |
-| Bank Left/Right             | `[` and `]`            | Adjust roll angle                        |
-| Reset Bank                  | `'` (Quote)            | Level the wings, sets roll to 0          |
-| Toggle GCAS                 | `\` (Backslash)        | added just in case                       |
+| Bank Left/Right             | `[` and `]`            | Adjust roll angle                            |
+| C Crs/R Roll/C Alt/C Roll   | `'` (Quote)            | clear/reset in that order, one per keystroke |
+| Toggle GCAS                 | `\` (Backslash)        | added just in case                           |
 | Toggle autothrottle         | `;`                    | will write current speed to ui/delete it |
 | **Toggle AP GUI**           | `F8`                   | **opens/closes the GUI**                 |
 

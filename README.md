@@ -17,7 +17,8 @@ folder structure after install (the names are wrong now but the locations are th
 
 ![no-folder-structure](https://github.com/user-attachments/assets/ff161a5b-676d-48eb-9eac-944afdeedb6c)
 
-If you're stuck you can try Primeva 2082 discord's mod install guide: https://docs.google.com/document/d/16aRWcrkt89YEn9_THwe9Fxo7AYPLE9SYSab_Y929dvE/mobilebasic
+If you're stuck you can try Primeva 2082 discord's mod install guide: 
+https://docs.google.com/document/d/16aRWcrkt89YEn9_THwe9Fxo7AYPLE9SYSab_Y929dvE
 or ask for help on the nuclear option discord.
 
 ## Default Controls

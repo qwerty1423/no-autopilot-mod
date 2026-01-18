@@ -4,16 +4,26 @@ Adds autopilot and some other features.
 
 ## Installation
 
-1. Install BepInEx 5 mono.
+prerequisites: copy of the game
+
+1. Install BepInEx 5.
    - [their github has install instructions](https://github.com/BepInEx/BepInEx/)
    - run the game, then quit
-   - edit BepInEx.cfg in BepInEx/config to enable hiding the game manager or whatever
-2. (Recommended) Install BepInEx Configuration Manager.
+   - edit BepInEx.cfg in BepInEx/config
+line that says:
+HideManagerGameObject = false
+
+should be changed to:
+HideManagerGameObject = true
+
+(this edit might not be necessary for this mod itself (I don't test with it off though so there are no guarantees here), but it is necessary for the config manager if you want it)
+
+2. (Recommended) Install BepInEx Configuration Manager. It is useful for editing settings ingame.
    - download [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager)
-   - place extracted folder in BepInEx/plugins
+   - place extracted folder in BepInEx/plugins. (make sure your folder structure is like the image below)
 3. Download  `com.qwerty1423.NOAutopilot-{version}.zip` from releases (to the right if you are on pc) and extract the dll.
 4. Place the dll into your `BepInEx/plugins/` folder.
-5. Run the game again to generate the config file (for the mod).
+5. Run the game again to generate the config file (for the mod). The mod should work at this point.
 
 folder structure after install (the names are wrong now but the locations are the same):
 

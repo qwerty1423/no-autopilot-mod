@@ -19,8 +19,8 @@ folder structure after install (the names are wrong now but the locations are th
 
 ![no-folder-structure](https://github.com/user-attachments/assets/ff161a5b-676d-48eb-9eac-944afdeedb6c)
 
-If you're stuck you can try Primeva 2082 discord's mod install guide: 
-https://docs.google.com/document/d/16aRWcrkt89YEn9_THwe9Fxo7AYPLE9SYSab_Y929dvE
+If you're stuck you can try Primeva 2082 discord's mod install guide:
+<https://docs.google.com/document/d/16aRWcrkt89YEn9_THwe9Fxo7AYPLE9SYSab_Y929dvE>
 
 or ask for help on the nuclear option discord.
 
@@ -123,6 +123,8 @@ If you are making large inputs, it will not pull up.
 
 simple how to use guide:
 right click / shift + right click on the map to make a path, then press equals and f8. hover mouse over the UI for tooltips.
+
+currently setting waypoints will only work if nothing else is selected on the map. maybe in the future I'll make it work if you have some enemies selected, but currently it does not.
 
 ## Building from source
 

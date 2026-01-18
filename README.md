@@ -6,7 +6,7 @@ Adds autopilot and some other features.
 
 1. Install BepInEx 5 mono.
    - [their github has install instructions](https://github.com/BepInEx/BepInEx/)
-   - run the game once, quit
+   - run the game, then quit
    - edit BepInEx.cfg in BepInEx/config to enable hiding the game manager or whatever
 2. (Recommended) Install BepInEx Configuration Manager.
    - download [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager)
@@ -75,6 +75,7 @@ In order of implementation, earliest first
 
 In approximate likelihood of implementation order descending.
 
+- yaw control
 - nap of the earth flying
 - proper helicopter support
 - auto take-off and landing
@@ -96,8 +97,6 @@ Displays current settings on the HUD. The format is `[Target Altitude] [Max Clim
 PID values can be tuned further if you like, but the defaults should be quite effective. They may not work in all situations or in all aircraft, however.
 
 There is no limit to the minimum altitude or maximum altitude, but crashes and engine flameouts may result from flying too low or too high.
-
-Use this mod at your own risk.
 
 ## Auto Jammer
 
@@ -121,10 +120,10 @@ If you are making large inputs, it will not pull up.
 
 <https://github.com/user-attachments/assets/1ac109a4-bc84-49ed-8141-55bc9a217607>
 
-simple how to use guide:
-right click / shift + right click on the map to make a path, then press equals and f8. hover mouse over the UI for tooltips.
+Simple how to use guide:
+Right click / shift + right click on the map to make a path, then press equals and f8. Hover mouse over the UI for tooltips.
 
-currently setting waypoints will only work if nothing else is selected on the map. maybe in the future I'll make it work if you have some enemies selected, but currently it does not. Probably best to use orbit mode if you are jamming with Medusa.
+Currently, setting waypoints will only work if nothing else is selected on the map. Maybe in the future I'll make it work if you have some enemies selected, but currently it does not. Probably best to use orbit mode if you are jamming with Medusa.
 
 ## Building from source
 

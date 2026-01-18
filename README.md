@@ -124,7 +124,7 @@ If you are making large inputs, it will not pull up.
 simple how to use guide:
 right click / shift + right click on the map to make a path, then press equals and f8. hover mouse over the UI for tooltips.
 
-currently setting waypoints will only work if nothing else is selected on the map. maybe in the future I'll make it work if you have some enemies selected, but currently it does not.
+currently setting waypoints will only work if nothing else is selected on the map. maybe in the future I'll make it work if you have some enemies selected, but currently it does not. Probably best to use orbit mode if you are jamming with Medusa.
 
 ## Building from source
 

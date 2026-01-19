@@ -37,7 +37,7 @@ namespace NOAutopilot
 
         // ap menu?
         public static ConfigEntry<KeyCode> MenuKey;
-        private Rect _windowRect = new(50, 50, 227, 312);
+        private Rect _windowRect = new(50, 50, 227, 330);
         private bool _showMenu = false;
 
         private Vector2 _scrollPos;
@@ -57,6 +57,7 @@ namespace NOAutopilot
 
         private GUIStyle _styleWindow;
         private GUIStyle _styleLabel;
+        private GUIStyle _styleReadout;
         private GUIStyle _styleButton;
         private bool _stylesInitialized = false;
 
@@ -192,7 +193,7 @@ namespace NOAutopilot
             UI_PosX = Config.Bind("Visuals - UI", "1. Window Position X", -1f, "-1 = Auto Bottom Right, otherwise pixel value");
             UI_PosY = Config.Bind("Visuals - UI", "2. Window Position Y", -1f, "-1 = Auto Bottom Right, otherwise pixel value");
             UI_Width = Config.Bind("Visuals - UI", "3. Window Width", 227f, "Saved Width");
-            UI_Height = Config.Bind("Visuals - UI", "4. Window Height", 312f, "Saved Height");
+            UI_Height = Config.Bind("Visuals - UI", "4. Window Height", 330f, "Saved Height");
 
             FuelSmoothing = Config.Bind("Calculations", "1. Fuel Flow Smoothing", 0.1f, "Alpha value");
             FuelUpdateInterval = Config.Bind("Calculations", "2. Fuel Update Interval", 1.0f, "Seconds");
@@ -438,6 +439,13 @@ namespace NOAutopilot
                 richText = true
             };
 
+            _styleReadout = new GUIStyle(GUI.skin.box)
+            {
+                alignment = TextAnchor.UpperLeft,
+                richText = true,
+                padding = new RectOffset(3, 3, 3, 3)
+            };
+
             _styleButton = new GUIStyle(GUI.skin.button);
 
             _stylesInitialized = true;
@@ -551,7 +559,7 @@ namespace NOAutopilot
                 {
                     Vector2 delta = Event.current.delta;
                     float minW = 227f;
-                    float minH = 312f;
+                    float minH = 330f;
 
                     if (_activeEdge == RectEdge.Right || _activeEdge == RectEdge.TopRight || _activeEdge == RectEdge.BottomRight)
                         _windowRect.width = Mathf.Max(minW, _windowRect.width + delta.x);
@@ -581,7 +589,7 @@ namespace NOAutopilot
                 float x = UI_PosX.Value;
                 float y = UI_PosY.Value;
                 float w = Mathf.Max(227f, UI_Width.Value);
-                float h = Mathf.Max(312f, UI_Height.Value);
+                float h = Mathf.Max(330f, UI_Height.Value);
 
                 if (x < 0) x = Screen.width - w - 20;
                 if (y < 0) y = Screen.height - h - 50;
@@ -702,7 +710,7 @@ namespace NOAutopilot
             _measuringContent.text = sCrs;
             float wCrs = _styleLabel.CalcSize(_measuringContent).x;
 
-            float targetWidth = Mathf.Max(wAlt, wVS, wRoll, wSpd, wCrs);
+            float targetWidth = Mathf.Max(wAlt, wVS, wRoll, wSpd, wCrs) + 6;
             _dynamicLabelWidth = Mathf.Lerp(_dynamicLabelWidth, targetWidth, 0.15f);
 
             // float currentRollDefault = APData.TargetCourse == -1f ? 0f : DefaultCRLimit.Value;
@@ -710,7 +718,7 @@ namespace NOAutopilot
             // altitude
             GUILayout.BeginHorizontal();
             GUI.color = (APData.Enabled && APData.TargetAlt > 0) ? Color.green : Color.white;
-            GUILayout.Label(new GUIContent($"{sAlt}", "Current altitude"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            GUILayout.Label(new GUIContent($"{sAlt}", "Current altitude\nGreen if alt AP on"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
             GUI.color = Color.white;
             _bufAlt = GUILayout.TextField(_bufAlt);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target altitude"));
@@ -724,7 +732,10 @@ namespace NOAutopilot
 
             // vertical speed
             GUILayout.BeginHorizontal();
-            GUILayout.Label(new GUIContent($"{sVS}", "Current climb/descent rate"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            bool isDefaultVS = Mathf.Abs(APData.CurrentMaxClimbRate - DefaultMaxClimbRate.Value) < 0.1f;
+            GUI.color = isDefaultVS ? Color.white : Color.cyan;
+            GUILayout.Label(new GUIContent($"{sVS}", "Current climb/descent rate\nCyan if not default"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
+            GUI.color = Color.white;
             _bufClimb = GUILayout.TextField(_bufClimb);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Max vertical speed"));
 
@@ -739,7 +750,7 @@ namespace NOAutopilot
             // bank angle
             GUILayout.BeginHorizontal();
             GUI.color = (APData.Enabled && APData.TargetRoll != -999f) ? Color.green : Color.white;
-            GUILayout.Label(new GUIContent($"{sRoll}", "Current bank angle"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            GUILayout.Label(new GUIContent($"{sRoll}", "Current bank angle\nGreen if roll AP on"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
             GUI.color = Color.white;
             _bufRoll = GUILayout.TextField(_bufRoll);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target/limit bank angle"));
@@ -754,7 +765,7 @@ namespace NOAutopilot
             // speed
             GUILayout.BeginHorizontal();
             GUI.color = (APData.TargetSpeed > 0) ? Color.green : Color.white;
-            GUILayout.Label(new GUIContent($"{sSpd}", "Current speed"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            GUILayout.Label(new GUIContent($"{sSpd}", "Current speed\nGreen if autothrottle on"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
             GUI.color = Color.white;
             _bufSpeed = GUILayout.TextField(_bufSpeed);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target speed"));
@@ -800,7 +811,7 @@ namespace NOAutopilot
             if (APData.NavEnabled && APData.Enabled) GUI.color = Color.cyan;
             else if (APData.Enabled && APData.TargetCourse >= 0) GUI.color = Color.green;
             else GUI.color = Color.white;
-            GUILayout.Label(new GUIContent($"{sCrs}", "Current course"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            GUILayout.Label(new GUIContent($"{sCrs}", "Current course\nCyan if NAV mode on\nGreen if Course AP on"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
             GUI.color = Color.white;
             if (APData.NavEnabled && APData.TargetCourse >= 0)
             {
@@ -912,20 +923,7 @@ namespace NOAutopilot
 
             // nav
             GUILayout.BeginHorizontal();
-            bool newNavState = GUILayout.Toggle(APData.NavEnabled, new GUIContent("Nav mode", "switch for waypoint ap mode. overrides course hold."));
-            if (newNavState != APData.NavEnabled)
-            {
-                if (newNavState)
-                {
-                    // If on and roll is disabled
-                    if (APData.TargetRoll == -999f)
-                    {
-                        APData.TargetRoll = DefaultCRLimit.Value;
-                        _bufRoll = APData.TargetRoll.ToString("F0");
-                    }
-                }
-                APData.NavEnabled = newNavState;
-            }
+            APData.NavEnabled = GUILayout.Toggle(APData.NavEnabled, new GUIContent("Nav mode", "switch for waypoint ap mode. overrides course hold."));
             NavCycle.Value = GUILayout.Toggle(NavCycle.Value, new GUIContent("Cycle wp", "On: cycles to next wp upon reaching wp, Off: Deletes upon reaching wp"));
             GUILayout.EndHorizontal();
 
@@ -962,7 +960,7 @@ namespace NOAutopilot
                         distTotal += Vector3.Distance(APData.NavQueue[i], APData.NavQueue[i + 1]);
                     }
 
-                    string totalDistStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distTotal), Plugin.DistShowUnit.Value);
+                    string totalDistStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distTotal), DistShowUnit.Value);
                     GUILayout.Label(new GUIContent($"Total: {totalDistStr}", "Total distance of flight plan"), _styleLabel);
 
                     float etaTotal = distTotal / APData.SpeedEma;

@@ -4,8 +4,6 @@ Adds autopilot and some other features.
 
 ## Installation
 
-prerequisites: copy of the game
-
 1. Install BepInEx 5.
    - [their github has install instructions](https://github.com/BepInEx/BepInEx/)
    - run the game, then quit
@@ -132,7 +130,7 @@ If you are making large inputs, it will not pull up.
 Simple how to use guide:
 Right click / shift + right click on the map to make a path, then press equals and f8. Hover mouse over the UI for tooltips.
 
-Currently, setting waypoints will only work if nothing else is selected on the map. Maybe in the future I'll make it work if you have some enemies selected, but currently it does not. Probably best to use orbit mode if you are jamming with Medusa.
+Setting waypoints will work as long as you don't create any yellow unit path lines, so as long as the first unit you have selected is not commandable then you can make a waypoint.
 
 ## Building from source
 

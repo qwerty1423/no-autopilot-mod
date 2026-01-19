@@ -78,7 +78,7 @@ namespace NOAutopilot
 
         // Visuals
         public static ConfigEntry<string> ColorAPOn, ColorInfo, ColorGood, ColorWarn, ColorCrit, ColorRange;
-        public static ConfigEntry<float> OverlayOffsetX, OverlayOffsetY, FuelSmoothing, FuelUpdateInterval;
+        public static ConfigEntry<float> OverlayOffsetX, OverlayOffsetY, FuelSmoothing, FuelUpdateInterval, DisplayUpdateInterval;
         public static ConfigEntry<int> FuelWarnMinutes, FuelCritMinutes;
         public static ConfigEntry<bool> ShowExtraInfo;
         public static ConfigEntry<bool> ShowAPOverlay;
@@ -179,7 +179,8 @@ namespace NOAutopilot
             ShowExtraInfo = Config.Bind("Visuals", "Show Fuel/AP Info", true, "Show extra info on Fuel Gauge");
             ShowAPOverlay = Config.Bind("Visuals", "Show AP Overlay", true, "Draw AP status text on the HUD. Turn off if you want, there's a window now.");
             ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show GCAS OFF on HUD");
-            ShowOverride = Config.Bind("Settings", "Show Override Delay", true, "Show Override on HUD");
+            ShowOverride = Config.Bind("Visuals", "Show Override Delay", true, "Show Override on HUD");
+            DisplayUpdateInterval = Config.Bind("Visuals", "HUD overlay update interval", 0.02f, "seconds");
             AltShowUnit = Config.Bind("Visuals - Units", "1. Show unit for alt", false, "(example) on: 10m, off: 10");
             DistShowUnit = Config.Bind("Visuals - Units", "2. Show unit for dist", true, "(example) on: 10km, off: 10");
             VertSpeedShowUnit = Config.Bind("Visuals - Units", "3. Show unit for vertical speed", false, "(example) on: 10m/s, off: 10");
@@ -2067,6 +2068,7 @@ namespace NOAutopilot
         private static float fuelFlowEma = 0f;
         private static float lastUpdateTime = 0f;
 
+        private static float _lastStringUpdate = 0f;
         private static FuelGauge _cachedFuelGauge;
         private static Text _cachedRefLabel;
         private static GameObject _lastVehicleChecked;
@@ -2082,6 +2084,7 @@ namespace NOAutopilot
             lastFuelMass = 0f;
             fuelFlowEma = 0f;
             lastUpdateTime = 0f;
+            _lastStringUpdate = 0f;
             _cachedFuelGauge = null;
             _cachedRefLabel = null;
             _lastVehicleChecked = null;
@@ -2162,107 +2165,112 @@ namespace NOAutopilot
                 }
                 else { lastUpdateTime = time; lastFuelMass = currentFuel; }
 
-                string content = "";
-
-                if (currentFuel <= 1f)
+                if (Time.time - _lastStringUpdate >= Plugin.DisplayUpdateInterval.Value)
                 {
-                    content += $"<color={Plugin.ColorCrit.Value}>TIME: 00:00\nRNG: -</color>\n";
-                }
-                else
-                {
-                    float calcFlow = Mathf.Max(fuelFlowEma, 0.0001f);
-                    float secs = currentFuel / calcFlow;
-                    string sTime = TimeSpan.FromSeconds(Mathf.Min(secs, 359999f)).ToString("hh\\:mm");
-                    float mins = secs / 60f;
+                    _lastStringUpdate = Time.time;
 
-                    string fuelCol = Plugin.ColorGood.Value;
-                    if (mins < Plugin.FuelCritMinutes.Value) fuelCol = Plugin.ColorCrit.Value;
-                    else if (mins < Plugin.FuelWarnMinutes.Value) fuelCol = Plugin.ColorWarn.Value;
+                    string content = "";
 
-                    content += $"<color={fuelCol}>{sTime}</color>\n";
-
-                    float spd = (aircraft.rb != null) ? aircraft.rb.velocity.magnitude : 0f;
-                    float distMeters = secs * spd;
-
-                    if (distMeters > 99999000f) distMeters = 99999000f;
-
-                    string sRange = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters), Plugin.DistShowUnit.Value);
-                    content += $"<color={Plugin.ColorRange.Value}>{sRange}</color>\n";
-                }
-
-                content += "\n";
-
-                // (AP was on before GCAS) OR (AP is on and no GCAS)
-                bool showAPInfo = (ControlOverridePatch.apStateBeforeGCAS && APData.GCASActive) || (APData.Enabled && !APData.GCASActive);
-
-                if (showAPInfo && Plugin.ShowAPOverlay.Value)
-                {
-                    string altStr = (APData.TargetAlt > 0)
-                        ? ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.TargetAlt), Plugin.AltShowUnit.Value)
-                        : "A-";
-                    string climbStr = ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(APData.CurrentMaxClimbRate), Plugin.VertSpeedShowUnit.Value);
-                    string spdStr;
-                    if (APData.TargetSpeed > 0)
+                    if (currentFuel <= 1f)
                     {
-                        if (APData.SpeedHoldIsMach)
-                            spdStr = $"M{APData.TargetSpeed:F2}";
+                        content += $"<color={Plugin.ColorCrit.Value}>TIME: 00:00\nRNG: -</color>\n";
+                    }
+                    else
+                    {
+                        float calcFlow = Mathf.Max(fuelFlowEma, 0.0001f);
+                        float secs = currentFuel / calcFlow;
+                        string sTime = TimeSpan.FromSeconds(Mathf.Min(secs, 359999f)).ToString("hh\\:mm");
+                        float mins = secs / 60f;
+
+                        string fuelCol = Plugin.ColorGood.Value;
+                        if (mins < Plugin.FuelCritMinutes.Value) fuelCol = Plugin.ColorCrit.Value;
+                        else if (mins < Plugin.FuelWarnMinutes.Value) fuelCol = Plugin.ColorWarn.Value;
+
+                        content += $"<color={fuelCol}>{sTime}</color>\n";
+
+                        float spd = (aircraft.rb != null) ? aircraft.rb.velocity.magnitude : 0f;
+                        float distMeters = secs * spd;
+
+                        if (distMeters > 99999000f) distMeters = 99999000f;
+
+                        string sRange = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters), Plugin.DistShowUnit.Value);
+                        content += $"<color={Plugin.ColorRange.Value}>{sRange}</color>\n";
+                    }
+
+                    content += "\n";
+
+                    // (AP was on before GCAS) OR (AP is on and no GCAS)
+                    bool showAPInfo = (ControlOverridePatch.apStateBeforeGCAS && APData.GCASActive) || (APData.Enabled && !APData.GCASActive);
+
+                    if (showAPInfo && Plugin.ShowAPOverlay.Value)
+                    {
+                        string altStr = (APData.TargetAlt > 0)
+                            ? ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.TargetAlt), Plugin.AltShowUnit.Value)
+                            : "A-";
+                        string climbStr = ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(APData.CurrentMaxClimbRate), Plugin.VertSpeedShowUnit.Value);
+                        string spdStr;
+                        if (APData.TargetSpeed > 0)
+                        {
+                            if (APData.SpeedHoldIsMach)
+                                spdStr = $"M{APData.TargetSpeed:F2}";
+                            else
+                                spdStr = ModUtils.ProcessGameString(UnitConverter.SpeedReading(APData.TargetSpeed), Plugin.SpeedShowUnit.Value);
+                        }
                         else
-                            spdStr = ModUtils.ProcessGameString(UnitConverter.SpeedReading(APData.TargetSpeed), Plugin.SpeedShowUnit.Value);
+                        {
+                            spdStr = "S-";
+                        }
+                        string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
+                        string degStr;
+
+                        if (APData.TargetCourse >= 0)
+                            degStr = $"C{APData.TargetCourse:F0}{degUnit}";
+                        else if (APData.TargetRoll != -999f)
+                            degStr = $"R{APData.TargetRoll:F0}{degUnit}";
+                        else
+                            degStr = "CR-";
+
+                        string navStr = "";
+                        if (APData.NavEnabled && APData.NavQueue.Count > 0)
+                        {
+                            float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
+                            navStr = "W>" + ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value);
+                        }
+                        else
+                            navStr = "W-";
+
+                        content += $"<color={Plugin.ColorAPOn.Value}>{altStr} {climbStr} {spdStr}\n{degStr} {navStr}</color>\n";
                     }
-                    else
+
+                    if (APData.GCASActive)
                     {
-                        spdStr = "S-";
+                        content += $"<color={Plugin.ColorCrit.Value}>A-GCAS</color>\n";
                     }
-                    string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
-                    string degStr;
-
-                    if (APData.TargetCourse >= 0)
-                        degStr = $"C{APData.TargetCourse:F0}{degUnit}";
-                    else if (APData.TargetRoll != -999f)
-                        degStr = $"R{APData.TargetRoll:F0}{degUnit}";
-                    else
-                        degStr = "CR-";
-
-                    string navStr = "";
-                    if (APData.NavEnabled && APData.NavQueue.Count > 0)
+                    else if (APData.GCASWarning)
                     {
-                        float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
-                        navStr = "W>" + ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value);
+                        content += $"<color={Plugin.ColorWarn.Value}>PULL UP</color>\n";
                     }
-                    else
-                        navStr = "W-";
-
-                    content += $"<color={Plugin.ColorAPOn.Value}>{altStr} {climbStr} {spdStr}\n{degStr} {navStr}</color>\n";
-                }
-
-                if (APData.GCASActive)
-                {
-                    content += $"<color={Plugin.ColorCrit.Value}>A-GCAS</color>\n";
-                }
-                else if (APData.GCASWarning)
-                {
-                    content += $"<color={Plugin.ColorWarn.Value}>PULL UP</color>\n";
-                }
-                else if (!APData.GCASEnabled && Plugin.ShowGCASOff.Value)
-                {
-                    content += $"<color={Plugin.ColorInfo.Value}>GCAS-</color>\n";
-                }
-
-                if (Plugin.ShowOverride.Value && APData.Enabled && !APData.GCASActive)
-                {
-                    float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastOverrideInputTime);
-                    if (overrideRemaining > 0)
+                    else if (!APData.GCASEnabled && Plugin.ShowGCASOff.Value)
                     {
-                        content += $"<color={Plugin.ColorInfo.Value}>{overrideRemaining:F1}s</color>\n";
+                        content += $"<color={Plugin.ColorInfo.Value}>GCAS-</color>\n";
                     }
-                }
 
-                if (APData.AutoJammerActive)
-                {
-                    content += $"<color={Plugin.ColorAPOn.Value}>AJ</color>";
-                }
+                    if (Plugin.ShowOverride.Value && APData.Enabled && !APData.GCASActive)
+                    {
+                        float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastOverrideInputTime);
+                        if (overrideRemaining > 0)
+                        {
+                            content += $"<color={Plugin.ColorInfo.Value}>{overrideRemaining:F1}s</color>\n";
+                        }
+                    }
 
-                overlayText.text = content;
+                    if (APData.AutoJammerActive)
+                    {
+                        content += $"<color={Plugin.ColorAPOn.Value}>AJ</color>";
+                    }
+
+                    overlayText.text = content;
+                }
             }
             catch (Exception ex)
             {

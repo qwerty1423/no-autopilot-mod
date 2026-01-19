@@ -76,6 +76,8 @@ namespace NOAutopilot
         private readonly GUIContent _measuringContent = new();
         private readonly float buttonWidth = 40f;
 
+        private static readonly Dictionary<KeyCode, bool> _keyStates = [];
+
         // Visuals
         public static ConfigEntry<string> ColorAPOn, ColorInfo, ColorGood, ColorWarn, ColorCrit, ColorRange;
         public static ConfigEntry<float> OverlayOffsetX, OverlayOffsetY, FuelSmoothing, FuelUpdateInterval, DisplayUpdateInterval;
@@ -242,9 +244,9 @@ namespace NOAutopilot
             MenuKey = Config.Bind("Controls", "18. Menu Key", KeyCode.F8, "Open the Autopilot Menu");
 
             // Tuning
-            DefaultMaxClimbRate = Config.Bind("Tuning - 0. Limits", "1. Default Max Climb Rate", 40f, "Startup value");
-            Conf_VS_MaxAngle = Config.Bind("Tuning - 0. Limits", "2. Max Pitch Angle", 90.0f, "useless limit");
-            DefaultCRLimit = Config.Bind("Tuning - 0. Limits", "3. Default course roll limit", 60.0f, "roll limit when turning in course/nav mode");
+            DefaultMaxClimbRate = Config.Bind("Tuning - 0. Limits", "1. Default Max Climb Rate", 10f, "Startup value");
+            Conf_VS_MaxAngle = Config.Bind("Tuning - 0. Limits", "2. Max Pitch Angle", 30.0f, "anti stall limit?");
+            DefaultCRLimit = Config.Bind("Tuning - 0. Limits", "3. Default course roll limit", 30.0f, "roll limit when turning in course/nav mode");
 
             // Loops
             Conf_Alt_P = Config.Bind("Tuning - 1. Altitude", "1. Alt P", 0.5f, "Alt Error -> Target VS");
@@ -443,7 +445,7 @@ namespace NOAutopilot
 
         private void Update()
         {
-            if (Input.GetKeyDown(MenuKey.Value))
+            if (GetKeyDownImproved(MenuKey.Value))
             {
                 _showMenu = !_showMenu;
                 if (_showMenu)
@@ -464,23 +466,23 @@ namespace NOAutopilot
                     SyncMenuValues();
                 }
             }
-            if (Input.GetKeyDown(ToggleKey.Value))
+            if (GetKeyDownImproved(ToggleKey.Value))
             {
                 APData.Enabled = !APData.Enabled;
                 APData.TargetAlt = APData.CurrentAlt;
             }
 
-            if (EnableAutoJammer.Value && Input.GetKeyDown(AutoJammerKey.Value))
+            if (EnableAutoJammer.Value && GetKeyDownImproved(AutoJammerKey.Value))
             {
                 APData.AutoJammerActive = !APData.AutoJammerActive;
             }
 
-            if (Input.GetKeyDown(ToggleGCASKey.Value))
+            if (GetKeyDownImproved(ToggleGCASKey.Value))
             {
                 APData.GCASEnabled = !APData.GCASEnabled;
                 if (!APData.GCASEnabled) { APData.GCASActive = false; APData.GCASWarning = false; }
             }
-            if (Input.GetKeyDown(SpeedHoldKey.Value))
+            if (GetKeyDownImproved(SpeedHoldKey.Value))
             {
                 if (APData.TargetSpeed > 0)
                 {
@@ -1097,6 +1099,31 @@ namespace NOAutopilot
                 Vector3 firstMap = new(APData.NavQueue[0].x * factor, APData.NavQueue[0].z * factor, 0f);
                 DrawLine(lastPoint, firstMap, "AP_NavLine_Loop", true);
             }
+        }
+
+        public static bool GetKeyDownImproved(KeyCode key)
+        {
+            if (key == KeyCode.None) return false;
+
+            bool isPhysicallyHeld = Input.GetKey(key);
+
+            if (!_keyStates.ContainsKey(key))
+            {
+                _keyStates[key] = false;
+            }
+
+            if (isPhysicallyHeld && !_keyStates[key])
+            {
+                _keyStates[key] = true;
+                return true;
+            }
+
+            if (!isPhysicallyHeld)
+            {
+                _keyStates[key] = false;
+            }
+
+            return false;
         }
 
         private void OnSceneUnloaded(Scene scene)
@@ -1717,7 +1744,7 @@ namespace NOAutopilot
                         if (Input.GetKey(Plugin.ClimbRateUpKey.Value)) APData.CurrentMaxClimbRate += Plugin.ClimbRateStep.Value;
                         if (Input.GetKey(Plugin.ClimbRateDownKey.Value)) APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - Plugin.ClimbRateStep.Value);
 
-                        if (Input.GetKeyDown(Plugin.ClearKey.Value))
+                        if (Plugin.GetKeyDownImproved(Plugin.ClearKey.Value))
                         {
                             if (APData.TargetCourse != -1f)
                             {
@@ -1744,8 +1771,17 @@ namespace NOAutopilot
                         }
                         else
                         {
-                            if (Input.GetKey(Plugin.BankLeftKey.Value)) APData.TargetRoll = Mathf.Repeat(APData.TargetRoll + Plugin.BankStep.Value + 180f, 360f) - 180f;
-                            if (Input.GetKey(Plugin.BankRightKey.Value)) APData.TargetRoll = Mathf.Repeat(APData.TargetRoll - Plugin.BankStep.Value + 180f, 360f) - 180f;
+                            bool bankLeft = Input.GetKey(Plugin.BankLeftKey.Value);
+                            bool bankRight = Input.GetKey(Plugin.BankRightKey.Value);
+                            if (bankLeft || bankRight)
+                            {
+                                if (APData.TargetRoll == -999f) APData.TargetRoll = APData.CurrentRoll;
+                                if (bankLeft)
+                                    APData.TargetRoll = Mathf.Repeat(APData.TargetRoll + Plugin.BankStep.Value + 180f, 360f) - 180f;
+
+                                if (bankRight)
+                                    APData.TargetRoll = Mathf.Repeat(APData.TargetRoll - Plugin.BankStep.Value + 180f, 360f) - 180f;
+                            }
                         }
                     }
 

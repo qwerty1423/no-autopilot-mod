@@ -8,6 +8,7 @@ Adds autopilot and some other features.
    - [their github has install instructions](https://github.com/BepInEx/BepInEx/)
    - run the game, then quit
    - edit BepInEx.cfg in BepInEx/config
+
     line that says:
     HideManagerGameObject = false
     should be changed to:

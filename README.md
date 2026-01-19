@@ -15,7 +15,7 @@ prerequisites: copy of the game
     should be changed to:
     HideManagerGameObject = true
 
-(this edit might not be necessary for this mod itself (I don't test with it off though so there are no guarantees here), but it is necessary for the config manager if you want it)
+   (this edit might not be necessary for this mod itself (I don't test with it off though so there are no guarantees here), but it is necessary for the config manager if you want it)
 
 2. (Recommended) Install BepInEx Configuration Manager. It is useful for editing settings ingame.
    - download [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager)

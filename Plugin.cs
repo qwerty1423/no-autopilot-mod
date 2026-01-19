@@ -282,7 +282,7 @@ namespace NOAutopilot
             GCAS_WarnBuffer = Config.Bind("Auto GCAS", "4. Warning Buffer", 20.0f, "Seconds warning before auto-pull");
             GCAS_AutoBuffer = Config.Bind("Auto GCAS", "5. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
             GCAS_Deadzone = Config.Bind("Auto GCAS", "6. GCAS Deadzone", 0.5f, "GCAS override deadzone");
-            GCAS_ScanRadius = Config.Bind("Auto GCAS", "7. Scan Radius", 2.0f, "Width of the spherecast.");
+            GCAS_ScanRadius = Config.Bind("Auto GCAS", "7. Scan Radius", 2.0f, "Width of the spherecast (m)");
             GCAS_P = Config.Bind("GCAS PID", "1. GCAS P", 0.1f, "G Error -> Stick");
             GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 1.0f, "Builds pull over time");
             GCAS_D = Config.Bind("GCAS PID", "3. GCAS D", 0.0f, "Dampens G overshoot");
@@ -2277,17 +2277,33 @@ namespace NOAutopilot
         public static void Reset() { }
         static void Postfix(DynamicMap __instance)
         {
-            if (__instance.selectedIcons.Count > 0) return;
+            if (__instance == null || !DynamicMap.mapMaximized || !Input.GetMouseButtonDown(1)) return;
 
-            if (DynamicMap.mapMaximized && Input.GetMouseButtonDown(1))
+            if (__instance.selectedIcons != null && __instance.selectedIcons.Count > 0)
             {
-                if (APData.LocalAircraft != null)
+                if (__instance.selectedIcons[0] is UnitMapIcon unitIcon)
                 {
-                    if (!Input.GetKey(KeyCode.LeftShift)) APData.NavQueue.Clear();
-                    APData.NavQueue.Add(__instance.GetCursorCoordinates().AsVector3());
-                    APData.NavEnabled = true;
-                    Plugin.RefreshNavVisuals();
+                    if (unitIcon.unit != null)
+                    {
+                        if (DynamicMap.GetFactionMode(unitIcon.unit.NetworkHQ, false) == FactionMode.Friendly
+                            && unitIcon.unit is not Building)
+                        {
+                            return; // there was friendly unit selected as first unit
+                        }
+                    }
                 }
+            }
+
+            if (APData.LocalAircraft != null)
+            {
+                if (!Input.GetKey(KeyCode.LeftShift))
+                {
+                    APData.NavQueue.Clear();
+                }
+
+                APData.NavQueue.Add(__instance.GetCursorCoordinates().AsVector3());
+                APData.NavEnabled = true;
+                Plugin.RefreshNavVisuals();
             }
         }
     }

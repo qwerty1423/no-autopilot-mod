@@ -93,10 +93,9 @@ namespace NOAutopilot
         public static ConfigEntry<bool> AngleShowUnit;
 
         // Settings
-        public static ConfigEntry<float> StickDeadzone;
-        // public static ConfigEntry<float> DisengageDelay;
-        public static ConfigEntry<float> ReengageDelay;
-        public static ConfigEntry<bool> InvertRoll, InvertPitch;
+        public static ConfigEntry<float> StickTempThreshold, StickDisengageThreshold;
+        public static ConfigEntry<float> DisengageDelay, ReengageDelay;
+        public static ConfigEntry<bool> InvertRoll, InvertPitch, StickDisengageEnabled;
         public static ConfigEntry<bool> Conf_InvertCourseRoll;
 
         // Auto Jammer
@@ -201,12 +200,14 @@ namespace NOAutopilot
             FuelCritMinutes = Config.Bind("Calculations", "4. Fuel Critical Time", 5, "Minutes");
 
             // Settings
-            StickDeadzone = Config.Bind("Settings", "1. Disengage Stick Deadzone", 0.01f, "for AP temporary disengage via manual input");
-            // DisengageDelay = Config.Bind("Settings", "2. Disengage Delay", 10f, "Seconds of continuous input over deadzone before AP turns off");
-            ReengageDelay = Config.Bind("Settings", "2. Reengage Delay", 0.4f, "Seconds to wait after stick release before AP resumes control");
-            InvertRoll = Config.Bind("Settings", "3. Invert Roll", true, "Flip Roll");
-            InvertPitch = Config.Bind("Settings", "4. Invert Pitch", true, "Flip Pitch");
-            Conf_InvertCourseRoll = Config.Bind("Settings", "5. Invert Bank Direction", true, "Toggle if plane turns wrong way");
+            StickTempThreshold = Config.Bind("Settings", "1. Temp disengage Stick Threshold", 0.01f, "for AP disengage via manual input");
+            ReengageDelay = Config.Bind("Settings", "2. Reengage Delay (temp disengage)", 0.4f, "Seconds to wait after stick release before AP resumes control");
+            DisengageDelay = Config.Bind("Settings", "3. Disengage Delay", 10f, "Seconds of continuous input before AP disengages (0 = off) (uses temp deadzone)");
+            StickDisengageEnabled = Config.Bind("Settings", "4. Disengage on Large Input", true, "If true, moving the stick past a threshold turns AP OFF entirely.");
+            StickDisengageThreshold = Config.Bind("Settings", "5. Large Input Disengage Threshold", 0.8f, "Stick input (0.0 to 1.0) required to disengage AP entirely");
+            InvertRoll = Config.Bind("Settings", "6. Invert Roll", true, "Flip Roll");
+            InvertPitch = Config.Bind("Settings", "7. Invert Pitch", true, "Flip Pitch");
+            Conf_InvertCourseRoll = Config.Bind("Settings", "8. Invert Bank Direction", true, "Toggle if plane turns wrong way");
 
             // nav
             NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f, "Distance in meters to consider a waypoint reached.");
@@ -482,6 +483,7 @@ namespace NOAutopilot
                     APData.NavEnabled = false;
                 }
                 APData.TargetAlt = APData.CurrentAlt;
+                _bufAlt = ModUtils.ConvertAlt_ToDisplay(APData.TargetAlt).ToString("F0");
             }
 
             if (EnableAutoJammer.Value && GetKeyDownImproved(AutoJammerKey.Value))
@@ -879,6 +881,7 @@ namespace NOAutopilot
 
                 APData.Enabled = true;
                 APData.UseSetValues = true;
+                SyncMenuValues();
                 GUI.FocusControl(null);
             }
 
@@ -1445,6 +1448,8 @@ namespace NOAutopilot
         private static float jammerNextReleaseTime = 0f;
         private static bool isJammerHoldingTrigger = false;
 
+        private static float _disengageTimer = 0f;
+
         public static void Reset()
         {
             pidAlt.Reset();
@@ -1479,6 +1484,8 @@ namespace NOAutopilot
             jammerNextFireTime = 0f;
             jammerNextReleaseTime = 0f;
             isJammerHoldingTrigger = false;
+
+            _disengageTimer = 0f;
         }
 
         private static void ResetIntegrators(float inputThrottle)
@@ -1610,7 +1617,7 @@ namespace NOAutopilot
                     else
                     {
                         float speed = APData.PlayerRB.velocity.magnitude;
-                        if (speed > 1f)
+                        if (speed > 0f)
                         {
                             Vector3 velocity = APData.PlayerRB.velocity;
                             float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
@@ -1654,7 +1661,7 @@ namespace NOAutopilot
                                 }
                             }
 
-                            if (descentRate > 0.1f)
+                            if (descentRate > 0f)
                             {
                                 float diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
                                 float pullUpLoss = turnRadius * (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
@@ -1789,12 +1796,47 @@ namespace NOAutopilot
                     }
                 }
 
-                bool pilotPitch = Mathf.Abs(stickPitch) > Plugin.StickDeadzone.Value;
-                bool pilotRoll = Mathf.Abs(stickRoll) > Plugin.StickDeadzone.Value;
+                bool pilotPitch = Mathf.Abs(stickPitch) > Plugin.StickTempThreshold.Value;
+                bool pilotRoll = Mathf.Abs(stickRoll) > Plugin.StickTempThreshold.Value;
 
                 if (pilotPitch || pilotRoll)
                 {
                     APData.LastOverrideInputTime = Time.time;
+
+                    if (APData.Enabled)
+                    {
+                        bool triggerDisengage = false;
+
+                        if (Plugin.StickDisengageEnabled.Value)
+                        {
+                            if (Mathf.Abs(stickPitch) > Plugin.StickDisengageThreshold.Value ||
+                                Mathf.Abs(stickRoll) > Plugin.StickDisengageThreshold.Value)
+                            {
+                                triggerDisengage = true;
+                            }
+                        }
+
+                        if (Plugin.DisengageDelay.Value > 0)
+                        {
+                            _disengageTimer += dt;
+                            if (_disengageTimer >= Plugin.DisengageDelay.Value)
+                            {
+                                triggerDisengage = true;
+                            }
+                        }
+
+                        if (triggerDisengage)
+                        {
+                            APData.Enabled = false;
+                            APData.NavEnabled = false;
+                            Plugin.SyncMenuValues();
+                            _disengageTimer = 0f;
+                        }
+                    }
+                }
+                else
+                {
+                    _disengageTimer = 0f;
                 }
 
                 bool isWaitingToReengage = (Time.time - APData.LastOverrideInputTime) < Plugin.ReengageDelay.Value;

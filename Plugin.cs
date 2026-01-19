@@ -794,6 +794,10 @@ namespace NOAutopilot
             // course
             GUILayout.BeginHorizontal();
             GUILayout.Label(new GUIContent($"{sCrs}", "Current course"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            if (APData.NavEnabled && APData.TargetCourse >= 0)
+            {
+                _bufCourse = APData.TargetCourse.ToString("F0");
+            }
             _bufCourse = GUILayout.TextField(_bufCourse);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target course"));
             if (GUILayout.Button(new GUIContent("CLR", "Disable course hold"), _styleButton, GUILayout.Width(buttonWidth)))
@@ -1512,6 +1516,36 @@ namespace NOAutopilot
                     APData.UseSetValues = false;
                 }
 
+                // waypoint deletion
+                if (APData.NavQueue.Count > 0)
+                {
+                    Vector3 targetPos = APData.NavQueue[0];
+                    Vector3 playerPos = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+                    Vector3 diff = targetPos - playerPos;
+
+                    float distSq = new Vector2(diff.x, diff.z).sqrMagnitude;
+                    bool passed = Vector3.Dot(pForward, diff.normalized) < 0;
+
+                    float threshold = Plugin.NavReachDistance.Value;
+                    float passedThreshold = Plugin.NavPassedDistance.Value;
+
+                    // if (close) or (behind and not too far away)
+                    if (distSq < (threshold * threshold) || (passed && distSq < passedThreshold * passedThreshold))
+                    {
+                        Vector3 reachedPoint = APData.NavQueue[0];
+                        APData.NavQueue.RemoveAt(0);
+                        if (Plugin.NavCycle.Value) APData.NavQueue.Add(reachedPoint);
+                        Plugin.RefreshNavVisuals();
+                        if (APData.NavQueue.Count == 0) APData.NavEnabled = false;
+                    }
+
+                    if (APData.Enabled && APData.NavEnabled && !APData.GCASActive)
+                    {
+                        float bearing = Mathf.Atan2(diff.x, diff.z) * Mathf.Rad2Deg;
+                        APData.TargetCourse = (bearing + 360f) % 360f;
+                    }
+                }
+
                 // can a plane have no pilot?
                 if (APData.LocalPilot != null && Plugin.m_GetAccel != null)
                 {
@@ -1845,41 +1879,6 @@ namespace NOAutopilot
                             Plugin.ThrottleSlewRate.Value * dt
                         );
                         Plugin.f_throttle.SetValue(inputObj, currentAppliedThrottle);
-                    }
-
-                    if (APData.NavEnabled && APData.NavQueue.Count > 0)
-                    {
-                        Vector3 targetPos = APData.NavQueue[0];
-                        Vector3 playerPos = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
-                        Vector3 diff = targetPos - playerPos;
-
-                        float bearing = Mathf.Atan2(diff.x, diff.z) * Mathf.Rad2Deg;
-                        APData.TargetCourse = (bearing + 360f) % 360f;
-
-                        float distSq = new Vector2(diff.x, diff.z).sqrMagnitude;
-                        bool passed = Vector3.Dot(pForward, diff.normalized) < 0;
-
-                        float threshold = Plugin.NavReachDistance.Value;
-                        float passedThreshold = Plugin.NavPassedDistance.Value;
-                        if (distSq < (threshold * threshold) || (passed && distSq < passedThreshold * passedThreshold))
-                        {
-                            Vector3 reachedPoint = APData.NavQueue[0];
-                            APData.NavQueue.RemoveAt(0);
-
-                            if (Plugin.NavCycle.Value)
-                            {
-                                // Put the reached point at the back of the line
-                                APData.NavQueue.Add(reachedPoint);
-                            }
-
-                            Plugin.RefreshNavVisuals();
-
-                            // If we aren't cycling and ran out of points, turn off Nav
-                            if (APData.NavQueue.Count == 0)
-                            {
-                                APData.NavEnabled = false;
-                            }
-                        }
                     }
 
                     // roll/course control

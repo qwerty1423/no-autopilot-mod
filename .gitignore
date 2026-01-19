@@ -1,4 +1,4 @@
-Libs/
+Libs/**/*.dll
 
 bin/
 obj/
@@ -10,3 +10,10 @@ obj/
 
 .DS_Store
 Thumbs.db
+
+*.dll
+*.pdb
+*.mdb
+*.zip
+*.7z
+*.rar

@@ -176,8 +176,8 @@ namespace NOAutopilot
             ColorCrit = Config.Bind("Visuals - Colors", "5. Color Critical", "#FF0000", "Red");
             ColorRange = Config.Bind("Visuals - Colors", "6. Range display color", "#00FFFF", "color for range");
             ColorNav = Config.Bind("Visuals - Colors", "7. Navigation Color", "#ff00ffcc", "color for flight path lines.");
-            OverlayOffsetX = Config.Bind("Visuals - Layout", "1. Stack Start X", 20f, "HUD Horizontal position");
-            OverlayOffsetY = Config.Bind("Visuals - Layout", "2. Stack Start Y", -20f, "HUD Vertical position");
+            OverlayOffsetX = Config.Bind("Visuals - Layout", "1. Stack Start X", -11f, "HUD Horizontal position");
+            OverlayOffsetY = Config.Bind("Visuals - Layout", "2. Stack Start Y", -7f, "HUD Vertical position");
             ShowExtraInfo = Config.Bind("Visuals", "Show Fuel/AP Info", true, "Show extra info on Fuel Gauge");
             ShowAPOverlay = Config.Bind("Visuals", "Show AP Overlay", true, "Draw AP status text on the HUD. Turn off if you want, there's a window now.");
             ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show GCAS OFF on HUD");
@@ -2245,22 +2245,43 @@ namespace NOAutopilot
 
                 if (!infoOverlayObj)
                 {
-                    infoOverlayObj = UnityEngine.Object.Instantiate(_cachedRefLabel.gameObject, __instance.transform);
+                    infoOverlayObj = UnityEngine.Object.Instantiate(_cachedRefLabel.gameObject, _cachedRefLabel.transform.parent);
                     infoOverlayObj.name = "AP_CombinedOverlay";
 
                     overlayText = infoOverlayObj.GetComponent<Text>();
+
+                    overlayText.resizeTextForBestFit = false;
 
                     overlayText.supportRichText = true;
                     overlayText.alignment = TextAnchor.UpperLeft;
                     overlayText.horizontalOverflow = HorizontalWrapMode.Overflow;
                     overlayText.verticalOverflow = VerticalWrapMode.Overflow;
 
+                    RectTransform rect = infoOverlayObj.GetComponent<RectTransform>();
+
+                    rect.pivot = new Vector2(0, 1);
+
+                    rect.anchorMin = new Vector2(0, 1);
+                    rect.anchorMax = new Vector2(0, 1);
+
+                    rect.localScale = _cachedRefLabel.transform.localScale;
+
+                    rect.localRotation = Quaternion.identity;
+
                     infoOverlayObj.SetActive(true);
                 }
 
-                infoOverlayObj.transform.position = _cachedRefLabel.transform.position
-                + (_cachedRefLabel.transform.right * Plugin.OverlayOffsetX.Value)
-                + (_cachedRefLabel.transform.up * Plugin.OverlayOffsetY.Value);
+                float currentSize = PlayerSettings.hmdTextSize;
+                float scaleRatio = currentSize / 24f;
+
+                overlayText.fontSize = (int)currentSize;
+
+                Vector3 refLocalPos = _cachedRefLabel.transform.localPosition;
+
+                float finalX = Plugin.OverlayOffsetX.Value * scaleRatio;
+                float finalY = Plugin.OverlayOffsetY.Value * scaleRatio;
+
+                infoOverlayObj.transform.localPosition = refLocalPos + new Vector3(finalX, finalY, 0);
 
                 Aircraft aircraft = APData.LocalAircraft;
                 if (aircraft == null) return;
@@ -2386,6 +2407,7 @@ namespace NOAutopilot
                         content += $"<color={Plugin.ColorAPOn.Value}>AJ</color>";
                     }
 
+                    overlayText.fontSize = (int)PlayerSettings.hmdTextSize;
                     overlayText.text = content;
                 }
             }

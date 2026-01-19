@@ -26,13 +26,13 @@ namespace NOAutopilot
         // controls table
         private readonly string table = $"<b>Toggle Autopilot:</b> = (Equals) | Self-explanatory.\n" +
                     $"<b>Toggle Auto-Jammer:</b> / (Slash) | Self-explanatory.\n" +
-                    $"<b>Target Alt Small:</b> Up / Down Arrow | Small adj (0.1m)\n" +
-                    $"<b>Target Alt Large:</b> Left / Right Arrow | Large adj (100m)\n" +
+                    $"<b>Target Alt Small:</b> Up / Down Arrow | Small adjustment\n" +
+                    $"<b>Target Alt Large:</b> Left / Right Arrow | Large adjustment\n" +
                     $"<b>Max Climb Rate:</b> PageUp / PageDown | Limit vertical speed\n" +
                     $"<b>Bank Left/Right:</b> [ and ] (Brackets) | Adjust roll angle\n" +
-                    $"<b>Clear Crs/Roll/Alt/Roll:</b> ' (Quote) | Resets in order\n" +
+                    $"<b>Clear Nav/Crs/Roll/Alt/Roll:</b> ' (Quote) | Resets in order\n" +
                     $"<b>Toggle GCAS:</b> \\ (Backslash) | Added just in case\n" +
-                    $"<b>Toggle Autothrottle:</b> ; (Semicolon) | Writes speed to UI\n" +
+                    $"<b>Toggle Autothrottle:</b> ; (Semicolon) | Toggle speed hold\n" +
                     $"<b>Toggle AP GUI:</b> F8 | Opens/closes the GUI";
 
         // ap menu?
@@ -753,8 +753,10 @@ namespace NOAutopilot
 
             // bank angle
             GUILayout.BeginHorizontal();
-            GUI.color = (APData.Enabled && APData.TargetRoll != -999f) ? Color.green : Color.white;
-            GUILayout.Label(new GUIContent($"{sRoll}", "Current bank angle\nGreen if roll AP on"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
+            if (APData.NavEnabled && APData.Enabled) GUI.color = Color.cyan;
+            else if (APData.Enabled && APData.TargetRoll != -999f) GUI.color = Color.green;
+            else GUI.color = Color.white;
+            GUILayout.Label(new GUIContent($"{sRoll}", "Current bank angle\nCyan if Nav mode on\nGreen if roll AP on"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
             GUI.color = Color.white;
             _bufRoll = GUILayout.TextField(_bufRoll);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target/limit bank angle"));
@@ -815,7 +817,7 @@ namespace NOAutopilot
             if (APData.NavEnabled && APData.Enabled) GUI.color = Color.cyan;
             else if (APData.Enabled && APData.TargetCourse >= 0) GUI.color = Color.green;
             else GUI.color = Color.white;
-            GUILayout.Label(new GUIContent($"{sCrs}", "Current course\nCyan if NAV mode on\nGreen if Course AP on"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
+            GUILayout.Label(new GUIContent($"{sCrs}", "Current course\nCyan if Nav mode on\nGreen if Course AP on"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
             GUI.color = Color.white;
             if (APData.NavEnabled && APData.TargetCourse >= 0)
             {

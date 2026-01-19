@@ -709,7 +709,9 @@ namespace NOAutopilot
 
             // altitude
             GUILayout.BeginHorizontal();
+            GUI.color = (APData.Enabled && APData.TargetAlt > 0) ? Color.green : Color.white;
             GUILayout.Label(new GUIContent($"{sAlt}", "Current altitude"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            GUI.color = Color.white;
             _bufAlt = GUILayout.TextField(_bufAlt);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target altitude"));
 
@@ -736,7 +738,9 @@ namespace NOAutopilot
 
             // bank angle
             GUILayout.BeginHorizontal();
+            GUI.color = (APData.Enabled && APData.TargetRoll != -999f) ? Color.green : Color.white;
             GUILayout.Label(new GUIContent($"{sRoll}", "Current bank angle"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            GUI.color = Color.white;
             _bufRoll = GUILayout.TextField(_bufRoll);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target/limit bank angle"));
 
@@ -749,7 +753,9 @@ namespace NOAutopilot
 
             // speed
             GUILayout.BeginHorizontal();
+            GUI.color = (APData.TargetSpeed > 0) ? Color.green : Color.white;
             GUILayout.Label(new GUIContent($"{sSpd}", "Current speed"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            GUI.color = Color.white;
             _bufSpeed = GUILayout.TextField(_bufSpeed);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target speed"));
 
@@ -791,7 +797,11 @@ namespace NOAutopilot
 
             // course
             GUILayout.BeginHorizontal();
+            if (APData.NavEnabled && APData.Enabled) GUI.color = Color.cyan;
+            else if (APData.Enabled && APData.TargetCourse >= 0) GUI.color = Color.green;
+            else GUI.color = Color.white;
             GUILayout.Label(new GUIContent($"{sCrs}", "Current course"), _styleLabel, GUILayout.Width(_dynamicLabelWidth));
+            GUI.color = Color.white;
             if (APData.NavEnabled && APData.TargetCourse >= 0)
             {
                 _bufCourse = APData.TargetCourse.ToString("F0");
@@ -880,12 +890,14 @@ namespace NOAutopilot
 
             // auto jam/gcas
             GUILayout.BeginHorizontal();
+            GUI.backgroundColor = APData.AutoJammerActive ? Color.green : Color.white;
             string ajText = "AJ: " + (APData.AutoJammerActive ? "ON" : "OFF");
             if (GUILayout.Button(new GUIContent(ajText, "Toggle Auto Jammer"), _styleButton))
             {
                 APData.AutoJammerActive = !APData.AutoJammerActive;
                 GUI.FocusControl(null);
             }
+            GUI.backgroundColor = APData.GCASEnabled ? Color.green : Color.white;
             string gcasText = "GCAS: " + (APData.GCASEnabled ? "ON" : "OFF");
             if (GUILayout.Button(new GUIContent(gcasText, "Toggle Auto-GCAS"), _styleButton))
             {
@@ -893,14 +905,27 @@ namespace NOAutopilot
                 if (!APData.GCASEnabled) APData.GCASActive = false;
                 GUI.FocusControl(null);
             }
-
+            GUI.backgroundColor = Color.white;
             GUILayout.EndHorizontal();
 
             GUILayout.Space(5);
 
             // nav
             GUILayout.BeginHorizontal();
-            APData.NavEnabled = GUILayout.Toggle(APData.NavEnabled, new GUIContent("Nav mode", "switch for waypoint ap mode. overrides course hold."));
+            bool newNavState = GUILayout.Toggle(APData.NavEnabled, new GUIContent("Nav mode", "switch for waypoint ap mode. overrides course hold."));
+            if (newNavState != APData.NavEnabled)
+            {
+                if (newNavState)
+                {
+                    // If on and roll is disabled
+                    if (APData.TargetRoll == -999f)
+                    {
+                        APData.TargetRoll = DefaultCRLimit.Value;
+                        _bufRoll = APData.TargetRoll.ToString("F0");
+                    }
+                }
+                APData.NavEnabled = newNavState;
+            }
             NavCycle.Value = GUILayout.Toggle(NavCycle.Value, new GUIContent("Cycle wp", "On: cycles to next wp upon reaching wp, Off: Deletes upon reaching wp"));
             GUILayout.EndHorizontal();
 

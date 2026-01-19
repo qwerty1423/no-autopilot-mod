@@ -45,11 +45,11 @@ namespace NOAutopilot
         private RectEdge _activeEdge = RectEdge.None;
         private enum RectEdge { None, Top, Bottom, Left, Right, TopLeft, TopRight, BottomLeft, BottomRight }
 
-        private string _bufAlt = "";
-        private string _bufClimb = "40";
-        private string _bufRoll = "";
-        private string _bufSpeed = "";
-        private string _bufCourse = "";
+        private static string _bufAlt = "";
+        private static string _bufClimb = "40";
+        private static string _bufRoll = "";
+        private static string _bufSpeed = "";
+        private static string _bufCourse = "";
 
         public static ConfigEntry<float> NavReachDistance, NavPassedDistance;
         public static ConfigEntry<string> ColorNav;
@@ -477,6 +477,10 @@ namespace NOAutopilot
             if (GetKeyDownImproved(ToggleKey.Value))
             {
                 APData.Enabled = !APData.Enabled;
+                if (!APData.Enabled)
+                {
+                    APData.NavEnabled = false;
+                }
                 APData.TargetAlt = APData.CurrentAlt;
             }
 
@@ -519,7 +523,7 @@ namespace NOAutopilot
             }
         }
 
-        private void SyncMenuValues()
+        public static void SyncMenuValues()
         {
             _bufAlt = (APData.TargetAlt > 0)
                 ? ModUtils.ConvertAlt_ToDisplay(APData.TargetAlt).ToString("F0")
@@ -819,9 +823,11 @@ namespace NOAutopilot
             }
             _bufCourse = GUILayout.TextField(_bufCourse);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target course"));
-            if (GUILayout.Button(new GUIContent("CLR", "Disable course hold"), _styleButton, GUILayout.Width(buttonWidth)))
+            if (GUILayout.Button(new GUIContent("CLR", "Disable course hold/nav"), _styleButton, GUILayout.Width(buttonWidth)))
             {
-                APData.TargetCourse = -1f; _bufCourse = "";
+                APData.TargetCourse = -1f;
+                _bufCourse = "";
+                APData.NavEnabled = false;
                 APData.TargetRoll = 0;
                 GUI.FocusControl(null);
             }
@@ -975,11 +981,13 @@ namespace NOAutopilot
                 if (GUILayout.Button(new GUIContent("Skip wp", "delete next point"), _styleButton))
                 {
                     APData.NavQueue.RemoveAt(0);
+                    if (APData.NavQueue.Count == 0) APData.NavEnabled = false;
                     RefreshNavVisuals();
                 }
                 if (GUILayout.Button(new GUIContent("Clear all", "delete all points. (much self explanatory)"), _styleButton))
                 {
                     APData.NavQueue.Clear();
+                    APData.NavEnabled = false;
                     RefreshNavVisuals();
                 }
                 GUILayout.EndHorizontal();
@@ -1388,6 +1396,7 @@ namespace NOAutopilot
                     APData.NavQueue.Clear();
                     foreach (var obj in APData.NavVisuals) if (obj != null) UnityEngine.Object.Destroy(obj);
                     APData.NavVisuals.Clear();
+                    Plugin.SyncMenuValues();
                 }
 
                 APData.CurrentRoll = APData.PlayerTransform.eulerAngles.z;
@@ -1866,7 +1875,11 @@ namespace NOAutopilot
 
                         if (Plugin.GetKeyDownImproved(Plugin.ClearKey.Value))
                         {
-                            if (APData.TargetCourse != -1f)
+                            if (APData.NavEnabled)
+                            {
+                                APData.NavEnabled = false;
+                            }
+                            else if (APData.TargetCourse != -1f)
                             {
                                 APData.TargetCourse = -1f;
                             }
@@ -1882,6 +1895,7 @@ namespace NOAutopilot
                             {
                                 APData.TargetRoll = -999f;
                             }
+                            Plugin.SyncMenuValues();
                         }
 
                         if (APData.TargetCourse >= 0f)

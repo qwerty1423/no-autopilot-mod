@@ -506,8 +506,6 @@ namespace NOAutopilot
                         APData.TargetSpeed = currentTAS;
                         _bufSpeed = ModUtils.ConvertSpeed_ToDisplay(currentTAS).ToString("F0");
                     }
-
-                    APData.Enabled = true;
                 }
                 GUI.FocusControl(null);
             }
@@ -1764,6 +1762,68 @@ namespace NOAutopilot
 
                 bool isWaitingToReengage = (Time.time - APData.LastOverrideInputTime) < Plugin.ReengageDelay.Value;
 
+                // throttle control
+                if (APData.TargetSpeed > 0f && Plugin.f_throttle != null)
+                {
+                    float currentSpeed = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
+                    float targetSpeedMS;
+
+                    if (APData.SpeedHoldIsMach)
+                    {
+                        float currentAlt = APData.LocalAircraft.GlobalPosition().y;
+                        float sos = LevelInfo.GetSpeedofSound(currentAlt);
+                        targetSpeedMS = APData.TargetSpeed * sos;
+                    }
+                    else
+                    {
+                        targetSpeedMS = APData.TargetSpeed;
+                    }
+
+                    float sErr = targetSpeedMS - currentSpeed;
+
+                    float currentAccel = Mathf.Abs(currentSpeed - lastSpdMeasurement) / dt;
+                    lastSpdMeasurement = currentSpeed;
+
+                    if (useRandom)
+                    {
+                        float sErrAbs = Mathf.Abs(sErr);
+                        if (!isSpdSleeping)
+                        {
+                            if (sErrAbs < Plugin.Rand_Spd_Inner.Value && currentAccel < Plugin.Rand_Acc_Inner.Value)
+                            {
+                                spdSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Rand_Spd_SleepMin.Value, Plugin.Rand_Spd_SleepMax.Value);
+                                isSpdSleeping = true;
+                            }
+                        }
+                        else if (sErrAbs > Plugin.Rand_Spd_Outer.Value || currentAccel > Plugin.Rand_Acc_Outer.Value || Time.time > spdSleepUntil)
+                        {
+                            isSpdSleeping = false;
+                        }
+                    }
+
+                    float minT = APData.AllowExtremeThrottle ? 0f : Plugin.ThrottleMinLimit.Value;
+                    float maxT = APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value;
+
+                    float pidOutput = pidSpd.Evaluate(sErr, currentSpeed, dt,
+                        Plugin.Conf_Spd_P.Value, Plugin.Conf_Spd_I.Value, Plugin.Conf_Spd_D.Value,
+                        maxT, true, null,
+                        lastThrottleOut, 0.95f);
+
+                    lastThrottleOut = pidOutput;
+
+                    float currentPitch = Mathf.Asin(pForward.y);
+                    float pitchWorkload = Mathf.Sin(currentPitch) * Plugin.Conf_Spd_C.Value;
+
+                    float desiredLeverPos = Mathf.Clamp((isSpdSleeping ? pidSpd.Integral : pidOutput) + pitchWorkload, minT, maxT);
+
+                    currentAppliedThrottle = Mathf.MoveTowards(
+                        currentAppliedThrottle,
+                        desiredLeverPos,
+                        Plugin.ThrottleSlewRate.Value * dt
+                    );
+                    Plugin.f_throttle.SetValue(inputObj, currentAppliedThrottle);
+                }
+
                 // autopilot
                 if (APData.Enabled || APData.GCASActive)
                 {
@@ -1817,68 +1877,6 @@ namespace NOAutopilot
                                     APData.TargetRoll = Mathf.Repeat(APData.TargetRoll - Plugin.BankStep.Value + 180f, 360f) - 180f;
                             }
                         }
-                    }
-
-                    // throttle control
-                    if (APData.TargetSpeed > 0f && Plugin.f_throttle != null)
-                    {
-                        float currentSpeed = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
-                        float targetSpeedMS;
-
-                        if (APData.SpeedHoldIsMach)
-                        {
-                            float currentAlt = APData.LocalAircraft.GlobalPosition().y;
-                            float sos = LevelInfo.GetSpeedofSound(currentAlt);
-                            targetSpeedMS = APData.TargetSpeed * sos;
-                        }
-                        else
-                        {
-                            targetSpeedMS = APData.TargetSpeed;
-                        }
-
-                        float sErr = targetSpeedMS - currentSpeed;
-
-                        float currentAccel = Mathf.Abs(currentSpeed - lastSpdMeasurement) / dt;
-                        lastSpdMeasurement = currentSpeed;
-
-                        if (useRandom)
-                        {
-                            float sErrAbs = Mathf.Abs(sErr);
-                            if (!isSpdSleeping)
-                            {
-                                if (sErrAbs < Plugin.Rand_Spd_Inner.Value && currentAccel < Plugin.Rand_Acc_Inner.Value)
-                                {
-                                    spdSleepUntil = Time.time + UnityEngine.Random.Range(Plugin.Rand_Spd_SleepMin.Value, Plugin.Rand_Spd_SleepMax.Value);
-                                    isSpdSleeping = true;
-                                }
-                            }
-                            else if (sErrAbs > Plugin.Rand_Spd_Outer.Value || currentAccel > Plugin.Rand_Acc_Outer.Value || Time.time > spdSleepUntil)
-                            {
-                                isSpdSleeping = false;
-                            }
-                        }
-
-                        float minT = APData.AllowExtremeThrottle ? 0f : Plugin.ThrottleMinLimit.Value;
-                        float maxT = APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value;
-
-                        float pidOutput = pidSpd.Evaluate(sErr, currentSpeed, dt,
-                            Plugin.Conf_Spd_P.Value, Plugin.Conf_Spd_I.Value, Plugin.Conf_Spd_D.Value,
-                            maxT, true, null,
-                            lastThrottleOut, 0.95f);
-
-                        lastThrottleOut = pidOutput;
-
-                        float currentPitch = Mathf.Asin(pForward.y);
-                        float pitchWorkload = Mathf.Sin(currentPitch) * Plugin.Conf_Spd_C.Value;
-
-                        float desiredLeverPos = Mathf.Clamp((isSpdSleeping ? pidSpd.Integral : pidOutput) + pitchWorkload, minT, maxT);
-
-                        currentAppliedThrottle = Mathf.MoveTowards(
-                            currentAppliedThrottle,
-                            desiredLeverPos,
-                            Plugin.ThrottleSlewRate.Value * dt
-                        );
-                        Plugin.f_throttle.SetValue(inputObj, currentAppliedThrottle);
                     }
 
                     // roll/course control
@@ -2234,8 +2232,8 @@ namespace NOAutopilot
 
                     content += "\n";
 
-                    // (AP was on before GCAS) OR (AP is on and no GCAS)
-                    bool showAPInfo = (ControlOverridePatch.apStateBeforeGCAS && APData.GCASActive) || (APData.Enabled && !APData.GCASActive);
+                    // (AP was on before GCAS) or (AP is on and no GCAS) or (autothrottle on)
+                    bool showAPInfo = (ControlOverridePatch.apStateBeforeGCAS && APData.GCASActive) || (APData.Enabled && !APData.GCASActive) || (APData.TargetSpeed > 0f && Plugin.f_throttle != null);
 
                     if (showAPInfo && Plugin.ShowAPOverlay.Value)
                     {

@@ -1470,7 +1470,7 @@ namespace NOAutopilot
             isJammerHoldingTrigger = false;
         }
 
-        private static void ResetIntegrators(float currentThrottle)
+        private static void ResetIntegrators(float inputThrottle)
         {
             pidAlt.Reset();
             pidVS.Reset();
@@ -1478,18 +1478,21 @@ namespace NOAutopilot
             pidRoll.Reset();
             pidGCAS.Reset();
             pidCrs.Reset();
-            pidSpd.Reset(Mathf.Clamp01(currentThrottle));
+            if (APData.TargetSpeed <= 0)
+            {
+                pidSpd.Reset(Mathf.Clamp01(inputThrottle));
+                currentAppliedThrottle = inputThrottle;
+                lastThrottleOut = inputThrottle;
+            }
 
             lastPitchOut = 0f;
             lastRollOut = 0f;
-            lastThrottleOut = currentThrottle;
             lastBankReq = 0f;
             lastVSReq = 0f;
             lastAngleReq = 0f;
 
             isPitchSleeping = isRollSleeping = isSpdSleeping = false;
             pitchSleepUntil = rollSleepUntil = spdSleepUntil = 0f;
-            currentAppliedThrottle = currentThrottle;
         }
 
         private static void Postfix(PilotPlayerState __instance)

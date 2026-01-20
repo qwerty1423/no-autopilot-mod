@@ -514,7 +514,7 @@ namespace NOAutopilot
 
             if (GetKeyDownImproved(SpeedHoldKey.Value))
             {
-                if (APData.TargetSpeed > 0)
+                if (APData.TargetSpeed >= 0)
                 {
                     APData.TargetSpeed = -1f;
                     _bufSpeed = "";
@@ -539,7 +539,7 @@ namespace NOAutopilot
                 GUI.FocusControl(null);
             }
 
-            if (APData.TargetSpeed > 0f)
+            if (APData.TargetSpeed >= 0f)
             {
                 bool speedUp = Input.GetKey(SpeedUpKey.Value);
                 bool speedDown = Input.GetKey(SpeedDownKey.Value);
@@ -577,12 +577,12 @@ namespace NOAutopilot
                         if (!APData.SpeedHoldIsMach)
                         {
                             float ms = ModUtils.ConvertSpeed_FromDisplay(val);
-                            APData.TargetSpeed = ms / sos;
+                            APData.TargetSpeed = Mathf.Max(0, ms / sos);
                         }
                         else
                         {
                             float ms = val * sos;
-                            APData.TargetSpeed = ms;
+                            APData.TargetSpeed = Mathf.Max(0, ms);
                         }
                     }
                     APData.SpeedHoldIsMach = !APData.SpeedHoldIsMach;
@@ -608,7 +608,7 @@ namespace NOAutopilot
 
             _bufRoll = (APData.TargetRoll != -999f) ? APData.TargetRoll.ToString("F0") : "";
 
-            if (APData.TargetSpeed > 0)
+            if (APData.TargetSpeed >= 0)
             {
                 if (APData.SpeedHoldIsMach)
                     _bufSpeed = APData.TargetSpeed.ToString("F2");
@@ -843,7 +843,7 @@ namespace NOAutopilot
 
             // speed
             GUILayout.BeginHorizontal();
-            GUI.color = (APData.TargetSpeed > 0) ? Color.green : Color.white;
+            GUI.color = (APData.TargetSpeed >= 0) ? Color.green : Color.white;
             GUILayout.Label(new GUIContent($"{sSpd}", "Current speed\nGreen if autothrottle on"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
             GUI.color = Color.white;
             _bufSpeed = GUILayout.TextField(_bufSpeed);
@@ -858,16 +858,16 @@ namespace NOAutopilot
                     if (!APData.SpeedHoldIsMach)
                     {
                         float ms = ModUtils.ConvertSpeed_FromDisplay(val);
-                        float mach = ms / sos;
+                        float mach = Mathf.Max(0, ms / sos);
                         _bufSpeed = mach.ToString("F2");
-                        if (APData.TargetSpeed > 0) APData.TargetSpeed = mach;
+                        if (APData.TargetSpeed >= 0) APData.TargetSpeed = mach;
                     }
                     else
                     {
-                        float ms = val * sos;
+                        float ms = Mathf.Max(val * sos);
                         float display = ModUtils.ConvertSpeed_ToDisplay(ms);
                         _bufSpeed = display.ToString("F0");
-                        if (APData.TargetSpeed > 0) APData.TargetSpeed = ms;
+                        if (APData.TargetSpeed >= 0) APData.TargetSpeed = ms;
                     }
                 }
                 APData.SpeedHoldIsMach = !APData.SpeedHoldIsMach;
@@ -1589,7 +1589,7 @@ namespace NOAutopilot
             pidRoll.Reset();
             pidGCAS.Reset();
             pidCrs.Reset();
-            if (APData.TargetSpeed <= 0)
+            if (APData.TargetSpeed < 0)
             {
                 pidSpd.Reset(Mathf.Clamp01(inputThrottle));
                 currentAppliedThrottle = inputThrottle;
@@ -1935,7 +1935,7 @@ namespace NOAutopilot
                 bool isWaitingToReengage = (Time.time - APData.LastOverrideInputTime) < Plugin.ReengageDelay.Value;
 
                 // throttle control
-                if (APData.TargetSpeed > 0f && Plugin.f_throttle != null)
+                if (APData.TargetSpeed >= 0 && Plugin.f_throttle != null)
                 {
                     float currentSpeed = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
                     float targetSpeedMS;
@@ -2459,7 +2459,7 @@ namespace NOAutopilot
                     // (AP was on before GCAS) or (AP is on and no GCAS)
                     bool apActive = (ControlOverridePatch.apStateBeforeGCAS && APData.GCASActive) || (APData.Enabled && !APData.GCASActive);
 
-                    bool speedActive = APData.TargetSpeed > 0f;
+                    bool speedActive = APData.TargetSpeed >= 0f;
 
                     bool showAPInfo = apActive || speedActive;
 

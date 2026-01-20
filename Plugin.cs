@@ -1715,10 +1715,14 @@ namespace NOAutopilot
                             Vector3 velocity = APData.PlayerRB.velocity;
                             float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
 
+                            float currentRollAbs = Mathf.Abs(APData.CurrentRoll);
+                            float estimatedRollRate = 60f;
+                            float timeToRollUpright = currentRollAbs / estimatedRollRate;
+
                             float gAccel = Plugin.GCAS_MaxG.Value * 9.81f;
                             float turnRadius = speed * speed / gAccel;
 
-                            float reactionTime = Plugin.GCAS_AutoBuffer.Value + (Time.deltaTime * 2.0f);
+                            float reactionTime = Plugin.GCAS_AutoBuffer.Value + (Time.deltaTime * 2.0f) + timeToRollUpright;
                             float reactionDist = speed * reactionTime;
                             float warnDist = speed * Plugin.GCAS_WarnBuffer.Value;
 
@@ -2198,7 +2202,20 @@ namespace NOAutopilot
                             // gcas
                             if (APData.GCASActive)
                             {
-                                float targetG = Plugin.GCAS_MaxG.Value;
+                                float rollAngle = Mathf.Abs(APData.CurrentRoll);
+                                float targetG;
+
+                                if (rollAngle > 90f)
+                                {
+                                    targetG = 0f;
+                                }
+                                else
+                                {
+                                    float pullScale = Mathf.Clamp01(1f - (rollAngle / 90f));
+                                    pullScale = Mathf.Pow(pullScale, 0.5f);
+                                    targetG = Mathf.Lerp(1.0f, Plugin.GCAS_MaxG.Value, pullScale);
+                                }
+
                                 float gError = targetG - currentG;
                                 pitchOut = pidGCAS.Evaluate(gError, currentG, dt,
                                     Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,

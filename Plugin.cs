@@ -24,16 +24,22 @@ namespace NOAutopilot
         private Harmony harmony;
 
         // controls table
-        private readonly string table = $"<b>Toggle Autopilot:</b> = (Equals) | Self-explanatory.\n" +
-                    $"<b>Toggle Auto-Jammer:</b> / (Slash) | Self-explanatory.\n" +
-                    $"<b>Target Alt Small:</b> Up / Down Arrow | Small adjustment\n" +
-                    $"<b>Target Alt Large:</b> Left / Right Arrow | Large adjustment\n" +
-                    $"<b>Max Climb Rate:</b> PageUp / PageDown | Limit vertical speed\n" +
-                    $"<b>Bank Left/Right:</b> [ and ] (Brackets) | Adjust roll angle\n" +
-                    $"<b>Clear Nav/Crs/Roll/Alt/Roll:</b> ' (Quote) | Resets in order\n" +
-                    $"<b>Toggle GCAS:</b> \\ (Backslash) | Added just in case\n" +
-                    $"<b>Toggle Autothrottle:</b> ; (Semicolon) | Toggle speed hold\n" +
-                    $"<b>Toggle AP GUI:</b> F8 | Opens/closes the GUI";
+        private readonly string table =
+        $"<b>Toggle AP GUI:</b> F8\n" +
+        $"<b>Toggle Autopilot:</b> = (Equals)\n" +
+        $"<b>Toggle AJ:</b> / (Slash)\n" +
+        $"<b>Toggle GCAS:</b> \\ (Backslash)\n" +
+        $"<b>Clear/Reset:</b> ' (Quote) | Roll>Nav>Crs>Roll>Alt>Roll><Roll\n\n" +
+
+        $"<b>Target Alt Small:</b> Up / Down Arrow | Small adjustment\n" +
+        $"<b>Target Alt Large:</b> Left / Right Arrow | Large adjustment\n" +
+        $"<b>Max Climb Rate:</b> PgUp / PgDn | Limit vertical speed\n" +
+        $"<b>Bank/Course L/R:</b> [ and ] | Adjust roll or heading\n\n" +
+
+        $"<b>Toggle Speed Hold:</b> ; (Semicolon) | Matches current speed\n" +
+        $"<b>Speed Up / Down:</b> LShift / LCtrl | Adjust target speed\n" +
+        $"<b>Mach/TAS hold:</b> Home | Switch between Mach/TAS\n" +
+        $"<b>Toggle AB:</b> End | Toggle Afterburner/Airbrake\n";
 
         // ap menu?
         public static ConfigEntry<KeyCode> MenuKey;
@@ -108,10 +114,11 @@ namespace NOAutopilot
 
         // Controls
         public static ConfigEntry<KeyCode> ToggleKey, UpKey, DownKey, BigUpKey, BigDownKey;
-        public static ConfigEntry<KeyCode> ClimbRateUpKey, ClimbRateDownKey, BankLeftKey, BankRightKey, ClearKey, SpeedHoldKey;
+        public static ConfigEntry<KeyCode> ClimbRateUpKey, ClimbRateDownKey, BankLeftKey, BankRightKey, ClearKey;
+        public static ConfigEntry<KeyCode> SpeedHoldKey, SpeedUpKey, SpeedDownKey, ToggleABKey, ToggleMachKey;
 
         // Flight Values
-        public static ConfigEntry<float> AltStep, BigAltStep, ClimbRateStep, BankStep, MinAltitude;
+        public static ConfigEntry<float> AltStep, BigAltStep, ClimbRateStep, BankStep, SpeedStep, MinAltitude;
 
         // Tuning
         public static ConfigEntry<float> DefaultMaxClimbRate, Conf_VS_MaxAngle, DefaultCRLimit;
@@ -237,14 +244,19 @@ namespace NOAutopilot
             BankRightKey = Config.Bind("Controls", "10. Bank Right", KeyCode.RightBracket, "Roll/course right");
             ClearKey = Config.Bind("Controls", "11. clear crs/roll/alt/roll", KeyCode.Quote, "every click will clear/reset first thing it sees isn't clear from left to right");
             SpeedHoldKey = Config.Bind("Controls", "12. Speed Hold Toggle", KeyCode.Semicolon, "speed hold/clear");
+            SpeedUpKey = Config.Bind("Controls", "13. Target Speed Increase", KeyCode.LeftShift, "Increase target speed");
+            SpeedDownKey = Config.Bind("Controls", "14. Target Speed Decrease", KeyCode.LeftControl, "Decrease target speed");
+            ToggleMachKey = Config.Bind("Controls", "15. Toggle Mach/TAS", KeyCode.Home, "Toggle between Mach and TAS hold");
+            ToggleABKey = Config.Bind("Controls", "16. Toggle Afterburner/Airbrake", KeyCode.End, "Toggle AB/Airbrake limits");
 
-            // Flight Values
-            AltStep = Config.Bind("Controls", "13. Altitude Increment (Small)", 0.1f, "Meters per tick");
-            BigAltStep = Config.Bind("Controls", "14. Altitude Increment (Big)", 100f, "Meters per tick");
-            ClimbRateStep = Config.Bind("Controls", "15. Climb Rate Step", 0.5f, "m/s per tick");
-            BankStep = Config.Bind("Controls", "16. Bank Step", 0.5f, "Degrees per tick");
-            MinAltitude = Config.Bind("Controls", "17. Minimum Target Altitude", 20f, "Safety floor");
-            MenuKey = Config.Bind("Controls", "18. Menu Key", KeyCode.F8, "Open the Autopilot Menu");
+            // control values
+            AltStep = Config.Bind("Controls", "17. Altitude Increment (Small)", 0.1f, "Meters per frame (60fps)");
+            BigAltStep = Config.Bind("Controls", "18. Altitude Increment (Big)", 100f, "Meters per frame (60fps)");
+            ClimbRateStep = Config.Bind("Controls", "19. Climb Rate Step", 0.5f, "m/s per frame (60fps)");
+            BankStep = Config.Bind("Controls", "20. Bank Step", 0.5f, "Degrees per frame (60fps)");
+            SpeedStep = Config.Bind("Controls", "21. Speed Step", 0.5f, "m/s per frame (60fps)");
+            MinAltitude = Config.Bind("Controls", "22. Minimum Target Altitude", 20f, "Safety floor");
+            MenuKey = Config.Bind("Controls", "23. Menu Key", KeyCode.F8, "Open the Autopilot Menu");
 
             // Tuning
             DefaultMaxClimbRate = Config.Bind("Tuning - 0. Limits", "1. Default Max Climb Rate", 10f, "Startup value");
@@ -463,19 +475,21 @@ namespace NOAutopilot
                     SyncMenuValues();
                 }
             }
+
             if (_showMenu && APData.Enabled)
             {
                 bool isAdjusting =
                     Input.GetKey(UpKey.Value) || Input.GetKey(DownKey.Value) ||
                     Input.GetKey(BigUpKey.Value) || Input.GetKey(BigDownKey.Value) ||
                     Input.GetKey(ClimbRateUpKey.Value) || Input.GetKey(ClimbRateDownKey.Value) ||
-                    Input.GetKey(BankLeftKey.Value) || Input.GetKey(BankRightKey.Value) || Input.GetKey(ClearKey.Value) || Input.GetKey(SpeedHoldKey.Value);
+                    Input.GetKey(BankLeftKey.Value) || Input.GetKey(BankRightKey.Value) || Input.GetKey(ClearKey.Value);
 
                 if (isAdjusting)
                 {
                     SyncMenuValues();
                 }
             }
+
             if (GetKeyDownImproved(ToggleKey.Value))
             {
                 APData.Enabled = !APData.Enabled;
@@ -497,6 +511,7 @@ namespace NOAutopilot
                 APData.GCASEnabled = !APData.GCASEnabled;
                 if (!APData.GCASEnabled) { APData.GCASActive = false; APData.GCASWarning = false; }
             }
+
             if (GetKeyDownImproved(SpeedHoldKey.Value))
             {
                 if (APData.TargetSpeed > 0)
@@ -506,23 +521,78 @@ namespace NOAutopilot
                 }
                 else if (APData.PlayerRB != null)
                 {
+                    float currentTAS = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
                     if (APData.SpeedHoldIsMach)
                     {
                         float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
-                        float currentTAS = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
                         float sos = LevelInfo.GetSpeedofSound(currentAlt);
-
                         APData.TargetSpeed = currentTAS / sos;
                         _bufSpeed = APData.TargetSpeed.ToString("F2");
                     }
                     else
                     {
-                        float currentTAS = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
                         APData.TargetSpeed = currentTAS;
                         _bufSpeed = ModUtils.ConvertSpeed_ToDisplay(currentTAS).ToString("F0");
                     }
                 }
+                SyncMenuValues();
                 GUI.FocusControl(null);
+            }
+
+            if (APData.TargetSpeed > 0f)
+            {
+                bool speedUp = Input.GetKey(SpeedUpKey.Value);
+                bool speedDown = Input.GetKey(SpeedDownKey.Value);
+                if (speedUp || speedDown)
+                {
+                    if (APData.TargetSpeed <= 0)
+                    {
+                        float currentTAS = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
+                        if (APData.SpeedHoldIsMach)
+                        {
+                            float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
+                            APData.TargetSpeed = currentTAS / LevelInfo.GetSpeedofSound(currentAlt);
+                        }
+                        else APData.TargetSpeed = currentTAS;
+                    }
+
+                    float step = SpeedStep.Value * 60f * Time.deltaTime;
+                    if (APData.SpeedHoldIsMach)
+                    {
+                        float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
+                        float sos = LevelInfo.GetSpeedofSound(currentAlt);
+                        step /= Mathf.Max(sos, 1f);
+                    }
+
+                    if (speedUp) APData.TargetSpeed += step;
+                    if (speedDown) APData.TargetSpeed = Mathf.Max(0, APData.TargetSpeed - step);
+                    SyncMenuValues();
+                }
+                else if (GetKeyDownImproved(ToggleMachKey.Value))
+                {
+                    if (float.TryParse(_bufSpeed, out float val))
+                    {
+                        float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
+                        float sos = LevelInfo.GetSpeedofSound(currentAlt);
+                        if (!APData.SpeedHoldIsMach)
+                        {
+                            float ms = ModUtils.ConvertSpeed_FromDisplay(val);
+                            APData.TargetSpeed = ms / sos;
+                        }
+                        else
+                        {
+                            float ms = val * sos;
+                            APData.TargetSpeed = ms;
+                        }
+                    }
+                    APData.SpeedHoldIsMach = !APData.SpeedHoldIsMach;
+                    SyncMenuValues();
+                }
+
+                if (GetKeyDownImproved(ToggleABKey.Value))
+                {
+                    APData.AllowExtremeThrottle = !APData.AllowExtremeThrottle;
+                }
             }
         }
 
@@ -834,6 +904,7 @@ namespace NOAutopilot
                 _bufCourse = "";
                 APData.NavEnabled = false;
                 APData.TargetRoll = 0;
+                _bufRoll = "0";
                 GUI.FocusControl(null);
             }
             GUILayout.EndHorizontal();
@@ -864,11 +935,14 @@ namespace NOAutopilot
 
                 if (float.TryParse(_bufRoll, out float r))
                 {
-                    APData.TargetRoll = r;
+                    if (APData.NavEnabled && APData.TargetRoll == 0f)
+                        APData.TargetRoll = DefaultCRLimit.Value;
+                    else
+                        APData.TargetRoll = r;
                 }
                 else
                 {
-                    if (APData.TargetCourse >= 0f)
+                    if (APData.TargetCourse >= 0f || APData.NavEnabled)
                     {
                         APData.TargetRoll = DefaultCRLimit.Value;
                         _bufRoll = APData.TargetRoll.ToString("F0");
@@ -901,12 +975,21 @@ namespace NOAutopilot
 
                     if (string.IsNullOrEmpty(_bufCourse) && string.IsNullOrEmpty(_bufRoll))
                     {
-                        APData.TargetRoll = 0f;
-                        _bufRoll = "0";
+                        if (APData.NavEnabled)
+                        {
+                            APData.TargetRoll = DefaultCRLimit.Value;
+                            _bufRoll = APData.TargetRoll.ToString("F0");
+                        }
+                        else
+                        {
+                            APData.TargetRoll = 0f;
+                            _bufRoll = "0";
+                        }
                     }
                     SyncMenuValues();
                     APData.UseSetValues = true;
                 }
+                GUI.FocusControl(null);
             }
             GUI.backgroundColor = Color.white;
             GUILayout.EndHorizontal();
@@ -935,7 +1018,16 @@ namespace NOAutopilot
 
             // nav
             GUILayout.BeginHorizontal();
-            APData.NavEnabled = GUILayout.Toggle(APData.NavEnabled, new GUIContent("Nav mode", "switch for waypoint ap mode. overrides course hold."));
+            bool newNavState = GUILayout.Toggle(APData.NavEnabled, new GUIContent("Nav mode", "switch for waypoint ap mode."));
+            if (newNavState != APData.NavEnabled)
+            {
+                APData.NavEnabled = newNavState;
+                if (APData.NavEnabled && (APData.TargetRoll == -999f || APData.TargetRoll == 0f))
+                {
+                    APData.TargetRoll = DefaultCRLimit.Value;
+                }
+                SyncMenuValues();
+            }
             NavCycle.Value = GUILayout.Toggle(NavCycle.Value, new GUIContent("Cycle wp", "On: cycles to next wp upon reaching wp, Off: Deletes upon reaching wp"));
             GUILayout.EndHorizontal();
 
@@ -1910,13 +2002,52 @@ namespace NOAutopilot
                     // keys
                     if (!pilotPitch && !pilotRoll && !APData.GCASActive)
                     {
-                        if (Input.GetKey(Plugin.UpKey.Value)) APData.TargetAlt += Plugin.AltStep.Value;
-                        if (Input.GetKey(Plugin.DownKey.Value)) APData.TargetAlt -= Plugin.AltStep.Value;
-                        if (Input.GetKey(Plugin.BigUpKey.Value)) APData.TargetAlt += Plugin.BigAltStep.Value;
-                        if (Input.GetKey(Plugin.BigDownKey.Value)) APData.TargetAlt = Mathf.Max(APData.TargetAlt - Plugin.BigAltStep.Value, Plugin.MinAltitude.Value);
+                        float fpsRef = 60f;
+                        float aStep = Plugin.AltStep.Value * fpsRef * dt;
+                        float bStep = Plugin.BigAltStep.Value * fpsRef * dt;
+                        float cStep = Plugin.ClimbRateStep.Value * fpsRef * dt;
+                        float rStep = Plugin.BankStep.Value * fpsRef * dt;
+                        if (Input.GetKey(Plugin.UpKey.Value)) APData.TargetAlt += aStep;
+                        if (Input.GetKey(Plugin.DownKey.Value)) APData.TargetAlt -= aStep;
+                        if (Input.GetKey(Plugin.BigUpKey.Value)) APData.TargetAlt += bStep;
+                        if (Input.GetKey(Plugin.BigDownKey.Value)) APData.TargetAlt = Mathf.Max(APData.TargetAlt - bStep, Plugin.MinAltitude.Value);
 
-                        if (Input.GetKey(Plugin.ClimbRateUpKey.Value)) APData.CurrentMaxClimbRate += Plugin.ClimbRateStep.Value;
-                        if (Input.GetKey(Plugin.ClimbRateDownKey.Value)) APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - Plugin.ClimbRateStep.Value);
+                        if (Input.GetKey(Plugin.ClimbRateUpKey.Value)) APData.CurrentMaxClimbRate += cStep;
+                        if (Input.GetKey(Plugin.ClimbRateDownKey.Value)) APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - cStep);
+
+                        if (APData.NavEnabled)
+                        {
+                            bool bankLeft = Input.GetKey(Plugin.BankLeftKey.Value);
+                            bool bankRight = Input.GetKey(Plugin.BankRightKey.Value);
+                            if (bankLeft || bankRight)
+                            {
+                                if (APData.TargetRoll == -999f) APData.TargetRoll = Plugin.DefaultCRLimit.Value;
+
+                                if (bankLeft) APData.TargetRoll -= rStep;
+                                if (bankRight) APData.TargetRoll += rStep;
+
+                                APData.TargetRoll = Mathf.Clamp(APData.TargetRoll, 1f, 90f);
+                            }
+                        }
+                        if (APData.TargetCourse >= 0f)
+                        {
+                            if (Input.GetKey(Plugin.BankLeftKey.Value)) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - rStep, 360f);
+                            if (Input.GetKey(Plugin.BankRightKey.Value)) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse + rStep, 360f);
+                        }
+                        else
+                        {
+                            bool bankLeft = Input.GetKey(Plugin.BankLeftKey.Value);
+                            bool bankRight = Input.GetKey(Plugin.BankRightKey.Value);
+                            if (bankLeft || bankRight)
+                            {
+                                if (APData.TargetRoll == -999f) APData.TargetRoll = APData.CurrentRoll;
+                                if (bankLeft)
+                                    APData.TargetRoll = Mathf.Repeat(APData.TargetRoll + rStep + 180f, 360f) - 180f;
+
+                                if (bankRight)
+                                    APData.TargetRoll = Mathf.Repeat(APData.TargetRoll - rStep + 180f, 360f) - 180f;
+                            }
+                        }
 
                         if (Plugin.GetKeyDownImproved(Plugin.ClearKey.Value))
                         {
@@ -1947,41 +2078,6 @@ namespace NOAutopilot
                             else
                             {
                                 APData.TargetRoll = -999f;
-                            }
-                            Plugin.SyncMenuValues();
-                        }
-
-                        if (APData.NavEnabled)
-                        {
-                            bool bankLeft = Input.GetKey(Plugin.BankLeftKey.Value);
-                            bool bankRight = Input.GetKey(Plugin.BankRightKey.Value);
-                            if (bankLeft || bankRight)
-                            {
-                                if (APData.TargetRoll == -999f) APData.TargetRoll = Plugin.DefaultCRLimit.Value;
-
-                                if (bankLeft) APData.TargetRoll -= Plugin.BankStep.Value;
-                                if (bankRight) APData.TargetRoll += Plugin.BankStep.Value;
-
-                                APData.TargetRoll = Mathf.Clamp(APData.TargetRoll, 1f, 90f);
-                            }
-                        }
-                        if (APData.TargetCourse >= 0f)
-                        {
-                            if (Input.GetKey(Plugin.BankLeftKey.Value)) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - Plugin.BankStep.Value, 360f);
-                            if (Input.GetKey(Plugin.BankRightKey.Value)) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse + Plugin.BankStep.Value, 360f);
-                        }
-                        else
-                        {
-                            bool bankLeft = Input.GetKey(Plugin.BankLeftKey.Value);
-                            bool bankRight = Input.GetKey(Plugin.BankRightKey.Value);
-                            if (bankLeft || bankRight)
-                            {
-                                if (APData.TargetRoll == -999f) APData.TargetRoll = APData.CurrentRoll;
-                                if (bankLeft)
-                                    APData.TargetRoll = Mathf.Repeat(APData.TargetRoll + Plugin.BankStep.Value + 180f, 360f) - 180f;
-
-                                if (bankRight)
-                                    APData.TargetRoll = Mathf.Repeat(APData.TargetRoll - Plugin.BankStep.Value + 180f, 360f) - 180f;
                             }
                         }
                     }
@@ -2503,7 +2599,13 @@ namespace NOAutopilot
 
                 APData.NavQueue.Add(__instance.GetCursorCoordinates().AsVector3());
                 APData.NavEnabled = true;
+                float currentTargetRoll = APData.TargetRoll;
+                if (currentTargetRoll == -999f || currentTargetRoll == 0f)
+                {
+                    APData.TargetRoll = Plugin.DefaultCRLimit.Value;
+                }
                 Plugin.RefreshNavVisuals();
+                Plugin.SyncMenuValues();
             }
         }
     }

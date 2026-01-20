@@ -6,6 +6,7 @@ Adds autopilot and some other features.
 
 1. Install BepInEx 5.
    - [their github has install instructions](https://github.com/BepInEx/BepInEx/)
+   - if you are on linux, add override in steam launch options: WINEDLLOVERRIDES="winhttp=n,b" %command%
    - run the game, then quit
    - edit BepInEx.cfg in BepInEx/config
 

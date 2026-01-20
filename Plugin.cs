@@ -545,7 +545,7 @@ namespace NOAutopilot
                 bool speedDown = Input.GetKey(SpeedDownKey.Value);
                 if (speedUp || speedDown)
                 {
-                    if (APData.TargetSpeed <= 0)
+                    if (APData.TargetSpeed < 0)
                     {
                         float currentTAS = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
                         if (APData.SpeedHoldIsMach)

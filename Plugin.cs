@@ -904,7 +904,7 @@ namespace NOAutopilot
                         APData.TargetRoll = 0f;
                         _bufRoll = "0";
                     }
-
+                    SyncMenuValues();
                     APData.UseSetValues = true;
                 }
             }
@@ -1922,7 +1922,15 @@ namespace NOAutopilot
                         {
                             if (APData.NavEnabled)
                             {
-                                APData.NavEnabled = false;
+                                float crlimit = Plugin.DefaultCRLimit.Value;
+                                if (APData.TargetRoll != crlimit)
+                                {
+                                    APData.TargetRoll = crlimit;
+                                }
+                                else
+                                {
+                                    APData.NavEnabled = false;
+                                }
                             }
                             else if (APData.TargetCourse != -1f)
                             {
@@ -1943,6 +1951,20 @@ namespace NOAutopilot
                             Plugin.SyncMenuValues();
                         }
 
+                        if (APData.NavEnabled)
+                        {
+                            bool bankLeft = Input.GetKey(Plugin.BankLeftKey.Value);
+                            bool bankRight = Input.GetKey(Plugin.BankRightKey.Value);
+                            if (bankLeft || bankRight)
+                            {
+                                if (APData.TargetRoll == -999f) APData.TargetRoll = Plugin.DefaultCRLimit.Value;
+
+                                if (bankLeft) APData.TargetRoll -= Plugin.BankStep.Value;
+                                if (bankRight) APData.TargetRoll += Plugin.BankStep.Value;
+
+                                APData.TargetRoll = Mathf.Clamp(APData.TargetRoll, 1f, 90f);
+                            }
+                        }
                         if (APData.TargetCourse >= 0f)
                         {
                             if (Input.GetKey(Plugin.BankLeftKey.Value)) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - Plugin.BankStep.Value, 360f);

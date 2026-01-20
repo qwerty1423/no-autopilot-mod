@@ -1671,7 +1671,10 @@ namespace NOAutopilot
                     {
                         Vector3 reachedPoint = APData.NavQueue[0];
                         APData.NavQueue.RemoveAt(0);
-                        if (Plugin.NavCycle.Value) APData.NavQueue.Add(reachedPoint);
+                        if (Plugin.NavCycle.Value && APData.NavQueue.Count >= 1)
+                        {
+                            APData.NavQueue.Add(reachedPoint);
+                        }
                         Plugin.RefreshNavVisuals();
                         if (APData.NavQueue.Count == 0) APData.NavEnabled = false;
                     }

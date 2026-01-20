@@ -1532,6 +1532,7 @@ namespace NOAutopilot
         private static bool isRollSleeping = false;
         private static bool isSpdSleeping = false;
         private static float gcasNextScan = 0f;
+        private static float overGFactor = 1.0f;
         private static bool dangerImminent = false;
         private static bool warningZone = false;
         public static bool apStateBeforeGCAS = false;
@@ -1569,6 +1570,7 @@ namespace NOAutopilot
             isRollSleeping = false;
             isSpdSleeping = false;
             gcasNextScan = 0f;
+            overGFactor = 1.0f;
             dangerImminent = false;
             warningZone = false;
             apStateBeforeGCAS = false;
@@ -1726,6 +1728,8 @@ namespace NOAutopilot
                             float reactionDist = speed * reactionTime;
                             float warnDist = speed * Plugin.GCAS_WarnBuffer.Value;
 
+                            overGFactor = 1.0f;
+
                             // bool isWallThreat = false;
 
                             if (Time.time >= gcasNextScan)
@@ -1748,7 +1752,17 @@ namespace NOAutopilot
                                         if (hit.distance < (reqArc + reactionDist + 20f))
                                         {
                                             dangerImminent = true;
-                                            // if (hit.normal.y < 0.7f) isWallThreat = true;
+
+                                            float availableArcDist = hit.distance - reactionDist - speed * timeToRollUpright;
+
+                                            if (availableArcDist < reqArc)
+                                            {
+                                                float neededRadius = availableArcDist / (turnAngle * Mathf.Deg2Rad);
+                                                neededRadius = Mathf.Max(neededRadius, 1f);
+                                                float gRequired = speed * speed / (neededRadius * 9.81f);
+
+                                                overGFactor = Mathf.Max(overGFactor, gRequired / Plugin.GCAS_MaxG.Value);
+                                            }
                                         }
                                         else if (hit.distance < (reqArc + reactionDist + warnDist))
                                         {
@@ -1761,11 +1775,25 @@ namespace NOAutopilot
                             if (descentRate > 0f)
                             {
                                 float diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
-                                float pullUpLoss = turnRadius * (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
                                 float vertBuffer = descentRate * reactionTime;
+                                float availablePullAlt = APData.CurrentAlt - vertBuffer;
+                                float pullUpLoss = turnRadius * (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
 
-                                if (APData.CurrentAlt < (pullUpLoss + vertBuffer)) dangerImminent = true;
-                                else if (APData.CurrentAlt < (pullUpLoss + vertBuffer + (descentRate * Plugin.GCAS_WarnBuffer.Value))) warningZone = true;
+                                if (availablePullAlt < pullUpLoss)
+                                {
+                                    dangerImminent = true;
+
+                                    float availableRadius = availablePullAlt / (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
+                                    availableRadius = Mathf.Max(availableRadius, 1f);
+
+                                    float gReqFloor = speed * speed / (availableRadius * 9.81f);
+
+                                    overGFactor = Mathf.Max(overGFactor, gReqFloor / Plugin.GCAS_MaxG.Value);
+                                }
+                                else if (APData.CurrentAlt < (pullUpLoss + vertBuffer + (descentRate * Plugin.GCAS_WarnBuffer.Value)))
+                                {
+                                    warningZone = true;
+                                }
                             }
 
                             if (APData.GCASActive)
@@ -2205,15 +2233,13 @@ namespace NOAutopilot
                                 float rollAngle = Mathf.Abs(APData.CurrentRoll);
                                 float targetG;
 
-                                if (rollAngle > 90f)
+                                if (rollAngle >= 90f)
                                 {
                                     targetG = 0f;
                                 }
                                 else
                                 {
-                                    float pullScale = Mathf.Clamp01(1f - (rollAngle / 90f));
-                                    pullScale = Mathf.Pow(pullScale, 0.5f);
-                                    targetG = Mathf.Lerp(1.0f, Plugin.GCAS_MaxG.Value, pullScale);
+                                    targetG = Plugin.GCAS_MaxG.Value * overGFactor;
                                 }
 
                                 float gError = targetG - currentG;

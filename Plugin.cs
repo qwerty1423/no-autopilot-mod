@@ -254,7 +254,7 @@ namespace NOAutopilot
             BigAltStep = Config.Bind("Controls", "18. Altitude Increment (Big)", 100f, "Meters per frame (60fps)");
             ClimbRateStep = Config.Bind("Controls", "19. Climb Rate Step", 0.5f, "m/s per frame (60fps)");
             BankStep = Config.Bind("Controls", "20. Bank Step", 0.5f, "Degrees per frame (60fps)");
-            SpeedStep = Config.Bind("Controls", "21. Speed Step", 0.5f, "m/s per frame (60fps)");
+            SpeedStep = Config.Bind("Controls", "21. Speed Step", 1.0f, "m/s per frame (60fps)");
             MinAltitude = Config.Bind("Controls", "22. Minimum Target Altitude", 20f, "Safety floor");
             MenuKey = Config.Bind("Controls", "23. Menu Key", KeyCode.F8, "Open the Autopilot Menu");
 

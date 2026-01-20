@@ -85,7 +85,7 @@ namespace NOAutopilot
         public static ConfigEntry<int> FuelWarnMinutes, FuelCritMinutes;
         public static ConfigEntry<bool> ShowExtraInfo;
         public static ConfigEntry<bool> ShowAPOverlay;
-        public static ConfigEntry<bool> ShowGCASOff, ShowOverride;
+        public static ConfigEntry<bool> ShowGCASOff, ShowOverride, ShowPlaceholders;
         public static ConfigEntry<bool> AltShowUnit;
         public static ConfigEntry<bool> DistShowUnit;
         public static ConfigEntry<bool> VertSpeedShowUnit;
@@ -182,6 +182,7 @@ namespace NOAutopilot
             ShowAPOverlay = Config.Bind("Visuals", "Show AP Overlay", true, "Draw AP status text on the HUD. Turn off if you want, there's a window now.");
             ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show GCAS OFF on HUD");
             ShowOverride = Config.Bind("Visuals", "Show Override Delay", true, "Show Override on HUD");
+            ShowPlaceholders = Config.Bind("Visuals", "Show Overlay Placeholders", false, "Show the A, V, W, when values default/null");
             DisplayUpdateInterval = Config.Bind("Visuals", "HUD overlay update interval", 0.02f, "seconds");
             AltShowUnit = Config.Bind("Visuals - Units", "1. Show unit for alt", false, "(example) on: 10m, off: 10");
             DistShowUnit = Config.Bind("Visuals - Units", "2. Show unit for dist", true, "(example) on: 10km, off: 10");
@@ -2337,47 +2338,77 @@ namespace NOAutopilot
 
                     content += "\n";
 
-                    // (AP was on before GCAS) or (AP is on and no GCAS) or (autothrottle on)
-                    bool showAPInfo = (ControlOverridePatch.apStateBeforeGCAS && APData.GCASActive) || (APData.Enabled && !APData.GCASActive) || (APData.TargetSpeed > 0f && Plugin.f_throttle != null);
+                    // (AP was on before GCAS) or (AP is on and no GCAS)
+                    bool apActive = (ControlOverridePatch.apStateBeforeGCAS && APData.GCASActive) || (APData.Enabled && !APData.GCASActive);
+
+                    bool speedActive = APData.TargetSpeed > 0f;
+
+                    bool showAPInfo = apActive || speedActive;
 
                     if (showAPInfo && Plugin.ShowAPOverlay.Value)
                     {
-                        string altStr = (APData.TargetAlt > 0)
-                            ? ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.TargetAlt), Plugin.AltShowUnit.Value)
-                            : "A-";
-                        string climbStr = ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(APData.CurrentMaxClimbRate), Plugin.VertSpeedShowUnit.Value);
-                        string spdStr;
-                        if (APData.TargetSpeed > 0)
+                        bool placeholders = Plugin.ShowPlaceholders.Value;
+                        string spdStr = placeholders ? "S" : "";
+                        string rollStr = placeholders ? "R" : "";
+                        string altStr = placeholders ? "A" : "";
+                        string climbStr = placeholders ? "V" : "";
+                        string crsStr = placeholders ? "C" : "";
+                        string navStr = placeholders ? "W" : "";
+
+                        if (speedActive)
                         {
                             if (APData.SpeedHoldIsMach)
                                 spdStr = $"M{APData.TargetSpeed:F2}";
                             else
-                                spdStr = ModUtils.ProcessGameString(UnitConverter.SpeedReading(APData.TargetSpeed), Plugin.SpeedShowUnit.Value);
+                                spdStr = "S" + ModUtils.ProcessGameString(UnitConverter.SpeedReading(APData.TargetSpeed), Plugin.SpeedShowUnit.Value);
                         }
-                        else
+
+                        if (apActive)
                         {
-                            spdStr = "S-";
+                            if (APData.TargetAlt > 0)
+                                altStr = "A" + ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.TargetAlt), Plugin.AltShowUnit.Value);
+
+                            if (APData.CurrentMaxClimbRate > 0 && APData.CurrentMaxClimbRate != Plugin.DefaultMaxClimbRate.Value)
+                                climbStr = "V" + ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(APData.CurrentMaxClimbRate), Plugin.VertSpeedShowUnit.Value);
+
+                            string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
+                            if (APData.TargetRoll != -999f)
+                                rollStr = $"R{APData.TargetRoll:F0}{degUnit}";
+                            if (APData.TargetCourse >= 0)
+                                crsStr = $"C{APData.TargetCourse:F0}{degUnit}";
+
+                            if (APData.NavEnabled && APData.NavQueue.Count > 0)
+                            {
+                                float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
+                                navStr = "W>" + ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value);
+                            }
                         }
-                        string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
-                        string degStr;
 
-                        if (APData.TargetCourse >= 0)
-                            degStr = $"C{APData.TargetCourse:F0}{degUnit}";
-                        else if (APData.TargetRoll != -999f)
-                            degStr = $"R{APData.TargetRoll:F0}{degUnit}";
-                        else
-                            degStr = "CR-";
 
-                        string navStr = "";
-                        if (APData.NavEnabled && APData.NavQueue.Count > 0)
+                        string line1 = "";
+                        if (!string.IsNullOrEmpty(spdStr)) line1 += spdStr;
+                        if (!string.IsNullOrEmpty(spdStr) && !string.IsNullOrEmpty(rollStr)) line1 += " ";
+                        if (!string.IsNullOrEmpty(rollStr)) line1 += rollStr;
+
+                        string line2 = "";
+                        if (!string.IsNullOrEmpty(altStr)) line2 += altStr;
+                        if (!string.IsNullOrEmpty(altStr) && !string.IsNullOrEmpty(climbStr)) line2 += " ";
+                        if (!string.IsNullOrEmpty(climbStr)) line2 += climbStr;
+
+                        string line3 = "";
+                        if (!string.IsNullOrEmpty(crsStr)) line3 += crsStr;
+                        if (!string.IsNullOrEmpty(crsStr) && !string.IsNullOrEmpty(navStr)) line3 += " ";
+                        if (!string.IsNullOrEmpty(navStr)) line3 += navStr;
+
+                        string finalBlock = "";
+                        if (!string.IsNullOrEmpty(line1)) finalBlock += line1 + "\n";
+                        if (!string.IsNullOrEmpty(line2)) finalBlock += line2 + "\n";
+                        finalBlock += line3;
+
+                        if (!string.IsNullOrEmpty(finalBlock))
                         {
-                            float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
-                            navStr = "W>" + ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value);
+                            content += $"<color={Plugin.ColorAPOn.Value}>{finalBlock}</color>\n";
                         }
-                        else
-                            navStr = "W-";
-
-                        content += $"<color={Plugin.ColorAPOn.Value}>{altStr} {climbStr} {spdStr}\n{degStr} {navStr}</color>\n";
                     }
 
                     if (APData.GCASActive)

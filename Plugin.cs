@@ -1742,10 +1742,10 @@ namespace NOAutopilot
                                 dangerImminent = false;
                                 warningZone = false;
 
-                                Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 20f);
+                                Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 5f);
                                 float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
 
-                                if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange))
+                                if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange, 8256))
                                 {
                                     if (hit.transform.root != APData.PlayerTransform.root)
                                     {

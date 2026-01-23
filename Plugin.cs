@@ -77,7 +77,7 @@ namespace NOAutopilot
         private float _stationaryTimer = 0f;
         private bool _isTooltipVisible = false;
         private bool _wasShownForThisTarget = false;
-        private readonly float _jitterThreshold = 5.0f;
+        private readonly float _jitterThreshold = 7.0f;
 
         private float _dynamicLabelWidth = 60f;
         private readonly GUIContent _measuringContent = new();

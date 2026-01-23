@@ -102,7 +102,8 @@ namespace NOAutopilot
         public static ConfigEntry<float> StickTempThreshold, StickDisengageThreshold;
         public static ConfigEntry<float> DisengageDelay, ReengageDelay;
         public static ConfigEntry<bool> InvertRoll, InvertPitch, StickDisengageEnabled;
-        public static ConfigEntry<bool> Conf_InvertCourseRoll;
+        public static ConfigEntry<bool> Conf_InvertCourseRoll, DisableATAPKey;
+        public static ConfigEntry<bool> DisableATAPGCAS, DisableATAPGUI, DisableATAPStick, KeepSetAltKey, KeepSetAltStick;
 
         // Auto Jammer
         public static ConfigEntry<bool> EnableAutoJammer;
@@ -216,6 +217,12 @@ namespace NOAutopilot
             InvertRoll = Config.Bind("Settings", "6. Invert Roll", true, "Flip Roll");
             InvertPitch = Config.Bind("Settings", "7. Invert Pitch", true, "Flip Pitch");
             Conf_InvertCourseRoll = Config.Bind("Settings", "8. Invert Bank Direction", true, "Toggle if plane turns wrong way");
+            DisableATAPGCAS = Config.Bind("Settings - Misc", "Disable autothrottle with AP (GCAS)", false, "Disable autothrottle when AP is disengaged by GCAS");
+            DisableATAPGUI = Config.Bind("Settings - Misc", "Disable autothrottle with AP (GUI)", false, "Disable autothrottle when AP is disengaged by GUI");
+            DisableATAPKey = Config.Bind("Settings - Misc", "Disable autothrottle with AP (key)", false, "Disable autothrottle when AP is disengaged by keyboard key");
+            DisableATAPStick = Config.Bind("Settings - Misc", "Disable autothrottle with AP (stick)", false, "Disable autothrottle when AP is disengaged by stick input");
+            KeepSetAltKey = Config.Bind("Settings - Misc", "Keep set altitude when AP engaged (key)", false, "AP will use previously set alt instead of current alt when engaged by keyboard key");
+            KeepSetAltStick = Config.Bind("Settings - Misc", "Keep set altitude when stick inputs made", true, "AP will not reset alt to current alt when stick inputs are made");
 
             // nav
             NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f, "Distance in meters to consider a waypoint reached.");
@@ -436,7 +443,7 @@ namespace NOAutopilot
             APData.Reset();
             ControlOverridePatch.Reset();
             HUDVisualsPatch.Reset();
-            HudPatch.Reset();
+            PlayerVehiclePatch.Reset();
             MapInteractionPatch.Reset();
             MapWaypointPatch.Reset();
 
@@ -496,9 +503,13 @@ namespace NOAutopilot
                 if (!APData.Enabled)
                 {
                     APData.NavEnabled = false;
+                    if (DisableATAPKey.Value) APData.TargetSpeed = -1f;
                 }
-                APData.TargetAlt = APData.CurrentAlt;
-                _bufAlt = ModUtils.ConvertAlt_ToDisplay(APData.TargetAlt).ToString("F0");
+                else if (!KeepSetAltKey.Value)
+                {
+                    APData.TargetAlt = APData.CurrentAlt;
+                }
+                SyncMenuValues();
             }
 
             if (EnableAutoJammer.Value && GetKeyDownImproved(AutoJammerKey.Value))
@@ -935,23 +946,20 @@ namespace NOAutopilot
 
                 if (float.TryParse(_bufRoll, out float r))
                 {
-                    if (APData.NavEnabled && APData.TargetRoll == 0f)
+                    if ((APData.NavEnabled || APData.TargetCourse >= 0) && APData.TargetRoll == 0)
                         APData.TargetRoll = DefaultCRLimit.Value;
                     else
                         APData.TargetRoll = r;
                 }
+                else if (APData.TargetCourse >= 0f || APData.NavEnabled)
+                {
+                    APData.TargetRoll = DefaultCRLimit.Value;
+                    _bufRoll = APData.TargetRoll.ToString("F0");
+                }
                 else
                 {
-                    if (APData.TargetCourse >= 0f || APData.NavEnabled)
-                    {
-                        APData.TargetRoll = DefaultCRLimit.Value;
-                        _bufRoll = APData.TargetRoll.ToString("F0");
-                    }
-                    else
-                    {
-                        APData.TargetRoll = -999f;
-                        _bufRoll = "";
-                    }
+                    APData.TargetRoll = -999f;
+                    _bufRoll = "";
                 }
 
                 APData.Enabled = true;
@@ -975,7 +983,7 @@ namespace NOAutopilot
 
                     if (string.IsNullOrEmpty(_bufCourse) && string.IsNullOrEmpty(_bufRoll))
                     {
-                        if (APData.NavEnabled)
+                        if (APData.NavEnabled || APData.TargetCourse >= 0)
                         {
                             APData.TargetRoll = DefaultCRLimit.Value;
                             _bufRoll = APData.TargetRoll.ToString("F0");
@@ -988,6 +996,11 @@ namespace NOAutopilot
                     }
                     SyncMenuValues();
                     APData.UseSetValues = true;
+                }
+                else if (DisableATAPGUI.Value)
+                {
+                    APData.TargetSpeed = -1f;
+                    SyncMenuValues();
                 }
                 GUI.FocusControl(null);
             }
@@ -1441,7 +1454,7 @@ namespace NOAutopilot
     }
 
     [HarmonyPatch(typeof(FlightHud), "SetHUDInfo")]
-    internal class HudPatch
+    internal class PlayerVehiclePatch
     {
         private static GameObject lastVehicleObj;
 
@@ -1496,9 +1509,6 @@ namespace NOAutopilot
                     APData.NavVisuals.Clear();
                     Plugin.SyncMenuValues();
                 }
-
-                APData.CurrentRoll = APData.PlayerTransform.eulerAngles.z;
-                if (APData.CurrentRoll > 180f) APData.CurrentRoll -= 360f;
             }
             catch (Exception ex) { Plugin.Logger.LogError($"[HudPatch] Error: {ex}"); }
         }
@@ -1617,12 +1627,13 @@ namespace NOAutopilot
                 return;
             }
 
-            if (APData.CurrentMaxClimbRate < 0f) APData.CurrentMaxClimbRate = Plugin.DefaultMaxClimbRate.Value;
-
             if (Plugin.f_controlInputs == null || Plugin.f_pitch == null || Plugin.f_roll == null || Plugin.f_throttle == null) return;
 
             try
             {
+                if (APData.CurrentMaxClimbRate < 0f) APData.CurrentMaxClimbRate = Plugin.DefaultMaxClimbRate.Value;
+                APData.CurrentRoll = APData.PlayerTransform.eulerAngles.z;
+                if (APData.CurrentRoll > 180f) APData.CurrentRoll -= 360f;
                 object inputObj = Plugin.f_controlInputs.GetValue(__instance);
                 if (inputObj == null) return;
                 float stickPitch = 0f;
@@ -1814,12 +1825,17 @@ namespace NOAutopilot
                                 if (safeToRelease)
                                 {
                                     APData.GCASActive = false;
-                                    APData.Enabled = apStateBeforeGCAS;
+                                    // APData.Enabled = apStateBeforeGCAS;
+                                    APData.Enabled = false;
                                     pidGCAS.Reset();
                                     pidAlt.Reset();
                                     pidVS.Reset();
                                     pidAngle.Reset();
-                                    APData.Enabled = false;
+                                    if (Plugin.DisableATAPGCAS.Value)
+                                    {
+                                        APData.TargetSpeed = -1f;
+                                        Plugin.SyncMenuValues();
+                                    }
                                 }
                                 else
                                 {
@@ -1957,7 +1973,11 @@ namespace NOAutopilot
                         {
                             APData.Enabled = false;
                             APData.NavEnabled = false;
-                            Plugin.SyncMenuValues();
+                            if (Plugin.DisableATAPStick.Value)
+                            {
+                                APData.TargetSpeed = -1f;
+                                Plugin.SyncMenuValues();
+                            }
                             _disengageTimer = 0f;
                         }
                     }
@@ -2224,7 +2244,10 @@ namespace NOAutopilot
                             pidAlt.Reset();
                             pidVS.Reset();
                             pidAngle.Reset();
-                            APData.TargetAlt = APData.CurrentAlt;
+                            if (!Plugin.KeepSetAltStick.Value)
+                            {
+                                APData.TargetAlt = APData.CurrentAlt;
+                            }
                         }
                         else
                         {

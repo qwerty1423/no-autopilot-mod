@@ -1454,7 +1454,7 @@ namespace NOAutopilot
     }
 
     [HarmonyPatch(typeof(FlightHud), "SetHUDInfo")]
-    internal class PlayerVehiclePatch
+    internal class HudPatch
     {
         private static GameObject lastVehicleObj;
 

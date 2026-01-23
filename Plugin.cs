@@ -443,7 +443,7 @@ namespace NOAutopilot
             APData.Reset();
             ControlOverridePatch.Reset();
             HUDVisualsPatch.Reset();
-            PlayerVehiclePatch.Reset();
+            HudPatch.Reset();
             MapInteractionPatch.Reset();
             MapWaypointPatch.Reset();
 
@@ -1454,7 +1454,7 @@ namespace NOAutopilot
     }
 
     [HarmonyPatch(typeof(FlightHud), "SetHUDInfo")]
-    internal class PlayerVehiclePatch
+    internal class HudPatch
     {
         private static GameObject lastVehicleObj;
 

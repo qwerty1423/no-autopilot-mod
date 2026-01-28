@@ -106,7 +106,7 @@ namespace NOAutopilot
         public static ConfigEntry<bool> InvertRoll, InvertPitch, StickDisengageEnabled;
         public static ConfigEntry<bool> Conf_InvertCourseRoll, DisableATAPKey;
         public static ConfigEntry<bool> DisableATAPGCAS, DisableATAPGUI, DisableATAPStick, KeepSetAltKey, KeepSetAltStick;
-        public static ConfigEntry<bool> UnlockMapPanning;
+        public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom;
 
         // Auto Jammer
         public static ConfigEntry<bool> EnableAutoJammer;
@@ -226,7 +226,8 @@ namespace NOAutopilot
             DisableATAPStick = Config.Bind("Settings - Misc", "Disable autothrottle with AP (stick)", false, "Disable autothrottle when AP is disengaged by stick input");
             KeepSetAltKey = Config.Bind("Settings - Misc", "Keep set altitude when AP engaged (key)", false, "AP will use previously set alt instead of current alt when engaged by keyboard key");
             KeepSetAltStick = Config.Bind("Settings - Misc", "Keep set altitude when stick inputs made", true, "AP will not reset alt to current alt when stick inputs are made");
-            UnlockMapPanning = Config.Bind("Settings - Misc", "Unlock Map Panning", true, "Requires restart to change.");
+            UnlockMapPan = Config.Bind("Settings - Misc", "Unlock Map Pan", true, "Requires restart to apply.");
+            UnlockMapZoom = Config.Bind("Settings - Misc", "Unlock Map Zoom", true, "Requires restart to apply.");
 
             // nav
             NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f, "Distance in meters to consider a waypoint reached.");
@@ -1049,8 +1050,46 @@ namespace NOAutopilot
             }
             GUI.backgroundColor = Color.white;
             GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Map:", _styleLabel, GUILayout.Width(35));
 
-            GUILayout.Space(5);
+            if (GUILayout.Button(new GUIContent("Center", "Pan to the center of the map"), _styleButton))
+            {
+                var map = SceneSingleton<DynamicMap>.i;
+                if (map != null)
+                {
+                    var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+                    var fPosOff = typeof(DynamicMap).GetField("positionOffset", flags);
+                    var fStatOff = typeof(DynamicMap).GetField("stationaryOffset", flags);
+
+                    if (fPosOff != null && fStatOff != null)
+                    {
+                        Vector2 stationary = (Vector2)fStatOff.GetValue(map);
+
+                        fPosOff.SetValue(map, -stationary);
+
+                        var fFollow = typeof(DynamicMap).GetField("followingCamera", flags);
+                        fFollow?.SetValue(map, false);
+                    }
+                    GUI.FocusControl(null);
+                }
+            }
+
+            if (GUILayout.Button(new GUIContent("Aircraft", "Pan map to your aircraft"), _styleButton))
+            {
+                var map = SceneSingleton<DynamicMap>.i;
+                if (map != null)
+                {
+                    var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+                    var fPosOff = typeof(DynamicMap).GetField("positionOffset", flags);
+
+                    fPosOff?.SetValue(map, Vector2.zero);
+
+                    map.CenterMap();
+                    GUI.FocusControl(null);
+                }
+            }
+            GUILayout.EndHorizontal();
 
             // nav
             GUILayout.BeginHorizontal();
@@ -2759,30 +2798,58 @@ namespace NOAutopilot
     }
 
     [HarmonyPatch(typeof(DynamicMap), "MapControls")]
-    internal class UnlockMapPanningPatch
+    internal class UnlockMapPatch
     {
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
-            if (!Plugin.UnlockMapPanning.Value) return instructions;
+            if (!Plugin.UnlockMapPan.Value && !Plugin.UnlockMapZoom.Value)
+                return instructions;
 
             var codes = instructions.ToList();
-            bool found = false;
+            bool panned = false;
+            bool zoomed = false;
 
             for (int i = 0; i < codes.Count; i++)
             {
-                if (codes[i].opcode == OpCodes.Call && codes[i].operand != null && codes[i].operand.ToString().Contains("ClampPos"))
+                if (Plugin.UnlockMapPan.Value && !panned)
                 {
-                    if (i > 0 && codes[i - 1].opcode == OpCodes.Ldc_R4)
+                    if (codes[i].opcode == OpCodes.Call && codes[i].operand != null && codes[i].operand.ToString().Contains("ClampPos"))
                     {
-                        codes[i - 1].operand = float.MaxValue;
-                        found = true;
-                        break;
+                        if (i > 0 && codes[i - 1].opcode == OpCodes.Ldc_R4)
+                        {
+                            codes[i - 1].operand = float.MaxValue;
+                            panned = true;
+                        }
+                    }
+                }
+
+                if (Plugin.UnlockMapZoom.Value && !zoomed)
+                {
+                    if (codes[i].opcode == OpCodes.Call && codes[i].operand != null &&
+                        codes[i].operand.ToString().Contains("Clamp") && !codes[i].operand.ToString().Contains("ClampPos"))
+                    {
+                        if (i >= 2 && codes[i - 2].opcode == OpCodes.Ldc_R4 && codes[i - 1].opcode == OpCodes.Ldc_R4)
+                        {
+                            float min = (float)codes[i - 2].operand;
+                            float max = (float)codes[i - 1].operand;
+                            float nmin = 0.001f;
+                            float nmax = 1000f;
+
+                            if (min != nmin && max != nmax)
+                            {
+                                codes[i - 2].operand = nmin;
+                                codes[i - 1].operand = nmax;
+                                zoomed = true;
+                            }
+                        }
                     }
                 }
             }
 
-            if (!found) Plugin.Logger.LogError("Could not unlock map panning.");
+            if (!panned) Plugin.Logger.LogError("Could not unlock map pan.");
+            if (!zoomed) Plugin.Logger.LogError("Could not unlock map zoom.");
+
             return codes.AsEnumerable();
         }
     }

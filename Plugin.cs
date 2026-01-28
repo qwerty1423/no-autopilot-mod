@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Linq;
+using System.Reflection.Emit;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -104,6 +106,7 @@ namespace NOAutopilot
         public static ConfigEntry<bool> InvertRoll, InvertPitch, StickDisengageEnabled;
         public static ConfigEntry<bool> Conf_InvertCourseRoll, DisableATAPKey;
         public static ConfigEntry<bool> DisableATAPGCAS, DisableATAPGUI, DisableATAPStick, KeepSetAltKey, KeepSetAltStick;
+        public static ConfigEntry<bool> UnlockMapPanning;
 
         // Auto Jammer
         public static ConfigEntry<bool> EnableAutoJammer;
@@ -223,6 +226,7 @@ namespace NOAutopilot
             DisableATAPStick = Config.Bind("Settings - Misc", "Disable autothrottle with AP (stick)", false, "Disable autothrottle when AP is disengaged by stick input");
             KeepSetAltKey = Config.Bind("Settings - Misc", "Keep set altitude when AP engaged (key)", false, "AP will use previously set alt instead of current alt when engaged by keyboard key");
             KeepSetAltStick = Config.Bind("Settings - Misc", "Keep set altitude when stick inputs made", true, "AP will not reset alt to current alt when stick inputs are made");
+            UnlockMapPanning = Config.Bind("Settings - Misc", "Unlock Map Panning", true, "Requires restart to change.");
 
             // nav
             NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f, "Distance in meters to consider a waypoint reached.");
@@ -434,8 +438,6 @@ namespace NOAutopilot
 
         private void OnDestroy()
         {
-            Logger.LogInfo("Unloading...");
-
             harmony?.UnpatchSelf();
 
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
@@ -446,8 +448,6 @@ namespace NOAutopilot
             HudPatch.Reset();
             MapInteractionPatch.Reset();
             MapWaypointPatch.Reset();
-
-            Logger.LogInfo("Unloading complete.");
         }
 
         private void InitStyles()
@@ -1094,6 +1094,15 @@ namespace NOAutopilot
                     APData.NavQueue.RemoveAt(0);
                     if (APData.NavQueue.Count == 0) APData.NavEnabled = false;
                     RefreshNavVisuals();
+                }
+                if (GUILayout.Button(new GUIContent("Undo wp", "delete last point"), _styleButton))
+                {
+                    if (APData.NavQueue.Count > 0)
+                    {
+                        APData.NavQueue.RemoveAt(APData.NavQueue.Count - 1);
+                        if (APData.NavQueue.Count == 0) APData.NavEnabled = false;
+                        RefreshNavVisuals();
+                    }
                 }
                 if (GUILayout.Button(new GUIContent("Clear all", "delete all points. (much self explanatory)"), _styleButton))
                 {
@@ -2644,6 +2653,8 @@ namespace NOAutopilot
         {
             if (__instance == null || !DynamicMap.mapMaximized || !Input.GetMouseButtonDown(1)) return;
 
+            if (!__instance.TryGetCursorCoordinates(out var clickedGlobalPos)) return;
+
             if (__instance.selectedIcons != null && __instance.selectedIcons.Count > 0)
             {
                 if (__instance.selectedIcons[0] is UnitMapIcon unitIcon)
@@ -2666,7 +2677,7 @@ namespace NOAutopilot
                     APData.NavQueue.Clear();
                 }
 
-                APData.NavQueue.Add(__instance.GetCursorCoordinates().AsVector3());
+                APData.NavQueue.Add(clickedGlobalPos.AsVector3());
                 APData.NavEnabled = true;
                 float currentTargetRoll = APData.TargetRoll;
                 if (currentTargetRoll == -999f || currentTargetRoll == 0f)
@@ -2721,6 +2732,35 @@ namespace NOAutopilot
 
                 playerLine.transform.localScale = new Vector3(4f * invZoom, Vector3.Distance(pMap, targetMap), 4f * invZoom);
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(DynamicMap), "MapControls")]
+    internal class UnlockMapPanningPatch
+    {
+        [HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            if (!Plugin.UnlockMapPanning.Value) return instructions;
+
+            var codes = instructions.ToList();
+            bool found = false;
+
+            for (int i = 0; i < codes.Count; i++)
+            {
+                if (codes[i].opcode == OpCodes.Call && codes[i].operand != null && codes[i].operand.ToString().Contains("ClampPos"))
+                {
+                    if (i > 0 && codes[i - 1].opcode == OpCodes.Ldc_R4)
+                    {
+                        codes[i - 1].operand = float.MaxValue;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!found) Plugin.Logger.LogError("Could not unlock map panning.");
+            return codes.AsEnumerable();
         }
     }
 

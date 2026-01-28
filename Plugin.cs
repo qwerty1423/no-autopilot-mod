@@ -801,12 +801,13 @@ namespace NOAutopilot
             float targetWidth = Mathf.Max(wAlt, wVS, wRoll, wSpd, wCrs) + 6;
             _dynamicLabelWidth = Mathf.Lerp(_dynamicLabelWidth, targetWidth, 0.15f);
 
-            // float currentRollDefault = APData.TargetCourse == -1f ? 0f : DefaultCRLimit.Value;
-
             // altitude
             GUILayout.BeginHorizontal();
             GUI.color = (APData.Enabled && APData.TargetAlt > 0) ? Color.green : Color.white;
-            GUILayout.Label(new GUIContent($"{sAlt}", "Current altitude\nGreen if alt AP on"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
+            if (GUILayout.Button(new GUIContent($"{sAlt}", "Current altitude\nGreen if alt AP on\nClick to copy"), _styleReadout, GUILayout.Width(_dynamicLabelWidth)))
+            {
+                _bufAlt = ModUtils.ConvertAlt_ToDisplay(APData.CurrentAlt).ToString("F0");
+            }
             GUI.color = Color.white;
             _bufAlt = GUILayout.TextField(_bufAlt);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target altitude"));
@@ -822,7 +823,10 @@ namespace NOAutopilot
             GUILayout.BeginHorizontal();
             bool isDefaultVS = Mathf.Abs(APData.CurrentMaxClimbRate - DefaultMaxClimbRate.Value) < 0.1f;
             GUI.color = isDefaultVS ? Color.white : Color.cyan;
-            GUILayout.Label(new GUIContent($"{sVS}", "Current climb/descent rate\nCyan if not default"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
+            if (GUILayout.Button(new GUIContent($"{sVS}", "Current climb/descent rate\nCyan if not default\nClick to copy"), _styleReadout, GUILayout.Width(_dynamicLabelWidth)))
+            {
+                _bufClimb = ModUtils.ConvertVS_ToDisplay(Mathf.Abs(currentVS)).ToString("F0");
+            }
             GUI.color = Color.white;
             _bufClimb = GUILayout.TextField(_bufClimb);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Max vertical speed"));
@@ -840,7 +844,12 @@ namespace NOAutopilot
             if (APData.NavEnabled && APData.Enabled) GUI.color = Color.cyan;
             else if (APData.Enabled && APData.TargetRoll != -999f) GUI.color = Color.green;
             else GUI.color = Color.white;
-            GUILayout.Label(new GUIContent($"{sRoll}", "Current bank angle\nCyan if Nav mode on\nGreen if roll AP on"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
+            if (GUILayout.Button(new GUIContent($"{sRoll}", "Current bank angle\nCyan if Nav mode on\nGreen if roll AP on\nClick to copy"), _styleReadout, GUILayout.Width(_dynamicLabelWidth)))
+            {
+                _bufRoll = (APData.NavEnabled || APData.TargetCourse >= 0)
+                    ? Mathf.Abs(APData.CurrentRoll).ToString("F0")
+                    : APData.CurrentRoll.ToString("F0");
+            }
             GUI.color = Color.white;
             _bufRoll = GUILayout.TextField(_bufRoll);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target/limit bank angle"));
@@ -855,7 +864,18 @@ namespace NOAutopilot
             // speed
             GUILayout.BeginHorizontal();
             GUI.color = (APData.TargetSpeed >= 0) ? Color.green : Color.white;
-            GUILayout.Label(new GUIContent($"{sSpd}", "Current speed\nGreen if autothrottle on"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
+            if (GUILayout.Button(new GUIContent($"{sSpd}", "Current speed\nGreen if autothrottle on\nClick to copy"), _styleReadout, GUILayout.Width(_dynamicLabelWidth)))
+            {
+                if (APData.SpeedHoldIsMach)
+                {
+                    float currentMach = currentSpeed / Mathf.Max(sos, 1f);
+                    _bufSpeed = currentMach.ToString("F2");
+                }
+                else
+                {
+                    _bufSpeed = ModUtils.ConvertSpeed_ToDisplay(currentSpeed).ToString("F0");
+                }
+            }
             GUI.color = Color.white;
             _bufSpeed = GUILayout.TextField(_bufSpeed);
             GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target speed"));
@@ -901,7 +921,10 @@ namespace NOAutopilot
             if (APData.NavEnabled && APData.Enabled) GUI.color = Color.cyan;
             else if (APData.Enabled && APData.TargetCourse >= 0) GUI.color = Color.green;
             else GUI.color = Color.white;
-            GUILayout.Label(new GUIContent($"{sCrs}", "Current course\nCyan if Nav mode on\nGreen if Course AP on"), _styleReadout, GUILayout.Width(_dynamicLabelWidth));
+            if (GUILayout.Button(new GUIContent($"{sCrs}", "Current course\nCyan if Nav mode on\nGreen if Course AP on\nClick to copy"), _styleReadout, GUILayout.Width(_dynamicLabelWidth)))
+            {
+                _bufCourse = currentCourse.ToString("F0");
+            }
             GUI.color = Color.white;
             if (APData.NavEnabled && APData.TargetCourse >= 0)
             {

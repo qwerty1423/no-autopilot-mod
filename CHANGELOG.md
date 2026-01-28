@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [4.13.9] - 2026-01-28
 
 ### Added
 
@@ -33,7 +33,7 @@
 
 - Roll target not changing in GUI when Nav/course enabled.
 
-[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.8...HEAD
+[4.13.9]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.8...v4.13.9
 [4.13.8]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.7...v4.13.8
 [4.13.7]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.6...v4.13.7
 [4.13.6]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.5...v4.13.6

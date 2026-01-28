@@ -105,7 +105,8 @@ namespace NOAutopilot
         public static ConfigEntry<float> DisengageDelay, ReengageDelay;
         public static ConfigEntry<bool> InvertRoll, InvertPitch, StickDisengageEnabled;
         public static ConfigEntry<bool> Conf_InvertCourseRoll, DisableATAPKey;
-        public static ConfigEntry<bool> DisableATAPGCAS, DisableATAPGUI, DisableATAPStick, KeepSetAltKey, KeepSetAltStick;
+        public static ConfigEntry<bool> DisableATAPGCAS, DisableATAPGUI, DisableATAPStick,
+        DisableNavAPKey, DisableNavAPStick, KeepSetAltKey, KeepSetAltStick;
         public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom;
 
         // Auto Jammer
@@ -224,6 +225,8 @@ namespace NOAutopilot
             DisableATAPGUI = Config.Bind("Settings - Misc", "Disable autothrottle with AP (GUI)", false, "Disable autothrottle when AP is disengaged by GUI");
             DisableATAPKey = Config.Bind("Settings - Misc", "Disable autothrottle with AP (key)", false, "Disable autothrottle when AP is disengaged by keyboard key");
             DisableATAPStick = Config.Bind("Settings - Misc", "Disable autothrottle with AP (stick)", false, "Disable autothrottle when AP is disengaged by stick input");
+            DisableNavAPKey = Config.Bind("Settings - Misc", "Disable nav mode with AP (key)", false, "Disable nav mode when AP is disengaged by key");
+            DisableNavAPStick = Config.Bind("Settings - Misc", "Disable nav mode with AP (stick)", false, "Disable nav mode when AP is disengaged by stick input");
             KeepSetAltKey = Config.Bind("Settings - Misc", "Keep set altitude when AP engaged (key)", false, "AP will use previously set alt instead of current alt when engaged by keyboard key");
             KeepSetAltStick = Config.Bind("Settings - Misc", "Keep set altitude when stick inputs made", true, "AP will not reset alt to current alt when stick inputs are made");
             UnlockMapPan = Config.Bind("Settings - Misc", "Unlock Map Pan", true, "Requires restart to apply.");
@@ -503,7 +506,7 @@ namespace NOAutopilot
                 APData.Enabled = !APData.Enabled;
                 if (!APData.Enabled)
                 {
-                    APData.NavEnabled = false;
+                    if (DisableNavAPKey.Value) APData.NavEnabled = false;
                     if (DisableATAPKey.Value) APData.TargetSpeed = -1f;
                 }
                 else if (!KeepSetAltKey.Value)
@@ -2043,7 +2046,10 @@ namespace NOAutopilot
                         if (triggerDisengage)
                         {
                             APData.Enabled = false;
-                            APData.NavEnabled = false;
+                            if (Plugin.DisableNavAPStick.Value)
+                            {
+                                APData.NavEnabled = false;
+                            }
                             if (Plugin.DisableATAPStick.Value)
                             {
                                 APData.TargetSpeed = -1f;

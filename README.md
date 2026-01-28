@@ -2,6 +2,8 @@
 
 Adds autopilot and some other features.
 
+## [Changelog](https://github.com/qwerty1423/no-autopilot-mod/blob/main/CHANGELOG.md)
+
 ## Installation
 
 1. Install BepInEx 5.

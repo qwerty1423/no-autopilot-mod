@@ -609,6 +609,13 @@ namespace NOAutopilot
                     APData.AllowExtremeThrottle = !APData.AllowExtremeThrottle;
                 }
             }
+
+            if (APData.PlayerRB != null)
+            {
+                float rawSpeed = APData.PlayerRB.velocity.magnitude;
+                float alpha = 1.0f - Mathf.Exp(-Time.deltaTime * 2.0f);
+                APData.SpeedEma = Mathf.Lerp(APData.SpeedEma, rawSpeed, alpha);
+            }
         }
 
         public static void SyncMenuValues()
@@ -1113,12 +1120,8 @@ namespace NOAutopilot
             // Nav waypoint list
             if (APData.NavQueue.Count > 0)
             {
-                float rawSpeed = (APData.PlayerRB != null) ? APData.PlayerRB.velocity.magnitude : 0f;
-                float alpha = 0.05f;
-                APData.SpeedEma = (alpha * rawSpeed) + ((1f - alpha) * APData.SpeedEma);
-
                 Vector3 playerPos = (APData.PlayerRB != null) ? APData.PlayerRB.position.ToGlobalPosition().AsVector3() : Vector3.zero;
-                float distNext = Vector3.Distance(playerPos, APData.NavQueue[0]);
+                float distNext = Vector2.Distance(new Vector2(playerPos.x, playerPos.z), new Vector2(APData.NavQueue[0].x, APData.NavQueue[0].z));
 
                 // next wp row
                 string nextDistStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distNext), Plugin.DistShowUnit.Value);
@@ -2561,7 +2564,8 @@ namespace NOAutopilot
                     {
                         float burned = lastFuelMass - currentFuel;
                         float flow = Mathf.Max(0f, burned / dt);
-                        fuelFlowEma = (Plugin.FuelSmoothing.Value * flow) + ((1f - Plugin.FuelSmoothing.Value) * fuelFlowEma);
+                        float smoothingFactor = Plugin.FuelSmoothing.Value;
+                        fuelFlowEma = Mathf.Lerp(fuelFlowEma, flow, smoothingFactor);
                         lastUpdateTime = time;
                         lastFuelMass = currentFuel;
                     }
@@ -2592,7 +2596,7 @@ namespace NOAutopilot
                         content += $"<color={fuelCol}>{sTime}</color>\n";
 
                         float spd = (aircraft.rb != null) ? aircraft.rb.velocity.magnitude : 0f;
-                        float distMeters = secs * spd;
+                        float distMeters = secs * APData.SpeedEma;
 
                         if (distMeters > 99999000f) distMeters = 99999000f;
 

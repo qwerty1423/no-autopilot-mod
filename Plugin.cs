@@ -2836,15 +2836,10 @@ namespace NOAutopilot
             if (Plugin.UnlockMapZoom.Value)
             {
                 matcher.Start();
-
-                var zoomMethodMatch = ClampMethod != null
-                    ? new CodeMatch(OpCodes.Call, ClampMethod)
-                    : new CodeMatch(i => i.opcode == OpCodes.Call && i.operand is MethodInfo { Name: "Clamp" });
-
                 matcher.MatchForward(false,
                     new CodeMatch(OpCodes.Ldc_R4),
                     new CodeMatch(OpCodes.Ldc_R4),
-                    zoomMethodMatch
+                    new CodeMatch(OpCodes.Call, ClampMethod)
                 );
 
                 if (matcher.IsValid)

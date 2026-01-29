@@ -2809,58 +2809,55 @@ namespace NOAutopilot
     [HarmonyPatch(typeof(DynamicMap), "MapControls")]
     internal class UnlockMapPatch
     {
+        static readonly MethodInfo ClampMethod = AccessTools.Method(typeof(Mathf), "Clamp", [typeof(float), typeof(float), typeof(float)]);
+
         [HarmonyTranspiler]
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
-            if (!Plugin.UnlockMapPan.Value && !Plugin.UnlockMapZoom.Value)
-                return instructions;
-
             var matcher = new CodeMatcher(instructions);
-            bool panned = false;
-            bool zoomed = false;
 
             if (Plugin.UnlockMapPan.Value)
             {
-                matcher.Start().MatchForward(false,
+                matcher.MatchForward(false,
                     new CodeMatch(OpCodes.Ldc_R4),
-                    new CodeMatch(i => i.opcode == OpCodes.Call && i.operand?.ToString().Contains("ClampPos") == true)
+                    new CodeMatch(i => i.opcode == OpCodes.Call && i.operand is MethodInfo { Name: "ClampPos" })
                 );
 
                 if (matcher.IsValid)
                 {
                     matcher.SetOperandAndAdvance(float.MaxValue);
-                    panned = true;
+                }
+                else
+                {
+                    Plugin.Logger.LogError("Could not find patch location for map pan.");
                 }
             }
 
             if (Plugin.UnlockMapZoom.Value)
             {
-                matcher.Start().MatchForward(false,
+                matcher.Start();
+
+                var zoomMethodMatch = ClampMethod != null
+                    ? new CodeMatch(OpCodes.Call, ClampMethod)
+                    : new CodeMatch(i => i.opcode == OpCodes.Call && i.operand is MethodInfo { Name: "Clamp" });
+
+                matcher.MatchForward(false,
                     new CodeMatch(OpCodes.Ldc_R4),
                     new CodeMatch(OpCodes.Ldc_R4),
-                    new CodeMatch(i => i.opcode == OpCodes.Call && i.operand?.ToString().Contains("Clamp") == true && !i.operand.ToString().Contains("ClampPos"))
+                    zoomMethodMatch
                 );
 
                 if (matcher.IsValid)
                 {
-                    float min = (float)matcher.InstructionAt(0).operand;
-                    float max = (float)matcher.InstructionAt(1).operand;
-                    float nmin = 0.001f;
-                    float nmax = 1000f;
-
-                    if (min != nmin && max != nmax)
-                    {
-                        matcher.InstructionAt(0).operand = nmin;
-                        matcher.InstructionAt(1).operand = nmax;
-                        zoomed = true;
-                    }
+                    matcher.SetOperandAndAdvance(0.001f);
+                    matcher.SetOperandAndAdvance(1000f);
+                }
+                else
+                {
+                    Plugin.Logger.LogError("Could not find patch location for map zoom.");
                 }
             }
-
-            if (Plugin.UnlockMapPan.Value && !panned) Plugin.Logger.LogError("Could not unlock map pan.");
-            if (Plugin.UnlockMapZoom.Value && !zoomed) Plugin.Logger.LogError("Could not unlock map zoom.");
-
-            return matcher.Instructions();
+            return matcher.InstructionEnumeration();
         }
     }
 

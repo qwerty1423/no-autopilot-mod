@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using System.Linq;
 using System.Reflection.Emit;
 using BepInEx;
 using BepInEx.Configuration;
@@ -2816,51 +2815,52 @@ namespace NOAutopilot
             if (!Plugin.UnlockMapPan.Value && !Plugin.UnlockMapZoom.Value)
                 return instructions;
 
-            var codes = instructions.ToList();
+            var matcher = new CodeMatcher(instructions);
             bool panned = false;
             bool zoomed = false;
 
-            for (int i = 0; i < codes.Count; i++)
+            if (Plugin.UnlockMapPan.Value)
             {
-                if (Plugin.UnlockMapPan.Value && !panned)
+                matcher.Start().MatchForward(false,
+                    new CodeMatch(OpCodes.Ldc_R4),
+                    new CodeMatch(i => i.opcode == OpCodes.Call && i.operand?.ToString().Contains("ClampPos") == true)
+                );
+
+                if (matcher.IsValid)
                 {
-                    if (codes[i].opcode == OpCodes.Call && codes[i].operand != null && codes[i].operand.ToString().Contains("ClampPos"))
-                    {
-                        if (i > 0 && codes[i - 1].opcode == OpCodes.Ldc_R4)
-                        {
-                            codes[i - 1].operand = float.MaxValue;
-                            panned = true;
-                        }
-                    }
+                    matcher.SetOperandAndAdvance(float.MaxValue);
+                    panned = true;
                 }
+            }
 
-                if (Plugin.UnlockMapZoom.Value && !zoomed)
+            if (Plugin.UnlockMapZoom.Value)
+            {
+                matcher.Start().MatchForward(false,
+                    new CodeMatch(OpCodes.Ldc_R4),
+                    new CodeMatch(OpCodes.Ldc_R4),
+                    new CodeMatch(i => i.opcode == OpCodes.Call && i.operand?.ToString().Contains("Clamp") == true && !i.operand.ToString().Contains("ClampPos"))
+                );
+
+                if (matcher.IsValid)
                 {
-                    if (codes[i].opcode == OpCodes.Call && codes[i].operand != null &&
-                        codes[i].operand.ToString().Contains("Clamp") && !codes[i].operand.ToString().Contains("ClampPos"))
-                    {
-                        if (i >= 2 && codes[i - 2].opcode == OpCodes.Ldc_R4 && codes[i - 1].opcode == OpCodes.Ldc_R4)
-                        {
-                            float min = (float)codes[i - 2].operand;
-                            float max = (float)codes[i - 1].operand;
-                            float nmin = 0.001f;
-                            float nmax = 1000f;
+                    float min = (float)matcher.InstructionAt(0).operand;
+                    float max = (float)matcher.InstructionAt(1).operand;
+                    float nmin = 0.001f;
+                    float nmax = 1000f;
 
-                            if (min != nmin && max != nmax)
-                            {
-                                codes[i - 2].operand = nmin;
-                                codes[i - 1].operand = nmax;
-                                zoomed = true;
-                            }
-                        }
+                    if (min != nmin && max != nmax)
+                    {
+                        matcher.InstructionAt(0).operand = nmin;
+                        matcher.InstructionAt(1).operand = nmax;
+                        zoomed = true;
                     }
                 }
             }
 
-            if (!panned) Plugin.Logger.LogError("Could not unlock map pan.");
-            if (!zoomed) Plugin.Logger.LogError("Could not unlock map zoom.");
+            if (Plugin.UnlockMapPan.Value && !panned) Plugin.Logger.LogError("Could not unlock map pan.");
+            if (Plugin.UnlockMapZoom.Value && !zoomed) Plugin.Logger.LogError("Could not unlock map zoom.");
 
-            return codes.AsEnumerable();
+            return matcher.Instructions();
         }
     }
 

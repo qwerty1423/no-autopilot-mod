@@ -2599,20 +2599,29 @@ namespace NOAutopilot
                         _lastStringUpdate = Time.time;
                         string content = "";
 
-                        if (currentFuel <= 0f) content += $"<color={Plugin.ColorCrit.Value}>00:00\n----</color>\n";
+                        if (currentFuel <= 0f)
+                        {
+                            content += $"<color={Plugin.ColorCrit.Value}>00:00\n----</color>\n";
+                        }
                         else
                         {
                             float calcFlow = Mathf.Max(fuelFlowEma, 0.0001f);
                             float secs = currentFuel / calcFlow;
                             string sTime = TimeSpan.FromSeconds(Mathf.Min(secs, 359999f)).ToString("hh\\:mm");
                             float mins = secs / 60f;
-                            string fuelCol = (mins < Plugin.FuelCritMinutes.Value) ? Plugin.ColorCrit.Value : (mins < Plugin.FuelWarnMinutes.Value ? Plugin.ColorWarn.Value : Plugin.ColorGood.Value);
+
+                            string fuelCol = Plugin.ColorGood.Value;
+                            if (mins < Plugin.FuelCritMinutes.Value) fuelCol = Plugin.ColorCrit.Value;
+                            else if (mins < Plugin.FuelWarnMinutes.Value) fuelCol = Plugin.ColorWarn.Value;
+
                             content += $"<color={fuelCol}>{sTime}</color>\n";
 
                             float spd = (aircraft.rb != null) ? aircraft.rb.velocity.magnitude : 0f;
                             float distMeters = secs * APData.SpeedEma;
                             if (distMeters > 99999000f) distMeters = 99999000f;
-                            content += $"<color={Plugin.ColorRange.Value}>{ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters), Plugin.DistShowUnit.Value)}</color>\n";
+
+                            string sRange = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters), Plugin.DistShowUnit.Value);
+                            content += $"<color={Plugin.ColorRange.Value}>{sRange}</color>\n";
                         }
                         content += "\n";
 
@@ -2680,14 +2689,24 @@ namespace NOAutopilot
                             content += $"<color={Plugin.ColorInfo.Value}>GCAS-</color>\n";
                         }
 
-                        if (APData.AutoJammerActive) content += $"<color={Plugin.ColorAPOn.Value}>AJ</color>";
+                        if (Plugin.ShowOverride.Value && APData.Enabled && !APData.GCASActive)
+                        {
+                            float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastOverrideInputTime);
+                            if (overrideRemaining > 0)
+                            {
+                                content += $"<color={Plugin.ColorInfo.Value}>{overrideRemaining:F1}s</color>\n";
+                            }
+                        }
+
+                        if (APData.AutoJammerActive)
+                        {
+                            content += $"<color={Plugin.ColorAPOn.Value}>AJ</color>";
+                        }
                         overlayText.text = content;
                     }
                 }
 
-                bool gcasAlert = APData.GCASActive || APData.GCASWarning;
-
-                if (gcasAlert)
+                if (APData.GCASActive || APData.GCASWarning)
                 {
                     if (gcasLeftObj == null)
                     {

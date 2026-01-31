@@ -2737,7 +2737,7 @@ namespace NOAutopilot
                     Color gcasColor = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
 
                     int arrowSize = (int)currentSize;
-                    int textSize = (int)currentSize;
+                    int textSize = (int)(currentSize * 0.7);
 
                     gcasLeftText.fontSize = arrowSize;
                     gcasLeftText.color = gcasColor;
@@ -2757,7 +2757,7 @@ namespace NOAutopilot
 
                     gcasLeftObj.transform.localPosition = new Vector3(-offsetX, yOffset, 0);
                     gcasRightObj.transform.localPosition = new Vector3(offsetX, yOffset, 0);
-                    gcasTopObj.transform.localPosition = new Vector3(0, 50, 0);
+                    gcasTopObj.transform.localPosition = new Vector3(0, 40, 0);
                 }
                 else
                 {

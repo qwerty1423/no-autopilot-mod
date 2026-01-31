@@ -35,6 +35,8 @@ If you're stuck you can try Primeva 2082 discord's mod install guide:
 
 or ask for help on the nuclear option discord.
 
+After updates, it is recommended to regenerate your config file at `BepInEx/config/com.qwerty1423.NOAutopilot.cfg` by either deleting it or moving it somewhere else and merging your changes with the newer version, because default config may change after an update.
+
 ## Default Controls
 
 The autopilot can be configured using only the `F8` gui window and the map, so `F8` is probably the most important keybind to remember.

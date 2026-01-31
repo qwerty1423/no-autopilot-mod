@@ -539,7 +539,7 @@ namespace NOAutopilot
                     if (APData.SpeedHoldIsMach)
                     {
                         float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
-                        float sos = LevelInfo.GetSpeedofSound(currentAlt);
+                        float sos = LevelInfo.GetSpeedOfSound(currentAlt);
                         APData.TargetSpeed = currentTAS / sos;
                         _bufSpeed = APData.TargetSpeed.ToString("F2");
                     }
@@ -565,7 +565,7 @@ namespace NOAutopilot
                         if (APData.SpeedHoldIsMach)
                         {
                             float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
-                            APData.TargetSpeed = currentTAS / LevelInfo.GetSpeedofSound(currentAlt);
+                            APData.TargetSpeed = currentTAS / LevelInfo.GetSpeedOfSound(currentAlt);
                         }
                         else APData.TargetSpeed = currentTAS;
                     }
@@ -574,7 +574,7 @@ namespace NOAutopilot
                     if (APData.SpeedHoldIsMach)
                     {
                         float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
-                        float sos = LevelInfo.GetSpeedofSound(currentAlt);
+                        float sos = LevelInfo.GetSpeedOfSound(currentAlt);
                         step /= Mathf.Max(sos, 1f);
                     }
 
@@ -587,7 +587,7 @@ namespace NOAutopilot
                     if (float.TryParse(_bufSpeed, out float val))
                     {
                         float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
-                        float sos = LevelInfo.GetSpeedofSound(currentAlt);
+                        float sos = LevelInfo.GetSpeedOfSound(currentAlt);
                         if (!APData.SpeedHoldIsMach)
                         {
                             float ms = ModUtils.ConvertSpeed_FromDisplay(val);
@@ -770,7 +770,7 @@ namespace NOAutopilot
             float currentVS = (APData.PlayerRB != null) ? APData.PlayerRB.velocity.y : 0f;
 
             float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
-            float sos = LevelInfo.GetSpeedofSound(currentAlt);
+            float sos = LevelInfo.GetSpeedOfSound(currentAlt);
             float currentSpeed = (APData.PlayerRB != null) ? APData.PlayerRB.velocity.magnitude : 0f;
 
             float currentCourse = 0f;
@@ -2094,7 +2094,7 @@ namespace NOAutopilot
                     if (APData.SpeedHoldIsMach)
                     {
                         float currentAlt = APData.LocalAircraft.GlobalPosition().y;
-                        float sos = LevelInfo.GetSpeedofSound(currentAlt);
+                        float sos = LevelInfo.GetSpeedOfSound(currentAlt);
                         targetSpeedMS = APData.TargetSpeed * sos;
                     }
                     else

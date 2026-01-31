@@ -2693,7 +2693,7 @@ namespace NOAutopilot
                     {
                         Transform hudCenter = _cachedRefLabel.transform.parent;
 
-                        GameObject CreateObj(string name, string txt, int fSize)
+                        GameObject CreateObj(string name, string txt)
                         {
                             GameObject obj = UnityEngine.Object.Instantiate(_cachedRefLabel.gameObject, hudCenter);
                             obj.name = name;
@@ -2717,13 +2717,13 @@ namespace NOAutopilot
                             return obj;
                         }
 
-                        gcasLeftObj = CreateObj("GCAS_Left", ">", (int)currentSize);
+                        gcasLeftObj = CreateObj("GCAS_Left", ">");
                         gcasLeftText = gcasLeftObj.GetComponent<Text>();
 
-                        gcasRightObj = CreateObj("GCAS_Right", "<", (int)currentSize);
+                        gcasRightObj = CreateObj("GCAS_Right", "<");
                         gcasRightText = gcasRightObj.GetComponent<Text>();
 
-                        gcasTopObj = CreateObj("GCAS_Top", "FLYUP", (int)currentSize);
+                        gcasTopObj = CreateObj("GCAS_Top", "FLYUP");
                         gcasTopText = gcasTopObj.GetComponent<Text>();
                     }
 

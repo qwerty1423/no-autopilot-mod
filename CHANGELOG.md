@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.13.11] - 2026-01-31
+
+### Fixed
+
+- restore the override indicator
+
 ## [4.13.10] - 2026-01-31
 
 ### Added

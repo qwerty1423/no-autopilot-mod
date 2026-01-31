@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- better GCAS visuals
+
+### Fixed
+
+- `GetSpeedofSound()` -> `GetSpeedOfSound()`
+
 ### Changed
 
 - use codematcher for map zoom and pan

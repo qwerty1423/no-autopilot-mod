@@ -1493,6 +1493,7 @@ namespace NOAutopilot
         public static Rigidbody PlayerRB;
         public static Aircraft LocalAircraft;
         public static WeaponManager LocalWeaponManager;
+        public static float GCASConverge = 0f;
 
         public static void Reset()
         {
@@ -1519,6 +1520,7 @@ namespace NOAutopilot
             PlayerRB = null;
             LocalAircraft = null;
             LocalWeaponManager = null;
+            GCASConverge = 0f;
 
             NavQueue.Clear();
             foreach (var obj in NavVisuals)
@@ -1566,6 +1568,7 @@ namespace NOAutopilot
                     APData.TargetCourse = -1f;
                     APData.CurrentMaxClimbRate = -1f;
                     APData.LastOverrideInputTime = -999f;
+                    APData.GCASConverge = 0f;
                     APData.LocalPilot = null;
                     APData.LocalWeaponManager = null;
                     if (APData.LocalAircraft != null)
@@ -1791,145 +1794,159 @@ namespace NOAutopilot
                         if (gs != null && !gs.ToString().Contains("LockedRetracted")) gearDown = true;
                     }
 
-                    if (Mathf.Abs(stickPitch) > Plugin.GCAS_Deadzone.Value || Mathf.Abs(stickRoll) > Plugin.GCAS_Deadzone.Value || gearDown)
+                    bool pilotOverride = Mathf.Abs(stickPitch) > Plugin.GCAS_Deadzone.Value || Mathf.Abs(stickRoll) > Plugin.GCAS_Deadzone.Value || gearDown;
+
+                    if (pilotOverride && APData.GCASActive)
                     {
+                        APData.GCASActive = false;
+                        APData.Enabled = false;
+                    }
+
+                    float speed = APData.PlayerRB.velocity.magnitude;
+                    if (speed > 0f)
+                    {
+                        Vector3 velocity = APData.PlayerRB.velocity;
+                        float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
+
+                        float currentRollAbs = Mathf.Abs(APData.CurrentRoll);
+                        float estimatedRollRate = 60f;
+                        float timeToRollUpright = currentRollAbs / estimatedRollRate;
+
+                        float gAccel = Plugin.GCAS_MaxG.Value * 9.81f;
+                        float turnRadius = speed * speed / gAccel;
+
+                        float reactionTime = Plugin.GCAS_AutoBuffer.Value + (Time.deltaTime * 2.0f) + timeToRollUpright;
+                        float reactionDist = speed * reactionTime;
+                        float warnDist = speed * Plugin.GCAS_WarnBuffer.Value;
+
+                        overGFactor = 1.0f;
+
+                        // bool isWallThreat = false;
+
+                        if (Time.time >= gcasNextScan)
+                        {
+                            gcasNextScan = Time.time + 0.02f;
+
+                            dangerImminent = false;
+                            warningZone = false;
+
+                            APData.GCASConverge = 0f;
+
+                            Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 5f);
+                            float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
+
+                            if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange, 8256))
+                            {
+                                if (hit.transform.root != APData.PlayerTransform.root)
+                                {
+                                    float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
+                                    float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
+
+                                    if (hit.distance < (reqArc + reactionDist + 20f))
+                                    {
+                                        dangerImminent = true;
+
+                                        float availableArcDist = hit.distance - reactionDist - speed * timeToRollUpright;
+
+                                        if (availableArcDist < reqArc)
+                                        {
+                                            float neededRadius = availableArcDist / (turnAngle * Mathf.Deg2Rad);
+                                            neededRadius = Mathf.Max(neededRadius, 1f);
+                                            float gRequired = speed * speed / (neededRadius * 9.81f);
+
+                                            overGFactor = Mathf.Max(overGFactor, gRequired / Plugin.GCAS_MaxG.Value);
+                                        }
+                                    }
+                                    else if (hit.distance < (reqArc + reactionDist + warnDist))
+                                    {
+                                        warningZone = true;
+                                        float distToTrigger = hit.distance - (reqArc + reactionDist + 20f);
+                                        float totalWarnRange = warnDist - 20f;
+                                        float fraction = 1f - (distToTrigger / Mathf.Max(totalWarnRange, 1f));
+                                        APData.GCASConverge = Mathf.Clamp01(fraction);
+                                    }
+                                }
+                            }
+                        }
+
+                        if (descentRate > 0f)
+                        {
+                            float diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
+                            float vertBuffer = descentRate * reactionTime;
+                            float availablePullAlt = APData.CurrentAlt - vertBuffer;
+                            float pullUpLoss = turnRadius * (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
+
+                            if (availablePullAlt < pullUpLoss)
+                            {
+                                dangerImminent = true;
+
+                                float availableRadius = availablePullAlt / (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
+                                availableRadius = Mathf.Max(availableRadius, 1f);
+
+                                float gReqFloor = speed * speed / (availableRadius * 9.81f);
+
+                                overGFactor = Mathf.Max(overGFactor, gReqFloor / Plugin.GCAS_MaxG.Value);
+                            }
+                            else if (APData.CurrentAlt < (pullUpLoss + vertBuffer + (descentRate * Plugin.GCAS_WarnBuffer.Value)))
+                            {
+                                warningZone = true;
+                                float triggerAlt = pullUpLoss + vertBuffer;
+                                float warnRange = descentRate * Plugin.GCAS_WarnBuffer.Value;
+                                float distToTrigger = APData.CurrentAlt - triggerAlt;
+                                float fraction = 1f - (distToTrigger / Mathf.Max(warnRange, 1f));
+                                APData.GCASConverge = Mathf.Max(APData.GCASConverge, Mathf.Clamp01(fraction));
+                            }
+                        }
+
                         if (APData.GCASActive)
                         {
-                            APData.GCASActive = false;
-                            APData.Enabled = false;
+                            bool safeToRelease = false;
+
+                            if (!dangerImminent)
+                            {
+                                // if (isWallThreat || APData.CurrentAlt > 100f) safeToRelease = true;
+                                // else if (velocity.y >= 0f) safeToRelease = true;
+
+                                safeToRelease = true;
+                            }
+
+                            if (safeToRelease)
+                            {
+                                APData.GCASActive = false;
+                                // APData.Enabled = apStateBeforeGCAS;
+                                APData.Enabled = false;
+                                pidGCAS.Reset();
+                                pidAlt.Reset();
+                                pidVS.Reset();
+                                pidAngle.Reset();
+                                if (Plugin.DisableATAPGCAS.Value)
+                                {
+                                    APData.TargetSpeed = -1f;
+                                    Plugin.SyncMenuValues();
+                                }
+                            }
+                            else
+                            {
+                                APData.GCASWarning = true;
+                                APData.TargetRoll = 0f;
+                                APData.GCASConverge = 1f;
+                            }
                         }
-                    }
-                    else
-                    {
-                        float speed = APData.PlayerRB.velocity.magnitude;
-                        if (speed > 0f)
+                        else if (dangerImminent)
                         {
-                            Vector3 velocity = APData.PlayerRB.velocity;
-                            float descentRate = (velocity.y < 0) ? Mathf.Abs(velocity.y) : 0f;
-
-                            float currentRollAbs = Mathf.Abs(APData.CurrentRoll);
-                            float estimatedRollRate = 60f;
-                            float timeToRollUpright = currentRollAbs / estimatedRollRate;
-
-                            float gAccel = Plugin.GCAS_MaxG.Value * 9.81f;
-                            float turnRadius = speed * speed / gAccel;
-
-                            float reactionTime = Plugin.GCAS_AutoBuffer.Value + (Time.deltaTime * 2.0f) + timeToRollUpright;
-                            float reactionDist = speed * reactionTime;
-                            float warnDist = speed * Plugin.GCAS_WarnBuffer.Value;
-
-                            overGFactor = 1.0f;
-
-                            // bool isWallThreat = false;
-
-                            if (Time.time >= gcasNextScan)
-                            {
-                                gcasNextScan = Time.time + 0.02f;
-
-                                dangerImminent = false;
-                                warningZone = false;
-
-                                Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 5f);
-                                float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
-
-                                if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized, out RaycastHit hit, scanRange, 8256))
-                                {
-                                    if (hit.transform.root != APData.PlayerTransform.root)
-                                    {
-                                        float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
-                                        float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
-
-                                        if (hit.distance < (reqArc + reactionDist + 20f))
-                                        {
-                                            dangerImminent = true;
-
-                                            float availableArcDist = hit.distance - reactionDist - speed * timeToRollUpright;
-
-                                            if (availableArcDist < reqArc)
-                                            {
-                                                float neededRadius = availableArcDist / (turnAngle * Mathf.Deg2Rad);
-                                                neededRadius = Mathf.Max(neededRadius, 1f);
-                                                float gRequired = speed * speed / (neededRadius * 9.81f);
-
-                                                overGFactor = Mathf.Max(overGFactor, gRequired / Plugin.GCAS_MaxG.Value);
-                                            }
-                                        }
-                                        else if (hit.distance < (reqArc + reactionDist + warnDist))
-                                        {
-                                            warningZone = true;
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (descentRate > 0f)
-                            {
-                                float diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
-                                float vertBuffer = descentRate * reactionTime;
-                                float availablePullAlt = APData.CurrentAlt - vertBuffer;
-                                float pullUpLoss = turnRadius * (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
-
-                                if (availablePullAlt < pullUpLoss)
-                                {
-                                    dangerImminent = true;
-
-                                    float availableRadius = availablePullAlt / (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
-                                    availableRadius = Mathf.Max(availableRadius, 1f);
-
-                                    float gReqFloor = speed * speed / (availableRadius * 9.81f);
-
-                                    overGFactor = Mathf.Max(overGFactor, gReqFloor / Plugin.GCAS_MaxG.Value);
-                                }
-                                else if (APData.CurrentAlt < (pullUpLoss + vertBuffer + (descentRate * Plugin.GCAS_WarnBuffer.Value)))
-                                {
-                                    warningZone = true;
-                                }
-                            }
-
-                            if (APData.GCASActive)
-                            {
-                                bool safeToRelease = false;
-
-                                if (!dangerImminent)
-                                {
-                                    // if (isWallThreat || APData.CurrentAlt > 100f) safeToRelease = true;
-                                    // else if (velocity.y >= 0f) safeToRelease = true;
-
-                                    safeToRelease = true;
-                                }
-
-                                if (safeToRelease)
-                                {
-                                    APData.GCASActive = false;
-                                    // APData.Enabled = apStateBeforeGCAS;
-                                    APData.Enabled = false;
-                                    pidGCAS.Reset();
-                                    pidAlt.Reset();
-                                    pidVS.Reset();
-                                    pidAngle.Reset();
-                                    if (Plugin.DisableATAPGCAS.Value)
-                                    {
-                                        APData.TargetSpeed = -1f;
-                                        Plugin.SyncMenuValues();
-                                    }
-                                }
-                                else
-                                {
-                                    APData.GCASWarning = true;
-                                    APData.TargetRoll = 0f;
-                                }
-                            }
-                            else if (dangerImminent)
+                            if (!pilotOverride)
                             {
                                 apStateBeforeGCAS = APData.Enabled;
                                 APData.Enabled = true;
                                 APData.GCASActive = true;
                                 APData.TargetRoll = 0f;
                             }
-                            else if (warningZone)
-                            {
-                                APData.GCASWarning = true;
-                            }
+                            APData.GCASWarning = true;
+                            APData.GCASConverge = 1f;
+                        }
+                        else if (warningZone)
+                        {
+                            APData.GCASWarning = true;
                         }
                     }
                 }
@@ -2448,6 +2465,14 @@ namespace NOAutopilot
         private static GameObject infoOverlayObj;
         private static Text overlayText;
 
+        private static GameObject gcasLeftObj;
+        private static GameObject gcasRightObj;
+        private static GameObject gcasTopObj;
+        private static Text gcasLeftText;
+        private static Text gcasRightText;
+        private static Text gcasTopText;
+        private static float smoothedConverge = 0f;
+
         private static float lastFuelMass = 0f;
         private static float fuelFlowEma = 0f;
         private static float lastUpdateTime = 0f;
@@ -2465,6 +2490,15 @@ namespace NOAutopilot
             }
             infoOverlayObj = null;
             overlayText = null;
+
+            if (gcasLeftObj) UnityEngine.Object.Destroy(gcasLeftObj);
+            if (gcasRightObj) UnityEngine.Object.Destroy(gcasRightObj);
+            if (gcasTopObj) UnityEngine.Object.Destroy(gcasTopObj);
+            gcasLeftObj = null;
+            gcasRightObj = null;
+            gcasTopObj = null;
+            smoothedConverge = 0f;
+
             lastFuelMass = 0f;
             fuelFlowEma = 0f;
             lastUpdateTime = 0f;
@@ -2502,6 +2536,9 @@ namespace NOAutopilot
                     if (infoOverlayObj) UnityEngine.Object.Destroy(infoOverlayObj);
                     infoOverlayObj = null;
 
+                    if (gcasLeftObj) UnityEngine.Object.Destroy(gcasLeftObj);
+                    gcasLeftObj = null;
+
                     if (_cachedFuelGauge != null)
                     {
                         _cachedRefLabel = (Text)Plugin.f_fuelLabel.GetValue(_cachedFuelGauge);
@@ -2514,199 +2551,219 @@ namespace NOAutopilot
                 {
                     infoOverlayObj = UnityEngine.Object.Instantiate(_cachedRefLabel.gameObject, _cachedRefLabel.transform.parent);
                     infoOverlayObj.name = "AP_CombinedOverlay";
-
                     overlayText = infoOverlayObj.GetComponent<Text>();
-
                     overlayText.resizeTextForBestFit = false;
-
                     overlayText.supportRichText = true;
                     overlayText.alignment = TextAnchor.UpperLeft;
                     overlayText.horizontalOverflow = HorizontalWrapMode.Overflow;
                     overlayText.verticalOverflow = VerticalWrapMode.Overflow;
-
                     RectTransform rect = infoOverlayObj.GetComponent<RectTransform>();
-
                     rect.pivot = new Vector2(0, 1);
-
                     rect.anchorMin = new Vector2(0, 1);
                     rect.anchorMax = new Vector2(0, 1);
-
                     rect.localScale = _cachedRefLabel.transform.localScale;
-
                     rect.localRotation = Quaternion.identity;
-
                     infoOverlayObj.SetActive(true);
                 }
 
                 float currentSize = PlayerSettings.hmdTextSize;
                 float scaleRatio = currentSize / 24f;
-
                 overlayText.fontSize = (int)currentSize;
 
                 Vector3 refLocalPos = _cachedRefLabel.transform.localPosition;
-
                 float finalX = Plugin.OverlayOffsetX.Value * scaleRatio;
                 float finalY = Plugin.OverlayOffsetY.Value * scaleRatio;
-
                 infoOverlayObj.transform.localPosition = refLocalPos + new Vector3(finalX, finalY, 0);
 
                 Aircraft aircraft = APData.LocalAircraft;
-                if (aircraft == null) return;
-
-                if (Plugin.f_fuelCapacity == null) return;
-                float currentFuel = (float)Plugin.f_fuelCapacity.GetValue(aircraft) * aircraft.GetFuelLevel();
-                float time = Time.time;
-                if (lastUpdateTime != 0f && lastFuelMass > 0f)
+                if (aircraft != null && Plugin.f_fuelCapacity != null)
                 {
-                    float dt = time - lastUpdateTime;
-                    if (dt >= Plugin.FuelUpdateInterval.Value)
+                    float currentFuel = (float)Plugin.f_fuelCapacity.GetValue(aircraft) * aircraft.GetFuelLevel();
+                    float time = Time.time;
+                    if (lastUpdateTime != 0f && lastFuelMass > 0f)
                     {
-                        float burned = lastFuelMass - currentFuel;
-                        float flow = Mathf.Max(0f, burned / dt);
-                        float smoothingFactor = Plugin.FuelSmoothing.Value;
-                        fuelFlowEma = Mathf.Lerp(fuelFlowEma, flow, smoothingFactor);
-                        lastUpdateTime = time;
-                        lastFuelMass = currentFuel;
+                        float dt = time - lastUpdateTime;
+                        if (dt >= Plugin.FuelUpdateInterval.Value)
+                        {
+                            float burned = lastFuelMass - currentFuel;
+                            float flow = Mathf.Max(0f, burned / dt);
+                            fuelFlowEma = Mathf.Lerp(fuelFlowEma, flow, Plugin.FuelSmoothing.Value);
+                            lastUpdateTime = time;
+                            lastFuelMass = currentFuel;
+                        }
+                    }
+                    else { lastUpdateTime = time; lastFuelMass = currentFuel; }
+
+                    if (Time.time - _lastStringUpdate >= Plugin.DisplayUpdateInterval.Value)
+                    {
+                        _lastStringUpdate = Time.time;
+                        string content = "";
+
+                        if (currentFuel <= 0f) content += $"<color={Plugin.ColorCrit.Value}>00:00\n----</color>\n";
+                        else
+                        {
+                            float calcFlow = Mathf.Max(fuelFlowEma, 0.0001f);
+                            float secs = currentFuel / calcFlow;
+                            string sTime = TimeSpan.FromSeconds(Mathf.Min(secs, 359999f)).ToString("hh\\:mm");
+                            float mins = secs / 60f;
+                            string fuelCol = (mins < Plugin.FuelCritMinutes.Value) ? Plugin.ColorCrit.Value : (mins < Plugin.FuelWarnMinutes.Value ? Plugin.ColorWarn.Value : Plugin.ColorGood.Value);
+                            content += $"<color={fuelCol}>{sTime}</color>\n";
+
+                            float spd = (aircraft.rb != null) ? aircraft.rb.velocity.magnitude : 0f;
+                            float distMeters = secs * APData.SpeedEma;
+                            if (distMeters > 99999000f) distMeters = 99999000f;
+                            content += $"<color={Plugin.ColorRange.Value}>{ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters), Plugin.DistShowUnit.Value)}</color>\n";
+                        }
+                        content += "\n";
+
+                        // (AP was on before GCAS) or (AP is on and no GCAS)
+                        bool apActive = (ControlOverridePatch.apStateBeforeGCAS && APData.GCASActive) || (APData.Enabled && !APData.GCASActive);
+                        bool speedActive = APData.TargetSpeed >= 0f;
+
+                        if ((apActive || speedActive) && Plugin.ShowAPOverlay.Value)
+                        {
+                            bool placeholders = Plugin.ShowPlaceholders.Value;
+                            string spdStr = placeholders ? "S" : "";
+                            string rollStr = placeholders ? "R" : "";
+                            string altStr = placeholders ? "A" : "";
+                            string climbStr = placeholders ? "V" : "";
+                            string crsStr = placeholders ? "C" : "";
+                            string navStr = placeholders ? "W" : "";
+
+                            if (speedActive)
+                            {
+                                spdStr = APData.SpeedHoldIsMach ? $"M{APData.TargetSpeed:F2}" : "S" + ModUtils.ProcessGameString(UnitConverter.SpeedReading(APData.TargetSpeed), Plugin.SpeedShowUnit.Value);
+                            }
+
+                            if (apActive)
+                            {
+                                if (APData.TargetAlt > 0)
+                                    altStr = "A" + ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.TargetAlt), Plugin.AltShowUnit.Value);
+
+                                if (APData.CurrentMaxClimbRate > 0 && APData.CurrentMaxClimbRate != Plugin.DefaultMaxClimbRate.Value)
+                                    climbStr = "V" + ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(APData.CurrentMaxClimbRate), Plugin.VertSpeedShowUnit.Value);
+
+                                string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
+                                if (APData.TargetRoll != -999f)
+                                    rollStr = $"R{APData.TargetRoll:F0}{degUnit}";
+                                if (APData.TargetCourse >= 0)
+                                    crsStr = $"C{APData.TargetCourse:F0}{degUnit}";
+                                if (APData.NavEnabled && APData.NavQueue.Count > 0)
+                                {
+                                    float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
+                                    navStr = "W>" + ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value);
+                                }
+                            }
+
+                            string line1 = "";
+                            if (!string.IsNullOrEmpty(spdStr)) line1 += spdStr;
+                            if (!string.IsNullOrEmpty(spdStr) && !string.IsNullOrEmpty(rollStr)) line1 += " ";
+                            if (!string.IsNullOrEmpty(rollStr)) line1 += rollStr;
+
+                            string line2 = "";
+                            if (!string.IsNullOrEmpty(altStr)) line2 += altStr;
+                            if (!string.IsNullOrEmpty(altStr) && !string.IsNullOrEmpty(climbStr)) line2 += " ";
+                            if (!string.IsNullOrEmpty(climbStr)) line2 += climbStr;
+
+                            string line3 = "";
+                            if (!string.IsNullOrEmpty(crsStr)) line3 += crsStr;
+                            if (!string.IsNullOrEmpty(crsStr) && !string.IsNullOrEmpty(navStr)) line3 += " ";
+                            if (!string.IsNullOrEmpty(navStr)) line3 += navStr;
+
+                            if (!string.IsNullOrEmpty(line1)) content += $"<color={Plugin.ColorAPOn.Value}>{line1}</color>\n";
+                            if (!string.IsNullOrEmpty(line2)) content += $"<color={Plugin.ColorAPOn.Value}>{line2}</color>\n";
+                            if (!string.IsNullOrEmpty(line3)) content += $"<color={Plugin.ColorAPOn.Value}>{line3}</color>\n";
+                        }
+
+                        if (!APData.GCASEnabled && Plugin.ShowGCASOff.Value)
+                        {
+                            content += $"<color={Plugin.ColorInfo.Value}>GCAS-</color>\n";
+                        }
+
+                        if (APData.AutoJammerActive) content += $"<color={Plugin.ColorAPOn.Value}>AJ</color>";
+                        overlayText.text = content;
                     }
                 }
-                else { lastUpdateTime = time; lastFuelMass = currentFuel; }
 
-                if (Time.time - _lastStringUpdate >= Plugin.DisplayUpdateInterval.Value)
+                bool gcasAlert = APData.GCASActive || APData.GCASWarning;
+
+                if (gcasAlert)
                 {
-                    _lastStringUpdate = Time.time;
-
-                    string content = "";
-
-                    if (currentFuel <= 1f)
+                    if (gcasLeftObj == null)
                     {
-                        content += $"<color={Plugin.ColorCrit.Value}>TIME: 00:00\nRNG: -</color>\n";
-                    }
-                    else
-                    {
-                        float calcFlow = Mathf.Max(fuelFlowEma, 0.0001f);
-                        float secs = currentFuel / calcFlow;
-                        string sTime = TimeSpan.FromSeconds(Mathf.Min(secs, 359999f)).ToString("hh\\:mm");
-                        float mins = secs / 60f;
+                        Transform hudCenter = _cachedRefLabel.transform.parent;
 
-                        string fuelCol = Plugin.ColorGood.Value;
-                        if (mins < Plugin.FuelCritMinutes.Value) fuelCol = Plugin.ColorCrit.Value;
-                        else if (mins < Plugin.FuelWarnMinutes.Value) fuelCol = Plugin.ColorWarn.Value;
-
-                        content += $"<color={fuelCol}>{sTime}</color>\n";
-
-                        float spd = (aircraft.rb != null) ? aircraft.rb.velocity.magnitude : 0f;
-                        float distMeters = secs * APData.SpeedEma;
-
-                        if (distMeters > 99999000f) distMeters = 99999000f;
-
-                        string sRange = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters), Plugin.DistShowUnit.Value);
-                        content += $"<color={Plugin.ColorRange.Value}>{sRange}</color>\n";
-                    }
-
-                    content += "\n";
-
-                    // (AP was on before GCAS) or (AP is on and no GCAS)
-                    bool apActive = (ControlOverridePatch.apStateBeforeGCAS && APData.GCASActive) || (APData.Enabled && !APData.GCASActive);
-
-                    bool speedActive = APData.TargetSpeed >= 0f;
-
-                    bool showAPInfo = apActive || speedActive;
-
-                    if (showAPInfo && Plugin.ShowAPOverlay.Value)
-                    {
-                        bool placeholders = Plugin.ShowPlaceholders.Value;
-                        string spdStr = placeholders ? "S" : "";
-                        string rollStr = placeholders ? "R" : "";
-                        string altStr = placeholders ? "A" : "";
-                        string climbStr = placeholders ? "V" : "";
-                        string crsStr = placeholders ? "C" : "";
-                        string navStr = placeholders ? "W" : "";
-
-                        if (speedActive)
+                        GameObject CreateObj(string name, string txt, int fSize)
                         {
-                            if (APData.SpeedHoldIsMach)
-                                spdStr = $"M{APData.TargetSpeed:F2}";
-                            else
-                                spdStr = "S" + ModUtils.ProcessGameString(UnitConverter.SpeedReading(APData.TargetSpeed), Plugin.SpeedShowUnit.Value);
+                            GameObject obj = UnityEngine.Object.Instantiate(_cachedRefLabel.gameObject, hudCenter);
+                            obj.name = name;
+                            Text t = obj.GetComponent<Text>();
+                            t.fontStyle = FontStyle.Normal;
+                            t.text = txt;
+                            t.alignment = TextAnchor.MiddleCenter;
+                            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+                            t.verticalOverflow = VerticalWrapMode.Overflow;
+                            t.resizeTextForBestFit = false;
+
+                            obj.transform.localRotation = Quaternion.identity;
+                            obj.transform.localScale = Vector3.one;
+
+                            RectTransform rt = obj.GetComponent<RectTransform>();
+                            rt.pivot = new Vector2(0.5f, 0.5f);
+                            rt.anchorMin = new Vector2(0.5f, 0.5f);
+                            rt.anchorMax = new Vector2(0.5f, 0.5f);
+                            rt.sizeDelta = new Vector2(200, 100);
+
+                            return obj;
                         }
 
-                        if (apActive)
-                        {
-                            if (APData.TargetAlt > 0)
-                                altStr = "A" + ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.TargetAlt), Plugin.AltShowUnit.Value);
+                        gcasLeftObj = CreateObj("GCAS_Left", ">", (int)currentSize);
+                        gcasLeftText = gcasLeftObj.GetComponent<Text>();
 
-                            if (APData.CurrentMaxClimbRate > 0 && APData.CurrentMaxClimbRate != Plugin.DefaultMaxClimbRate.Value)
-                                climbStr = "V" + ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(APData.CurrentMaxClimbRate), Plugin.VertSpeedShowUnit.Value);
+                        gcasRightObj = CreateObj("GCAS_Right", "<", (int)currentSize);
+                        gcasRightText = gcasRightObj.GetComponent<Text>();
 
-                            string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
-                            if (APData.TargetRoll != -999f)
-                                rollStr = $"R{APData.TargetRoll:F0}{degUnit}";
-                            if (APData.TargetCourse >= 0)
-                                crsStr = $"C{APData.TargetCourse:F0}{degUnit}";
-
-                            if (APData.NavEnabled && APData.NavQueue.Count > 0)
-                            {
-                                float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
-                                navStr = "W>" + ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value);
-                            }
-                        }
-
-
-                        string line1 = "";
-                        if (!string.IsNullOrEmpty(spdStr)) line1 += spdStr;
-                        if (!string.IsNullOrEmpty(spdStr) && !string.IsNullOrEmpty(rollStr)) line1 += " ";
-                        if (!string.IsNullOrEmpty(rollStr)) line1 += rollStr;
-
-                        string line2 = "";
-                        if (!string.IsNullOrEmpty(altStr)) line2 += altStr;
-                        if (!string.IsNullOrEmpty(altStr) && !string.IsNullOrEmpty(climbStr)) line2 += " ";
-                        if (!string.IsNullOrEmpty(climbStr)) line2 += climbStr;
-
-                        string line3 = "";
-                        if (!string.IsNullOrEmpty(crsStr)) line3 += crsStr;
-                        if (!string.IsNullOrEmpty(crsStr) && !string.IsNullOrEmpty(navStr)) line3 += " ";
-                        if (!string.IsNullOrEmpty(navStr)) line3 += navStr;
-
-                        string finalBlock = "";
-                        if (!string.IsNullOrEmpty(line1)) finalBlock += line1 + "\n";
-                        if (!string.IsNullOrEmpty(line2)) finalBlock += line2 + "\n";
-                        finalBlock += line3;
-
-                        if (!string.IsNullOrEmpty(finalBlock))
-                        {
-                            content += $"<color={Plugin.ColorAPOn.Value}>{finalBlock}</color>\n";
-                        }
+                        gcasTopObj = CreateObj("GCAS_Top", "FLYUP", (int)currentSize);
+                        gcasTopText = gcasTopObj.GetComponent<Text>();
                     }
 
-                    if (APData.GCASActive)
-                    {
-                        content += $"<color={Plugin.ColorCrit.Value}>A-GCAS</color>\n";
-                    }
-                    else if (APData.GCASWarning)
-                    {
-                        content += $"<color={Plugin.ColorWarn.Value}>PULL UP</color>\n";
-                    }
-                    else if (!APData.GCASEnabled && Plugin.ShowGCASOff.Value)
-                    {
-                        content += $"<color={Plugin.ColorInfo.Value}>GCAS-</color>\n";
-                    }
+                    float target = APData.GCASConverge;
+                    smoothedConverge = Mathf.Lerp(smoothedConverge, target, Time.deltaTime * 2f);
 
-                    if (Plugin.ShowOverride.Value && APData.Enabled && !APData.GCASActive)
-                    {
-                        float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastOverrideInputTime);
-                        if (overrideRemaining > 0)
-                        {
-                            content += $"<color={Plugin.ColorInfo.Value}>{overrideRemaining:F1}s</color>\n";
-                        }
-                    }
+                    gcasLeftObj.SetActive(true);
+                    gcasRightObj.SetActive(true);
+                    gcasTopObj.SetActive(APData.GCASActive);
 
-                    if (APData.AutoJammerActive)
-                    {
-                        content += $"<color={Plugin.ColorAPOn.Value}>AJ</color>";
-                    }
+                    Color gcasColor = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
 
-                    overlayText.fontSize = (int)PlayerSettings.hmdTextSize;
-                    overlayText.text = content;
+                    int arrowSize = (int)currentSize;
+                    int textSize = (int)currentSize;
+
+                    gcasLeftText.fontSize = arrowSize;
+                    gcasLeftText.color = gcasColor;
+                    gcasRightText.fontSize = arrowSize;
+                    gcasRightText.color = gcasColor;
+                    gcasTopText.fontSize = textSize;
+                    gcasTopText.color = gcasColor;
+
+                    float alpha = smoothedConverge;
+                    var c = gcasLeftText.color; c.a = alpha; gcasLeftText.color = c;
+                    c = gcasRightText.color; c.a = alpha; gcasRightText.color = c;
+                    c = gcasTopText.color; c.a = alpha; gcasTopText.color = c;
+
+                    float offsetX = Mathf.Lerp(200f, 5f, smoothedConverge);
+
+                    float yOffset = -(arrowSize * 0.25f);
+
+                    gcasLeftObj.transform.localPosition = new Vector3(-offsetX, yOffset, 0);
+                    gcasRightObj.transform.localPosition = new Vector3(offsetX, yOffset, 0);
+                    gcasTopObj.transform.localPosition = new Vector3(0, 50, 0);
+                }
+                else
+                {
+                    if (gcasLeftObj && gcasLeftObj.activeSelf) gcasLeftObj.SetActive(false);
+                    if (gcasRightObj && gcasRightObj.activeSelf) gcasRightObj.SetActive(false);
+                    if (gcasTopObj && gcasTopObj.activeSelf) gcasTopObj.SetActive(false);
                 }
             }
             catch (Exception ex)

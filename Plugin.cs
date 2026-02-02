@@ -535,6 +535,8 @@ namespace NOAutopilot
 
             m_GetFBWParams = null;
             m_SetFBWParams = null;
+            f_fbw_item1_enabled = null;
+            f_fbw_item2_tuning = null;
 
             t_NetworkServer = null;
             p_serverActive = null;
@@ -542,6 +544,10 @@ namespace NOAutopilot
             t_NetworkClient = null;
             p_clientActive = null;
             p_clientIsHost = null;
+
+            f_mapPosOffset = null;
+            f_mapStatOffset = null;
+            f_mapFollow = null;
 
             Logger = null;
         }

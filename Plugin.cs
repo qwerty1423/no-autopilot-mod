@@ -251,7 +251,7 @@ namespace NOAutopilot
 
             // Controls
             ToggleKey = Config.Bind("Controls", "01. Toggle AP Key", KeyCode.Equals, "AP On/Off");
-            ToggleFBWKey = Config.Bind("Controls", "02. Toggle FBW Key", KeyCode.Delete, "Toggle Stability Assist");
+            ToggleFBWKey = Config.Bind("Controls", "02. Toggle FBW Key", KeyCode.Delete, "works in singleplayer");
             UpKey = Config.Bind("Controls", "03. Altitude Up (Small)", KeyCode.UpArrow, "small increase");
             DownKey = Config.Bind("Controls", "04. Altitude Down (Small)", KeyCode.DownArrow, "small decrease");
             BigUpKey = Config.Bind("Controls", "05. Altitude Up (Big)", KeyCode.LeftArrow, "large increase");
@@ -624,7 +624,21 @@ namespace NOAutopilot
 
             if (GetKeyDownImproved(ToggleFBWKey.Value))
             {
-                APData.FBWDisabled = !APData.FBWDisabled;
+                APData.NextMultiplayerCheck = 0f;
+                if (IsMultiplayer())
+                {
+                    APData.FBWDisabled = false;
+                }
+                else
+                {
+                    APData.FBWDisabled = !APData.FBWDisabled;
+                }
+                UpdateFBWState();
+            }
+
+            if (APData.FBWDisabled && IsMultiplayer())
+            {
+                APData.FBWDisabled = false;
                 UpdateFBWState();
             }
 
@@ -1378,6 +1392,13 @@ namespace NOAutopilot
         {
             if (APData.LocalAircraft == null) return;
 
+            bool shouldDisable = APData.FBWDisabled;
+            if (APData.IsMultiplayerCached)
+            {
+                shouldDisable = false;
+                APData.FBWDisabled = false;
+            }
+
             try
             {
                 object filterObj = f_controlsFilter.GetValue(APData.LocalAircraft);
@@ -1388,7 +1409,7 @@ namespace NOAutopilot
                 var fields = result.GetType().GetFields();
                 float[] currentTuning = (float[])fields[1].GetValue(result);
 
-                m_SetFBWParams.Invoke(filterObj, [!APData.FBWDisabled, currentTuning]);
+                m_SetFBWParams.Invoke(filterObj, [!shouldDisable, currentTuning]);
             }
             catch (Exception ex)
             {
@@ -1414,6 +1435,37 @@ namespace NOAutopilot
                 APData.NavVisuals.Clear();
                 CleanUpFBW();
             }
+        }
+
+        public static bool IsMultiplayer()
+        {
+            if (Time.time < APData.NextMultiplayerCheck) return APData.IsMultiplayerCached;
+
+            APData.NextMultiplayerCheck = Time.time + 3.0f;
+            try
+            {
+                Type serverType = AccessTools.TypeByName("Mirage.NetworkServer");
+                if (serverType != null && (bool)serverType.GetProperty("Active").GetValue(null))
+                {
+                    if (serverType.GetProperty("connections").GetValue(null) is ICollection connections && connections.Count > 1)
+                    {
+                        APData.IsMultiplayerCached = true;
+                        return true;
+                    }
+                }
+                Type clientType = AccessTools.TypeByName("Mirage.NetworkClient");
+                if (clientType != null && (bool)clientType.GetProperty("Active").GetValue(null))
+                {
+                    APData.IsMultiplayerCached = true;
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"[IsMultiplayer] Error: {ex}");
+            }
+            APData.IsMultiplayerCached = false;
+            return false;
         }
     }
 
@@ -1547,6 +1599,8 @@ namespace NOAutopilot
         public static Aircraft LocalAircraft;
         public static WeaponManager LocalWeaponManager;
         public static float GCASConverge = 0f;
+        public static bool IsMultiplayerCached = false;
+        public static float NextMultiplayerCheck = 0f;
 
         public static void Reset()
         {
@@ -1575,6 +1629,8 @@ namespace NOAutopilot
             LocalAircraft = null;
             LocalWeaponManager = null;
             GCASConverge = 0f;
+            IsMultiplayerCached = false;
+            NextMultiplayerCheck = 0f;
 
             NavQueue.Clear();
             foreach (var obj in NavVisuals)
@@ -1645,7 +1701,10 @@ namespace NOAutopilot
                     Plugin.CleanUpFBW();
                 }
             }
-            catch (Exception ex) { Plugin.Logger.LogError($"[HudPatch] Error: {ex}"); }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[HudPatch] Error: {ex}");
+            }
         }
     }
 

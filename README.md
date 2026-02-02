@@ -4,6 +4,8 @@ Adds autopilot and some other features. Clientside and multiplayer compatible.
 
 It would be best to make sure the host is ok with you using the mod, especially in PVP.
 
+As of 2026-02-02, Talon Two allows the use of the mod on their servers, and GrayWar does not.
+
 ## [Changelog](https://github.com/qwerty1423/no-autopilot-mod/blob/main/CHANGELOG.md)
 
 ## Installation

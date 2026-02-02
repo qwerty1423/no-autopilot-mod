@@ -467,6 +467,12 @@ namespace NOAutopilot
 
             _keyStates?.Clear();
 
+            _bufAlt = null;
+            _bufClimb = null;
+            _bufRoll = null;
+            _bufSpeed = null;
+            _bufCourse = null;
+
             f_playerVehicle = null;
             f_controlInputs = null;
             f_pitch = null;
@@ -475,22 +481,25 @@ namespace NOAutopilot
             f_targetList = null;
             f_currentWeaponStation = null;
             f_stationWeapons = null;
+
             f_fuelLabel = null;
             f_fuelCapacity = null;
             f_controlsFilter = null;
             f_pilots = null;
             f_gearState = null;
             f_weaponManager = null;
+
             f_powerSupply = null;
             f_charge = null;
             f_maxCharge = null;
 
             m_Fire = null;
             m_GetAccel = null;
-            m_GetFBWParams = null;
-            m_SetFBWParams = null;
 
             t_JammingPod = null;
+
+            m_GetFBWParams = null;
+            m_SetFBWParams = null;
 
             Logger = null;
         }

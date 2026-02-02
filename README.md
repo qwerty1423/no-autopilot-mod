@@ -1,6 +1,7 @@
 # Nuclear Option Autopilot Mod
 
-Adds autopilot and some other features. Clientside, multiplayer compatible.
+Adds autopilot and some other features. Clientside and multiplayer compatible.
+
 It would be best to make sure the host is ok with you using the mod, especially in PVP.
 
 ## [Changelog](https://github.com/qwerty1423/no-autopilot-mod/blob/main/CHANGELOG.md)

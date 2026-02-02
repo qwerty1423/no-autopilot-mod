@@ -178,6 +178,12 @@ namespace NOAutopilot
         internal static MethodInfo m_GetFBWParams;
         internal static MethodInfo m_SetFBWParams;
 
+        internal static Type t_NetworkServer;
+        internal static PropertyInfo p_serverActive, p_serverAllPlayers;
+
+        internal static Type t_NetworkClient;
+        internal static PropertyInfo p_clientActive, p_clientIsHost;
+
         private void Awake()
         {
             Logger = base.Logger;
@@ -437,6 +443,22 @@ namespace NOAutopilot
                 m_SetFBWParams = t_ControlsFilter.GetMethod("SetFlyByWireParameters", flags);
                 Check(m_GetFBWParams, "m_GetFBWParams");
                 Check(m_SetFBWParams, "m_SetFBWParams");
+
+                t_NetworkServer = AccessTools.TypeByName("Mirage.NetworkServer");
+                Check(t_NetworkServer, "t_NetworkServer");
+
+                p_serverActive = AccessTools.Property(t_NetworkServer, "Active");
+                Check(p_serverActive, "p_serverActive");
+                p_serverAllPlayers = AccessTools.Property(t_NetworkServer, "AllPlayers");
+                Check(p_serverAllPlayers, "p_serverAllPlayers");
+
+                t_NetworkClient = AccessTools.TypeByName("Mirage.NetworkClient");
+                Check(t_NetworkClient, "t_NetworkClient");
+
+                p_clientActive = AccessTools.Property(t_NetworkClient, "Active");
+                Check(p_clientActive, "p_clientActive");
+                p_clientIsHost = AccessTools.Property(t_NetworkClient, "IsHost");
+                Check(p_clientIsHost, "p_clientIsHost");
             }
             catch (Exception ex)
             {
@@ -500,6 +522,13 @@ namespace NOAutopilot
 
             m_GetFBWParams = null;
             m_SetFBWParams = null;
+
+            t_NetworkServer = null;
+            p_serverActive = null;
+            p_serverAllPlayers = null;
+            t_NetworkClient = null;
+            p_clientActive = null;
+            p_clientIsHost = null;
 
             Logger = null;
         }
@@ -1484,13 +1513,13 @@ namespace NOAutopilot
 
             try
             {
-                UnityEngine.Object serverInstance = FindObjectOfType(AccessTools.TypeByName("Mirage.NetworkServer"));
+                UnityEngine.Object serverInstance = FindObjectOfType(t_NetworkServer);
                 if (serverInstance != null)
                 {
-                    bool isServerActive = (bool)AccessTools.Property(serverInstance.GetType(), "Active").GetValue(serverInstance);
+                    bool isServerActive = (bool)p_serverActive.GetValue(serverInstance);
                     if (isServerActive)
                     {
-                        if (AccessTools.Property(serverInstance.GetType(), "AllPlayers").GetValue(serverInstance) is IReadOnlyCollection<object> connections && connections.Count > 1)
+                        if (p_serverAllPlayers.GetValue(serverInstance) is IReadOnlyCollection<object> connections && connections.Count > 1)
                         {
                             APData.IsMultiplayerCached = true;
                             return true;
@@ -1498,11 +1527,11 @@ namespace NOAutopilot
                     }
                 }
 
-                UnityEngine.Object clientInstance = FindObjectOfType(AccessTools.TypeByName("Mirage.NetworkClient"));
+                UnityEngine.Object clientInstance = FindObjectOfType(t_NetworkClient);
                 if (clientInstance != null)
                 {
-                    bool isClientActive = (bool)AccessTools.Property(clientInstance.GetType(), "Active").GetValue(clientInstance);
-                    bool isHost = (bool)AccessTools.Property(clientInstance.GetType(), "IsHost").GetValue(clientInstance);
+                    bool isClientActive = (bool)p_clientActive.GetValue(clientInstance);
+                    bool isHost = (bool)p_clientIsHost.GetValue(clientInstance);
 
                     if (isClientActive && !isHost)
                     {

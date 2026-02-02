@@ -177,12 +177,15 @@ namespace NOAutopilot
 
         internal static MethodInfo m_GetFBWParams;
         internal static MethodInfo m_SetFBWParams;
+        internal static FieldInfo f_fbw_item1_enabled;
+        internal static FieldInfo f_fbw_item2_tuning;
 
         internal static Type t_NetworkServer;
         internal static PropertyInfo p_serverActive, p_serverAllPlayers;
-
         internal static Type t_NetworkClient;
         internal static PropertyInfo p_clientActive, p_clientIsHost;
+
+        internal static FieldInfo f_mapPosOffset, f_mapStatOffset, f_mapFollow;
 
         private void Awake()
         {
@@ -443,22 +446,32 @@ namespace NOAutopilot
                 m_SetFBWParams = t_ControlsFilter.GetMethod("SetFlyByWireParameters", flags);
                 Check(m_GetFBWParams, "m_GetFBWParams");
                 Check(m_SetFBWParams, "m_SetFBWParams");
+                Type fbwTupleType = m_GetFBWParams.ReturnType;
+                f_fbw_item1_enabled = fbwTupleType.GetField("Item1");
+                Check(f_fbw_item1_enabled, "f_fbw_item1_enabled");
+                f_fbw_item2_tuning = fbwTupleType.GetField("Item2");
+                Check(f_fbw_item2_tuning, "f_fbw_item2_tuning");
 
                 t_NetworkServer = AccessTools.TypeByName("Mirage.NetworkServer");
                 Check(t_NetworkServer, "t_NetworkServer");
-
                 p_serverActive = AccessTools.Property(t_NetworkServer, "Active");
                 Check(p_serverActive, "p_serverActive");
                 p_serverAllPlayers = AccessTools.Property(t_NetworkServer, "AllPlayers");
                 Check(p_serverAllPlayers, "p_serverAllPlayers");
-
                 t_NetworkClient = AccessTools.TypeByName("Mirage.NetworkClient");
                 Check(t_NetworkClient, "t_NetworkClient");
-
                 p_clientActive = AccessTools.Property(t_NetworkClient, "Active");
                 Check(p_clientActive, "p_clientActive");
                 p_clientIsHost = AccessTools.Property(t_NetworkClient, "IsHost");
                 Check(p_clientIsHost, "p_clientIsHost");
+
+                Type t_Map = typeof(DynamicMap);
+                f_mapPosOffset = t_Map.GetField("positionOffset", flags);
+                Check(f_mapPosOffset, "f_mapPosOffset");
+                f_mapStatOffset = t_Map.GetField("stationaryOffset", flags);
+                Check(f_mapStatOffset, "f_mapStatOffset");
+                f_mapFollow = t_Map.GetField("followingCamera", flags);
+                Check(f_mapFollow, "f_mapFollow");
             }
             catch (Exception ex)
             {
@@ -1167,38 +1180,24 @@ namespace NOAutopilot
             if (GUILayout.Button(new GUIContent("Center", "Pan to the center of the map"), _styleButton))
             {
                 var map = SceneSingleton<DynamicMap>.i;
-                if (map != null)
+                if (map != null && f_mapPosOffset != null && f_mapStatOffset != null)
                 {
-                    var flags = BindingFlags.NonPublic | BindingFlags.Instance;
-                    var fPosOff = typeof(DynamicMap).GetField("positionOffset", flags);
-                    var fStatOff = typeof(DynamicMap).GetField("stationaryOffset", flags);
-
-                    if (fPosOff != null && fStatOff != null)
-                    {
-                        Vector2 stationary = (Vector2)fStatOff.GetValue(map);
-
-                        fPosOff.SetValue(map, -stationary);
-
-                        var fFollow = typeof(DynamicMap).GetField("followingCamera", flags);
-                        fFollow?.SetValue(map, false);
-                    }
-                    GUI.FocusControl(null);
+                    Vector2 stationary = (Vector2)f_mapStatOffset.GetValue(map);
+                    f_mapPosOffset.SetValue(map, -stationary);
+                    f_mapFollow?.SetValue(map, false);
                 }
+                GUI.FocusControl(null);
             }
 
             if (GUILayout.Button(new GUIContent("Aircraft", "Pan map to your aircraft"), _styleButton))
             {
                 var map = SceneSingleton<DynamicMap>.i;
-                if (map != null)
+                if (map != null && f_mapPosOffset != null)
                 {
-                    var flags = BindingFlags.NonPublic | BindingFlags.Instance;
-                    var fPosOff = typeof(DynamicMap).GetField("positionOffset", flags);
-
-                    fPosOff?.SetValue(map, Vector2.zero);
-
+                    f_mapPosOffset.SetValue(map, Vector2.zero);
                     map.CenterMap();
-                    GUI.FocusControl(null);
                 }
+                GUI.FocusControl(null);
             }
             GUILayout.EndHorizontal();
 
@@ -1472,12 +1471,8 @@ namespace NOAutopilot
             {
                 object filterObj = f_controlsFilter.GetValue(APData.LocalAircraft);
                 if (filterObj == null) return;
-
-                object result = m_GetFBWParams.Invoke(filterObj, null);
-
-                var fields = result.GetType().GetFields();
-                float[] currentTuning = (float[])fields[1].GetValue(result);
-
+                object tupleResult = m_GetFBWParams.Invoke(filterObj, null);
+                float[] currentTuning = (float[])f_fbw_item2_tuning.GetValue(tupleResult);
                 m_SetFBWParams.Invoke(filterObj, [!shouldDisable, currentTuning]);
             }
             catch (Exception ex)
@@ -1513,30 +1508,36 @@ namespace NOAutopilot
 
             try
             {
-                UnityEngine.Object serverInstance = FindObjectOfType(t_NetworkServer);
-                if (serverInstance != null)
+                if (t_NetworkServer != null)
                 {
-                    bool isServerActive = (bool)p_serverActive.GetValue(serverInstance);
-                    if (isServerActive)
+                    UnityEngine.Object serverInstance = FindObjectOfType(t_NetworkServer);
+                    if (serverInstance != null)
                     {
-                        if (p_serverAllPlayers.GetValue(serverInstance) is IReadOnlyCollection<object> connections && connections.Count > 1)
+                        bool isServerActive = (bool)p_serverActive.GetValue(serverInstance);
+                        if (isServerActive)
                         {
-                            APData.IsMultiplayerCached = true;
-                            return true;
+                            if (p_serverAllPlayers.GetValue(serverInstance) is IReadOnlyCollection<object> connections && connections.Count > 1)
+                            {
+                                APData.IsMultiplayerCached = true;
+                                return true;
+                            }
                         }
                     }
                 }
 
-                UnityEngine.Object clientInstance = FindObjectOfType(t_NetworkClient);
-                if (clientInstance != null)
+                if (t_NetworkClient != null)
                 {
-                    bool isClientActive = (bool)p_clientActive.GetValue(clientInstance);
-                    bool isHost = (bool)p_clientIsHost.GetValue(clientInstance);
-
-                    if (isClientActive && !isHost)
+                    UnityEngine.Object clientInstance = FindObjectOfType(t_NetworkClient);
+                    if (clientInstance != null)
                     {
-                        APData.IsMultiplayerCached = true;
-                        return true;
+                        bool isClientActive = (bool)p_clientActive.GetValue(clientInstance);
+                        bool isHost = (bool)p_clientIsHost.GetValue(clientInstance);
+
+                        if (isClientActive && !isHost)
+                        {
+                            APData.IsMultiplayerCached = true;
+                            return true;
+                        }
                     }
                 }
             }

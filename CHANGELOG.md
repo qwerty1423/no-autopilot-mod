@@ -1,6 +1,10 @@
 # Changelog
 
-## [Unreleased]
+## [4.13.13] - 2026-02-02
+
+### Fixed
+
+- performance improvement for the fbw disabler
 
 ## [4.13.12] - 2026-02-02
 

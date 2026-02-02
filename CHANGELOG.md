@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.13.12] - 2026-02-02
+
+### Added
+
+- fbw disabler for singleplayer
+
 ## [4.13.11] - 2026-01-31
 
 ### Fixed

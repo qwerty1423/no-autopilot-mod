@@ -1460,10 +1460,7 @@ namespace NOAutopilot
                     return true;
                 }
             }
-            catch (Exception ex)
-            {
-                Logger.LogError($"[IsMultiplayer] Error: {ex}");
-            }
+            catch { }
             APData.IsMultiplayerCached = false;
             return false;
         }

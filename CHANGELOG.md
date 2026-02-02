@@ -139,6 +139,7 @@
 
 ## [4.8.4] - 2025-12-29
 
+[4.13.12]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.11...v4.13.12
 [4.13.11]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.10...v4.13.11
 [4.13.10]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.9...v4.13.10
 [4.13.9]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.8...v4.13.9

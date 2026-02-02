@@ -175,13 +175,8 @@ namespace NOAutopilot
 
         internal static Type t_JammingPod;
 
-        private static object _activeFbwObject = null;
-        private static bool _defaultsCaptured = false;
-
-        private static float _origPitch, _origRoll, _origAlpha, _origDirect;
-
-        internal static FieldInfo f_fbwInstance;
-        internal static FieldInfo f_mPitch, f_mRoll, f_alpha, f_direct;
+        internal static MethodInfo m_GetFBWParams;
+        internal static MethodInfo m_SetFBWParams;
 
         private void Awake()
         {
@@ -436,18 +431,12 @@ namespace NOAutopilot
                 f_fuelLabel = t_FuelGauge.GetField("fuelLabel", flags);
                 Check(f_fuelLabel, "f_fuelLabel");
 
-                f_fbwInstance = typeof(ControlsFilter).GetField("flyByWire", flags);
-                Check(f_fbwInstance, "f_fbwInstance");
-                Type t_fbw = typeof(ControlsFilter).GetNestedType("FlyByWire", flags);
-                Check(t_fbw, "t_fbw");
-                f_mPitch = t_fbw.GetField("maxPitchAngularVel", flags);
-                f_mRoll = t_fbw.GetField("maxRollAngularVel", flags);
-                f_alpha = t_fbw.GetField("alphaLimiter", flags);
-                f_direct = t_fbw.GetField("directControlFactor", flags);
-                Check(f_mPitch, "f_mPitch");
-                Check(f_mRoll, "f_mRoll");
-                Check(f_alpha, "f_alpha");
-                Check(f_direct, "f_direct");
+                Type t_ControlsFilter = typeof(ControlsFilter);
+                Check(t_ControlsFilter, "t_ControlsFilter");
+                m_GetFBWParams = t_ControlsFilter.GetMethod("GetFlyByWireParameters", flags);
+                m_SetFBWParams = t_ControlsFilter.GetMethod("SetFlyByWireParameters", flags);
+                Check(m_GetFBWParams, "m_GetFBWParams");
+                Check(m_SetFBWParams, "m_SetFBWParams");
             }
             catch (Exception ex)
             {
@@ -1378,23 +1367,11 @@ namespace NOAutopilot
 
         public static void CleanUpFBW()
         {
-            if (_activeFbwObject != null && _defaultsCaptured)
+            if (APData.FBWDisabled)
             {
-                try
-                {
-                    f_mPitch.SetValue(_activeFbwObject, _origPitch);
-                    f_mRoll.SetValue(_activeFbwObject, _origRoll);
-                    f_alpha.SetValue(_activeFbwObject, _origAlpha);
-                    f_direct.SetValue(_activeFbwObject, _origDirect);
-                }
-                catch (Exception)
-                {
-                }
+                APData.FBWDisabled = false;
+                UpdateFBWState();
             }
-
-            _activeFbwObject = null;
-            _defaultsCaptured = false;
-            APData.FBWDisabled = false;
         }
 
         public static void UpdateFBWState()
@@ -1403,47 +1380,15 @@ namespace NOAutopilot
 
             try
             {
-                if (f_controlsFilter == null) return;
                 object filterObj = f_controlsFilter.GetValue(APData.LocalAircraft);
-
                 if (filterObj == null) return;
 
-                if (f_fbwInstance == null) return;
-                object fbwObj = f_fbwInstance.GetValue(filterObj);
+                object result = m_GetFBWParams.Invoke(filterObj, null);
 
-                if (fbwObj == null) return;
+                var fields = result.GetType().GetFields();
+                float[] currentTuning = (float[])fields[1].GetValue(result);
 
-                if (APData.FBWDisabled)
-                {
-                    if (!_defaultsCaptured || _activeFbwObject != fbwObj)
-                    {
-                        _activeFbwObject = fbwObj;
-
-                        _origPitch = (float)f_mPitch.GetValue(fbwObj);
-                        _origRoll = (float)f_mRoll.GetValue(fbwObj);
-                        _origAlpha = (float)f_alpha.GetValue(fbwObj);
-                        _origDirect = (float)f_direct.GetValue(fbwObj);
-
-                        _defaultsCaptured = true;
-                    }
-                    f_mPitch.SetValue(fbwObj, 1000f);
-                    f_mRoll.SetValue(fbwObj, 1000f);
-                    f_alpha.SetValue(fbwObj, 1000f);
-                    f_direct.SetValue(fbwObj, 1f);
-                }
-                else
-                {
-                    if (_defaultsCaptured && _activeFbwObject == fbwObj)
-                    {
-                        f_mPitch.SetValue(fbwObj, _origPitch);
-                        f_mRoll.SetValue(fbwObj, _origRoll);
-                        f_alpha.SetValue(fbwObj, _origAlpha);
-                        f_direct.SetValue(fbwObj, _origDirect);
-
-                        _activeFbwObject = null;
-                        _defaultsCaptured = false;
-                    }
-                }
+                m_SetFBWParams.Invoke(filterObj, [!APData.FBWDisabled, currentTuning]);
             }
             catch (Exception ex)
             {

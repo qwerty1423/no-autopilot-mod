@@ -117,7 +117,7 @@ namespace NOAutopilot
         public static ConfigEntry<float> AutoJammerReleaseMin, AutoJammerReleaseMax;
 
         // Controls
-        public static ConfigEntry<KeyCode> ToggleKey, UpKey, DownKey, BigUpKey, BigDownKey;
+        public static ConfigEntry<KeyCode> ToggleKey, ToggleFBWKey, UpKey, DownKey, BigUpKey, BigDownKey;
         public static ConfigEntry<KeyCode> ClimbRateUpKey, ClimbRateDownKey, BankLeftKey, BankRightKey, ClearKey;
         public static ConfigEntry<KeyCode> SpeedHoldKey, SpeedUpKey, SpeedDownKey, ToggleABKey, ToggleMachKey;
 
@@ -166,7 +166,7 @@ namespace NOAutopilot
         internal static FieldInfo f_currentWeaponStation;
         internal static FieldInfo f_stationWeapons;
 
-        internal static FieldInfo f_fuelLabel, f_fuelCapacity;
+        internal static FieldInfo f_fuelLabel, f_fuelCapacity, f_controlsFilter;
         internal static FieldInfo f_pilots, f_gearState, f_weaponManager; // f_radarAlt;
 
         internal static FieldInfo f_powerSupply, f_charge, f_maxCharge;
@@ -174,6 +174,14 @@ namespace NOAutopilot
         internal static MethodInfo m_Fire, m_GetAccel;
 
         internal static Type t_JammingPod;
+
+        private static object _activeFbwObject = null;
+        private static bool _defaultsCaptured = false;
+
+        private static float _origPitch, _origRoll, _origAlpha, _origDirect;
+
+        internal static FieldInfo f_fbwInstance;
+        internal static FieldInfo f_mPitch, f_mRoll, f_alpha, f_direct;
 
         private void Awake()
         {
@@ -248,6 +256,7 @@ namespace NOAutopilot
 
             // Controls
             ToggleKey = Config.Bind("Controls", "01. Toggle AP Key", KeyCode.Equals, "AP On/Off");
+            ToggleFBWKey = Config.Bind("Controls", "02. Toggle FBW Key", KeyCode.Delete, "Toggle Stability Assist");
             UpKey = Config.Bind("Controls", "03. Altitude Up (Small)", KeyCode.UpArrow, "small increase");
             DownKey = Config.Bind("Controls", "04. Altitude Down (Small)", KeyCode.DownArrow, "small decrease");
             BigUpKey = Config.Bind("Controls", "05. Altitude Up (Big)", KeyCode.LeftArrow, "large increase");
@@ -373,11 +382,13 @@ namespace NOAutopilot
                 Check(f_roll, "f_roll");
                 Check(f_throttle, "f_throttle");
 
+                f_controlsFilter = typeof(Aircraft).GetField("controlsFilter", flags);
                 f_fuelCapacity = typeof(Aircraft).GetField("fuelCapacity", flags);
                 f_pilots = typeof(Aircraft).GetField("pilots", flags);
                 f_gearState = typeof(Aircraft).GetField("gearState", flags);
                 f_weaponManager = typeof(Aircraft).GetField("weaponManager", flags);
 
+                Check(f_fuelCapacity, "f_controlsFilter");
                 Check(f_fuelCapacity, "f_fuelCapacity");
                 Check(f_pilots, "f_pilots");
                 Check(f_gearState, "f_gearState");
@@ -424,6 +435,19 @@ namespace NOAutopilot
                 Check(t_FuelGauge, "t_FuelGauge");
                 f_fuelLabel = t_FuelGauge.GetField("fuelLabel", flags);
                 Check(f_fuelLabel, "f_fuelLabel");
+
+                f_fbwInstance = typeof(ControlsFilter).GetField("flyByWire", flags);
+                Check(f_fbwInstance, "f_fbwInstance");
+                Type t_fbw = typeof(ControlsFilter).GetNestedType("FlyByWire", flags);
+                Check(t_fbw, "t_fbw");
+                f_mPitch = t_fbw.GetField("maxPitchAngularVel", flags);
+                f_mRoll = t_fbw.GetField("maxRollAngularVel", flags);
+                f_alpha = t_fbw.GetField("alphaLimiter", flags);
+                f_direct = t_fbw.GetField("directControlFactor", flags);
+                Check(f_mPitch, "f_mPitch");
+                Check(f_mRoll, "f_mRoll");
+                Check(f_alpha, "f_alpha");
+                Check(f_direct, "f_direct");
             }
             catch (Exception ex)
             {
@@ -607,6 +631,12 @@ namespace NOAutopilot
                 {
                     APData.AllowExtremeThrottle = !APData.AllowExtremeThrottle;
                 }
+            }
+
+            if (GetKeyDownImproved(ToggleFBWKey.Value))
+            {
+                APData.FBWDisabled = !APData.FBWDisabled;
+                UpdateFBWState();
             }
 
             if (APData.PlayerRB != null)
@@ -1346,6 +1376,82 @@ namespace NOAutopilot
             return false;
         }
 
+        public static void CleanUpFBW()
+        {
+            if (_activeFbwObject != null && _defaultsCaptured)
+            {
+                try
+                {
+                    f_mPitch.SetValue(_activeFbwObject, _origPitch);
+                    f_mRoll.SetValue(_activeFbwObject, _origRoll);
+                    f_alpha.SetValue(_activeFbwObject, _origAlpha);
+                    f_direct.SetValue(_activeFbwObject, _origDirect);
+                }
+                catch (Exception)
+                {
+                }
+            }
+
+            _activeFbwObject = null;
+            _defaultsCaptured = false;
+            APData.FBWDisabled = false;
+        }
+
+        public static void UpdateFBWState()
+        {
+            if (APData.LocalAircraft == null) return;
+
+            try
+            {
+                if (f_controlsFilter == null) return;
+                object filterObj = f_controlsFilter.GetValue(APData.LocalAircraft);
+
+                if (filterObj == null) return;
+
+                if (f_fbwInstance == null) return;
+                object fbwObj = f_fbwInstance.GetValue(filterObj);
+
+                if (fbwObj == null) return;
+
+                if (APData.FBWDisabled)
+                {
+                    if (!_defaultsCaptured || _activeFbwObject != fbwObj)
+                    {
+                        _activeFbwObject = fbwObj;
+
+                        _origPitch = (float)f_mPitch.GetValue(fbwObj);
+                        _origRoll = (float)f_mRoll.GetValue(fbwObj);
+                        _origAlpha = (float)f_alpha.GetValue(fbwObj);
+                        _origDirect = (float)f_direct.GetValue(fbwObj);
+
+                        _defaultsCaptured = true;
+                    }
+                    f_mPitch.SetValue(fbwObj, 1000f);
+                    f_mRoll.SetValue(fbwObj, 1000f);
+                    f_alpha.SetValue(fbwObj, 1000f);
+                    f_direct.SetValue(fbwObj, 1f);
+                }
+                else
+                {
+                    if (_defaultsCaptured && _activeFbwObject == fbwObj)
+                    {
+                        f_mPitch.SetValue(fbwObj, _origPitch);
+                        f_mRoll.SetValue(fbwObj, _origRoll);
+                        f_alpha.SetValue(fbwObj, _origAlpha);
+                        f_direct.SetValue(fbwObj, _origDirect);
+
+                        _activeFbwObject = null;
+                        _defaultsCaptured = false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"[UpdateFBWState] Error: {ex.Message}");
+                APData.FBWDisabled = false;
+            }
+        }
+
         private void OnSceneUnloaded(Scene scene)
         {
             if (!string.Equals(scene.name, "GameWorld", StringComparison.OrdinalIgnoreCase))
@@ -1361,6 +1467,7 @@ namespace NOAutopilot
                 APData.NavQueue.Clear();
                 foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
                 APData.NavVisuals.Clear();
+                CleanUpFBW();
             }
         }
     }
@@ -1477,6 +1584,7 @@ namespace NOAutopilot
         public static bool AllowExtremeThrottle = false;
         public static bool SpeedHoldIsMach = false;
         public static bool NavEnabled = false;
+        public static bool FBWDisabled = false;
         public static float TargetAlt = -1f;
         public static float TargetRoll = -999f;
         public static float TargetSpeed = -1f;
@@ -1506,6 +1614,7 @@ namespace NOAutopilot
             AllowExtremeThrottle = false;
             SpeedHoldIsMach = false;
             NavEnabled = false;
+            FBWDisabled = false;
             TargetAlt = -1f;
             TargetRoll = -999f;
             TargetSpeed = -1f;
@@ -1562,6 +1671,7 @@ namespace NOAutopilot
                     APData.AutoJammerActive = false;
                     APData.GCASActive = false;
                     APData.GCASWarning = false;
+                    APData.FBWDisabled = false;
                     APData.TargetAlt = altitude;
                     APData.TargetRoll = 0f;
                     APData.TargetSpeed = -1f;
@@ -1587,6 +1697,7 @@ namespace NOAutopilot
                     foreach (var obj in APData.NavVisuals) if (obj != null) UnityEngine.Object.Destroy(obj);
                     APData.NavVisuals.Clear();
                     Plugin.SyncMenuValues();
+                    Plugin.CleanUpFBW();
                 }
             }
             catch (Exception ex) { Plugin.Logger.LogError($"[HudPatch] Error: {ex}"); }
@@ -1738,6 +1849,11 @@ namespace NOAutopilot
                     if (APData.Enabled)
                     {
                         ResetIntegrators(currentThrottle);
+                        if (APData.FBWDisabled)
+                        {
+                            APData.FBWDisabled = false;
+                            Plugin.UpdateFBWState();
+                        }
                     }
                     wasEnabled = APData.Enabled;
                     APData.UseSetValues = false;
@@ -1940,6 +2056,11 @@ namespace NOAutopilot
                                 APData.Enabled = true;
                                 APData.GCASActive = true;
                                 APData.TargetRoll = 0f;
+                                if (APData.FBWDisabled)
+                                {
+                                    APData.FBWDisabled = false;
+                                    Plugin.UpdateFBWState();
+                                }
                             }
                             APData.GCASWarning = true;
                             APData.GCASConverge = 1f;
@@ -2700,7 +2821,12 @@ namespace NOAutopilot
 
                         if (APData.AutoJammerActive)
                         {
-                            content += $"<color={Plugin.ColorAPOn.Value}>AJ</color>";
+                            content += $"<color={Plugin.ColorAPOn.Value}>AJ\n</color>";
+                        }
+
+                        if (APData.FBWDisabled)
+                        {
+                            content += $"<color={Plugin.ColorCrit.Value}>FBW OFF</color>";
                         }
                         overlayText.text = content;
                     }

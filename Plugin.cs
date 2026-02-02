@@ -1440,27 +1440,42 @@ namespace NOAutopilot
         public static bool IsMultiplayer()
         {
             if (Time.time < APData.NextMultiplayerCheck) return APData.IsMultiplayerCached;
+            APData.NextMultiplayerCheck = Time.time + 2.0f;
 
-            APData.NextMultiplayerCheck = Time.time + 3.0f;
             try
             {
-                Type serverType = AccessTools.TypeByName("Mirage.NetworkServer");
-                if (serverType != null && (bool)serverType.GetProperty("Active").GetValue(null))
+                UnityEngine.Object serverInstance = FindObjectOfType(AccessTools.TypeByName("Mirage.NetworkServer"));
+                if (serverInstance != null)
                 {
-                    if (serverType.GetProperty("connections").GetValue(null) is ICollection connections && connections.Count > 1)
+                    bool isServerActive = (bool)AccessTools.Property(serverInstance.GetType(), "Active").GetValue(serverInstance);
+                    if (isServerActive)
+                    {
+                        if (AccessTools.Property(serverInstance.GetType(), "AllPlayers").GetValue(serverInstance) is IReadOnlyCollection<object> connections && connections.Count > 1)
+                        {
+                            APData.IsMultiplayerCached = true;
+                            return true;
+                        }
+                    }
+                }
+
+                UnityEngine.Object clientInstance = FindObjectOfType(AccessTools.TypeByName("Mirage.NetworkClient"));
+                if (clientInstance != null)
+                {
+                    bool isClientActive = (bool)AccessTools.Property(clientInstance.GetType(), "Active").GetValue(clientInstance);
+                    bool isHost = (bool)AccessTools.Property(clientInstance.GetType(), "IsHost").GetValue(clientInstance);
+
+                    if (isClientActive && !isHost)
                     {
                         APData.IsMultiplayerCached = true;
                         return true;
                     }
                 }
-                Type clientType = AccessTools.TypeByName("Mirage.NetworkClient");
-                if (clientType != null && (bool)clientType.GetProperty("Active").GetValue(null))
-                {
-                    APData.IsMultiplayerCached = true;
-                    return true;
-                }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Logger.LogError($"[IsMultiplayer] Error: {ex}");
+            }
+
             APData.IsMultiplayerCached = false;
             return false;
         }

@@ -1,5 +1,7 @@
 # Changelog
 
+## [Unreleased]
+
 ## [4.13.12] - 2026-02-02
 
 ### Added
@@ -139,6 +141,7 @@
 
 ## [4.8.4] - 2025-12-29
 
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.12...HEAD
 [4.13.12]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.11...v4.13.12
 [4.13.11]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.10...v4.13.11
 [4.13.10]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.9...v4.13.10

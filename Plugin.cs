@@ -464,6 +464,35 @@ namespace NOAutopilot
             HudPatch.Reset();
             MapInteractionPatch.Reset();
             MapWaypointPatch.Reset();
+
+            _keyStates?.Clear();
+
+            f_playerVehicle = null;
+            f_controlInputs = null;
+            f_pitch = null;
+            f_roll = null;
+            f_throttle = null;
+            f_targetList = null;
+            f_currentWeaponStation = null;
+            f_stationWeapons = null;
+            f_fuelLabel = null;
+            f_fuelCapacity = null;
+            f_controlsFilter = null;
+            f_pilots = null;
+            f_gearState = null;
+            f_weaponManager = null;
+            f_powerSupply = null;
+            f_charge = null;
+            f_maxCharge = null;
+
+            m_Fire = null;
+            m_GetAccel = null;
+            m_GetFBWParams = null;
+            m_SetFBWParams = null;
+
+            t_JammingPod = null;
+
+            Logger = null;
         }
 
         private void InitStyles()
@@ -636,11 +665,13 @@ namespace NOAutopilot
                 UpdateFBWState();
             }
 
-            if (APData.FBWDisabled && IsMultiplayer())
-            {
-                APData.FBWDisabled = false;
-                UpdateFBWState();
-            }
+            // no need because plane respawns and the toggle above exists
+            // not worth the lag spikes
+            // if (APData.FBWDisabled && IsMultiplayer())
+            // {
+            //     APData.FBWDisabled = false;
+            //     UpdateFBWState();
+            // }
 
             if (APData.PlayerRB != null)
             {

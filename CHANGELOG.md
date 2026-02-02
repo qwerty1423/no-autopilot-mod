@@ -5,6 +5,9 @@
 ### Changed
 
 - performance improvement for the fbw disabler
+- cache for the fbw disabler
+- cache for the multiplayer check
+- cache for the map center/aircraft buttons
 
 ## [4.13.12] - 2026-02-02
 

@@ -104,7 +104,7 @@ namespace NOAutopilot
         public static ConfigEntry<bool> Conf_InvertCourseRoll, DisableATAPKey;
         public static ConfigEntry<bool> DisableATAPGCAS, DisableATAPGUI, DisableATAPStick,
         DisableNavAPKey, DisableNavAPStick, KeepSetAltKey, KeepSetAltStick;
-        public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom;
+        public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom, SaveMapState;
 
         // Auto Jammer
         public static ConfigEntry<bool> EnableAutoJammer;
@@ -183,7 +183,7 @@ namespace NOAutopilot
         internal static Type t_NetworkClient;
         internal static PropertyInfo p_clientActive, p_clientIsHost;
 
-        internal static FieldInfo f_mapPosOffset, f_mapStatOffset, f_mapFollow;
+        internal static FieldInfo f_mapPosOffset, f_mapStatOffset, f_mapFollow, f_onMapChanged;
 
         private void Awake()
         {
@@ -240,6 +240,8 @@ namespace NOAutopilot
             KeepSetAltStick = Config.Bind("Settings - Misc", "Keep set altitude when stick inputs made", true, "AP will not reset alt to current alt when stick inputs are made");
             UnlockMapPan = Config.Bind("Settings - Misc", "Unlock Map Pan", true, "Requires restart to apply.");
             UnlockMapZoom = Config.Bind("Settings - Misc", "Unlock Map Zoom", true, "Requires restart to apply.");
+            SaveMapState = Config.Bind("Settings - Misc", "Save Map State", false, "Prevent map from resetting position/zoom when reopened.");
+            APData.SaveMapState = SaveMapState.Value;
 
             // nav
             NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f, "Distance in meters to consider a waypoint reached.");
@@ -470,6 +472,8 @@ namespace NOAutopilot
                 Check(f_mapStatOffset, "f_mapStatOffset");
                 f_mapFollow = t_Map.GetField("followingCamera", flags);
                 Check(f_mapFollow, "f_mapFollow");
+                f_onMapChanged = t_Map.GetField("onMapChanged", flags | BindingFlags.Static);
+                Check(f_onMapChanged, "f_onMapChanged");
             }
             catch (Exception ex)
             {
@@ -1177,7 +1181,12 @@ namespace NOAutopilot
             GUI.backgroundColor = Color.white;
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Map:", _styleLabel, GUILayout.Width(35));
+            bool newSaveState = GUILayout.Toggle(APData.SaveMapState, new GUIContent("Lock", "Keep map zoom/pos when reopening."));
+            if (newSaveState != APData.SaveMapState)
+            {
+                APData.SaveMapState = newSaveState;
+                SaveMapState.Value = newSaveState;
+            }
 
             if (GUILayout.Button(new GUIContent("Center", "Pan to the center of the map"), _styleButton))
             {
@@ -1660,6 +1669,11 @@ namespace NOAutopilot
         public static float GCASConverge = 0f;
         public static bool IsMultiplayerCached = false;
         public static float NextMultiplayerCheck = 0f;
+        public static bool SaveMapState = false;
+        public static Vector2 SavedMapPos = Vector2.zero;
+        public static float SavedMapZoom = 1f;
+        public static bool SavedMapFollow = true;
+        public static bool MapStateStored = false;
 
         public static void Reset()
         {
@@ -1690,6 +1704,7 @@ namespace NOAutopilot
             GCASConverge = 0f;
             IsMultiplayerCached = false;
             NextMultiplayerCheck = 0f;
+            MapStateStored = false;
 
             NavQueue.Clear();
             foreach (var obj in NavVisuals)
@@ -3118,6 +3133,46 @@ namespace NOAutopilot
                 }
             }
             return matcher.InstructionEnumeration();
+        }
+    }
+
+    [HarmonyPatch(typeof(DynamicMap), "Minimize")]
+    internal class MapSaveStatePatch
+    {
+        static void Prefix(DynamicMap __instance)
+        {
+            if (!APData.SaveMapState || __instance == null) return;
+
+            try
+            {
+                APData.SavedMapPos = (Vector2)Plugin.f_mapPosOffset.GetValue(__instance);
+                APData.SavedMapFollow = (bool)Plugin.f_mapFollow.GetValue(__instance);
+                APData.SavedMapZoom = __instance.GetZoomLevel();
+                APData.MapStateStored = true;
+            }
+            catch (Exception ex) { Plugin.Logger.LogError($"SaveMapState Error: {ex.Message}"); }
+        }
+    }
+
+    [HarmonyPatch(typeof(DynamicMap), "Maximize")]
+    internal class MapLoadStatePatch
+    {
+        static void Postfix(DynamicMap __instance)
+        {
+            if (!APData.SaveMapState || !APData.MapStateStored || __instance == null) return;
+
+            try
+            {
+                Plugin.f_mapPosOffset.SetValue(__instance, APData.SavedMapPos);
+                Plugin.f_mapFollow.SetValue(__instance, APData.SavedMapFollow);
+                __instance.SetZoomLevel(APData.SavedMapZoom);
+                if (Plugin.f_onMapChanged != null)
+                {
+                    var delegateObj = Plugin.f_onMapChanged.GetValue(null) as Action;
+                    delegateObj?.Invoke();
+                }
+            }
+            catch (Exception ex) { Plugin.Logger.LogError($"LoadMapState Error: {ex.Message}"); }
         }
     }
 

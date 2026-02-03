@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- map lock function
+- keyboard shortcut support
+
 ## [4.13.13] - 2026-02-02
 
 ### Changed
@@ -148,6 +155,7 @@
 
 ## [4.8.4] - 2025-12-29
 
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.13...HEAD
 [4.13.13]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.12...v4.13.13
 [4.13.12]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.11...v4.13.12
 [4.13.11]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.10...v4.13.11

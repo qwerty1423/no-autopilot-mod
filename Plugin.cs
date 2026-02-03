@@ -197,8 +197,8 @@ namespace NOAutopilot
             ColorCrit = Config.Bind("Visuals - Colors", "5. Color Critical", "#FF0000", "Red");
             ColorRange = Config.Bind("Visuals - Colors", "6. Range display color", "#00FFFF", "color for range");
             ColorNav = Config.Bind("Visuals - Colors", "7. Navigation Color", "#ff00ffcc", "color for flight path lines.");
-            OverlayOffsetX = Config.Bind("Visuals - Layout", "1. Stack Start X", -11f, "HUD Horizontal position");
-            OverlayOffsetY = Config.Bind("Visuals - Layout", "2. Stack Start Y", -7f, "HUD Vertical position");
+            OverlayOffsetX = Config.Bind("Visuals - Layout", "1. Stack Start X", -18f, "HUD Horizontal position");
+            OverlayOffsetY = Config.Bind("Visuals - Layout", "2. Stack Start Y", -10f, "HUD Vertical position");
             ShowExtraInfo = Config.Bind("Visuals", "Show Fuel/AP Info", true, "Show extra info on Fuel Gauge");
             ShowAPOverlay = Config.Bind("Visuals", "Show AP Overlay", true, "Draw AP status text on the HUD. Turn off if you want, there's a window now.");
             ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show GCAS OFF on HUD");

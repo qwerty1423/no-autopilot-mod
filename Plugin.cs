@@ -2771,7 +2771,7 @@ namespace NOAutopilot
                 }
 
                 float currentSize = PlayerSettings.hmdTextSize;
-                float scaleRatio = currentSize / 24f;
+                float scaleRatio = currentSize / 40f;
                 overlayText.fontSize = (int)currentSize;
 
                 Vector3 refLocalPos = _cachedRefLabel.transform.localPosition;

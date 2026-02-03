@@ -84,8 +84,6 @@ namespace NOAutopilot
         private readonly GUIContent _measuringContent = new();
         private readonly float buttonWidth = 40f;
 
-        private static readonly Dictionary<KeyCode, bool> _keyStates = [];
-
         // Visuals
         public static ConfigEntry<string> ColorAPOn, ColorInfo, ColorGood, ColorWarn, ColorCrit, ColorRange;
         public static ConfigEntry<float> OverlayOffsetX, OverlayOffsetY, FuelSmoothing, FuelUpdateInterval, DisplayUpdateInterval;
@@ -499,8 +497,6 @@ namespace NOAutopilot
             HudPatch.Reset();
             MapInteractionPatch.Reset();
             MapWaypointPatch.Reset();
-
-            _keyStates?.Clear();
 
             _bufAlt = null;
             _bufClimb = null;

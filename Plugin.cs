@@ -548,6 +548,8 @@ namespace NOAutopilot
             f_mapPosOffset = null;
             f_mapStatOffset = null;
             f_mapFollow = null;
+            f_onMapChanged = null;
+            SaveMapState = null;
 
             Logger = null;
         }
@@ -1705,6 +1707,9 @@ namespace NOAutopilot
             IsMultiplayerCached = false;
             NextMultiplayerCheck = 0f;
             MapStateStored = false;
+            SavedMapPos = Vector2.zero;
+            SavedMapZoom = 1f;
+            SavedMapFollow = true;
 
             NavQueue.Clear();
             foreach (var obj in NavVisuals)

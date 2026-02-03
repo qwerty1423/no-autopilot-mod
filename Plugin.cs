@@ -2770,7 +2770,7 @@ namespace NOAutopilot
                     infoOverlayObj.SetActive(true);
                 }
 
-                float currentSize = PlayerSettings.hmdTextSize;
+                float currentSize = PlayerSettings.hudTextSize;
                 float scaleRatio = currentSize / 40f;
                 overlayText.fontSize = (int)currentSize;
 

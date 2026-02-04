@@ -538,60 +538,11 @@ namespace NOAutopilot
             HudPatch.Reset();
             MapInteractionPatch.Reset();
             MapWaypointPatch.Reset();
+            RewiredConfigManager.Reset();
 
-            _bufAlt = null;
-            _bufClimb = null;
-            _bufRoll = null;
-            _bufSpeed = null;
-            _bufCourse = null;
+            ClearAllStatics();
 
-            _cachedTableContent = null;
-            _cachedExtraInfoContent = null;
-
-            f_playerVehicle = null;
-            f_controlInputs = null;
-            f_pitch = null;
-            f_roll = null;
-            f_throttle = null;
-            f_targetList = null;
-            f_currentWeaponStation = null;
-            f_stationWeapons = null;
-
-            f_fuelLabel = null;
-            f_fuelCapacity = null;
-            f_controlsFilter = null;
-            f_pilots = null;
-            f_gearState = null;
-            f_weaponManager = null;
-
-            f_powerSupply = null;
-            f_charge = null;
-            f_maxCharge = null;
-
-            m_Fire = null;
-            m_GetAccel = null;
-
-            t_JammingPod = null;
-
-            m_GetFBWParams = null;
-            m_SetFBWParams = null;
-            f_fbw_item1_enabled = null;
-            f_fbw_item2_tuning = null;
-
-            t_NetworkServer = null;
-            p_serverActive = null;
-            p_serverAllPlayers = null;
-            t_NetworkClient = null;
-            p_clientActive = null;
-            p_clientIsHost = null;
-
-            f_mapPosOffset = null;
-            f_mapStatOffset = null;
-            f_mapFollow = null;
-            f_onMapChanged = null;
-            SaveMapState = null;
-
-            Logger = null;
+            harmony = null;
         }
 
         private void InitStyles()
@@ -1588,6 +1539,21 @@ namespace NOAutopilot
 
             APData.IsMultiplayerCached = false;
             return false;
+        }
+
+        private void ClearAllStatics()
+        {
+            var fields = typeof(Plugin).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+
+            foreach (var field in fields)
+            {
+                if (field.IsLiteral || field.IsInitOnly) continue;
+                try
+                {
+                    field.SetValue(null, null);
+                }
+                catch { }
+            }
         }
     }
 
@@ -3380,6 +3346,14 @@ namespace NOAutopilot
                     _targetIndex = attr?.ButtonIndex as ConfigEntryBase;
                 }
             }
+        }
+
+        public static void Reset()
+        {
+            _isListening = false;
+            _targetEntry = null;
+            _targetController = null;
+            _targetIndex = null;
         }
     }
 

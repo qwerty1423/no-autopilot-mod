@@ -539,10 +539,15 @@ namespace NOAutopilot
             MapInteractionPatch.Reset();
             MapWaypointPatch.Reset();
             RewiredConfigManager.Reset();
+            if (APData.NavVisuals != null)
+            {
+                foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
+            }
 
             ClearAllStatics();
 
             harmony = null;
+            Logger = null;
         }
 
         private void InitStyles()
@@ -1543,16 +1548,23 @@ namespace NOAutopilot
 
         private void ClearAllStatics()
         {
-            var fields = typeof(Plugin).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            var assembly = Assembly.GetExecutingAssembly();
 
-            foreach (var field in fields)
+            foreach (var type in assembly.GetTypes())
             {
-                if (field.IsLiteral || field.IsInitOnly) continue;
-                try
+                var fields = type.GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+
+                foreach (var field in fields)
                 {
-                    field.SetValue(null, null);
+                    if (field.IsLiteral || field.IsInitOnly) continue;
+
+                    try
+                    {
+                        object defaultValue = field.FieldType.IsValueType ? Activator.CreateInstance(field.FieldType) : null;
+                        field.SetValue(null, defaultValue);
+                    }
+                    catch { }
                 }
-                catch { }
             }
         }
     }

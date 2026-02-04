@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection.Emit;
+using System.Linq;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -12,6 +13,7 @@ using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using Rewired;
 
 namespace NOAutopilot
 {
@@ -44,7 +46,6 @@ namespace NOAutopilot
         $"<b>Toggle AB:</b> End | Toggle Afterburner/Airbrake\n";
 
         // ap menu?
-        public static ConfigEntry<KeyboardShortcut> MenuKey;
         private Rect _windowRect = new(50, 50, 227, 330);
         private bool _showMenu = false;
 
@@ -111,16 +112,22 @@ namespace NOAutopilot
 
         // Auto Jammer
         public static ConfigEntry<bool> EnableAutoJammer;
-        public static ConfigEntry<KeyboardShortcut> AutoJammerKey;
         public static ConfigEntry<float> AutoJammerThreshold;
         public static ConfigEntry<bool> AutoJammerRandom;
         public static ConfigEntry<float> AutoJammerMinDelay, AutoJammerMaxDelay;
         public static ConfigEntry<float> AutoJammerReleaseMin, AutoJammerReleaseMax;
 
         // Controls
-        public static ConfigEntry<KeyboardShortcut> ToggleKey, ToggleFBWKey, UpKey, DownKey, BigUpKey, BigDownKey;
-        public static ConfigEntry<KeyboardShortcut> ClimbRateUpKey, ClimbRateDownKey, BankLeftKey, BankRightKey, ClearKey;
-        public static ConfigEntry<KeyboardShortcut> SpeedHoldKey, SpeedUpKey, SpeedDownKey, ToggleABKey, ToggleMachKey;
+        public static ConfigEntry<string> MenuKey;
+        public static ConfigEntry<string> ToggleKey, ToggleFBWKey;
+        public static ConfigEntry<string> AutoJammerKey, ToggleGCASKey, ClearKey;
+
+        public static ConfigEntry<string> UpKey, DownKey, BigUpKey, BigDownKey;
+        public static ConfigEntry<string> ClimbRateUpKey, ClimbRateDownKey;
+        public static ConfigEntry<string> BankLeftKey, BankRightKey;
+
+        public static ConfigEntry<string> SpeedHoldKey, SpeedUpKey, SpeedDownKey;
+        public static ConfigEntry<string> ToggleMachKey, ToggleABKey;
 
         // Flight Values
         public static ConfigEntry<float> AltStep, BigAltStep, ClimbRateStep, BankStep, SpeedStep, MinAltitude;
@@ -142,7 +149,6 @@ namespace NOAutopilot
 
         // Auto GCAS
         public static ConfigEntry<bool> EnableGCAS;
-        public static ConfigEntry<KeyboardShortcut> ToggleGCASKey;
         public static ConfigEntry<float> GCAS_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
         public static ConfigEntry<float> GCAS_P, GCAS_I, GCAS_D, GCAS_ILimit;
 
@@ -253,7 +259,6 @@ namespace NOAutopilot
 
             // Auto Jammer
             EnableAutoJammer = Config.Bind("Auto Jammer", "1. Enable Auto Jammer", true, "Allow the feature");
-            AutoJammerKey = Config.Bind("Auto Jammer", "2. Toggle Key", new KeyboardShortcut(KeyCode.Slash), "Key to toggle jamming");
             AutoJammerThreshold = Config.Bind("Auto Jammer", "3. Energy Threshold", 0.99f, "Fire when energy > this %");
             AutoJammerRandom = Config.Bind("Auto Jammer", "4. Random Delay", true, "Add random delay");
             AutoJammerMinDelay = Config.Bind("Auto Jammer", "5. Delay Min", 0.02f, "Seconds");
@@ -262,22 +267,28 @@ namespace NOAutopilot
             AutoJammerReleaseMax = Config.Bind("Auto Jammer", "8. Release Delay Max", 0.04f, "Seconds");
 
             // Controls
-            ToggleKey = Config.Bind("Controls", "01. Toggle AP Key", new KeyboardShortcut(KeyCode.Equals), "AP On/Off");
-            ToggleFBWKey = Config.Bind("Controls", "02. Toggle FBW Key", new KeyboardShortcut(KeyCode.Delete), "works in singleplayer");
-            UpKey = Config.Bind("Controls", "03. Altitude Up (Small)", new KeyboardShortcut(KeyCode.UpArrow), "small increase");
-            DownKey = Config.Bind("Controls", "04. Altitude Down (Small)", new KeyboardShortcut(KeyCode.DownArrow), "small decrease");
-            BigUpKey = Config.Bind("Controls", "05. Altitude Up (Big)", new KeyboardShortcut(KeyCode.LeftArrow), "large increase");
-            BigDownKey = Config.Bind("Controls", "06. Altitude Down (Big)", new KeyboardShortcut(KeyCode.RightArrow), "large decrease");
-            ClimbRateUpKey = Config.Bind("Controls", "07. Climb Rate Increase", new KeyboardShortcut(KeyCode.PageUp), "Increase Max VS");
-            ClimbRateDownKey = Config.Bind("Controls", "08. Climb Rate Decrease", new KeyboardShortcut(KeyCode.PageDown), "Decrease Max VS");
-            BankLeftKey = Config.Bind("Controls", "09. Bank Left", new KeyboardShortcut(KeyCode.LeftBracket), "Roll/course Left");
-            BankRightKey = Config.Bind("Controls", "10. Bank Right", new KeyboardShortcut(KeyCode.RightBracket), "Roll/course right");
-            ClearKey = Config.Bind("Controls", "11. clear crs/roll/alt/roll", new KeyboardShortcut(KeyCode.Quote), "every click will clear/reset first thing it sees isn't clear from left to right");
-            SpeedHoldKey = Config.Bind("Controls", "12. Speed Hold Toggle", new KeyboardShortcut(KeyCode.Semicolon), "speed hold/clear");
-            SpeedUpKey = Config.Bind("Controls", "13. Target Speed Increase", new KeyboardShortcut(KeyCode.LeftShift), "Increase target speed");
-            SpeedDownKey = Config.Bind("Controls", "14. Target Speed Decrease", new KeyboardShortcut(KeyCode.LeftControl), "Decrease target speed");
-            ToggleMachKey = Config.Bind("Controls", "15. Toggle Mach/TAS", new KeyboardShortcut(KeyCode.Home), "Toggle between Mach and TAS hold");
-            ToggleABKey = Config.Bind("Controls", "16. Toggle Afterburner/Airbrake", new KeyboardShortcut(KeyCode.End), "Toggle AB/Airbrake limits");
+            MenuKey = RewiredConfigManager.BindRW(Config, "Controls", "1. Menu Key", "Open the Autopilot Menu");
+            ToggleKey = RewiredConfigManager.BindRW(Config, "Controls", "2. Toggle AP Key", "AP On/Off");
+            ToggleFBWKey = RewiredConfigManager.BindRW(Config, "Controls", "3. Toggle FBW Key", "works in singleplayer");
+            AutoJammerKey = RewiredConfigManager.BindRW(Config, "Controls", "4. Toggle Key", "Key to toggle jamming");
+            ToggleGCASKey = RewiredConfigManager.BindRW(Config, "Controls", "5. Toggle GCAS Key", "Turn Auto-GCAS on/off");
+            ClearKey = RewiredConfigManager.BindRW(Config, "Controls", "6. clear crs/roll/alt/roll", "every click will clear/reset first thing it sees isn't clear from left to right");
+
+            UpKey = RewiredConfigManager.BindRW(Config, "Controls - Altitude", "03. Altitude Up (Small)", "small increase");
+            DownKey = RewiredConfigManager.BindRW(Config, "Controls - Altitude", "04. Altitude Down (Small)", "small decrease");
+            BigUpKey = RewiredConfigManager.BindRW(Config, "Controls - Altitude", "05. Altitude Up (Big)", "large increase");
+            BigDownKey = RewiredConfigManager.BindRW(Config, "Controls - Altitude", "06. Altitude Down (Big)", "large decrease");
+            ClimbRateUpKey = RewiredConfigManager.BindRW(Config, "Controls - Altitude", "07. Climb Rate Increase", "Increase Max VS");
+            ClimbRateDownKey = RewiredConfigManager.BindRW(Config, "Controls - Altitude", "08. Climb Rate Decrease", "Decrease Max VS");
+
+            BankLeftKey = RewiredConfigManager.BindRW(Config, "Controls - Bank", "09. Bank Left", "Roll/course Left");
+            BankRightKey = RewiredConfigManager.BindRW(Config, "Controls - Bank", "10. Bank Right", "Roll/course right");
+
+            SpeedHoldKey = RewiredConfigManager.BindRW(Config, "Controls - Speed", "12. Speed Hold Toggle", "speed hold/clear");
+            SpeedUpKey = RewiredConfigManager.BindRW(Config, "Controls - Speed", "13. Target Speed Increase", "Increase target speed");
+            SpeedDownKey = RewiredConfigManager.BindRW(Config, "Controls - Speed", "14. Target Speed Decrease", "Decrease target speed");
+            ToggleMachKey = RewiredConfigManager.BindRW(Config, "Controls - Speed", "15. Toggle Mach/TAS", "Toggle between Mach and TAS hold");
+            ToggleABKey = RewiredConfigManager.BindRW(Config, "Controls - Speed", "16. Toggle Afterburner/Airbrake", "Toggle AB/Airbrake limits");
 
             // control values
             AltStep = Config.Bind("Controls", "17. Altitude Increment (Small)", 0.1f, "Meters per frame (60fps)");
@@ -286,7 +297,6 @@ namespace NOAutopilot
             BankStep = Config.Bind("Controls", "20. Bank Step", 0.5f, "Degrees per frame (60fps)");
             SpeedStep = Config.Bind("Controls", "21. Speed Step", 1.0f, "m/s per frame (60fps)");
             MinAltitude = Config.Bind("Controls", "22. Minimum Target Altitude", 20f, "Safety floor");
-            MenuKey = Config.Bind("Controls", "23. Menu Key", new KeyboardShortcut(KeyCode.F8), "Open the Autopilot Menu");
 
             // Tuning
             DefaultMaxClimbRate = Config.Bind("Tuning - 0. Limits", "1. Default Max Climb Rate", 10f, "Startup value");
@@ -325,7 +335,6 @@ namespace NOAutopilot
 
             // Auto GCAS
             EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS on start", true, "GCAS off at start if disabled");
-            ToggleGCASKey = Config.Bind("Auto GCAS", "2. Toggle GCAS Key", new KeyboardShortcut(KeyCode.Backslash), "Turn Auto-GCAS on/off");
             GCAS_MaxG = Config.Bind("Auto GCAS", "3. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
             GCAS_WarnBuffer = Config.Bind("Auto GCAS", "4. Warning Buffer", 20.0f, "GCAS warning indicator first appearance");
             GCAS_AutoBuffer = Config.Bind("Auto GCAS", "5. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
@@ -584,7 +593,9 @@ namespace NOAutopilot
 
         private void Update()
         {
-            if (MenuKey.Value.IsDown())
+            RewiredConfigManager.Update();
+
+            if (InputHelper.IsDown(MenuKey))
             {
                 _showMenu = !_showMenu;
                 if (_showMenu)
@@ -596,10 +607,10 @@ namespace NOAutopilot
             if (_showMenu && APData.Enabled)
             {
                 bool isAdjusting =
-                    UpKey.Value.IsPressed() || DownKey.Value.IsPressed() ||
-                    BigUpKey.Value.IsPressed() || BigDownKey.Value.IsPressed() ||
-                    ClimbRateUpKey.Value.IsPressed() || ClimbRateDownKey.Value.IsPressed() ||
-                    BankLeftKey.Value.IsPressed() || BankRightKey.Value.IsPressed() || ClearKey.Value.IsPressed();
+                    InputHelper.IsPressed(UpKey) || InputHelper.IsPressed(DownKey) ||
+                    InputHelper.IsPressed(BigUpKey) || InputHelper.IsPressed(BigDownKey) ||
+                    InputHelper.IsPressed(ClimbRateUpKey) || InputHelper.IsPressed(ClimbRateDownKey) ||
+                    InputHelper.IsPressed(BankLeftKey) || InputHelper.IsPressed(BankRightKey) || InputHelper.IsPressed(ClearKey);
 
                 if (isAdjusting)
                 {
@@ -607,7 +618,7 @@ namespace NOAutopilot
                 }
             }
 
-            if (ToggleKey.Value.IsDown())
+            if (InputHelper.IsDown(ToggleKey))
             {
                 APData.Enabled = !APData.Enabled;
                 if (!APData.Enabled)
@@ -622,18 +633,18 @@ namespace NOAutopilot
                 SyncMenuValues();
             }
 
-            if (EnableAutoJammer.Value && AutoJammerKey.Value.IsDown())
+            if (EnableAutoJammer.Value && InputHelper.IsDown(AutoJammerKey))
             {
                 APData.AutoJammerActive = !APData.AutoJammerActive;
             }
 
-            if (ToggleGCASKey.Value.IsDown())
+            if (InputHelper.IsDown(ToggleGCASKey))
             {
                 APData.GCASEnabled = !APData.GCASEnabled;
                 if (!APData.GCASEnabled) { APData.GCASActive = false; APData.GCASWarning = false; }
             }
 
-            if (SpeedHoldKey.Value.IsDown())
+            if (InputHelper.IsDown(SpeedHoldKey))
             {
                 if (APData.TargetSpeed >= 0)
                 {
@@ -662,8 +673,8 @@ namespace NOAutopilot
 
             if (APData.TargetSpeed >= 0f)
             {
-                bool speedUp = SpeedUpKey.Value.IsPressed();
-                bool speedDown = SpeedDownKey.Value.IsPressed();
+                bool speedUp = InputHelper.IsPressed(SpeedUpKey);
+                bool speedDown = InputHelper.IsPressed(SpeedDownKey);
                 if (speedUp || speedDown)
                 {
                     if (APData.TargetSpeed < 0)
@@ -689,7 +700,7 @@ namespace NOAutopilot
                     if (speedDown) APData.TargetSpeed = Mathf.Max(0, APData.TargetSpeed - step);
                     SyncMenuValues();
                 }
-                else if (ToggleMachKey.Value.IsDown())
+                else if (InputHelper.IsDown(ToggleMachKey))
                 {
                     if (float.TryParse(_bufSpeed, out float val))
                     {
@@ -710,13 +721,13 @@ namespace NOAutopilot
                     SyncMenuValues();
                 }
 
-                if (ToggleABKey.Value.IsDown())
+                if (InputHelper.IsDown(ToggleABKey))
                 {
                     APData.AllowExtremeThrottle = !APData.AllowExtremeThrottle;
                 }
             }
 
-            if (ToggleFBWKey.Value.IsDown())
+            if (InputHelper.IsDown(ToggleFBWKey))
             {
                 APData.NextMultiplayerCheck = 0f;
                 if (IsMultiplayer())
@@ -2373,18 +2384,18 @@ namespace NOAutopilot
                         float bStep = Plugin.BigAltStep.Value * fpsRef * dt;
                         float cStep = Plugin.ClimbRateStep.Value * fpsRef * dt;
                         float rStep = Plugin.BankStep.Value * fpsRef * dt;
-                        if (Plugin.UpKey.Value.IsPressed()) APData.TargetAlt += aStep;
-                        if (Plugin.DownKey.Value.IsPressed()) APData.TargetAlt -= aStep;
-                        if (Plugin.BigUpKey.Value.IsPressed()) APData.TargetAlt += bStep;
-                        if (Plugin.BigDownKey.Value.IsPressed()) APData.TargetAlt = Mathf.Max(APData.TargetAlt - bStep, Plugin.MinAltitude.Value);
+                        if (InputHelper.IsPressed(Plugin.UpKey)) APData.TargetAlt += aStep;
+                        if (InputHelper.IsPressed(Plugin.DownKey)) APData.TargetAlt -= aStep;
+                        if (InputHelper.IsPressed(Plugin.BigUpKey)) APData.TargetAlt += bStep;
+                        if (InputHelper.IsPressed(Plugin.BigDownKey)) APData.TargetAlt = Mathf.Max(APData.TargetAlt - bStep, Plugin.MinAltitude.Value);
 
-                        if (Plugin.ClimbRateUpKey.Value.IsPressed()) APData.CurrentMaxClimbRate += cStep;
-                        if (Plugin.ClimbRateDownKey.Value.IsPressed()) APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - cStep);
+                        if (InputHelper.IsPressed(Plugin.ClimbRateUpKey)) APData.CurrentMaxClimbRate += cStep;
+                        if (InputHelper.IsPressed(Plugin.ClimbRateDownKey)) APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - cStep);
 
                         if (APData.NavEnabled)
                         {
-                            bool bankLeft = Plugin.BankLeftKey.Value.IsPressed();
-                            bool bankRight = Plugin.BankRightKey.Value.IsPressed();
+                            bool bankLeft = InputHelper.IsPressed(Plugin.BankLeftKey);
+                            bool bankRight = InputHelper.IsPressed(Plugin.BankRightKey);
                             if (bankLeft || bankRight)
                             {
                                 if (APData.TargetRoll == -999f) APData.TargetRoll = Plugin.DefaultCRLimit.Value;
@@ -2397,13 +2408,13 @@ namespace NOAutopilot
                         }
                         if (APData.TargetCourse >= 0f)
                         {
-                            if (Plugin.BankLeftKey.Value.IsPressed()) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - rStep, 360f);
-                            if (Plugin.BankRightKey.Value.IsPressed()) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse + rStep, 360f);
+                            if (InputHelper.IsPressed(Plugin.BankLeftKey)) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - rStep, 360f);
+                            if (InputHelper.IsPressed(Plugin.BankRightKey)) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse + rStep, 360f);
                         }
                         else
                         {
-                            bool bankLeft = Plugin.BankLeftKey.Value.IsPressed();
-                            bool bankRight = Plugin.BankRightKey.Value.IsPressed();
+                            bool bankLeft = InputHelper.IsPressed(Plugin.BankLeftKey);
+                            bool bankRight = InputHelper.IsPressed(Plugin.BankRightKey);
                             if (bankLeft || bankRight)
                             {
                                 if (APData.TargetRoll == -999f) APData.TargetRoll = APData.CurrentRoll;
@@ -2415,7 +2426,7 @@ namespace NOAutopilot
                             }
                         }
 
-                        if (Plugin.ClearKey.Value.IsDown())
+                        if (InputHelper.IsDown(Plugin.ClearKey))
                         {
                             if (APData.NavEnabled)
                             {
@@ -3257,6 +3268,114 @@ namespace NOAutopilot
             _lastMeasurement = measurement;
 
             return (error * kp) + Integral + (derivative * kd);
+        }
+    }
+
+    internal sealed class ConfigurationManagerAttributes
+    {
+        public bool? Browsable;
+        // public bool? HideDefaultButton;
+        // public int? Order;
+        public Action<ConfigEntryBase> CustomDrawer;
+        public object ControllerName;
+        public object ButtonIndex;
+    }
+
+    internal static class RewiredConfigManager
+    {
+        private static bool _isListening = false;
+        private static ConfigEntryBase _targetEntry, _targetController, _targetIndex;
+
+        public static ConfigEntry<string> BindRW(ConfigFile config, string category, string keyName, string description)
+        {
+            var cName = config.Bind("Hidden", keyName + "_CN", "", new ConfigDescription("", null, new ConfigurationManagerAttributes { Browsable = false }));
+            var bIdx = config.Bind("Hidden", keyName + "_IX", -1, new ConfigDescription("", null, new ConfigurationManagerAttributes { Browsable = false }));
+
+            return config.Bind(category, keyName, "", new ConfigDescription(description, null, new ConfigurationManagerAttributes
+            {
+                CustomDrawer = RewiredButtonDrawer,
+                ControllerName = cName,
+                ButtonIndex = bIdx
+            }));
+        }
+
+        public static void Update()
+        {
+            if (!_isListening || ReInput.controllers == null) return;
+            foreach (var c in ReInput.controllers.Joysticks) if (CheckController(c)) return;
+            if (CheckController(ReInput.controllers.Keyboard)) return;
+            if (Input.GetKeyDown(KeyCode.Escape)) _isListening = false;
+        }
+
+        private static bool CheckController(Controller c)
+        {
+            if (c == null || !c.GetAnyButtonDown()) return false;
+            for (int i = 0; i < c.buttonCount; i++)
+            {
+                if (c.GetButtonDown(i))
+                {
+                    string cName = c.name.Trim();
+                    string bName = (c.type == ControllerType.Keyboard) ? ((KeyCode)i).ToString() : "Button " + i;
+
+                    if (c.type != ControllerType.Keyboard)
+                    {
+                        var elements = Traverse.Create(c).Field("KHksquAJKcDEUkNfJQjMANjDEBFB").GetValue<IList>();
+                        if (elements != null && i < elements.Count)
+                        {
+                            var id = Traverse.Create(elements[i]).Property("elementIdentifier").GetValue<ControllerElementIdentifier>();
+                            if (id != null) bName = id.name;
+                        }
+                    }
+
+                    _targetEntry.BoxedValue = $"{cName} | {bName} | {i}";
+                    if (_targetController != null) _targetController.BoxedValue = cName;
+                    if (_targetIndex != null) _targetIndex.BoxedValue = i;
+                    _isListening = false;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static void RewiredButtonDrawer(ConfigEntryBase entry)
+        {
+            if (_isListening && _targetEntry == entry)
+            {
+                GUIUtility.keyboardControl = 0;
+                if (GUILayout.Button("Listening... (Esc to cancel)", GUILayout.ExpandWidth(true))) _isListening = false;
+            }
+            else
+            {
+                string val = (string)entry.BoxedValue;
+                if (GUILayout.Button(string.IsNullOrEmpty(val) ? "None - Click to bind" : val, GUILayout.ExpandWidth(true)))
+                {
+                    _isListening = true;
+                    _targetEntry = entry;
+                    var attr = entry.Description.Tags?.OfType<ConfigurationManagerAttributes>().FirstOrDefault();
+                    _targetController = attr?.ControllerName as ConfigEntryBase;
+                    _targetIndex = attr?.ButtonIndex as ConfigEntryBase;
+                }
+            }
+        }
+    }
+
+    public static class InputHelper
+    {
+        public static bool IsDown(ConfigEntry<string> rw) => PollRewired(rw, true);
+        public static bool IsPressed(ConfigEntry<string> rw) => PollRewired(rw, false);
+
+        private static bool PollRewired(ConfigEntry<string> rw, bool checkDown)
+        {
+            string b = rw?.Value;
+            if (string.IsNullOrEmpty(b) || !b.Contains("|") || ReInput.controllers == null) return false;
+            string[] p = b.Split('|');
+            if (p.Length < 3 || !int.TryParse(p[2].Trim(), out int idx)) return false;
+            string cName = p[0].Trim();
+
+            foreach (var c in ReInput.controllers.Joysticks) if (c.name.Trim() == cName) return checkDown ? c.GetButtonDown(idx) : c.GetButton(idx);
+            var k = ReInput.controllers.Keyboard;
+            if (k != null && k.name.Trim() == cName) return checkDown ? k.GetButtonDown(idx) : k.GetButton(idx);
+            return false;
         }
     }
 }

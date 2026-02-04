@@ -294,26 +294,26 @@ namespace NOAutopilot
             ToggleMachKey = Config.Bind("Controls - Speed", "4. Toggle Mach/TAS", new KeyboardShortcut(KeyCode.Home), "Toggle between Mach and TAS hold");
             ToggleABKey = Config.Bind("Controls - Speed", "5. Toggle Afterburner/Airbrake", new KeyboardShortcut(KeyCode.End), "Toggle AB/Airbrake limits");
 
-            // Controls (RW)
-            MenuKeyRW = RewiredConfigManager.BindRW(Config, "Controls (RW)", "1. Menu Key", "Open the Autopilot Menu");
-            ToggleKeyRW = RewiredConfigManager.BindRW(Config, "Controls (RW)", "2. Toggle AP Key", "AP On/Off");
-            ToggleFBWKeyRW = RewiredConfigManager.BindRW(Config, "Controls (RW)", "3. Toggle FBW Key", "works in singleplayer");
-            AutoJammerKeyRW = RewiredConfigManager.BindRW(Config, "Controls (RW)", "4. Toggle Key", "Key to toggle jamming");
-            ToggleGCASKeyRW = RewiredConfigManager.BindRW(Config, "Controls (RW)", "5. Toggle GCAS Key", "Turn Auto-GCAS on/off");
-            ClearKeyRW = RewiredConfigManager.BindRW(Config, "Controls (RW)", "6. clear crs/roll/alt/roll", "every click will clear/reset first thing it sees isn't clear from left to right");
-            UpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (RW)", "1. Altitude Up (Small)", "small increase");
-            DownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (RW)", "2. Altitude Down (Small)", "small decrease");
-            BigUpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (RW)", "3. Altitude Up (Big)", "large increase");
-            BigDownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (RW)", "4. Altitude Down (Big)", "large decrease");
-            ClimbRateUpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (RW)", "5. Climb Rate Increase", "Increase Max VS");
-            ClimbRateDownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (RW)", "6. Climb Rate Decrease", "Decrease Max VS");
-            BankLeftKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Bank (RW)", "1. Bank Left", "Roll/course Left");
-            BankRightKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Bank (RW)", "2. Bank Right", "Roll/course right");
-            SpeedHoldKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (RW)", "1. Speed Hold Toggle", "speed hold/clear");
-            SpeedUpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (RW)", "2. Target Speed Increase", "Increase target speed");
-            SpeedDownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (RW)", "3. Target Speed Decrease", "Decrease target speed");
-            ToggleMachKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (RW)", "4. Toggle Mach/TAS", "Toggle between Mach and TAS hold");
-            ToggleABKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (RW)", "5. Toggle Afterburner/Airbrake", "Toggle AB/Airbrake limits");
+            // Controls (Rewired)
+            MenuKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "1. Menu Key", "Open the Autopilot Menu");
+            ToggleKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "2. Toggle AP Key", "AP On/Off");
+            ToggleFBWKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "3. Toggle FBW Key", "works in singleplayer");
+            AutoJammerKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "4. Toggle Key", "Key to toggle jamming");
+            ToggleGCASKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5. Toggle GCAS Key", "Turn Auto-GCAS on/off");
+            ClearKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear crs/roll/alt/roll", "every click will clear/reset first thing it sees isn't clear from left to right");
+            UpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "1. Altitude Up (Small)", "small increase");
+            DownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "2. Altitude Down (Small)", "small decrease");
+            BigUpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "3. Altitude Up (Big)", "large increase");
+            BigDownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "4. Altitude Down (Big)", "large decrease");
+            ClimbRateUpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "5. Climb Rate Increase", "Increase Max VS");
+            ClimbRateDownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "6. Climb Rate Decrease", "Decrease Max VS");
+            BankLeftKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "1. Bank Left", "Roll/course Left");
+            BankRightKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "2. Bank Right", "Roll/course right");
+            SpeedHoldKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "1. Speed Hold Toggle", "speed hold/clear");
+            SpeedUpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "2. Target Speed Increase", "Increase target speed");
+            SpeedDownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "3. Target Speed Decrease", "Decrease target speed");
+            ToggleMachKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "4. Toggle Mach/TAS", "Toggle between Mach and TAS hold");
+            ToggleABKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "5. Toggle Afterburner/Airbrake", "Toggle AB/Airbrake limits");
 
             // control values
             AltStep = Config.Bind("Controls - Values", "17. Altitude Increment (Small)", 0.1f, "Meters per frame (60fps)");
@@ -3349,7 +3349,7 @@ namespace NOAutopilot
             else
             {
                 string val = (string)entry.BoxedValue;
-                if (GUILayout.Button(string.IsNullOrEmpty(val) ? "None (Click to bind HOTAS)" : val, GUILayout.ExpandWidth(true)))
+                if (GUILayout.Button(string.IsNullOrEmpty(val) ? "None - Click to bind (Rewired)" : val, GUILayout.ExpandWidth(true)))
                 {
                     _isListening = true;
                     _targetEntry = entry;

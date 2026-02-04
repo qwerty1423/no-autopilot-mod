@@ -158,4 +158,4 @@ steps
 2. copy dependencies into /Libs folder from game files. (mainly in /Nuclear Option/NuclearOption_Data/Managed). the list is in the `.csproj`.
 3. `dotnet build -c Release`
 
-releases >3.13.3 reproducible (probably). Getting the correct versions of the dlls might be difficult. You also have to clone the repo and checkout the correct version.
+releases >3.13.3 reproducible (probably). Getting the correct versions of the dlls might be difficult since the game updates regularly and silently. You also have to clone the repo and checkout the correct version.

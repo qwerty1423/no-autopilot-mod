@@ -201,6 +201,10 @@ namespace NOAutopilot
 
         internal static FieldInfo f_mapPosOffset, f_mapStatOffset, f_mapFollow, f_onMapChanged;
 
+        internal static Type t_GLOC;
+        internal static FieldInfo f_bloodPressure;
+        internal static FieldInfo f_conscious;
+
         private void Awake()
         {
             Logger = base.Logger;
@@ -403,6 +407,7 @@ namespace NOAutopilot
                 }
 
                 BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+                BindingFlags privateFlags = BindingFlags.NonPublic | BindingFlags.Instance;
 
                 f_playerVehicle = typeof(FlightHud).GetField("playerVehicle", flags);
                 Check(f_playerVehicle, "f_playerVehicle");
@@ -511,6 +516,13 @@ namespace NOAutopilot
                 Check(f_mapFollow, "f_mapFollow");
                 f_onMapChanged = t_Map.GetField("onMapChanged", flags | BindingFlags.Static);
                 Check(f_onMapChanged, "f_onMapChanged");
+
+                t_GLOC = typeof(Aircraft).Assembly.GetType("GLOC");
+                Check(t_GLOC, "t_GLOC");
+                f_bloodPressure = t_GLOC.GetField("bloodPressure", privateFlags);
+                f_conscious = t_GLOC.GetField("conscious", privateFlags);
+                Check(f_bloodPressure, "f_bloodPressure");
+                Check(f_conscious, "f_conscious");
             }
             catch (Exception ex)
             {
@@ -779,7 +791,23 @@ namespace NOAutopilot
                 _cachedExtraInfoContent = new GUIContent("(Hover above for some info)\n(Hover here for controls)", table);
             }
             if (!_showMenu) return;
+
+            float guiAlpha = 1f;
+            if (!APData.IsConscious)
+            {
+                guiAlpha = 0f;
+            }
+            else
+            {
+                guiAlpha = Mathf.Clamp01((APData.BloodPressure - 0.2f) / 0.4f);
+            }
+
+            if (guiAlpha <= 0f) return;
+
             if (!_stylesInitialized) InitStyles();
+
+            Color oldGuiColor = GUI.color;
+            GUI.color = new Color(1, 1, 1, guiAlpha);
 
             if (_isResizing)
             {
@@ -887,6 +915,7 @@ namespace NOAutopilot
 
             GUI.depth = -1;
             DrawCustomTooltip();
+            GUI.color = oldGuiColor;
         }
 
         // gui
@@ -1706,6 +1735,8 @@ namespace NOAutopilot
         public static float SavedMapZoom = 1f;
         public static bool SavedMapFollow = true;
         public static bool MapStateStored = false;
+        public static float BloodPressure = 1f;
+        public static bool IsConscious = true;
 
         public static void Reset()
         {
@@ -1740,6 +1771,8 @@ namespace NOAutopilot
             SavedMapPos = Vector2.zero;
             SavedMapZoom = 1f;
             SavedMapFollow = true;
+            BloodPressure = 1f;
+            IsConscious = true;
 
             NavQueue.Clear();
             foreach (var obj in NavVisuals)
@@ -2010,6 +2043,17 @@ namespace NOAutopilot
                 {
                     Vector3 pAccel = (Vector3)Plugin.m_GetAccel.Invoke(APData.LocalPilot, null);
                     currentG = Vector3.Dot(pAccel + Vector3.up, pUp);
+
+                    Component pilotComp = APData.LocalPilot as Component;
+                    if (pilotComp != null)
+                    {
+                        var gloc = pilotComp.GetComponent(Plugin.t_GLOC);
+                        if (gloc != null)
+                        {
+                            APData.BloodPressure = (float)Plugin.f_bloodPressure.GetValue(gloc);
+                            APData.IsConscious = (bool)Plugin.f_conscious.GetValue(gloc);
+                        }
+                    }
                 }
 
                 // gcas

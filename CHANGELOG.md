@@ -7,6 +7,10 @@
 - map lock function
 - keyboard shortcut support
 
+### Fixed
+
+- hud text did not change size when setting was changed
+
 ## [4.13.13] - 2026-02-02
 
 ### Changed

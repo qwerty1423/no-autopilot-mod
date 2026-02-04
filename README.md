@@ -45,6 +45,7 @@ After updates, it is recommended to regenerate your config file at `BepInEx/conf
 
 The autopilot can be configured using only the `F8` gui window and the map, so `F8` is probably the most important keybind to remember.
 Leave blank the text boxes that you don't want to be controlled by the autopilot, then click set values (a few times just in case).
+A more up to date version of the table below is included in one of the tooltips in the GUI, although without the table formatting. Currently only default controls included.
 
 | Action                      | Key                    | Description                                  |
 | :-------------------------- | :--------------------- | :------------------------------------------- |
@@ -87,6 +88,8 @@ In order of implementation, earliest first
 - course hold
 - autothrottle
 - waypoints
+- minor map improvements
+- singleplayer fbw disabler
   
 ### features not in the mod (yet?)
 
@@ -109,7 +112,7 @@ Target bank angle can be set so that plane turns in a circle. Should be useful f
 
 Large stick inputs will disengage the autopilot.
 
-Displays current settings on the HUD. The format is `[Target Altitude] [Max Climb Rate]\n[Target speed] [Target Bank Angle/course] [distance to next wp]`. For example, autopilot set to 3m altitude, at 40m/s climb rate, at 0 degrees bank angle will show up as `3 40 S- R0` on the HUD.
+Displays current settings on the HUD.
 
 PID values can be tuned further if you like, but the defaults should be quite effective. They may not work in all situations or in all aircraft, however.
 

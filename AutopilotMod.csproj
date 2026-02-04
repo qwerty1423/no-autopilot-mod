@@ -73,7 +73,6 @@
 
     <Reference Include="Assembly-CSharp"> <HintPath>Libs/Assembly-CSharp.dll</HintPath> </Reference>
     <Reference Include="Mirage"> <HintPath>Libs/Mirage.dll</HintPath> </Reference>
-    <Reference Include="UnityEngine.UI"> <HintPath>Libs/UnityEngine.UI.dll</HintPath> </Reference>
   </ItemGroup>
 
   <PropertyGroup>

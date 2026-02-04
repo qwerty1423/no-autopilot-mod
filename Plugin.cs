@@ -316,12 +316,12 @@ namespace NOAutopilot
             ToggleABKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (RW)", "5. Toggle Afterburner/Airbrake", "Toggle AB/Airbrake limits");
 
             // control values
-            AltStep = Config.Bind("Controls", "17. Altitude Increment (Small)", 0.1f, "Meters per frame (60fps)");
-            BigAltStep = Config.Bind("Controls", "18. Altitude Increment (Big)", 100f, "Meters per frame (60fps)");
-            ClimbRateStep = Config.Bind("Controls", "19. Climb Rate Step", 0.5f, "m/s per frame (60fps)");
-            BankStep = Config.Bind("Controls", "20. Bank Step", 0.5f, "Degrees per frame (60fps)");
-            SpeedStep = Config.Bind("Controls", "21. Speed Step", 1.0f, "m/s per frame (60fps)");
-            MinAltitude = Config.Bind("Controls", "22. Minimum Target Altitude", 20f, "Safety floor");
+            AltStep = Config.Bind("Controls - Values", "17. Altitude Increment (Small)", 0.1f, "Meters per frame (60fps)");
+            BigAltStep = Config.Bind("Controls - Values", "18. Altitude Increment (Big)", 100f, "Meters per frame (60fps)");
+            ClimbRateStep = Config.Bind("Controls - Values", "19. Climb Rate Step", 0.5f, "m/s per frame (60fps)");
+            BankStep = Config.Bind("Controls - Values", "20. Bank Step", 0.5f, "Degrees per frame (60fps)");
+            SpeedStep = Config.Bind("Controls - Values", "21. Speed Step", 1.0f, "m/s per frame (60fps)");
+            MinAltitude = Config.Bind("Controls - Values", "22. Minimum Target Altitude", 20f, "Safety floor");
 
             // Tuning
             DefaultMaxClimbRate = Config.Bind("Tuning - 0. Limits", "1. Default Max Climb Rate", 10f, "Startup value");

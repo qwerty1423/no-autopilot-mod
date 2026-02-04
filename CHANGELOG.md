@@ -10,6 +10,7 @@
 ### Fixed
 
 - hud text did not change size when setting was changed
+- performance improvement (imperceptible)
 
 ## [4.13.13] - 2026-02-02
 

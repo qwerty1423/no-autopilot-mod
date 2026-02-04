@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection.Emit;
 using BepInEx;
@@ -83,6 +84,8 @@ namespace NOAutopilot
         private float _dynamicLabelWidth = 60f;
         private readonly GUIContent _measuringContent = new();
         private readonly float buttonWidth = 40f;
+        private GUIContent _cachedTableContent;
+        private GUIContent _cachedExtraInfoContent;
 
         // Visuals
         public static ConfigEntry<string> ColorAPOn, ColorInfo, ColorGood, ColorWarn, ColorCrit, ColorRange;
@@ -508,6 +511,9 @@ namespace NOAutopilot
             _bufSpeed = null;
             _bufCourse = null;
 
+            _cachedTableContent = null;
+            _cachedExtraInfoContent = null;
+
             f_playerVehicle = null;
             f_controlInputs = null;
             f_pitch = null;
@@ -770,6 +776,11 @@ namespace NOAutopilot
         // gui
         private void OnGUI()
         {
+            if (_cachedTableContent == null)
+            {
+                _cachedTableContent = new GUIContent("(Hover for controls)", table);
+                _cachedExtraInfoContent = new GUIContent("(Hover above for some info)\n(Hover here for controls)", table);
+            }
             if (!_showMenu) return;
             if (!_stylesInitialized) InitStyles();
 
@@ -1292,7 +1303,7 @@ namespace NOAutopilot
                     RefreshNavVisuals();
                 }
                 GUILayout.EndHorizontal();
-                GUILayout.Label(new GUIContent("(Hover for controls)", table), _styleLabel);
+                GUILayout.Label(_cachedTableContent, _styleLabel);
             }
             else
             {
@@ -1300,7 +1311,7 @@ namespace NOAutopilot
                 GUILayout.EndHorizontal();
                 GUILayout.Label(new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.", "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the item."), _styleLabel);
 
-                GUILayout.Label(new GUIContent("(Hover above for some info)\n(Hover here for controls)", table), _styleLabel);
+                GUILayout.Label(_cachedExtraInfoContent, _styleLabel);
             }
 
             GUILayout.EndVertical();
@@ -2684,6 +2695,7 @@ namespace NOAutopilot
         private static float _lastStringUpdate = 0f;
         private static FuelGauge _cachedFuelGauge;
         private static Text _cachedRefLabel;
+        private static readonly StringBuilder _sbHud = new(1024);
         private static GameObject _lastVehicleChecked;
 
         public static void Reset()
@@ -2710,6 +2722,7 @@ namespace NOAutopilot
             _cachedFuelGauge = null;
             _cachedRefLabel = null;
             _lastVehicleChecked = null;
+            _sbHud.Clear();
         }
 
         private static void Postfix(FlightHud __instance)
@@ -2801,11 +2814,11 @@ namespace NOAutopilot
                     if (Time.time - _lastStringUpdate >= Plugin.DisplayUpdateInterval.Value)
                     {
                         _lastStringUpdate = Time.time;
-                        string content = "";
+                        _sbHud.Clear();
 
                         if (currentFuel <= 0f)
                         {
-                            content += $"<color={Plugin.ColorCrit.Value}>00:00\n----</color>\n";
+                            _sbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">00:00\n----</color>\n");
                         }
                         else
                         {
@@ -2818,16 +2831,15 @@ namespace NOAutopilot
                             if (mins < Plugin.FuelCritMinutes.Value) fuelCol = Plugin.ColorCrit.Value;
                             else if (mins < Plugin.FuelWarnMinutes.Value) fuelCol = Plugin.ColorWarn.Value;
 
-                            content += $"<color={fuelCol}>{sTime}</color>\n";
+                            _sbHud.Append("<color=").Append(fuelCol).Append(">").Append(sTime).Append("</color>\n");
 
                             float spd = (aircraft.rb != null) ? aircraft.rb.velocity.magnitude : 0f;
                             float distMeters = secs * APData.SpeedEma;
                             if (distMeters > 99999000f) distMeters = 99999000f;
 
                             string sRange = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters), Plugin.DistShowUnit.Value);
-                            content += $"<color={Plugin.ColorRange.Value}>{sRange}</color>\n";
+                            _sbHud.Append("<color=").Append(Plugin.ColorRange.Value).Append(">").Append(sRange).Append("</color>\n\n");
                         }
-                        content += "\n";
 
                         // (AP was on before GCAS) or (AP is on and no GCAS)
                         bool apActive = (ControlOverridePatch.apStateBeforeGCAS && APData.GCASActive) || (APData.Enabled && !APData.GCASActive);
@@ -2836,61 +2848,86 @@ namespace NOAutopilot
                         if ((apActive || speedActive) && Plugin.ShowAPOverlay.Value)
                         {
                             bool placeholders = Plugin.ShowPlaceholders.Value;
-                            string spdStr = placeholders ? "S" : "";
-                            string rollStr = placeholders ? "R" : "";
-                            string altStr = placeholders ? "A" : "";
-                            string climbStr = placeholders ? "V" : "";
-                            string crsStr = placeholders ? "C" : "";
-                            string navStr = placeholders ? "W" : "";
 
+                            if (apActive || speedActive)
+                                _sbHud.Append("<color=").Append(Plugin.ColorAPOn.Value).Append(">");
+
+                            bool hasLine1 = false;
                             if (speedActive)
                             {
-                                spdStr = APData.SpeedHoldIsMach ? $"M{APData.TargetSpeed:F2}" : "S" + ModUtils.ProcessGameString(UnitConverter.SpeedReading(APData.TargetSpeed), Plugin.SpeedShowUnit.Value);
+                                if (APData.SpeedHoldIsMach)
+                                    _sbHud.Append("M").Append(APData.TargetSpeed.ToString("F2"));
+                                else
+                                    _sbHud.Append("S").Append(ModUtils.ProcessGameString(UnitConverter.SpeedReading(APData.TargetSpeed), Plugin.SpeedShowUnit.Value));
+                                hasLine1 = true;
                             }
+                            else if (placeholders) { _sbHud.Append("S"); hasLine1 = true; }
 
                             if (apActive)
                             {
-                                if (APData.TargetAlt > 0)
-                                    altStr = "A" + ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.TargetAlt), Plugin.AltShowUnit.Value);
-
-                                if (APData.CurrentMaxClimbRate > 0 && APData.CurrentMaxClimbRate != Plugin.DefaultMaxClimbRate.Value)
-                                    climbStr = "V" + ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(APData.CurrentMaxClimbRate), Plugin.VertSpeedShowUnit.Value);
-
                                 string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
                                 if (APData.TargetRoll != -999f)
-                                    rollStr = $"R{APData.TargetRoll:F0}{degUnit}";
-                                if (APData.TargetCourse >= 0)
-                                    crsStr = $"C{APData.TargetCourse:F0}{degUnit}";
-                                if (APData.NavEnabled && APData.NavQueue.Count > 0)
                                 {
-                                    float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
-                                    navStr = "W>" + ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value);
+                                    if (hasLine1) _sbHud.Append(" ");
+                                    _sbHud.Append("R").Append(APData.TargetRoll.ToString("F0")).Append(degUnit);
+                                    hasLine1 = true;
+                                }
+                                else if (placeholders)
+                                {
+                                    if (hasLine1) _sbHud.Append(" ");
+                                    _sbHud.Append("R");
+                                    hasLine1 = true;
                                 }
                             }
+                            if (hasLine1) _sbHud.Append("\n");
 
-                            string line1 = "";
-                            if (!string.IsNullOrEmpty(spdStr)) line1 += spdStr;
-                            if (!string.IsNullOrEmpty(spdStr) && !string.IsNullOrEmpty(rollStr)) line1 += " ";
-                            if (!string.IsNullOrEmpty(rollStr)) line1 += rollStr;
+                            bool hasLine2 = false;
+                            if (apActive)
+                            {
+                                if (APData.TargetAlt > 0)
+                                {
+                                    _sbHud.Append("A").Append(ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.TargetAlt), Plugin.AltShowUnit.Value));
+                                    hasLine2 = true;
+                                }
+                                else if (placeholders) { _sbHud.Append("A"); hasLine2 = true; }
 
-                            string line2 = "";
-                            if (!string.IsNullOrEmpty(altStr)) line2 += altStr;
-                            if (!string.IsNullOrEmpty(altStr) && !string.IsNullOrEmpty(climbStr)) line2 += " ";
-                            if (!string.IsNullOrEmpty(climbStr)) line2 += climbStr;
+                                if (APData.CurrentMaxClimbRate > 0 && APData.CurrentMaxClimbRate != Plugin.DefaultMaxClimbRate.Value)
+                                {
+                                    if (hasLine2) _sbHud.Append(" ");
+                                    _sbHud.Append("V").Append(ModUtils.ProcessGameString(UnitConverter.ClimbRateReading(APData.CurrentMaxClimbRate), Plugin.VertSpeedShowUnit.Value));
+                                    hasLine2 = true;
+                                }
+                                else if (placeholders) { if (hasLine2) _sbHud.Append(" "); _sbHud.Append("V"); hasLine2 = true; }
+                            }
+                            if (hasLine2) _sbHud.Append("\n");
 
-                            string line3 = "";
-                            if (!string.IsNullOrEmpty(crsStr)) line3 += crsStr;
-                            if (!string.IsNullOrEmpty(crsStr) && !string.IsNullOrEmpty(navStr)) line3 += " ";
-                            if (!string.IsNullOrEmpty(navStr)) line3 += navStr;
+                            bool hasLine3 = false;
+                            if (apActive)
+                            {
+                                string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
+                                if (APData.TargetCourse >= 0)
+                                {
+                                    _sbHud.Append("C").Append(APData.TargetCourse.ToString("F0")).Append(degUnit);
+                                    hasLine3 = true;
+                                }
+                                else if (placeholders) { _sbHud.Append("C"); hasLine3 = true; }
 
-                            if (!string.IsNullOrEmpty(line1)) content += $"<color={Plugin.ColorAPOn.Value}>{line1}</color>\n";
-                            if (!string.IsNullOrEmpty(line2)) content += $"<color={Plugin.ColorAPOn.Value}>{line2}</color>\n";
-                            if (!string.IsNullOrEmpty(line3)) content += $"<color={Plugin.ColorAPOn.Value}>{line3}</color>\n";
+                                if (APData.NavEnabled && APData.NavQueue.Count > 0)
+                                {
+                                    if (hasLine3) _sbHud.Append(" ");
+                                    float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(), APData.NavQueue[0]);
+                                    _sbHud.Append("W>").Append(ModUtils.ProcessGameString(UnitConverter.DistanceReading(d), Plugin.DistShowUnit.Value));
+                                    hasLine3 = true;
+                                }
+                                else if (placeholders) { if (hasLine3) _sbHud.Append(" "); _sbHud.Append("W"); hasLine3 = true; }
+                            }
+                            if (hasLine3) _sbHud.Append("\n");
+                            if (apActive || speedActive) _sbHud.Append("</color>");
                         }
 
                         if (!APData.GCASEnabled && Plugin.ShowGCASOff.Value)
                         {
-                            content += $"<color={Plugin.ColorInfo.Value}>GCAS-</color>\n";
+                            _sbHud.Append("<color=").Append(Plugin.ColorInfo.Value).Append(">GCAS-</color>\n");
                         }
 
                         if (Plugin.ShowOverride.Value && APData.Enabled && !APData.GCASActive)
@@ -2898,20 +2935,20 @@ namespace NOAutopilot
                             float overrideRemaining = Plugin.ReengageDelay.Value - (Time.time - APData.LastOverrideInputTime);
                             if (overrideRemaining > 0)
                             {
-                                content += $"<color={Plugin.ColorInfo.Value}>{overrideRemaining:F1}s</color>\n";
+                                _sbHud.Append("<color=").Append(Plugin.ColorInfo.Value).Append(">").Append(overrideRemaining.ToString("F1")).Append("s</color>\n");
                             }
                         }
 
                         if (APData.AutoJammerActive)
                         {
-                            content += $"<color={Plugin.ColorAPOn.Value}>AJ\n</color>";
+                            _sbHud.Append("<color=").Append(Plugin.ColorAPOn.Value).Append(">AJ\n</color>");
                         }
 
                         if (APData.FBWDisabled)
                         {
-                            content += $"<color={Plugin.ColorCrit.Value}>FBW OFF</color>";
+                            _sbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">FBW OFF</color>");
                         }
-                        overlayText.text = content;
+                        overlayText.text = _sbHud.ToString();
                     }
                 }
 

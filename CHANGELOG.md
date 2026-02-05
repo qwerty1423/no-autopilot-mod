@@ -5,6 +5,7 @@
 ### Fixed
 
 - removed binding axes with rewired
+- add toggle for fuel overlay on HUD
 
 ## [4.15.1] - 2026-02-05
 

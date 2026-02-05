@@ -3428,7 +3428,13 @@ namespace NOAutopilot
             }
         }
 
-        public static void Reset() => _isListening = false;
+        public static void Reset()
+        {
+            _isListening = false;
+            _targetEntry = null;
+            _targetController = null;
+            _targetIndex = null;
+        }
     }
 
     public static class InputHelper

@@ -5,7 +5,7 @@
     <AssemblyName>com.qwerty1423.NOAutopilot</AssemblyName>
     <Product>NOAutopilot</Product>
     <Description>no autopilot?</Description>
-    <Version>4.14.0</Version>
+    <Version>4.15.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
@@ -73,6 +73,7 @@
 
     <Reference Include="Assembly-CSharp"> <HintPath>Libs/Assembly-CSharp.dll</HintPath> </Reference>
     <Reference Include="Mirage"> <HintPath>Libs/Mirage.dll</HintPath> </Reference>
+    <Reference Include="Rewired_Core"> <HintPath>Libs/Rewired_Core.dll</HintPath> </Reference>
   </ItemGroup>
 
   <PropertyGroup>

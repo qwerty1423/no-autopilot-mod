@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection.Emit;
+using System.Linq;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -12,6 +13,7 @@ using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using Rewired;
 
 namespace NOAutopilot
 {
@@ -44,7 +46,6 @@ namespace NOAutopilot
         $"<b>Toggle AB:</b> End | Toggle Afterburner/Airbrake\n";
 
         // ap menu?
-        public static ConfigEntry<KeyboardShortcut> MenuKey;
         private Rect _windowRect = new(50, 50, 227, 330);
         private bool _showMenu = false;
 
@@ -111,16 +112,29 @@ namespace NOAutopilot
 
         // Auto Jammer
         public static ConfigEntry<bool> EnableAutoJammer;
-        public static ConfigEntry<KeyboardShortcut> AutoJammerKey;
         public static ConfigEntry<float> AutoJammerThreshold;
         public static ConfigEntry<bool> AutoJammerRandom;
         public static ConfigEntry<float> AutoJammerMinDelay, AutoJammerMaxDelay;
         public static ConfigEntry<float> AutoJammerReleaseMin, AutoJammerReleaseMax;
 
         // Controls
-        public static ConfigEntry<KeyboardShortcut> ToggleKey, ToggleFBWKey, UpKey, DownKey, BigUpKey, BigDownKey;
-        public static ConfigEntry<KeyboardShortcut> ClimbRateUpKey, ClimbRateDownKey, BankLeftKey, BankRightKey, ClearKey;
-        public static ConfigEntry<KeyboardShortcut> SpeedHoldKey, SpeedUpKey, SpeedDownKey, ToggleABKey, ToggleMachKey;
+        public static ConfigEntry<KeyboardShortcut> MenuKey;
+        public static ConfigEntry<KeyboardShortcut> ToggleKey, ToggleFBWKey;
+        public static ConfigEntry<KeyboardShortcut> AutoJammerKey, ToggleGCASKey, ClearKey;
+        public static ConfigEntry<KeyboardShortcut> UpKey, DownKey, BigUpKey, BigDownKey;
+        public static ConfigEntry<KeyboardShortcut> ClimbRateUpKey, ClimbRateDownKey;
+        public static ConfigEntry<KeyboardShortcut> BankLeftKey, BankRightKey;
+        public static ConfigEntry<KeyboardShortcut> SpeedHoldKey, SpeedUpKey, SpeedDownKey;
+        public static ConfigEntry<KeyboardShortcut> ToggleMachKey, ToggleABKey;
+
+        public static ConfigEntry<string> MenuKeyRW;
+        public static ConfigEntry<string> ToggleKeyRW, ToggleFBWKeyRW;
+        public static ConfigEntry<string> AutoJammerKeyRW, ToggleGCASKeyRW, ClearKeyRW;
+        public static ConfigEntry<string> UpKeyRW, DownKeyRW, BigUpKeyRW, BigDownKeyRW;
+        public static ConfigEntry<string> ClimbRateUpKeyRW, ClimbRateDownKeyRW;
+        public static ConfigEntry<string> BankLeftKeyRW, BankRightKeyRW;
+        public static ConfigEntry<string> SpeedHoldKeyRW, SpeedUpKeyRW, SpeedDownKeyRW;
+        public static ConfigEntry<string> ToggleMachKeyRW, ToggleABKeyRW;
 
         // Flight Values
         public static ConfigEntry<float> AltStep, BigAltStep, ClimbRateStep, BankStep, SpeedStep, MinAltitude;
@@ -142,7 +156,6 @@ namespace NOAutopilot
 
         // Auto GCAS
         public static ConfigEntry<bool> EnableGCAS;
-        public static ConfigEntry<KeyboardShortcut> ToggleGCASKey;
         public static ConfigEntry<float> GCAS_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
         public static ConfigEntry<float> GCAS_P, GCAS_I, GCAS_D, GCAS_ILimit;
 
@@ -187,6 +200,10 @@ namespace NOAutopilot
         internal static PropertyInfo p_clientActive, p_clientIsHost;
 
         internal static FieldInfo f_mapPosOffset, f_mapStatOffset, f_mapFollow, f_onMapChanged;
+
+        internal static Type t_GLOC;
+        internal static FieldInfo f_bloodPressure;
+        internal static FieldInfo f_conscious;
 
         private void Awake()
         {
@@ -253,7 +270,6 @@ namespace NOAutopilot
 
             // Auto Jammer
             EnableAutoJammer = Config.Bind("Auto Jammer", "1. Enable Auto Jammer", true, "Allow the feature");
-            AutoJammerKey = Config.Bind("Auto Jammer", "2. Toggle Key", new KeyboardShortcut(KeyCode.Slash), "Key to toggle jamming");
             AutoJammerThreshold = Config.Bind("Auto Jammer", "3. Energy Threshold", 0.99f, "Fire when energy > this %");
             AutoJammerRandom = Config.Bind("Auto Jammer", "4. Random Delay", true, "Add random delay");
             AutoJammerMinDelay = Config.Bind("Auto Jammer", "5. Delay Min", 0.02f, "Seconds");
@@ -262,31 +278,54 @@ namespace NOAutopilot
             AutoJammerReleaseMax = Config.Bind("Auto Jammer", "8. Release Delay Max", 0.04f, "Seconds");
 
             // Controls
-            ToggleKey = Config.Bind("Controls", "01. Toggle AP Key", new KeyboardShortcut(KeyCode.Equals), "AP On/Off");
-            ToggleFBWKey = Config.Bind("Controls", "02. Toggle FBW Key", new KeyboardShortcut(KeyCode.Delete), "works in singleplayer");
-            UpKey = Config.Bind("Controls", "03. Altitude Up (Small)", new KeyboardShortcut(KeyCode.UpArrow), "small increase");
-            DownKey = Config.Bind("Controls", "04. Altitude Down (Small)", new KeyboardShortcut(KeyCode.DownArrow), "small decrease");
-            BigUpKey = Config.Bind("Controls", "05. Altitude Up (Big)", new KeyboardShortcut(KeyCode.LeftArrow), "large increase");
-            BigDownKey = Config.Bind("Controls", "06. Altitude Down (Big)", new KeyboardShortcut(KeyCode.RightArrow), "large decrease");
-            ClimbRateUpKey = Config.Bind("Controls", "07. Climb Rate Increase", new KeyboardShortcut(KeyCode.PageUp), "Increase Max VS");
-            ClimbRateDownKey = Config.Bind("Controls", "08. Climb Rate Decrease", new KeyboardShortcut(KeyCode.PageDown), "Decrease Max VS");
-            BankLeftKey = Config.Bind("Controls", "09. Bank Left", new KeyboardShortcut(KeyCode.LeftBracket), "Roll/course Left");
-            BankRightKey = Config.Bind("Controls", "10. Bank Right", new KeyboardShortcut(KeyCode.RightBracket), "Roll/course right");
-            ClearKey = Config.Bind("Controls", "11. clear crs/roll/alt/roll", new KeyboardShortcut(KeyCode.Quote), "every click will clear/reset first thing it sees isn't clear from left to right");
-            SpeedHoldKey = Config.Bind("Controls", "12. Speed Hold Toggle", new KeyboardShortcut(KeyCode.Semicolon), "speed hold/clear");
-            SpeedUpKey = Config.Bind("Controls", "13. Target Speed Increase", new KeyboardShortcut(KeyCode.LeftShift), "Increase target speed");
-            SpeedDownKey = Config.Bind("Controls", "14. Target Speed Decrease", new KeyboardShortcut(KeyCode.LeftControl), "Decrease target speed");
-            ToggleMachKey = Config.Bind("Controls", "15. Toggle Mach/TAS", new KeyboardShortcut(KeyCode.Home), "Toggle between Mach and TAS hold");
-            ToggleABKey = Config.Bind("Controls", "16. Toggle Afterburner/Airbrake", new KeyboardShortcut(KeyCode.End), "Toggle AB/Airbrake limits");
+            MenuKey = Config.Bind("Controls", "1. Menu Key", new KeyboardShortcut(KeyCode.F8), "Open the Autopilot Menu");
+            ToggleKey = Config.Bind("Controls", "2. Toggle AP Key", new KeyboardShortcut(KeyCode.Equals), "AP On/Off");
+            ToggleFBWKey = Config.Bind("Controls", "3. Toggle FBW Key", new KeyboardShortcut(KeyCode.Delete), "works in singleplayer");
+            AutoJammerKey = Config.Bind("Controls", "4. Auto Jammer Key", new KeyboardShortcut(KeyCode.Slash), "Key to toggle jamming");
+            ToggleGCASKey = Config.Bind("Controls", "5. Toggle GCAS Key", new KeyboardShortcut(KeyCode.Backslash), "Turn Auto-GCAS on/off");
+            ClearKey = Config.Bind("Controls", "06. clear crs/roll/alt/roll", new KeyboardShortcut(KeyCode.Quote), "every click will clear/reset first thing it sees isn't clear from left to right");
+            UpKey = Config.Bind("Controls - Altitude", "1. Altitude Up (Small)", new KeyboardShortcut(KeyCode.UpArrow), "small increase");
+            DownKey = Config.Bind("Controls - Altitude", "2. Altitude Down (Small)", new KeyboardShortcut(KeyCode.DownArrow), "small decrease");
+            BigUpKey = Config.Bind("Controls - Altitude", "3. Altitude Up (Big)", new KeyboardShortcut(KeyCode.LeftArrow), "large increase");
+            BigDownKey = Config.Bind("Controls - Altitude", "4. Altitude Down (Big)", new KeyboardShortcut(KeyCode.RightArrow), "large decrease");
+            ClimbRateUpKey = Config.Bind("Controls - Altitude", "5. Climb Rate Increase", new KeyboardShortcut(KeyCode.PageUp), "Increase Max VS");
+            ClimbRateDownKey = Config.Bind("Controls - Altitude", "6. Climb Rate Decrease", new KeyboardShortcut(KeyCode.PageDown), "Decrease Max VS");
+            BankLeftKey = Config.Bind("Controls - Bank", "1. Bank Left", new KeyboardShortcut(KeyCode.LeftBracket), "Roll/course Left");
+            BankRightKey = Config.Bind("Controls - Bank", "2. Bank Right", new KeyboardShortcut(KeyCode.RightBracket), "Roll/course right");
+            SpeedHoldKey = Config.Bind("Controls - Speed", "1. Speed Hold Toggle", new KeyboardShortcut(KeyCode.Semicolon), "speed hold/clear");
+            SpeedUpKey = Config.Bind("Controls - Speed", "2. Target Speed Increase", new KeyboardShortcut(KeyCode.LeftShift), "Increase target speed");
+            SpeedDownKey = Config.Bind("Controls - Speed", "3. Target Speed Decrease", new KeyboardShortcut(KeyCode.LeftControl), "Decrease target speed");
+            ToggleMachKey = Config.Bind("Controls - Speed", "4. Toggle Mach/TAS", new KeyboardShortcut(KeyCode.Home), "Toggle between Mach and TAS hold");
+            ToggleABKey = Config.Bind("Controls - Speed", "5. Toggle Afterburner/Airbrake", new KeyboardShortcut(KeyCode.End), "Toggle AB/Airbrake limits");
+
+            // Controls (Rewired)
+            MenuKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "1. Menu", "Open the Autopilot Menu");
+            ToggleKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "2. Toggle AP", "AP On/Off");
+            ToggleFBWKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "3. Toggle FBW", "works in singleplayer");
+            AutoJammerKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "4. Toggle AJ", "Toggle auto jamming with jamming pods");
+            ToggleGCASKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5. Toggle GCAS", "Turn Auto-GCAS on/off");
+            ClearKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear crs/roll/alt/roll", "every click will clear/reset first thing it sees isn't clear from left to right");
+            UpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "1. Altitude Up (Small)", "small increase");
+            DownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "2. Altitude Down (Small)", "small decrease");
+            BigUpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "3. Altitude Up (Big)", "large increase");
+            BigDownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "4. Altitude Down (Big)", "large decrease");
+            ClimbRateUpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "5. Climb Rate Increase", "Increase Max VS");
+            ClimbRateDownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "6. Climb Rate Decrease", "Decrease Max VS");
+            BankLeftKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "1. Bank Left", "Roll/course Left");
+            BankRightKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "2. Bank Right", "Roll/course right");
+            SpeedHoldKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "1. Speed Hold Toggle", "speed hold/clear");
+            SpeedUpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "2. Target Speed Increase", "Increase target speed");
+            SpeedDownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "3. Target Speed Decrease", "Decrease target speed");
+            ToggleMachKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "4. Toggle Mach/TAS", "Toggle between Mach and TAS hold");
+            ToggleABKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "5. Toggle Afterburner/Airbrake", "Toggle AB/Airbrake limits");
 
             // control values
-            AltStep = Config.Bind("Controls", "17. Altitude Increment (Small)", 0.1f, "Meters per frame (60fps)");
-            BigAltStep = Config.Bind("Controls", "18. Altitude Increment (Big)", 100f, "Meters per frame (60fps)");
-            ClimbRateStep = Config.Bind("Controls", "19. Climb Rate Step", 0.5f, "m/s per frame (60fps)");
-            BankStep = Config.Bind("Controls", "20. Bank Step", 0.5f, "Degrees per frame (60fps)");
-            SpeedStep = Config.Bind("Controls", "21. Speed Step", 1.0f, "m/s per frame (60fps)");
-            MinAltitude = Config.Bind("Controls", "22. Minimum Target Altitude", 20f, "Safety floor");
-            MenuKey = Config.Bind("Controls", "23. Menu Key", new KeyboardShortcut(KeyCode.F8), "Open the Autopilot Menu");
+            AltStep = Config.Bind("Controls - Values", "17. Altitude Increment (Small)", 0.1f, "Meters per frame (60fps)");
+            BigAltStep = Config.Bind("Controls - Values", "18. Altitude Increment (Big)", 100f, "Meters per frame (60fps)");
+            ClimbRateStep = Config.Bind("Controls - Values", "19. Climb Rate Step", 0.5f, "m/s per frame (60fps)");
+            BankStep = Config.Bind("Controls - Values", "20. Bank Step", 0.5f, "Degrees per frame (60fps)");
+            SpeedStep = Config.Bind("Controls - Values", "21. Speed Step", 1.0f, "m/s per frame (60fps)");
+            MinAltitude = Config.Bind("Controls - Values", "22. Minimum Target Altitude", 20f, "Safety floor");
 
             // Tuning
             DefaultMaxClimbRate = Config.Bind("Tuning - 0. Limits", "1. Default Max Climb Rate", 10f, "Startup value");
@@ -325,7 +364,6 @@ namespace NOAutopilot
 
             // Auto GCAS
             EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS on start", true, "GCAS off at start if disabled");
-            ToggleGCASKey = Config.Bind("Auto GCAS", "2. Toggle GCAS Key", new KeyboardShortcut(KeyCode.Backslash), "Turn Auto-GCAS on/off");
             GCAS_MaxG = Config.Bind("Auto GCAS", "3. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
             GCAS_WarnBuffer = Config.Bind("Auto GCAS", "4. Warning Buffer", 20.0f, "GCAS warning indicator first appearance");
             GCAS_AutoBuffer = Config.Bind("Auto GCAS", "5. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
@@ -369,6 +407,7 @@ namespace NOAutopilot
                 }
 
                 BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+                BindingFlags privateFlags = BindingFlags.NonPublic | BindingFlags.Instance;
 
                 f_playerVehicle = typeof(FlightHud).GetField("playerVehicle", flags);
                 Check(f_playerVehicle, "f_playerVehicle");
@@ -477,6 +516,13 @@ namespace NOAutopilot
                 Check(f_mapFollow, "f_mapFollow");
                 f_onMapChanged = t_Map.GetField("onMapChanged", flags | BindingFlags.Static);
                 Check(f_onMapChanged, "f_onMapChanged");
+
+                t_GLOC = typeof(Aircraft).Assembly.GetType("GLOC");
+                Check(t_GLOC, "t_GLOC");
+                f_bloodPressure = t_GLOC.GetField("bloodPressure", privateFlags);
+                f_conscious = t_GLOC.GetField("conscious", privateFlags);
+                Check(f_bloodPressure, "f_bloodPressure");
+                Check(f_conscious, "f_conscious");
             }
             catch (Exception ex)
             {
@@ -504,59 +550,15 @@ namespace NOAutopilot
             HudPatch.Reset();
             MapInteractionPatch.Reset();
             MapWaypointPatch.Reset();
+            RewiredConfigManager.Reset();
+            if (APData.NavVisuals != null)
+            {
+                foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
+            }
 
-            _bufAlt = null;
-            _bufClimb = null;
-            _bufRoll = null;
-            _bufSpeed = null;
-            _bufCourse = null;
+            ClearAllStatics();
 
-            _cachedTableContent = null;
-            _cachedExtraInfoContent = null;
-
-            f_playerVehicle = null;
-            f_controlInputs = null;
-            f_pitch = null;
-            f_roll = null;
-            f_throttle = null;
-            f_targetList = null;
-            f_currentWeaponStation = null;
-            f_stationWeapons = null;
-
-            f_fuelLabel = null;
-            f_fuelCapacity = null;
-            f_controlsFilter = null;
-            f_pilots = null;
-            f_gearState = null;
-            f_weaponManager = null;
-
-            f_powerSupply = null;
-            f_charge = null;
-            f_maxCharge = null;
-
-            m_Fire = null;
-            m_GetAccel = null;
-
-            t_JammingPod = null;
-
-            m_GetFBWParams = null;
-            m_SetFBWParams = null;
-            f_fbw_item1_enabled = null;
-            f_fbw_item2_tuning = null;
-
-            t_NetworkServer = null;
-            p_serverActive = null;
-            p_serverAllPlayers = null;
-            t_NetworkClient = null;
-            p_clientActive = null;
-            p_clientIsHost = null;
-
-            f_mapPosOffset = null;
-            f_mapStatOffset = null;
-            f_mapFollow = null;
-            f_onMapChanged = null;
-            SaveMapState = null;
-
+            harmony = null;
             Logger = null;
         }
 
@@ -584,7 +586,9 @@ namespace NOAutopilot
 
         private void Update()
         {
-            if (MenuKey.Value.IsDown())
+            RewiredConfigManager.Update();
+
+            if (InputHelper.IsDown(MenuKeyRW) || MenuKey.Value.IsDown())
             {
                 _showMenu = !_showMenu;
                 if (_showMenu)
@@ -596,10 +600,15 @@ namespace NOAutopilot
             if (_showMenu && APData.Enabled)
             {
                 bool isAdjusting =
-                    UpKey.Value.IsPressed() || DownKey.Value.IsPressed() ||
-                    BigUpKey.Value.IsPressed() || BigDownKey.Value.IsPressed() ||
-                    ClimbRateUpKey.Value.IsPressed() || ClimbRateDownKey.Value.IsPressed() ||
-                    BankLeftKey.Value.IsPressed() || BankRightKey.Value.IsPressed() || ClearKey.Value.IsPressed();
+                    InputHelper.IsPressed(UpKeyRW) || UpKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(DownKeyRW) || DownKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(BigUpKeyRW) || BigUpKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(BigDownKeyRW) || BigDownKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(ClimbRateUpKeyRW) || ClimbRateUpKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(ClimbRateDownKeyRW) || ClimbRateDownKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(BankLeftKeyRW) || BankLeftKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(BankRightKeyRW) || BankRightKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(ClearKeyRW) || ClearKey.Value.IsPressed();
 
                 if (isAdjusting)
                 {
@@ -607,7 +616,7 @@ namespace NOAutopilot
                 }
             }
 
-            if (ToggleKey.Value.IsDown())
+            if (InputHelper.IsDown(ToggleKeyRW) || ToggleKey.Value.IsDown())
             {
                 APData.Enabled = !APData.Enabled;
                 if (!APData.Enabled)
@@ -622,18 +631,18 @@ namespace NOAutopilot
                 SyncMenuValues();
             }
 
-            if (EnableAutoJammer.Value && AutoJammerKey.Value.IsDown())
+            if (EnableAutoJammer.Value && (InputHelper.IsDown(AutoJammerKeyRW) || AutoJammerKey.Value.IsDown()))
             {
                 APData.AutoJammerActive = !APData.AutoJammerActive;
             }
 
-            if (ToggleGCASKey.Value.IsDown())
+            if (InputHelper.IsDown(ToggleGCASKeyRW) || ToggleGCASKey.Value.IsDown())
             {
                 APData.GCASEnabled = !APData.GCASEnabled;
                 if (!APData.GCASEnabled) { APData.GCASActive = false; APData.GCASWarning = false; }
             }
 
-            if (SpeedHoldKey.Value.IsDown())
+            if (InputHelper.IsDown(SpeedHoldKeyRW) || SpeedHoldKey.Value.IsDown())
             {
                 if (APData.TargetSpeed >= 0)
                 {
@@ -662,8 +671,8 @@ namespace NOAutopilot
 
             if (APData.TargetSpeed >= 0f)
             {
-                bool speedUp = SpeedUpKey.Value.IsPressed();
-                bool speedDown = SpeedDownKey.Value.IsPressed();
+                bool speedUp = InputHelper.IsPressed(SpeedUpKeyRW) || SpeedUpKey.Value.IsPressed();
+                bool speedDown = InputHelper.IsPressed(SpeedDownKeyRW) || SpeedDownKey.Value.IsPressed();
                 if (speedUp || speedDown)
                 {
                     if (APData.TargetSpeed < 0)
@@ -689,7 +698,7 @@ namespace NOAutopilot
                     if (speedDown) APData.TargetSpeed = Mathf.Max(0, APData.TargetSpeed - step);
                     SyncMenuValues();
                 }
-                else if (ToggleMachKey.Value.IsDown())
+                else if (InputHelper.IsDown(ToggleMachKeyRW) || ToggleMachKey.Value.IsDown())
                 {
                     if (float.TryParse(_bufSpeed, out float val))
                     {
@@ -710,13 +719,13 @@ namespace NOAutopilot
                     SyncMenuValues();
                 }
 
-                if (ToggleABKey.Value.IsDown())
+                if (InputHelper.IsDown(ToggleABKeyRW) || ToggleABKey.Value.IsDown())
                 {
                     APData.AllowExtremeThrottle = !APData.AllowExtremeThrottle;
                 }
             }
 
-            if (ToggleFBWKey.Value.IsDown())
+            if (InputHelper.IsDown(ToggleFBWKeyRW) || ToggleFBWKey.Value.IsDown())
             {
                 APData.NextMultiplayerCheck = 0f;
                 if (IsMultiplayer())
@@ -782,114 +791,141 @@ namespace NOAutopilot
                 _cachedExtraInfoContent = new GUIContent("(Hover above for some info)\n(Hover here for controls)", table);
             }
             if (!_showMenu) return;
+
+            float guiAlpha = 1f;
+            if (!APData.IsConscious)
+            {
+                guiAlpha = 0f;
+            }
+            else
+            {
+                guiAlpha = Mathf.Clamp01((APData.BloodPressure - 0.2f) / 0.4f);
+            }
+
+            if (guiAlpha <= 0f)
+            {
+                _isResizing = false;
+                return;
+            }
+
             if (!_stylesInitialized) InitStyles();
 
-            if (_isResizing)
+            Color oldGuiColor = GUI.color;
+            try
             {
-                if (Event.current.type == EventType.MouseUp) { _isResizing = false; _activeEdge = RectEdge.None; }
-                else if (Event.current.type == EventType.MouseDrag)
+                GUI.color = new Color(1, 1, 1, guiAlpha);
+
+                if (_isResizing)
                 {
-                    Vector2 delta = Event.current.delta;
-                    float minW = 227f;
-                    float minH = 330f;
-
-                    if (_activeEdge == RectEdge.Right || _activeEdge == RectEdge.TopRight || _activeEdge == RectEdge.BottomRight)
-                        _windowRect.width = Mathf.Max(minW, _windowRect.width + delta.x);
-
-                    if (_activeEdge == RectEdge.Bottom || _activeEdge == RectEdge.BottomLeft || _activeEdge == RectEdge.BottomRight)
-                        _windowRect.height = Mathf.Max(minH, _windowRect.height + delta.y);
-
-                    if (_activeEdge == RectEdge.Left || _activeEdge == RectEdge.TopLeft || _activeEdge == RectEdge.BottomLeft)
+                    if (Event.current.type == EventType.MouseUp) { _isResizing = false; _activeEdge = RectEdge.None; }
+                    else if (Event.current.type == EventType.MouseDrag)
                     {
-                        float oldX = _windowRect.x;
-                        _windowRect.x = Mathf.Min(_windowRect.xMax - minW, _windowRect.x + delta.x);
-                        _windowRect.width += oldX - _windowRect.x;
-                    }
+                        Vector2 delta = Event.current.delta;
+                        float minW = 227f;
+                        float minH = 330f;
 
-                    if (_activeEdge == RectEdge.Top || _activeEdge == RectEdge.TopLeft || _activeEdge == RectEdge.TopRight)
+                        if (_activeEdge == RectEdge.Right || _activeEdge == RectEdge.TopRight || _activeEdge == RectEdge.BottomRight)
+                            _windowRect.width = Mathf.Max(minW, _windowRect.width + delta.x);
+
+                        if (_activeEdge == RectEdge.Bottom || _activeEdge == RectEdge.BottomLeft || _activeEdge == RectEdge.BottomRight)
+                            _windowRect.height = Mathf.Max(minH, _windowRect.height + delta.y);
+
+                        if (_activeEdge == RectEdge.Left || _activeEdge == RectEdge.TopLeft || _activeEdge == RectEdge.BottomLeft)
+                        {
+                            float oldX = _windowRect.x;
+                            _windowRect.x = Mathf.Min(_windowRect.xMax - minW, _windowRect.x + delta.x);
+                            _windowRect.width += oldX - _windowRect.x;
+                        }
+
+                        if (_activeEdge == RectEdge.Top || _activeEdge == RectEdge.TopLeft || _activeEdge == RectEdge.TopRight)
+                        {
+                            float oldY = _windowRect.y;
+                            _windowRect.y = Mathf.Min(_windowRect.yMax - minH, _windowRect.y + delta.y);
+                            _windowRect.height += oldY - _windowRect.y;
+                        }
+                        Event.current.Use();
+                    }
+                }
+
+                if (_firstWindowInit)
+                {
+                    float x = UI_PosX.Value;
+                    float y = UI_PosY.Value;
+                    float w = Mathf.Max(227f, UI_Width.Value);
+                    float h = Mathf.Max(330f, UI_Height.Value);
+
+                    if (x < 0) x = Screen.width - w - 20;
+                    if (y < 0) y = Screen.height - h - 50;
+
+                    _windowRect = new Rect(x, y, w, h);
+                    _firstWindowInit = false;
+                }
+
+                Vector2 mousePos = Event.current.mousePosition;
+                float thickness = 8f;
+
+                if (Event.current.type == EventType.MouseDown && _showMenu)
+                {
+                    bool withinVertical = mousePos.y >= _windowRect.y - thickness && mousePos.y <= _windowRect.yMax + thickness;
+                    bool withinHorizontal = mousePos.x >= _windowRect.x - thickness && mousePos.x <= _windowRect.xMax + thickness;
+
+                    bool closeLeft = Mathf.Abs(mousePos.x - _windowRect.x) < thickness && withinVertical;
+                    bool closeRight = Mathf.Abs(mousePos.x - _windowRect.xMax) < thickness && withinVertical;
+                    bool closeTop = Mathf.Abs(mousePos.y - _windowRect.y) < thickness && withinHorizontal;
+                    bool closeBottom = Mathf.Abs(mousePos.y - _windowRect.yMax) < thickness && withinHorizontal;
+
+                    if (closeLeft && closeTop) _activeEdge = RectEdge.TopLeft;
+                    else if (closeRight && closeTop) _activeEdge = RectEdge.TopRight;
+                    else if (closeLeft && closeBottom) _activeEdge = RectEdge.BottomLeft;
+                    else if (closeRight && closeBottom) _activeEdge = RectEdge.BottomRight;
+                    else if (closeLeft) _activeEdge = RectEdge.Left;
+                    else if (closeRight) _activeEdge = RectEdge.Right;
+                    else if (closeTop) _activeEdge = RectEdge.Top;
+                    else if (closeBottom) _activeEdge = RectEdge.Bottom;
+
+                    if (_activeEdge != RectEdge.None)
                     {
-                        float oldY = _windowRect.y;
-                        _windowRect.y = Mathf.Min(_windowRect.yMax - minH, _windowRect.y + delta.y);
-                        _windowRect.height += oldY - _windowRect.y;
+                        _isResizing = true;
+                        Event.current.Use();
                     }
-                    Event.current.Use();
                 }
-            }
 
-            if (_firstWindowInit)
-            {
-                float x = UI_PosX.Value;
-                float y = UI_PosY.Value;
-                float w = Mathf.Max(227f, UI_Width.Value);
-                float h = Mathf.Max(330f, UI_Height.Value);
-
-                if (x < 0) x = Screen.width - w - 20;
-                if (y < 0) y = Screen.height - h - 50;
-
-                _windowRect = new Rect(x, y, w, h);
-                _firstWindowInit = false;
-            }
-
-            Vector2 mousePos = Event.current.mousePosition;
-            float thickness = 8f;
-
-            if (Event.current.type == EventType.MouseDown && _showMenu)
-            {
-                bool withinVertical = mousePos.y >= _windowRect.y - thickness && mousePos.y <= _windowRect.yMax + thickness;
-                bool withinHorizontal = mousePos.x >= _windowRect.x - thickness && mousePos.x <= _windowRect.xMax + thickness;
-
-                bool closeLeft = Mathf.Abs(mousePos.x - _windowRect.x) < thickness && withinVertical;
-                bool closeRight = Mathf.Abs(mousePos.x - _windowRect.xMax) < thickness && withinVertical;
-                bool closeTop = Mathf.Abs(mousePos.y - _windowRect.y) < thickness && withinHorizontal;
-                bool closeBottom = Mathf.Abs(mousePos.y - _windowRect.yMax) < thickness && withinHorizontal;
-
-                if (closeLeft && closeTop) _activeEdge = RectEdge.TopLeft;
-                else if (closeRight && closeTop) _activeEdge = RectEdge.TopRight;
-                else if (closeLeft && closeBottom) _activeEdge = RectEdge.BottomLeft;
-                else if (closeRight && closeBottom) _activeEdge = RectEdge.BottomRight;
-                else if (closeLeft) _activeEdge = RectEdge.Left;
-                else if (closeRight) _activeEdge = RectEdge.Right;
-                else if (closeTop) _activeEdge = RectEdge.Top;
-                else if (closeBottom) _activeEdge = RectEdge.Bottom;
-
-                if (_activeEdge != RectEdge.None)
+                if (Event.current.type == EventType.MouseUp && _showMenu)
                 {
-                    _isResizing = true;
-                    Event.current.Use();
+                    if (_windowRect.x != UI_PosX.Value || _windowRect.y != UI_PosY.Value ||
+                        _windowRect.width != UI_Width.Value || _windowRect.height != UI_Height.Value)
+                    {
+                        UI_PosX.Value = _windowRect.x;
+                        UI_PosY.Value = _windowRect.y;
+                        UI_Width.Value = _windowRect.width;
+                        UI_Height.Value = _windowRect.height;
+                    }
+                    _isResizing = false;
+                    _activeEdge = RectEdge.None;
                 }
-            }
 
-            if (Event.current.type == EventType.MouseUp && _showMenu)
-            {
-                if (_windowRect.x != UI_PosX.Value || _windowRect.y != UI_PosY.Value ||
-                    _windowRect.width != UI_Width.Value || _windowRect.height != UI_Height.Value)
+                _windowRect.width = Mathf.Min(_windowRect.width, Screen.width);
+                _windowRect.height = Mathf.Min(_windowRect.height, Screen.height);
+
+                GUI.depth = 0;
+                _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, "Autopilot controls", _styleWindow);
+
+                float clampedX = Mathf.Clamp(_windowRect.x, 0, Screen.width - _windowRect.width);
+                float clampedY = Mathf.Clamp(_windowRect.y, 0, Screen.height - _windowRect.height);
+
+                if (clampedX != _windowRect.x || clampedY != _windowRect.y)
                 {
-                    UI_PosX.Value = _windowRect.x;
-                    UI_PosY.Value = _windowRect.y;
-                    UI_Width.Value = _windowRect.width;
-                    UI_Height.Value = _windowRect.height;
+                    _windowRect.x = clampedX;
+                    _windowRect.y = clampedY;
                 }
-                _isResizing = false;
-                _activeEdge = RectEdge.None;
+
+                GUI.depth = -1;
+                DrawCustomTooltip();
             }
-
-            _windowRect.width = Mathf.Min(_windowRect.width, Screen.width);
-            _windowRect.height = Mathf.Min(_windowRect.height, Screen.height);
-
-            GUI.depth = 0;
-            _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, "Autopilot controls", _styleWindow);
-
-            float clampedX = Mathf.Clamp(_windowRect.x, 0, Screen.width - _windowRect.width);
-            float clampedY = Mathf.Clamp(_windowRect.y, 0, Screen.height - _windowRect.height);
-
-            if (clampedX != _windowRect.x || clampedY != _windowRect.y)
+            finally
             {
-                _windowRect.x = clampedX;
-                _windowRect.y = clampedY;
+                GUI.color = oldGuiColor;
             }
-
-            GUI.depth = -1;
-            DrawCustomTooltip();
         }
 
         // gui
@@ -1548,6 +1584,28 @@ namespace NOAutopilot
             APData.IsMultiplayerCached = false;
             return false;
         }
+
+        private void ClearAllStatics()
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+
+            foreach (var type in assembly.GetTypes())
+            {
+                var fields = type.GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+
+                foreach (var field in fields)
+                {
+                    if (field.IsLiteral || field.IsInitOnly) continue;
+
+                    try
+                    {
+                        object defaultValue = field.FieldType.IsValueType ? Activator.CreateInstance(field.FieldType) : null;
+                        field.SetValue(null, defaultValue);
+                    }
+                    catch { }
+                }
+            }
+        }
     }
 
     public static class ModUtils
@@ -1687,6 +1745,8 @@ namespace NOAutopilot
         public static float SavedMapZoom = 1f;
         public static bool SavedMapFollow = true;
         public static bool MapStateStored = false;
+        public static float BloodPressure = 1f;
+        public static bool IsConscious = true;
 
         public static void Reset()
         {
@@ -1721,6 +1781,8 @@ namespace NOAutopilot
             SavedMapPos = Vector2.zero;
             SavedMapZoom = 1f;
             SavedMapFollow = true;
+            BloodPressure = 1f;
+            IsConscious = true;
 
             NavQueue.Clear();
             foreach (var obj in NavVisuals)
@@ -1991,6 +2053,17 @@ namespace NOAutopilot
                 {
                     Vector3 pAccel = (Vector3)Plugin.m_GetAccel.Invoke(APData.LocalPilot, null);
                     currentG = Vector3.Dot(pAccel + Vector3.up, pUp);
+
+                    Component pilotComp = APData.LocalPilot as Component;
+                    if (pilotComp != null)
+                    {
+                        var gloc = pilotComp.GetComponent(Plugin.t_GLOC);
+                        if (gloc != null)
+                        {
+                            APData.BloodPressure = (float)Plugin.f_bloodPressure.GetValue(gloc);
+                            APData.IsConscious = (bool)Plugin.f_conscious.GetValue(gloc);
+                        }
+                    }
                 }
 
                 // gcas
@@ -2373,18 +2446,18 @@ namespace NOAutopilot
                         float bStep = Plugin.BigAltStep.Value * fpsRef * dt;
                         float cStep = Plugin.ClimbRateStep.Value * fpsRef * dt;
                         float rStep = Plugin.BankStep.Value * fpsRef * dt;
-                        if (Plugin.UpKey.Value.IsPressed()) APData.TargetAlt += aStep;
-                        if (Plugin.DownKey.Value.IsPressed()) APData.TargetAlt -= aStep;
-                        if (Plugin.BigUpKey.Value.IsPressed()) APData.TargetAlt += bStep;
-                        if (Plugin.BigDownKey.Value.IsPressed()) APData.TargetAlt = Mathf.Max(APData.TargetAlt - bStep, Plugin.MinAltitude.Value);
+                        if (InputHelper.IsPressed(Plugin.UpKeyRW) || Plugin.UpKey.Value.IsPressed()) APData.TargetAlt += aStep;
+                        if (InputHelper.IsPressed(Plugin.DownKeyRW) || Plugin.DownKey.Value.IsPressed()) APData.TargetAlt -= aStep;
+                        if (InputHelper.IsPressed(Plugin.BigUpKeyRW) || Plugin.BigUpKey.Value.IsPressed()) APData.TargetAlt += bStep;
+                        if (InputHelper.IsPressed(Plugin.BigDownKeyRW) || Plugin.BigDownKey.Value.IsPressed()) APData.TargetAlt = Mathf.Max(APData.TargetAlt - bStep, Plugin.MinAltitude.Value);
 
-                        if (Plugin.ClimbRateUpKey.Value.IsPressed()) APData.CurrentMaxClimbRate += cStep;
-                        if (Plugin.ClimbRateDownKey.Value.IsPressed()) APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - cStep);
+                        if (InputHelper.IsPressed(Plugin.ClimbRateUpKeyRW) || Plugin.ClimbRateUpKey.Value.IsPressed()) APData.CurrentMaxClimbRate += cStep;
+                        if (InputHelper.IsPressed(Plugin.ClimbRateDownKeyRW) || Plugin.ClimbRateDownKey.Value.IsPressed()) APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - cStep);
 
                         if (APData.NavEnabled)
                         {
-                            bool bankLeft = Plugin.BankLeftKey.Value.IsPressed();
-                            bool bankRight = Plugin.BankRightKey.Value.IsPressed();
+                            bool bankLeft = InputHelper.IsPressed(Plugin.BankLeftKeyRW) || Plugin.BankLeftKey.Value.IsPressed();
+                            bool bankRight = InputHelper.IsPressed(Plugin.BankRightKeyRW) || Plugin.BankRightKey.Value.IsPressed();
                             if (bankLeft || bankRight)
                             {
                                 if (APData.TargetRoll == -999f) APData.TargetRoll = Plugin.DefaultCRLimit.Value;
@@ -2397,13 +2470,13 @@ namespace NOAutopilot
                         }
                         if (APData.TargetCourse >= 0f)
                         {
-                            if (Plugin.BankLeftKey.Value.IsPressed()) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - rStep, 360f);
-                            if (Plugin.BankRightKey.Value.IsPressed()) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse + rStep, 360f);
+                            if (InputHelper.IsPressed(Plugin.BankLeftKeyRW) || Plugin.BankLeftKey.Value.IsPressed()) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - rStep, 360f);
+                            if (InputHelper.IsPressed(Plugin.BankRightKeyRW) || Plugin.BankRightKey.Value.IsPressed()) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse + rStep, 360f);
                         }
                         else
                         {
-                            bool bankLeft = Plugin.BankLeftKey.Value.IsPressed();
-                            bool bankRight = Plugin.BankRightKey.Value.IsPressed();
+                            bool bankLeft = InputHelper.IsPressed(Plugin.BankLeftKeyRW) || Plugin.BankLeftKey.Value.IsPressed();
+                            bool bankRight = InputHelper.IsPressed(Plugin.BankRightKeyRW) || Plugin.BankRightKey.Value.IsPressed();
                             if (bankLeft || bankRight)
                             {
                                 if (APData.TargetRoll == -999f) APData.TargetRoll = APData.CurrentRoll;
@@ -2415,7 +2488,7 @@ namespace NOAutopilot
                             }
                         }
 
-                        if (Plugin.ClearKey.Value.IsDown())
+                        if (InputHelper.IsDown(Plugin.ClearKeyRW) || Plugin.ClearKey.Value.IsDown())
                         {
                             if (APData.NavEnabled)
                             {
@@ -3257,6 +3330,116 @@ namespace NOAutopilot
             _lastMeasurement = measurement;
 
             return (error * kp) + Integral + (derivative * kd);
+        }
+    }
+
+    internal sealed class ConfigurationManagerAttributes
+    {
+        public bool? Browsable;
+        // public bool? HideDefaultButton;
+        // public int? Order;
+        public Action<ConfigEntryBase> CustomDrawer;
+        public object ControllerName;
+        public object ButtonIndex;
+    }
+
+    internal static class RewiredConfigManager
+    {
+        private static bool _isListening = false;
+        private static ConfigEntryBase _targetEntry, _targetController, _targetIndex;
+
+        public static ConfigEntry<string> BindRW(ConfigFile config, string category, string keyName, string description)
+        {
+            var cName = config.Bind("Hidden", keyName + "_CN", "", new ConfigDescription("", null, new ConfigurationManagerAttributes { Browsable = false }));
+            var bIdx = config.Bind("Hidden", keyName + "_IX", -1, new ConfigDescription("", null, new ConfigurationManagerAttributes { Browsable = false }));
+            return config.Bind(category, keyName, "", new ConfigDescription(description, null, new ConfigurationManagerAttributes
+            {
+                CustomDrawer = RewiredButtonDrawer,
+                ControllerName = cName,
+                ButtonIndex = bIdx
+            }));
+        }
+
+        public static void Update()
+        {
+            if (!_isListening || ReInput.controllers == null) return;
+            foreach (var c in ReInput.controllers.Joysticks) if (CheckController(c)) return;
+            if (Input.GetKeyDown(KeyCode.Escape)) _isListening = false;
+        }
+
+        private static bool CheckController(Controller c)
+        {
+            if (c == null || !c.GetAnyButtonDown()) return false;
+            for (int i = 0; i < c.buttonCount; i++)
+            {
+                if (c.GetButtonDown(i))
+                {
+                    string cName = c.name.Trim();
+                    string bName = "Button " + i;
+
+                    var elements = Traverse.Create(c).Field("KHksquAJKcDEUkNfJQjMANjDEBFB").GetValue<IList>();
+                    if (elements != null && i < elements.Count)
+                    {
+                        var id = Traverse.Create(elements[i]).Property("elementIdentifier").GetValue<ControllerElementIdentifier>();
+                        if (id != null) bName = id.name;
+                    }
+
+                    _targetEntry.BoxedValue = $"{cName} | {bName} | {i}";
+                    if (_targetController != null) _targetController.BoxedValue = cName;
+                    if (_targetIndex != null) _targetIndex.BoxedValue = i;
+                    _isListening = false;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static void RewiredButtonDrawer(ConfigEntryBase entry)
+        {
+            if (_isListening && _targetEntry == entry)
+            {
+                if (GUILayout.Button("Listening... (Esc to cancel)", GUILayout.ExpandWidth(true))) _isListening = false;
+            }
+            else
+            {
+                string val = (string)entry.BoxedValue;
+                if (GUILayout.Button(string.IsNullOrEmpty(val) ? "None - Click to bind (Rewired)" : val, GUILayout.ExpandWidth(true)))
+                {
+                    _isListening = true;
+                    _targetEntry = entry;
+                    var attr = entry.Description.Tags?.OfType<ConfigurationManagerAttributes>().FirstOrDefault();
+                    _targetController = attr?.ControllerName as ConfigEntryBase;
+                    _targetIndex = attr?.ButtonIndex as ConfigEntryBase;
+                }
+            }
+        }
+
+        public static void Reset()
+        {
+            _isListening = false;
+            _targetEntry = null;
+            _targetController = null;
+            _targetIndex = null;
+        }
+    }
+
+    public static class InputHelper
+    {
+        public static bool IsDown(ConfigEntry<string> rw) => PollRewired(rw, true);
+        public static bool IsPressed(ConfigEntry<string> rw) => PollRewired(rw, false);
+
+        private static bool PollRewired(ConfigEntry<string> rw, bool checkDown)
+        {
+            string b = rw?.Value;
+            if (string.IsNullOrEmpty(b) || !b.Contains("|") || ReInput.controllers == null) return false;
+            string[] p = b.Split('|');
+            if (p.Length < 3 || !int.TryParse(p[2].Trim(), out int idx)) return false;
+            string cName = p[0].Trim();
+
+            foreach (var c in ReInput.controllers.Joysticks) if (c.name.Trim() == cName) return checkDown ? c.GetButtonDown(idx) : c.GetButton(idx);
+            var k = ReInput.controllers.Keyboard;
+            if (k != null && k.name.Trim() == cName) return checkDown ? k.GetButtonDown(idx) : k.GetButton(idx);
+            return false;
         }
     }
 }

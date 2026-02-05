@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.15.0] - 2026-02-05
+
+## Added
+
+- rewired input (for hotas, controller) (thanks to original implementation in [NOTT](https://github.com/clumzy/NO_Tactitools))
+- gloc support for the gui
+
 ## [4.14.0] - 2026-02-04
 
 ### Added

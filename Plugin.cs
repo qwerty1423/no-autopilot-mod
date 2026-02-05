@@ -98,7 +98,7 @@ namespace NOAutopilot
         public static ConfigEntry<bool> AltShowUnit;
         public static ConfigEntry<bool> DistShowUnit;
         public static ConfigEntry<bool> VertSpeedShowUnit;
-        public static ConfigEntry<bool> SpeedShowUnit; // for future
+        public static ConfigEntry<bool> SpeedShowUnit;
         public static ConfigEntry<bool> AngleShowUnit;
 
         // Settings
@@ -283,7 +283,7 @@ namespace NOAutopilot
             ToggleFBWKey = Config.Bind("Controls", "3. Toggle FBW Key", new KeyboardShortcut(KeyCode.Delete), "works in singleplayer");
             AutoJammerKey = Config.Bind("Controls", "4. Auto Jammer Key", new KeyboardShortcut(KeyCode.Slash), "Key to toggle jamming");
             ToggleGCASKey = Config.Bind("Controls", "5. Toggle GCAS Key", new KeyboardShortcut(KeyCode.Backslash), "Turn Auto-GCAS on/off");
-            ClearKey = Config.Bind("Controls", "06. clear crs/roll/alt/roll", new KeyboardShortcut(KeyCode.Quote), "every click will clear/reset first thing it sees isn't clear from left to right");
+            ClearKey = Config.Bind("Controls", "6. clear roll/nav/crs/roll/alt/roll", new KeyboardShortcut(KeyCode.Quote), "every press will clear/reset first thing it sees isn't clear from left to right");
             UpKey = Config.Bind("Controls - Altitude", "1. Altitude Up (Small)", new KeyboardShortcut(KeyCode.UpArrow), "small increase");
             DownKey = Config.Bind("Controls - Altitude", "2. Altitude Down (Small)", new KeyboardShortcut(KeyCode.DownArrow), "small decrease");
             BigUpKey = Config.Bind("Controls - Altitude", "3. Altitude Up (Big)", new KeyboardShortcut(KeyCode.LeftArrow), "large increase");
@@ -304,7 +304,7 @@ namespace NOAutopilot
             ToggleFBWKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "3. Toggle FBW", "works in singleplayer");
             AutoJammerKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "4. Toggle AJ", "Toggle auto jamming with jamming pods");
             ToggleGCASKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5. Toggle GCAS", "Turn Auto-GCAS on/off");
-            ClearKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear crs/roll/alt/roll", "every click will clear/reset first thing it sees isn't clear from left to right");
+            ClearKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear roll/nav/crs/roll/alt/roll", "every use will clear/reset first thing it sees isn't clear from left to right");
             UpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "1. Altitude Up (Small)", "small increase");
             DownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "2. Altitude Down (Small)", "small decrease");
             BigUpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "3. Altitude Up (Big)", "large increase");
@@ -434,7 +434,7 @@ namespace NOAutopilot
                 f_gearState = typeof(Aircraft).GetField("gearState", flags);
                 f_weaponManager = typeof(Aircraft).GetField("weaponManager", flags);
 
-                Check(f_fuelCapacity, "f_controlsFilter");
+                Check(f_controlsFilter, "f_controlsFilter");
                 Check(f_fuelCapacity, "f_fuelCapacity");
                 Check(f_pilots, "f_pilots");
                 Check(f_gearState, "f_gearState");
@@ -751,7 +751,7 @@ namespace NOAutopilot
             {
                 float rawSpeed = APData.PlayerRB.velocity.magnitude;
                 float alpha = 1.0f - Mathf.Exp(-Time.deltaTime * 2.0f);
-                APData.SpeedEma = Mathf.Lerp(APData.SpeedEma, rawSpeed, alpha);
+                APData.SpeedEma = Mathf.Max(Mathf.Lerp(APData.SpeedEma, rawSpeed, alpha), 0.0001f);
             }
         }
 
@@ -1075,7 +1075,7 @@ namespace NOAutopilot
                     }
                     else
                     {
-                        float ms = Mathf.Max(val * sos);
+                        float ms = Mathf.Max(0, val * sos);
                         float display = ModUtils.ConvertSpeed_ToDisplay(ms);
                         _bufSpeed = display.ToString("F0");
                         if (APData.TargetSpeed >= 0) APData.TargetSpeed = ms;
@@ -1286,8 +1286,6 @@ namespace NOAutopilot
                 // next wp row
                 string nextDistStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distNext), Plugin.DistShowUnit.Value);
                 GUILayout.Label(new GUIContent($"Next: {nextDistStr}", "Distance to next wp"), _styleLabel);
-
-                if (APData.SpeedEma < 0.0001f) APData.SpeedEma = 0.0001f;
 
                 float etaNext = distNext / APData.SpeedEma;
                 string sEtaNext = (etaNext > 3599) ? TimeSpan.FromSeconds(etaNext).ToString(@"h\:mm\:ss") : TimeSpan.FromSeconds(etaNext).ToString(@"mm\:ss");
@@ -3363,42 +3361,58 @@ namespace NOAutopilot
         public static void Update()
         {
             if (!_isListening || ReInput.controllers == null) return;
-            foreach (var c in ReInput.controllers.Joysticks) if (CheckController(c)) return;
-            if (Input.GetKeyDown(KeyCode.Escape)) _isListening = false;
+            foreach (var j in ReInput.controllers.Joysticks) if (CheckController(j)) return;
+            if (CheckController(ReInput.controllers.Mouse)) return;
         }
 
         private static bool CheckController(Controller c)
         {
-            if (c == null || !c.GetAnyButtonDown()) return false;
+            if (c == null) return false;
             for (int i = 0; i < c.buttonCount; i++)
             {
                 if (c.GetButtonDown(i))
                 {
-                    string cName = c.name.Trim();
-                    string bName = "Button " + i;
+                    if (c.type == ControllerType.Mouse && i <= 2) continue;
 
-                    var elements = Traverse.Create(c).Field("KHksquAJKcDEUkNfJQjMANjDEBFB").GetValue<IList>();
-                    if (elements != null && i < elements.Count)
-                    {
-                        var id = Traverse.Create(elements[i]).Property("elementIdentifier").GetValue<ControllerElementIdentifier>();
-                        if (id != null) bName = id.name;
-                    }
-
-                    _targetEntry.BoxedValue = $"{cName} | {bName} | {i}";
-                    if (_targetController != null) _targetController.BoxedValue = cName;
-                    if (_targetIndex != null) _targetIndex.BoxedValue = i;
-                    _isListening = false;
+                    var btn = c.Buttons[i];
+                    SaveBind(c, btn.elementIdentifier.name, btn.elementIdentifier.id, "B");
                     return true;
                 }
             }
+
+            if (c.type == ControllerType.Mouse) return false;
+
+            foreach (var element in c.Elements)
+            {
+                if (element is Controller.Axis axis)
+                {
+                    if (Mathf.Abs(axis.value) > 0.7f)
+                    {
+                        SaveBind(c, axis.elementIdentifier.name, axis.elementIdentifier.id, "A");
+                        return true;
+                    }
+                }
+            }
             return false;
+        }
+
+        private static void SaveBind(Controller c, string elemName, int id, string typeTag)
+        {
+            string cName = c.name.Trim();
+            _targetEntry.BoxedValue = $"{cName} | {elemName} | {id} | {typeTag}";
+            if (_targetController != null) _targetController.BoxedValue = cName;
+            if (_targetIndex != null) _targetIndex.BoxedValue = id;
+            _isListening = false;
         }
 
         public static void RewiredButtonDrawer(ConfigEntryBase entry)
         {
             if (_isListening && _targetEntry == entry)
             {
-                if (GUILayout.Button("Listening... (Esc to cancel)", GUILayout.ExpandWidth(true))) _isListening = false;
+                if (GUILayout.Button("Listening... (Click to cancel)", GUILayout.ExpandWidth(true)))
+                {
+                    _isListening = false;
+                }
             }
             else
             {
@@ -3414,13 +3428,7 @@ namespace NOAutopilot
             }
         }
 
-        public static void Reset()
-        {
-            _isListening = false;
-            _targetEntry = null;
-            _targetController = null;
-            _targetIndex = null;
-        }
+        public static void Reset() => _isListening = false;
     }
 
     public static class InputHelper
@@ -3430,15 +3438,38 @@ namespace NOAutopilot
 
         private static bool PollRewired(ConfigEntry<string> rw, bool checkDown)
         {
-            string b = rw?.Value;
-            if (string.IsNullOrEmpty(b) || !b.Contains("|") || ReInput.controllers == null) return false;
-            string[] p = b.Split('|');
-            if (p.Length < 3 || !int.TryParse(p[2].Trim(), out int idx)) return false;
-            string cName = p[0].Trim();
+            string val = rw?.Value;
+            if (string.IsNullOrEmpty(val) || !val.Contains("|") || ReInput.controllers == null) return false;
 
-            foreach (var c in ReInput.controllers.Joysticks) if (c.name.Trim() == cName) return checkDown ? c.GetButtonDown(idx) : c.GetButton(idx);
-            var k = ReInput.controllers.Keyboard;
-            if (k != null && k.name.Trim() == cName) return checkDown ? k.GetButtonDown(idx) : k.GetButton(idx);
+            string[] p = val.Split('|');
+            if (p.Length < 3) return false;
+
+            string cName = p[0].Trim();
+            if (!int.TryParse(p[2].Trim(), out int id)) return false;
+            bool isAxis = p.Length >= 4 && p[3].Trim() == "A";
+
+            Controller target = null;
+            foreach (var j in ReInput.controllers.Joysticks) if (j.name.Trim() == cName) { target = j; break; }
+            if (target == null && ReInput.controllers.Mouse.name.Trim() == cName) target = ReInput.controllers.Mouse;
+            if (target == null && ReInput.controllers.Keyboard.name.Trim() == cName) target = ReInput.controllers.Keyboard;
+
+            if (target != null)
+            {
+                var element = target.GetElementById(id);
+                if (element == null) return false;
+
+                if (isAxis && element is Controller.Axis axis)
+                {
+                    return Mathf.Abs(axis.value) > 0.5f;
+                }
+
+                if (element is Controller.Button)
+                {
+                    int idx = target.GetButtonIndexById(id);
+                    if (idx < 0) return false;
+                    return checkDown ? target.GetButtonDown(idx) : target.GetButton(idx);
+                }
+            }
             return false;
         }
     }

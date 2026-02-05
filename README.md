@@ -39,6 +39,8 @@ If you're stuck you can try Primeva 2082 discord's mod install guide:
 
 or ask for help on the nuclear option discord.
 
+There are also more mods available on the discord.
+
 ## Updates
 
 After updates, it is sometimes recommended to regenerate your config file at `BepInEx/config/com.qwerty1423.NOAutopilot.cfg` by either deleting it or moving it somewhere else and merging your changes with the newer version, because default config may change after an update.

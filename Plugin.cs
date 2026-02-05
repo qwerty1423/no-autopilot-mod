@@ -802,120 +802,130 @@ namespace NOAutopilot
                 guiAlpha = Mathf.Clamp01((APData.BloodPressure - 0.2f) / 0.4f);
             }
 
-            if (guiAlpha <= 0f) return;
+            if (guiAlpha <= 0f)
+            {
+                _isResizing = false;
+                return;
+            }
 
             if (!_stylesInitialized) InitStyles();
 
             Color oldGuiColor = GUI.color;
-            GUI.color = new Color(1, 1, 1, guiAlpha);
-
-            if (_isResizing)
+            try
             {
-                if (Event.current.type == EventType.MouseUp) { _isResizing = false; _activeEdge = RectEdge.None; }
-                else if (Event.current.type == EventType.MouseDrag)
+                GUI.color = new Color(1, 1, 1, guiAlpha);
+
+                if (_isResizing)
                 {
-                    Vector2 delta = Event.current.delta;
-                    float minW = 227f;
-                    float minH = 330f;
-
-                    if (_activeEdge == RectEdge.Right || _activeEdge == RectEdge.TopRight || _activeEdge == RectEdge.BottomRight)
-                        _windowRect.width = Mathf.Max(minW, _windowRect.width + delta.x);
-
-                    if (_activeEdge == RectEdge.Bottom || _activeEdge == RectEdge.BottomLeft || _activeEdge == RectEdge.BottomRight)
-                        _windowRect.height = Mathf.Max(minH, _windowRect.height + delta.y);
-
-                    if (_activeEdge == RectEdge.Left || _activeEdge == RectEdge.TopLeft || _activeEdge == RectEdge.BottomLeft)
+                    if (Event.current.type == EventType.MouseUp) { _isResizing = false; _activeEdge = RectEdge.None; }
+                    else if (Event.current.type == EventType.MouseDrag)
                     {
-                        float oldX = _windowRect.x;
-                        _windowRect.x = Mathf.Min(_windowRect.xMax - minW, _windowRect.x + delta.x);
-                        _windowRect.width += oldX - _windowRect.x;
-                    }
+                        Vector2 delta = Event.current.delta;
+                        float minW = 227f;
+                        float minH = 330f;
 
-                    if (_activeEdge == RectEdge.Top || _activeEdge == RectEdge.TopLeft || _activeEdge == RectEdge.TopRight)
+                        if (_activeEdge == RectEdge.Right || _activeEdge == RectEdge.TopRight || _activeEdge == RectEdge.BottomRight)
+                            _windowRect.width = Mathf.Max(minW, _windowRect.width + delta.x);
+
+                        if (_activeEdge == RectEdge.Bottom || _activeEdge == RectEdge.BottomLeft || _activeEdge == RectEdge.BottomRight)
+                            _windowRect.height = Mathf.Max(minH, _windowRect.height + delta.y);
+
+                        if (_activeEdge == RectEdge.Left || _activeEdge == RectEdge.TopLeft || _activeEdge == RectEdge.BottomLeft)
+                        {
+                            float oldX = _windowRect.x;
+                            _windowRect.x = Mathf.Min(_windowRect.xMax - minW, _windowRect.x + delta.x);
+                            _windowRect.width += oldX - _windowRect.x;
+                        }
+
+                        if (_activeEdge == RectEdge.Top || _activeEdge == RectEdge.TopLeft || _activeEdge == RectEdge.TopRight)
+                        {
+                            float oldY = _windowRect.y;
+                            _windowRect.y = Mathf.Min(_windowRect.yMax - minH, _windowRect.y + delta.y);
+                            _windowRect.height += oldY - _windowRect.y;
+                        }
+                        Event.current.Use();
+                    }
+                }
+
+                if (_firstWindowInit)
+                {
+                    float x = UI_PosX.Value;
+                    float y = UI_PosY.Value;
+                    float w = Mathf.Max(227f, UI_Width.Value);
+                    float h = Mathf.Max(330f, UI_Height.Value);
+
+                    if (x < 0) x = Screen.width - w - 20;
+                    if (y < 0) y = Screen.height - h - 50;
+
+                    _windowRect = new Rect(x, y, w, h);
+                    _firstWindowInit = false;
+                }
+
+                Vector2 mousePos = Event.current.mousePosition;
+                float thickness = 8f;
+
+                if (Event.current.type == EventType.MouseDown && _showMenu)
+                {
+                    bool withinVertical = mousePos.y >= _windowRect.y - thickness && mousePos.y <= _windowRect.yMax + thickness;
+                    bool withinHorizontal = mousePos.x >= _windowRect.x - thickness && mousePos.x <= _windowRect.xMax + thickness;
+
+                    bool closeLeft = Mathf.Abs(mousePos.x - _windowRect.x) < thickness && withinVertical;
+                    bool closeRight = Mathf.Abs(mousePos.x - _windowRect.xMax) < thickness && withinVertical;
+                    bool closeTop = Mathf.Abs(mousePos.y - _windowRect.y) < thickness && withinHorizontal;
+                    bool closeBottom = Mathf.Abs(mousePos.y - _windowRect.yMax) < thickness && withinHorizontal;
+
+                    if (closeLeft && closeTop) _activeEdge = RectEdge.TopLeft;
+                    else if (closeRight && closeTop) _activeEdge = RectEdge.TopRight;
+                    else if (closeLeft && closeBottom) _activeEdge = RectEdge.BottomLeft;
+                    else if (closeRight && closeBottom) _activeEdge = RectEdge.BottomRight;
+                    else if (closeLeft) _activeEdge = RectEdge.Left;
+                    else if (closeRight) _activeEdge = RectEdge.Right;
+                    else if (closeTop) _activeEdge = RectEdge.Top;
+                    else if (closeBottom) _activeEdge = RectEdge.Bottom;
+
+                    if (_activeEdge != RectEdge.None)
                     {
-                        float oldY = _windowRect.y;
-                        _windowRect.y = Mathf.Min(_windowRect.yMax - minH, _windowRect.y + delta.y);
-                        _windowRect.height += oldY - _windowRect.y;
+                        _isResizing = true;
+                        Event.current.Use();
                     }
-                    Event.current.Use();
                 }
-            }
 
-            if (_firstWindowInit)
-            {
-                float x = UI_PosX.Value;
-                float y = UI_PosY.Value;
-                float w = Mathf.Max(227f, UI_Width.Value);
-                float h = Mathf.Max(330f, UI_Height.Value);
-
-                if (x < 0) x = Screen.width - w - 20;
-                if (y < 0) y = Screen.height - h - 50;
-
-                _windowRect = new Rect(x, y, w, h);
-                _firstWindowInit = false;
-            }
-
-            Vector2 mousePos = Event.current.mousePosition;
-            float thickness = 8f;
-
-            if (Event.current.type == EventType.MouseDown && _showMenu)
-            {
-                bool withinVertical = mousePos.y >= _windowRect.y - thickness && mousePos.y <= _windowRect.yMax + thickness;
-                bool withinHorizontal = mousePos.x >= _windowRect.x - thickness && mousePos.x <= _windowRect.xMax + thickness;
-
-                bool closeLeft = Mathf.Abs(mousePos.x - _windowRect.x) < thickness && withinVertical;
-                bool closeRight = Mathf.Abs(mousePos.x - _windowRect.xMax) < thickness && withinVertical;
-                bool closeTop = Mathf.Abs(mousePos.y - _windowRect.y) < thickness && withinHorizontal;
-                bool closeBottom = Mathf.Abs(mousePos.y - _windowRect.yMax) < thickness && withinHorizontal;
-
-                if (closeLeft && closeTop) _activeEdge = RectEdge.TopLeft;
-                else if (closeRight && closeTop) _activeEdge = RectEdge.TopRight;
-                else if (closeLeft && closeBottom) _activeEdge = RectEdge.BottomLeft;
-                else if (closeRight && closeBottom) _activeEdge = RectEdge.BottomRight;
-                else if (closeLeft) _activeEdge = RectEdge.Left;
-                else if (closeRight) _activeEdge = RectEdge.Right;
-                else if (closeTop) _activeEdge = RectEdge.Top;
-                else if (closeBottom) _activeEdge = RectEdge.Bottom;
-
-                if (_activeEdge != RectEdge.None)
+                if (Event.current.type == EventType.MouseUp && _showMenu)
                 {
-                    _isResizing = true;
-                    Event.current.Use();
+                    if (_windowRect.x != UI_PosX.Value || _windowRect.y != UI_PosY.Value ||
+                        _windowRect.width != UI_Width.Value || _windowRect.height != UI_Height.Value)
+                    {
+                        UI_PosX.Value = _windowRect.x;
+                        UI_PosY.Value = _windowRect.y;
+                        UI_Width.Value = _windowRect.width;
+                        UI_Height.Value = _windowRect.height;
+                    }
+                    _isResizing = false;
+                    _activeEdge = RectEdge.None;
                 }
-            }
 
-            if (Event.current.type == EventType.MouseUp && _showMenu)
-            {
-                if (_windowRect.x != UI_PosX.Value || _windowRect.y != UI_PosY.Value ||
-                    _windowRect.width != UI_Width.Value || _windowRect.height != UI_Height.Value)
+                _windowRect.width = Mathf.Min(_windowRect.width, Screen.width);
+                _windowRect.height = Mathf.Min(_windowRect.height, Screen.height);
+
+                GUI.depth = 0;
+                _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, "Autopilot controls", _styleWindow);
+
+                float clampedX = Mathf.Clamp(_windowRect.x, 0, Screen.width - _windowRect.width);
+                float clampedY = Mathf.Clamp(_windowRect.y, 0, Screen.height - _windowRect.height);
+
+                if (clampedX != _windowRect.x || clampedY != _windowRect.y)
                 {
-                    UI_PosX.Value = _windowRect.x;
-                    UI_PosY.Value = _windowRect.y;
-                    UI_Width.Value = _windowRect.width;
-                    UI_Height.Value = _windowRect.height;
+                    _windowRect.x = clampedX;
+                    _windowRect.y = clampedY;
                 }
-                _isResizing = false;
-                _activeEdge = RectEdge.None;
+
+                GUI.depth = -1;
+                DrawCustomTooltip();
             }
-
-            _windowRect.width = Mathf.Min(_windowRect.width, Screen.width);
-            _windowRect.height = Mathf.Min(_windowRect.height, Screen.height);
-
-            GUI.depth = 0;
-            _windowRect = GUI.Window(999, _windowRect, DrawAPWindow, "Autopilot controls", _styleWindow);
-
-            float clampedX = Mathf.Clamp(_windowRect.x, 0, Screen.width - _windowRect.width);
-            float clampedY = Mathf.Clamp(_windowRect.y, 0, Screen.height - _windowRect.height);
-
-            if (clampedX != _windowRect.x || clampedY != _windowRect.y)
+            finally
             {
-                _windowRect.x = clampedX;
-                _windowRect.y = clampedY;
+                GUI.color = oldGuiColor;
             }
-
-            GUI.depth = -1;
-            DrawCustomTooltip();
-            GUI.color = oldGuiColor;
         }
 
         // gui

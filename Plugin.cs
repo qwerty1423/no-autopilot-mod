@@ -299,11 +299,11 @@ namespace NOAutopilot
             ToggleABKey = Config.Bind("Controls - Speed", "5. Toggle Afterburner/Airbrake", new KeyboardShortcut(KeyCode.End), "Toggle AB/Airbrake limits");
 
             // Controls (Rewired)
-            MenuKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "1. Menu Key", "Open the Autopilot Menu");
-            ToggleKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "2. Toggle AP Key", "AP On/Off");
-            ToggleFBWKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "3. Toggle FBW Key", "works in singleplayer");
-            AutoJammerKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "4. Toggle Key", "Key to toggle jamming");
-            ToggleGCASKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5. Toggle GCAS Key", "Turn Auto-GCAS on/off");
+            MenuKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "1. Menu", "Open the Autopilot Menu");
+            ToggleKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "2. Toggle AP", "AP On/Off");
+            ToggleFBWKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "3. Toggle FBW", "works in singleplayer");
+            AutoJammerKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "4. Toggle AJ", "Toggle auto jamming with jamming pods");
+            ToggleGCASKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5. Toggle GCAS", "Turn Auto-GCAS on/off");
             ClearKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear crs/roll/alt/roll", "every click will clear/reset first thing it sees isn't clear from left to right");
             UpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "1. Altitude Up (Small)", "small increase");
             DownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "2. Altitude Down (Small)", "small decrease");

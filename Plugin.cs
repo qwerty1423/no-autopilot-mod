@@ -3363,6 +3363,7 @@ namespace NOAutopilot
             if (!_isListening || ReInput.controllers == null) return;
             foreach (var j in ReInput.controllers.Joysticks) if (CheckController(j)) return;
             if (CheckController(ReInput.controllers.Mouse)) return;
+            if (CheckController(ReInput.controllers.Keyboard)) return;
         }
 
         private static bool CheckController(Controller c)
@@ -3377,20 +3378,6 @@ namespace NOAutopilot
                     var btn = c.Buttons[i];
                     SaveBind(c, btn.elementIdentifier.name, btn.elementIdentifier.id, "B");
                     return true;
-                }
-            }
-
-            if (c.type == ControllerType.Mouse) return false;
-
-            foreach (var element in c.Elements)
-            {
-                if (element is Controller.Axis axis)
-                {
-                    if (Mathf.Abs(axis.value) > 0.7f)
-                    {
-                        SaveBind(c, axis.elementIdentifier.name, axis.elementIdentifier.id, "A");
-                        return true;
-                    }
                 }
             }
             return false;
@@ -3452,7 +3439,6 @@ namespace NOAutopilot
 
             string cName = p[0].Trim();
             if (!int.TryParse(p[2].Trim(), out int id)) return false;
-            bool isAxis = p.Length >= 4 && p[3].Trim() == "A";
 
             Controller target = null;
             foreach (var j in ReInput.controllers.Joysticks) if (j.name.Trim() == cName) { target = j; break; }
@@ -3463,11 +3449,6 @@ namespace NOAutopilot
             {
                 var element = target.GetElementById(id);
                 if (element == null) return false;
-
-                if (isAxis && element is Controller.Axis axis)
-                {
-                    return Mathf.Abs(axis.value) > 0.5f;
-                }
 
                 if (element is Controller.Button)
                 {

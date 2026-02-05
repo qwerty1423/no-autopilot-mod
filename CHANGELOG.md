@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.15.2] - 2026-02-06
+
+### Fixed
+
+- removed binding axes with rewired
+
 ## [4.15.1] - 2026-02-05
 
 ### Fixed
@@ -174,6 +180,7 @@
 
 ## [4.8.4] - 2025-12-29
 
+[4.15.2]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.1...v4.15.2
 [4.15.1]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.0...v4.15.1
 [4.15.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.14.0...v4.15.0
 [4.14.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.13.13...v4.14.0

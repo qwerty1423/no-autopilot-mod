@@ -93,7 +93,7 @@ namespace NOAutopilot
         public static ConfigEntry<float> OverlayOffsetX, OverlayOffsetY, FuelSmoothing, FuelUpdateInterval, DisplayUpdateInterval;
         public static ConfigEntry<int> FuelWarnMinutes, FuelCritMinutes;
         public static ConfigEntry<bool> ShowExtraInfo;
-        public static ConfigEntry<bool> ShowAPOverlay;
+        public static ConfigEntry<bool> ShowFuelOverlay, ShowAPOverlay;
         public static ConfigEntry<bool> ShowGCASOff, ShowOverride, ShowPlaceholders;
         public static ConfigEntry<bool> AltShowUnit;
         public static ConfigEntry<bool> DistShowUnit;
@@ -220,6 +220,7 @@ namespace NOAutopilot
             OverlayOffsetX = Config.Bind("Visuals - Layout", "1. Stack Start X", -18f, "HUD Horizontal position");
             OverlayOffsetY = Config.Bind("Visuals - Layout", "2. Stack Start Y", -10f, "HUD Vertical position");
             ShowExtraInfo = Config.Bind("Visuals", "Show Fuel/AP Info", true, "Show extra info on Fuel Gauge");
+            ShowFuelOverlay = Config.Bind("Visuals", "Show Fuel Overlay", true, "Draw fuel info text on the HUD.");
             ShowAPOverlay = Config.Bind("Visuals", "Show AP Overlay", true, "Draw AP status text on the HUD. Turn off if you want, there's a window now.");
             ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show GCAS OFF on HUD");
             ShowOverride = Config.Bind("Visuals", "Show Override Delay", true, "Show Override on HUD");
@@ -2887,29 +2888,32 @@ namespace NOAutopilot
                         _lastStringUpdate = Time.time;
                         _sbHud.Clear();
 
-                        if (currentFuel <= 0f)
+                        if (Plugin.ShowFuelOverlay.Value)
                         {
-                            _sbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">00:00\n----</color>\n");
-                        }
-                        else
-                        {
-                            float calcFlow = Mathf.Max(fuelFlowEma, 0.0001f);
-                            float secs = currentFuel / calcFlow;
-                            string sTime = TimeSpan.FromSeconds(Mathf.Min(secs, 359999f)).ToString("hh\\:mm");
-                            float mins = secs / 60f;
+                            if (currentFuel <= 0f)
+                            {
+                                _sbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">00:00\n----</color>\n");
+                            }
+                            else
+                            {
+                                float calcFlow = Mathf.Max(fuelFlowEma, 0.0001f);
+                                float secs = currentFuel / calcFlow;
+                                string sTime = TimeSpan.FromSeconds(Mathf.Min(secs, 359999f)).ToString("hh\\:mm");
+                                float mins = secs / 60f;
 
-                            string fuelCol = Plugin.ColorGood.Value;
-                            if (mins < Plugin.FuelCritMinutes.Value) fuelCol = Plugin.ColorCrit.Value;
-                            else if (mins < Plugin.FuelWarnMinutes.Value) fuelCol = Plugin.ColorWarn.Value;
+                                string fuelCol = Plugin.ColorGood.Value;
+                                if (mins < Plugin.FuelCritMinutes.Value) fuelCol = Plugin.ColorCrit.Value;
+                                else if (mins < Plugin.FuelWarnMinutes.Value) fuelCol = Plugin.ColorWarn.Value;
 
-                            _sbHud.Append("<color=").Append(fuelCol).Append(">").Append(sTime).Append("</color>\n");
+                                _sbHud.Append("<color=").Append(fuelCol).Append(">").Append(sTime).Append("</color>\n");
 
-                            float spd = (aircraft.rb != null) ? aircraft.rb.velocity.magnitude : 0f;
-                            float distMeters = secs * APData.SpeedEma;
-                            if (distMeters > 99999000f) distMeters = 99999000f;
+                                float spd = (aircraft.rb != null) ? aircraft.rb.velocity.magnitude : 0f;
+                                float distMeters = secs * APData.SpeedEma;
+                                if (distMeters > 99999000f) distMeters = 99999000f;
 
-                            string sRange = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters), Plugin.DistShowUnit.Value);
-                            _sbHud.Append("<color=").Append(Plugin.ColorRange.Value).Append(">").Append(sRange).Append("</color>\n\n");
+                                string sRange = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters), Plugin.DistShowUnit.Value);
+                                _sbHud.Append("<color=").Append(Plugin.ColorRange.Value).Append(">").Append(sRange).Append("</color>\n\n");
+                            }
                         }
 
                         // (AP was on before GCAS) or (AP is on and no GCAS)

@@ -106,7 +106,7 @@
   <Message Text="Creating ZIP archive for $(AssemblyName)..." Importance="high" />
 
   <Exec
-    Command="7z a -tzip -mx=9 -mtc=off -mta=off -mtm=off &quot;$(AssemblyName)-$(Version).zip&quot; &quot;$(AssemblyName).dll&quot;"
+    Command="7z a -tzip -mx=9 &quot;$(AssemblyName)-$(Version).zip&quot; &quot;$(AssemblyName).dll&quot;"
     WorkingDirectory="$(OutputPath)" />
   </Target>
 </Project>

@@ -8,7 +8,7 @@
 
 ### changed
 
-- renamed some variables and settings
+- renamed some variables
 
 ## [4.15.2] - 2026-02-06
 

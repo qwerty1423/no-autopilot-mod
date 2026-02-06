@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### fixed
+
+- keep dll timestamp so that bepinex cache updates properly
+
+### changed
+
+- renamed some variables and settings
+
 ## [4.15.2] - 2026-02-06
 
 ### Fixed

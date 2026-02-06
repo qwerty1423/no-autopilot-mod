@@ -650,7 +650,7 @@ namespace NOAutopilot
                     APData.TargetSpeed = -1f;
                     _bufSpeed = "";
                 }
-                else if (APData.PlayerRB != null)
+                else if (APData.PlayerRB != null && APData.LocalAircraft != null)
                 {
                     float currentTAS = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
                     if (APData.SpeedHoldIsMach)
@@ -1807,32 +1807,28 @@ namespace NOAutopilot
             try
             {
                 APData.CurrentAlt = altitude;
-                if (playerVehicle == null || playerVehicle is not Component v) return;
+                if (playerVehicle == null)
+                {
+                    lastVehicleObj = null;
+                    APData.LocalAircraft = null;
+                    APData.PlayerRB = null;
+                    return;
+                }
+
+                if (playerVehicle is not Component v) return;
 
                 if (v.gameObject != lastVehicleObj)
                 {
                     lastVehicleObj = v.gameObject;
-
+                    APData.Reset();
                     APData.PlayerTransform = v.transform;
                     APData.PlayerRB = v.GetComponent<Rigidbody>();
                     APData.LocalAircraft = v.GetComponent<Aircraft>();
 
-                    APData.Enabled = false;
-                    APData.UseSetValues = false;
-                    APData.GCASEnabled = Plugin.EnableGCAS.Value;
-                    APData.AutoJammerActive = false;
-                    APData.GCASActive = false;
-                    APData.GCASWarning = false;
-                    APData.FBWDisabled = false;
                     APData.TargetAlt = altitude;
                     APData.TargetRoll = 0f;
-                    APData.TargetSpeed = -1f;
-                    APData.TargetCourse = -1f;
-                    APData.CurrentMaxClimbRate = -1f;
-                    APData.LastOverrideInputTime = -999f;
-                    APData.GCASConverge = 0f;
-                    APData.LocalPilot = null;
-                    APData.LocalWeaponManager = null;
+                    APData.GCASEnabled = Plugin.EnableGCAS.Value;
+
                     if (APData.LocalAircraft != null)
                     {
                         if (Plugin.f_weaponManager != null)
@@ -1844,10 +1840,6 @@ namespace NOAutopilot
                             if (pilots != null && pilots.Count > 0) APData.LocalPilot = pilots[0];
                         }
                     }
-                    APData.NavEnabled = false;
-                    APData.NavQueue.Clear();
-                    foreach (var obj in APData.NavVisuals) if (obj != null) UnityEngine.Object.Destroy(obj);
-                    APData.NavVisuals.Clear();
                     Plugin.SyncMenuValues();
                     Plugin.CleanUpFBW();
                 }

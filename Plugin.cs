@@ -205,6 +205,9 @@ namespace NOAutopilot
         internal static FieldInfo f_bloodPressure;
         internal static FieldInfo f_conscious;
 
+        internal static Type t_LandingGear;
+        internal static MethodInfo m_WeightOnWheel;
+
         private void Awake()
         {
             Logger = base.Logger;
@@ -524,6 +527,11 @@ namespace NOAutopilot
                 f_conscious = t_GLOC.GetField("conscious", privateFlags);
                 Check(f_bloodPressure, "f_bloodPressure");
                 Check(f_conscious, "f_conscious");
+
+                t_LandingGear = typeof(Aircraft).Assembly.GetType("LandingGear");
+                Check(t_LandingGear, "t_LandingGear");
+                m_WeightOnWheel = t_LandingGear.GetMethod("WeightOnWheel", [typeof(float)]);
+                Check(m_WeightOnWheel, "m_WeightOnWheel");
             }
             catch (Exception ex)
             {
@@ -1746,6 +1754,7 @@ namespace NOAutopilot
         public static bool MapStateStored = false;
         public static float BloodPressure = 1f;
         public static bool IsConscious = true;
+        public static List<Component> LocalLandingGears = [];
 
         public static void Reset()
         {
@@ -1782,6 +1791,7 @@ namespace NOAutopilot
             SavedMapFollow = true;
             BloodPressure = 1f;
             IsConscious = true;
+            LocalLandingGears.Clear();
 
             NavQueue.Clear();
             foreach (var obj in NavVisuals)
@@ -1838,6 +1848,8 @@ namespace NOAutopilot
                         {
                             IList pilots = (IList)Plugin.f_pilots.GetValue(APData.LocalAircraft);
                             if (pilots != null && pilots.Count > 0) APData.LocalPilot = pilots[0];
+                            var gears = v.GetComponentsInChildren(Plugin.t_LandingGear);
+                            if (gears != null) foreach (var g in gears) APData.LocalLandingGears.Add(g);
                         }
                     }
                     Plugin.SyncMenuValues();
@@ -2060,6 +2072,21 @@ namespace NOAutopilot
                 // gcas
                 if (APData.GCASEnabled)
                 {
+                    if (APData.LocalLandingGears != null)
+                    {
+                        foreach (var gear in APData.LocalLandingGears)
+                        {
+                            if (gear != null && (bool)Plugin.m_WeightOnWheel.Invoke(gear, [0.1f]))
+                            {
+                                APData.GCASActive = false;
+                                APData.GCASWarning = false;
+                                dangerImminent = false;
+                                warningZone = false;
+                                break;
+                            }
+                        }
+                    }
+
                     bool gearDown = false;
                     Aircraft acRef = APData.LocalAircraft;
                     if (acRef != null && Plugin.f_gearState != null)

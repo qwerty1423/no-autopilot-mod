@@ -127,14 +127,14 @@ namespace NOAutopilot
         public static ConfigEntry<KeyboardShortcut> SpeedHoldKey, SpeedUpKey, SpeedDownKey;
         public static ConfigEntry<KeyboardShortcut> ToggleMachKey, ToggleABKey;
 
-        public static ConfigEntry<string> MenuKeyRW;
-        public static ConfigEntry<string> ToggleKeyRW, ToggleFBWKeyRW;
-        public static ConfigEntry<string> AutoJammerKeyRW, ToggleGCASKeyRW, ClearKeyRW;
-        public static ConfigEntry<string> UpKeyRW, DownKeyRW, BigUpKeyRW, BigDownKeyRW;
-        public static ConfigEntry<string> ClimbRateUpKeyRW, ClimbRateDownKeyRW;
-        public static ConfigEntry<string> BankLeftKeyRW, BankRightKeyRW;
-        public static ConfigEntry<string> SpeedHoldKeyRW, SpeedUpKeyRW, SpeedDownKeyRW;
-        public static ConfigEntry<string> ToggleMachKeyRW, ToggleABKeyRW;
+        public static ConfigEntry<string> MenuRW;
+        public static ConfigEntry<string> ToggleRW, ToggleFBWRW;
+        public static ConfigEntry<string> AutoJammerRW, ToggleGCASRW, ClearRW;
+        public static ConfigEntry<string> UpRW, DownRW, BigUpRW, BigDownRW;
+        public static ConfigEntry<string> ClimbRateUpRW, ClimbRateDownRW;
+        public static ConfigEntry<string> BankLeftRW, BankRightRW;
+        public static ConfigEntry<string> SpeedHoldRW, SpeedUpRW, SpeedDownRW;
+        public static ConfigEntry<string> ToggleMachRW, ToggleABRW;
 
         // Flight Values
         public static ConfigEntry<float> AltStep, BigAltStep, ClimbRateStep, BankStep, SpeedStep, MinAltitude;
@@ -300,25 +300,25 @@ namespace NOAutopilot
             ToggleABKey = Config.Bind("Controls - Speed", "5. Toggle Afterburner/Airbrake", new KeyboardShortcut(KeyCode.End), "Toggle AB/Airbrake limits");
 
             // Controls (Rewired)
-            MenuKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "1. Menu", "Open the Autopilot Menu");
-            ToggleKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "2. Toggle AP", "AP On/Off");
-            ToggleFBWKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "3. Toggle FBW", "works in singleplayer");
-            AutoJammerKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "4. Toggle AJ", "Toggle auto jamming with jamming pods");
-            ToggleGCASKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5. Toggle GCAS", "Turn Auto-GCAS on/off");
-            ClearKeyRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear roll/nav/crs/roll/alt/roll", "every use will clear/reset first thing it sees isn't clear from left to right");
-            UpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "1. Altitude Up (Small)", "small increase");
-            DownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "2. Altitude Down (Small)", "small decrease");
-            BigUpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "3. Altitude Up (Big)", "large increase");
-            BigDownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "4. Altitude Down (Big)", "large decrease");
-            ClimbRateUpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "5. Climb Rate Increase", "Increase Max VS");
-            ClimbRateDownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "6. Climb Rate Decrease", "Decrease Max VS");
-            BankLeftKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "1. Bank Left", "Roll/course Left");
-            BankRightKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "2. Bank Right", "Roll/course right");
-            SpeedHoldKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "1. Speed Hold Toggle", "speed hold/clear");
-            SpeedUpKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "2. Target Speed Increase", "Increase target speed");
-            SpeedDownKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "3. Target Speed Decrease", "Decrease target speed");
-            ToggleMachKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "4. Toggle Mach/TAS", "Toggle between Mach and TAS hold");
-            ToggleABKeyRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "5. Toggle Afterburner/Airbrake", "Toggle AB/Airbrake limits");
+            MenuRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "1. Menu", "Open the Autopilot Menu");
+            ToggleRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "2. Toggle AP", "AP On/Off");
+            ToggleFBWRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "3. Toggle FBW", "works in singleplayer");
+            AutoJammerRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "4. Toggle AJ", "Toggle auto jamming with jamming pods");
+            ToggleGCASRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5. Toggle GCAS", "Turn Auto-GCAS on/off");
+            ClearRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear roll/nav/crs/roll/alt/roll", "every use will clear/reset first thing it sees isn't clear from left to right");
+            UpRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "1. Altitude Up (Small)", "small increase");
+            DownRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "2. Altitude Down (Small)", "small decrease");
+            BigUpRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "3. Altitude Up (Big)", "large increase");
+            BigDownRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "4. Altitude Down (Big)", "large decrease");
+            ClimbRateUpRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "5. Climb Rate Increase", "Increase Max VS");
+            ClimbRateDownRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "6. Climb Rate Decrease", "Decrease Max VS");
+            BankLeftRW = RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "1. Bank Left", "Roll/course Left");
+            BankRightRW = RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "2. Bank Right", "Roll/course right");
+            SpeedHoldRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "1. Speed Hold Toggle", "speed hold/clear");
+            SpeedUpRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "2. Target Speed Increase", "Increase target speed");
+            SpeedDownRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "3. Target Speed Decrease", "Decrease target speed");
+            ToggleMachRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "4. Toggle Mach/TAS", "Toggle between Mach and TAS hold");
+            ToggleABRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "5. Toggle Afterburner/Airbrake", "Toggle AB/Airbrake limits");
 
             // control values
             AltStep = Config.Bind("Controls - Values", "17. Altitude Increment (Small)", 0.1f, "Meters per frame (60fps)");
@@ -589,7 +589,7 @@ namespace NOAutopilot
         {
             RewiredConfigManager.Update();
 
-            if (InputHelper.IsDown(MenuKeyRW) || MenuKey.Value.IsDown())
+            if (InputHelper.IsDown(MenuRW) || MenuKey.Value.IsDown())
             {
                 _showMenu = !_showMenu;
                 if (_showMenu)
@@ -601,15 +601,15 @@ namespace NOAutopilot
             if (_showMenu && APData.Enabled)
             {
                 bool isAdjusting =
-                    InputHelper.IsPressed(UpKeyRW) || UpKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(DownKeyRW) || DownKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(BigUpKeyRW) || BigUpKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(BigDownKeyRW) || BigDownKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(ClimbRateUpKeyRW) || ClimbRateUpKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(ClimbRateDownKeyRW) || ClimbRateDownKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(BankLeftKeyRW) || BankLeftKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(BankRightKeyRW) || BankRightKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(ClearKeyRW) || ClearKey.Value.IsPressed();
+                    InputHelper.IsPressed(UpRW) || UpKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(DownRW) || DownKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(BigUpRW) || BigUpKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(BigDownRW) || BigDownKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(ClimbRateUpRW) || ClimbRateUpKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(ClimbRateDownRW) || ClimbRateDownKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(BankLeftRW) || BankLeftKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(BankRightRW) || BankRightKey.Value.IsPressed() ||
+                    InputHelper.IsPressed(ClearRW) || ClearKey.Value.IsPressed();
 
                 if (isAdjusting)
                 {
@@ -617,7 +617,7 @@ namespace NOAutopilot
                 }
             }
 
-            if (InputHelper.IsDown(ToggleKeyRW) || ToggleKey.Value.IsDown())
+            if (InputHelper.IsDown(ToggleRW) || ToggleKey.Value.IsDown())
             {
                 APData.Enabled = !APData.Enabled;
                 if (!APData.Enabled)
@@ -632,18 +632,18 @@ namespace NOAutopilot
                 SyncMenuValues();
             }
 
-            if (EnableAutoJammer.Value && (InputHelper.IsDown(AutoJammerKeyRW) || AutoJammerKey.Value.IsDown()))
+            if (EnableAutoJammer.Value && (InputHelper.IsDown(AutoJammerRW) || AutoJammerKey.Value.IsDown()))
             {
                 APData.AutoJammerActive = !APData.AutoJammerActive;
             }
 
-            if (InputHelper.IsDown(ToggleGCASKeyRW) || ToggleGCASKey.Value.IsDown())
+            if (InputHelper.IsDown(ToggleGCASRW) || ToggleGCASKey.Value.IsDown())
             {
                 APData.GCASEnabled = !APData.GCASEnabled;
                 if (!APData.GCASEnabled) { APData.GCASActive = false; APData.GCASWarning = false; }
             }
 
-            if (InputHelper.IsDown(SpeedHoldKeyRW) || SpeedHoldKey.Value.IsDown())
+            if (InputHelper.IsDown(SpeedHoldRW) || SpeedHoldKey.Value.IsDown())
             {
                 if (APData.TargetSpeed >= 0)
                 {
@@ -672,8 +672,8 @@ namespace NOAutopilot
 
             if (APData.TargetSpeed >= 0f)
             {
-                bool speedUp = InputHelper.IsPressed(SpeedUpKeyRW) || SpeedUpKey.Value.IsPressed();
-                bool speedDown = InputHelper.IsPressed(SpeedDownKeyRW) || SpeedDownKey.Value.IsPressed();
+                bool speedUp = InputHelper.IsPressed(SpeedUpRW) || SpeedUpKey.Value.IsPressed();
+                bool speedDown = InputHelper.IsPressed(SpeedDownRW) || SpeedDownKey.Value.IsPressed();
                 if (speedUp || speedDown)
                 {
                     if (APData.TargetSpeed < 0)
@@ -699,7 +699,7 @@ namespace NOAutopilot
                     if (speedDown) APData.TargetSpeed = Mathf.Max(0, APData.TargetSpeed - step);
                     SyncMenuValues();
                 }
-                else if (InputHelper.IsDown(ToggleMachKeyRW) || ToggleMachKey.Value.IsDown())
+                else if (InputHelper.IsDown(ToggleMachRW) || ToggleMachKey.Value.IsDown())
                 {
                     if (float.TryParse(_bufSpeed, out float val))
                     {
@@ -720,13 +720,13 @@ namespace NOAutopilot
                     SyncMenuValues();
                 }
 
-                if (InputHelper.IsDown(ToggleABKeyRW) || ToggleABKey.Value.IsDown())
+                if (InputHelper.IsDown(ToggleABRW) || ToggleABKey.Value.IsDown())
                 {
                     APData.AllowExtremeThrottle = !APData.AllowExtremeThrottle;
                 }
             }
 
-            if (InputHelper.IsDown(ToggleFBWKeyRW) || ToggleFBWKey.Value.IsDown())
+            if (InputHelper.IsDown(ToggleFBWRW) || ToggleFBWKey.Value.IsDown())
             {
                 APData.NextMultiplayerCheck = 0f;
                 if (IsMultiplayer())
@@ -2445,18 +2445,18 @@ namespace NOAutopilot
                         float bStep = Plugin.BigAltStep.Value * fpsRef * dt;
                         float cStep = Plugin.ClimbRateStep.Value * fpsRef * dt;
                         float rStep = Plugin.BankStep.Value * fpsRef * dt;
-                        if (InputHelper.IsPressed(Plugin.UpKeyRW) || Plugin.UpKey.Value.IsPressed()) APData.TargetAlt += aStep;
-                        if (InputHelper.IsPressed(Plugin.DownKeyRW) || Plugin.DownKey.Value.IsPressed()) APData.TargetAlt -= aStep;
-                        if (InputHelper.IsPressed(Plugin.BigUpKeyRW) || Plugin.BigUpKey.Value.IsPressed()) APData.TargetAlt += bStep;
-                        if (InputHelper.IsPressed(Plugin.BigDownKeyRW) || Plugin.BigDownKey.Value.IsPressed()) APData.TargetAlt = Mathf.Max(APData.TargetAlt - bStep, Plugin.MinAltitude.Value);
+                        if (InputHelper.IsPressed(Plugin.UpRW) || Plugin.UpKey.Value.IsPressed()) APData.TargetAlt += aStep;
+                        if (InputHelper.IsPressed(Plugin.DownRW) || Plugin.DownKey.Value.IsPressed()) APData.TargetAlt -= aStep;
+                        if (InputHelper.IsPressed(Plugin.BigUpRW) || Plugin.BigUpKey.Value.IsPressed()) APData.TargetAlt += bStep;
+                        if (InputHelper.IsPressed(Plugin.BigDownRW) || Plugin.BigDownKey.Value.IsPressed()) APData.TargetAlt = Mathf.Max(APData.TargetAlt - bStep, Plugin.MinAltitude.Value);
 
-                        if (InputHelper.IsPressed(Plugin.ClimbRateUpKeyRW) || Plugin.ClimbRateUpKey.Value.IsPressed()) APData.CurrentMaxClimbRate += cStep;
-                        if (InputHelper.IsPressed(Plugin.ClimbRateDownKeyRW) || Plugin.ClimbRateDownKey.Value.IsPressed()) APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - cStep);
+                        if (InputHelper.IsPressed(Plugin.ClimbRateUpRW) || Plugin.ClimbRateUpKey.Value.IsPressed()) APData.CurrentMaxClimbRate += cStep;
+                        if (InputHelper.IsPressed(Plugin.ClimbRateDownRW) || Plugin.ClimbRateDownKey.Value.IsPressed()) APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - cStep);
 
                         if (APData.NavEnabled)
                         {
-                            bool bankLeft = InputHelper.IsPressed(Plugin.BankLeftKeyRW) || Plugin.BankLeftKey.Value.IsPressed();
-                            bool bankRight = InputHelper.IsPressed(Plugin.BankRightKeyRW) || Plugin.BankRightKey.Value.IsPressed();
+                            bool bankLeft = InputHelper.IsPressed(Plugin.BankLeftRW) || Plugin.BankLeftKey.Value.IsPressed();
+                            bool bankRight = InputHelper.IsPressed(Plugin.BankRightRW) || Plugin.BankRightKey.Value.IsPressed();
                             if (bankLeft || bankRight)
                             {
                                 if (APData.TargetRoll == -999f) APData.TargetRoll = Plugin.DefaultCRLimit.Value;
@@ -2469,13 +2469,13 @@ namespace NOAutopilot
                         }
                         if (APData.TargetCourse >= 0f)
                         {
-                            if (InputHelper.IsPressed(Plugin.BankLeftKeyRW) || Plugin.BankLeftKey.Value.IsPressed()) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - rStep, 360f);
-                            if (InputHelper.IsPressed(Plugin.BankRightKeyRW) || Plugin.BankRightKey.Value.IsPressed()) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse + rStep, 360f);
+                            if (InputHelper.IsPressed(Plugin.BankLeftRW) || Plugin.BankLeftKey.Value.IsPressed()) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - rStep, 360f);
+                            if (InputHelper.IsPressed(Plugin.BankRightRW) || Plugin.BankRightKey.Value.IsPressed()) APData.TargetCourse = Mathf.Repeat(APData.TargetCourse + rStep, 360f);
                         }
                         else
                         {
-                            bool bankLeft = InputHelper.IsPressed(Plugin.BankLeftKeyRW) || Plugin.BankLeftKey.Value.IsPressed();
-                            bool bankRight = InputHelper.IsPressed(Plugin.BankRightKeyRW) || Plugin.BankRightKey.Value.IsPressed();
+                            bool bankLeft = InputHelper.IsPressed(Plugin.BankLeftRW) || Plugin.BankLeftKey.Value.IsPressed();
+                            bool bankRight = InputHelper.IsPressed(Plugin.BankRightRW) || Plugin.BankRightKey.Value.IsPressed();
                             if (bankLeft || bankRight)
                             {
                                 if (APData.TargetRoll == -999f) APData.TargetRoll = APData.CurrentRoll;
@@ -2487,7 +2487,7 @@ namespace NOAutopilot
                             }
                         }
 
-                        if (InputHelper.IsDown(Plugin.ClearKeyRW) || Plugin.ClearKey.Value.IsDown())
+                        if (InputHelper.IsDown(Plugin.ClearRW) || Plugin.ClearKey.Value.IsDown())
                         {
                             if (APData.NavEnabled)
                             {

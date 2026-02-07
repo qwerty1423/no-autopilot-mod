@@ -2087,7 +2087,7 @@ namespace NOAutopilot
                     {
                         foreach (var gear in APData.LocalLandingGears)
                         {
-                            if (gear != null && (bool)Plugin.m_WeightOnWheel.Invoke(gear, [0.0f]))
+                            if (gear != null && (bool)Plugin.m_WeightOnWheel.Invoke(gear, [0]))
                             {
                                 APData.IsOnGround = true;
                                 break;

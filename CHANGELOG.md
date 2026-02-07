@@ -2,7 +2,7 @@
 
 ## [4.15.4]
 
-## fixed
+### fixed
 
 - gcas symbols now not shown when radar alt is low and gear down
 - more nulls added

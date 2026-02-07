@@ -4,7 +4,7 @@
 
 ## fixed
 
-- gcas symbols now not shown when weight on wheels
+- gcas symbols now not shown when radar alt is low and gear down
 - more nulls added
 
 ## [4.15.3]

@@ -2,14 +2,14 @@
 
 ## [4.15.4]
 
-### fixed
+### Fixed
 
 - gcas symbols now not shown when radar alt is low and gear down
 - more nulls added
 
 ## [4.15.3]
 
-### fixed
+### Fixed
 
 - keep dll timestamp so that bepinex cache updates properly
 

@@ -1813,7 +1813,7 @@ namespace NOAutopilot
             try
             {
                 APData.CurrentAlt = altitude;
-                if (playerVehicle == null)
+                if (playerVehicle == null || playerVehicle is not Component v)
                 {
                     lastVehicleObj = null;
                     APData.LocalAircraft = null;
@@ -1821,31 +1821,29 @@ namespace NOAutopilot
                     return;
                 }
 
-                if (playerVehicle is not Component v) return;
+                Aircraft foundAircraft = v.GetComponent<Aircraft>();
 
-                if (v.gameObject != lastVehicleObj)
+                if (foundAircraft != null && (v.gameObject != lastVehicleObj || APData.LocalAircraft == null))
                 {
                     lastVehicleObj = v.gameObject;
                     APData.Reset();
+                    APData.LocalAircraft = foundAircraft;
                     APData.PlayerTransform = v.transform;
                     APData.PlayerRB = v.GetComponent<Rigidbody>();
-                    APData.LocalAircraft = v.GetComponent<Aircraft>();
 
                     APData.TargetAlt = altitude;
                     APData.TargetRoll = 0f;
                     APData.GCASEnabled = Plugin.EnableGCAS.Value;
 
-                    if (APData.LocalAircraft != null)
-                    {
-                        if (Plugin.f_weaponManager != null)
-                            APData.LocalWeaponManager = Plugin.f_weaponManager.GetValue(APData.LocalAircraft) as WeaponManager;
+                    if (Plugin.f_weaponManager != null)
+                        APData.LocalWeaponManager = Plugin.f_weaponManager.GetValue(APData.LocalAircraft) as WeaponManager;
 
-                        if (Plugin.f_pilots != null)
-                        {
-                            IList pilots = (IList)Plugin.f_pilots.GetValue(APData.LocalAircraft);
-                            if (pilots != null && pilots.Count > 0) APData.LocalPilot = pilots[0];
-                        }
+                    if (Plugin.f_pilots != null)
+                    {
+                        IList pilots = (IList)Plugin.f_pilots.GetValue(APData.LocalAircraft);
+                        if (pilots != null && pilots.Count > 0) APData.LocalPilot = pilots[0];
                     }
+
                     Plugin.SyncMenuValues();
                     Plugin.CleanUpFBW();
                 }

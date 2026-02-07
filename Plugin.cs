@@ -2074,25 +2074,25 @@ namespace NOAutopilot
                 // gcas
                 if (APData.GCASEnabled)
                 {
-                    APData.IsOnGround = false;
-                    if (APData.LocalLandingGears != null)
-                    {
-                        foreach (var gear in APData.LocalLandingGears)
-                        {
-                            if (gear != null && (bool)Plugin.m_WeightOnWheel.Invoke(gear, [0.1f]))
-                            {
-                                APData.IsOnGround = true;
-                                break;
-                            }
-                        }
-                    }
-
                     bool gearDown = false;
                     Aircraft acRef = APData.LocalAircraft;
                     if (acRef != null && Plugin.f_gearState != null)
                     {
                         object gs = Plugin.f_gearState.GetValue(acRef);
                         if (gs != null && !gs.ToString().Contains("LockedRetracted")) gearDown = true;
+                    }
+
+                    APData.IsOnGround = false;
+                    if (gearDown && APData.LocalLandingGears != null)
+                    {
+                        foreach (var gear in APData.LocalLandingGears)
+                        {
+                            if (gear != null && (bool)Plugin.m_WeightOnWheel.Invoke(gear, [0.0f]))
+                            {
+                                APData.IsOnGround = true;
+                                break;
+                            }
+                        }
                     }
 
                     bool pilotOverride = Mathf.Abs(stickPitch) > Plugin.GCAS_Deadzone.Value || Mathf.Abs(stickRoll) > Plugin.GCAS_Deadzone.Value || gearDown;

@@ -181,7 +181,7 @@ namespace NOAutopilot
         internal static FieldInfo f_stationWeapons;
 
         internal static FieldInfo f_fuelLabel, f_fuelCapacity, f_controlsFilter;
-        internal static FieldInfo f_pilots, f_gearState, f_weaponManager; // f_radarAlt;
+        internal static FieldInfo f_pilots, f_gearState, f_weaponManager, f_radarAlt;
 
         internal static FieldInfo f_powerSupply, f_charge, f_maxCharge;
 
@@ -204,9 +204,6 @@ namespace NOAutopilot
         internal static Type t_GLOC;
         internal static FieldInfo f_bloodPressure;
         internal static FieldInfo f_conscious;
-
-        internal static Type t_LandingGear;
-        internal static MethodInfo m_WeightOnWheel;
 
         private void Awake()
         {
@@ -437,12 +434,14 @@ namespace NOAutopilot
                 f_pilots = typeof(Aircraft).GetField("pilots", flags);
                 f_gearState = typeof(Aircraft).GetField("gearState", flags);
                 f_weaponManager = typeof(Aircraft).GetField("weaponManager", flags);
+                f_radarAlt = typeof(Aircraft).GetField("radarAlt", flags);
 
                 Check(f_controlsFilter, "f_controlsFilter");
                 Check(f_fuelCapacity, "f_fuelCapacity");
                 Check(f_pilots, "f_pilots");
                 Check(f_gearState, "f_gearState");
                 Check(f_weaponManager, "f_weaponManager");
+                Check(f_radarAlt, "f_radarAlt");
 
                 Type psType = typeof(Aircraft).Assembly.GetType("PowerSupply");
                 Check(psType, "PowerSupply Type");
@@ -527,11 +526,6 @@ namespace NOAutopilot
                 f_conscious = t_GLOC.GetField("conscious", privateFlags);
                 Check(f_bloodPressure, "f_bloodPressure");
                 Check(f_conscious, "f_conscious");
-
-                t_LandingGear = typeof(Aircraft).Assembly.GetType("LandingGear");
-                Check(t_LandingGear, "t_LandingGear");
-                m_WeightOnWheel = t_LandingGear.GetMethod("WeightOnWheel", [typeof(float)]);
-                Check(m_WeightOnWheel, "m_WeightOnWheel");
             }
             catch (Exception ex)
             {
@@ -1850,8 +1844,6 @@ namespace NOAutopilot
                         {
                             IList pilots = (IList)Plugin.f_pilots.GetValue(APData.LocalAircraft);
                             if (pilots != null && pilots.Count > 0) APData.LocalPilot = pilots[0];
-                            var gears = v.GetComponentsInChildren(Plugin.t_LandingGear);
-                            if (gears != null) foreach (var g in gears) APData.LocalLandingGears.Add(g);
                         }
                     }
                     Plugin.SyncMenuValues();
@@ -2083,16 +2075,10 @@ namespace NOAutopilot
                     }
 
                     APData.IsOnGround = false;
-                    if (gearDown && APData.LocalLandingGears != null)
+                    float currentRadarAlt = (float)Plugin.f_radarAlt.GetValue(APData.LocalAircraft);
+                    if (gearDown && currentRadarAlt < 0.5f)
                     {
-                        foreach (var gear in APData.LocalLandingGears)
-                        {
-                            if (gear != null && (bool)Plugin.m_WeightOnWheel.Invoke(gear, [0]))
-                            {
-                                APData.IsOnGround = true;
-                                break;
-                            }
-                        }
+                        APData.IsOnGround = true;
                     }
 
                     bool pilotOverride = Mathf.Abs(stickPitch) > Plugin.GCAS_Deadzone.Value || Mathf.Abs(stickRoll) > Plugin.GCAS_Deadzone.Value || gearDown;

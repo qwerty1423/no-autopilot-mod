@@ -1755,6 +1755,7 @@ namespace NOAutopilot
         public static float BloodPressure = 1f;
         public static bool IsConscious = true;
         public static List<Component> LocalLandingGears = [];
+        public static bool IsOnGround = false;
 
         public static void Reset()
         {
@@ -1792,6 +1793,7 @@ namespace NOAutopilot
             BloodPressure = 1f;
             IsConscious = true;
             LocalLandingGears.Clear();
+            IsOnGround = false;
 
             NavQueue.Clear();
             foreach (var obj in NavVisuals)
@@ -2072,16 +2074,14 @@ namespace NOAutopilot
                 // gcas
                 if (APData.GCASEnabled)
                 {
+                    APData.IsOnGround = false;
                     if (APData.LocalLandingGears != null)
                     {
                         foreach (var gear in APData.LocalLandingGears)
                         {
                             if (gear != null && (bool)Plugin.m_WeightOnWheel.Invoke(gear, [0.1f]))
                             {
-                                APData.GCASActive = false;
-                                APData.GCASWarning = false;
-                                dangerImminent = false;
-                                warningZone = false;
+                                APData.IsOnGround = true;
                                 break;
                             }
                         }
@@ -3046,7 +3046,7 @@ namespace NOAutopilot
                     }
                 }
 
-                if (APData.GCASActive || APData.GCASWarning)
+                if (APData.GCASActive || APData.GCASWarning && !APData.IsOnGround)
                 {
                     if (gcasLeftObj == null)
                     {

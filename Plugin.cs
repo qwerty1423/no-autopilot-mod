@@ -2076,7 +2076,7 @@ namespace NOAutopilot
 
                     APData.IsOnGround = false;
                     float currentRadarAlt = (float)Plugin.f_radarAlt.GetValue(APData.LocalAircraft);
-                    if (gearDown && currentRadarAlt < 0.5f)
+                    if (gearDown && currentRadarAlt < 0.1f)
                     {
                         APData.IsOnGround = true;
                     }

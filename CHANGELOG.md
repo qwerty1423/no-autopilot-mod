@@ -198,8 +198,8 @@
 
 ## [4.8.4] - 2025-12-29
 
-[4.15.2]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.3...v4.15.4
-[4.15.2]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.2...v4.15.3
+[4.15.4]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.3...v4.15.4
+[4.15.3]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.2...v4.15.3
 [4.15.2]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.1...v4.15.2
 [4.15.1]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.0...v4.15.1
 [4.15.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.14.0...v4.15.0

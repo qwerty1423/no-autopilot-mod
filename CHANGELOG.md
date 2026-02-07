@@ -5,7 +5,10 @@
 ### Fixed
 
 - gcas symbols now not shown when radar alt is low and gear down
-- more nulls added
+
+### Attempt to fix
+
+- multiplayer issue on respawn
 
 ## [4.15.3]
 

@@ -4,7 +4,9 @@
 
 ### Added
 
-- unload on error so no log spam? (configurable)
+- unload mod on error to reduce log spam? (configurable)
+- fuel time format string config
+- enable nav on waypoint creation toggle
 
 ### Changed
 

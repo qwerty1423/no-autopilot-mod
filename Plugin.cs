@@ -91,7 +91,9 @@ namespace NOAutopilot
         private GUIContent _cachedExtraInfoContent;
 
         // Visuals
-        public static ConfigEntry<string> ColorAPOn, ColorInfo, ColorGood, ColorWarn, ColorCrit, ColorRange;
+        public static ConfigEntry<string> ColorAPOn, ColorInfo, ColorGood;
+        public static ConfigEntry<string> ColorWarn, ColorCrit, ColorRange;
+        public static ConfigEntry<string> FuelFormatString;
         public static ConfigEntry<float> OverlayOffsetX, OverlayOffsetY, FuelSmoothing, FuelUpdateInterval, DisplayUpdateInterval;
         public static ConfigEntry<int> FuelWarnMinutes, FuelCritMinutes;
         public static ConfigEntry<bool> ShowExtraInfo;
@@ -108,8 +110,9 @@ namespace NOAutopilot
         public static ConfigEntry<float> DisengageDelay, ReengageDelay;
         public static ConfigEntry<bool> InvertRoll, InvertPitch, StickDisengageEnabled;
         public static ConfigEntry<bool> Conf_InvertCourseRoll, DisableATAPKey;
-        public static ConfigEntry<bool> DisableATAPGCAS, DisableATAPGUI, DisableATAPStick,
-        DisableNavAPKey, DisableNavAPStick, KeepSetAltKey, KeepSetAltStick;
+        public static ConfigEntry<bool> DisableATAPGCAS, DisableATAPGUI, DisableATAPStick;
+        public static ConfigEntry<bool> DisableNavAPKey, DisableNavAPStick, EnableNavonWP;
+        public static ConfigEntry<bool> KeepSetAltKey, KeepSetAltStick;
         public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom, SaveMapState, UnpatchIfBroken;
 
         // Auto Jammer
@@ -187,13 +190,14 @@ namespace NOAutopilot
             ColorNav = Config.Bind("Visuals - Colors", "7. Navigation Color", "#ff00ffcc", "color for flight path lines.");
             OverlayOffsetX = Config.Bind("Visuals - Layout", "1. Stack Start X", -18f, "HUD Horizontal position");
             OverlayOffsetY = Config.Bind("Visuals - Layout", "2. Stack Start Y", -10f, "HUD Vertical position");
+            DisplayUpdateInterval = Config.Bind("Visuals", "HUD overlay update interval", 0.02f, "seconds");
             ShowExtraInfo = Config.Bind("Visuals", "Show Fuel/AP Info", true, "Show extra info on Fuel Gauge");
             ShowFuelOverlay = Config.Bind("Visuals", "Show Fuel Overlay", true, "Draw fuel info text on the HUD.");
             ShowAPOverlay = Config.Bind("Visuals", "Show AP Overlay", true, "Draw AP status text on the HUD. Turn off if you want, there's a window now.");
             ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show GCAS OFF on HUD");
             ShowOverride = Config.Bind("Visuals", "Show Override Delay", true, "Show Override on HUD");
             ShowPlaceholders = Config.Bind("Visuals", "Show Overlay Placeholders", false, "Show the A, V, W, when values default/null");
-            DisplayUpdateInterval = Config.Bind("Visuals", "HUD overlay update interval", 0.02f, "seconds");
+            FuelFormatString = Config.Bind("Visuals", "Fuel time format string", "hh':'mm", "e.g. hh':'mm':'ss, hh':'mm, mm':'ss, etc.");
             AltShowUnit = Config.Bind("Visuals - Units", "1. Show unit for alt", false, "(example) on: 10m, off: 10");
             DistShowUnit = Config.Bind("Visuals - Units", "2. Show unit for dist", true, "(example) on: 10km, off: 10");
             VertSpeedShowUnit = Config.Bind("Visuals - Units", "3. Show unit for vertical speed", false, "(example) on: 10m/s, off: 10");
@@ -225,6 +229,7 @@ namespace NOAutopilot
             DisableATAPStick = Config.Bind("Settings - Misc", "Disable autothrottle with AP (stick)", false, "Disable autothrottle when AP is disengaged by stick input");
             DisableNavAPKey = Config.Bind("Settings - Misc", "Disable nav mode with AP (key)", false, "Disable nav mode when AP is disengaged by key");
             DisableNavAPStick = Config.Bind("Settings - Misc", "Disable nav mode with AP (stick)", false, "Disable nav mode when AP is disengaged by stick input");
+            EnableNavonWP = Config.Bind("Settings - Misc", "Enable nav mode on WP creation", true, "Whether to enable nav mode on creation of new waypoint");
             KeepSetAltKey = Config.Bind("Settings - Misc", "Keep set altitude when AP engaged (key)", false, "AP will use previously set alt instead of current alt when engaged by keyboard key");
             KeepSetAltStick = Config.Bind("Settings - Misc", "Keep set altitude when stick inputs made", true, "AP will not reset alt to current alt when stick inputs are made");
             UnlockMapPan = Config.Bind("Settings - Misc", "Unlock Map Pan", true, "Requires restart to apply.");
@@ -2756,13 +2761,14 @@ namespace NOAutopilot
                         {
                             if (currentFuel <= 0f)
                             {
-                                _sbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">00:00\n----</color>\n");
+                                string sTime = TimeSpan.FromSeconds(0).ToString(Plugin.FuelFormatString.Value);
+                                _sbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">").Append(sTime).Append("\n----</color>\n");
                             }
                             else
                             {
                                 float calcFlow = Mathf.Max(fuelFlowEma, 0.0001f);
                                 float secs = currentFuel / calcFlow;
-                                string sTime = TimeSpan.FromSeconds(Mathf.Min(secs, 359999f)).ToString("hh\\:mm");
+                                string sTime = TimeSpan.FromSeconds(Mathf.Min(secs, 359999f)).ToString(Plugin.FuelFormatString.Value);
                                 float mins = secs / 60f;
 
                                 string fuelCol = Plugin.ColorGood.Value;
@@ -3012,7 +3018,10 @@ namespace NOAutopilot
                 }
 
                 APData.NavQueue.Add(clickedGlobalPos.AsVector3());
-                APData.NavEnabled = true;
+                if (Plugin.EnableNavonWP.Value)
+                {
+                    APData.NavEnabled = true;
+                }
                 float currentTargetRoll = APData.TargetRoll;
                 if (currentTargetRoll == -999f || currentTargetRoll == 0f)
                 {

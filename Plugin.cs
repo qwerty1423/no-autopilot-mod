@@ -197,7 +197,7 @@ namespace NOAutopilot
             ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show GCAS OFF on HUD");
             ShowOverride = Config.Bind("Visuals", "Show Override Delay", true, "Show Override on HUD");
             ShowPlaceholders = Config.Bind("Visuals", "Show Overlay Placeholders", false, "Show the A, V, W, when values default/null");
-            FuelFormatString = Config.Bind("Visuals", "Fuel time format string", "hh\\:mm", "e.g. hh\\:mm\\:ss, hh\\:mm, mm\\:ss, etc.");
+            FuelFormatString = Config.Bind("Visuals", "Fuel time format string", "hh\\:mm", "e.g. hh\\:mm\\:ss, hh\\:mm, mm\\:ss, h\\h\\ m\\m\\ s\\s, etc.\nhttps://learn.microsoft.com/en-us/dotnet/standard/base-types/custom-timespan-format-strings");
             AltShowUnit = Config.Bind("Visuals - Units", "1. Show unit for alt", false, "(example) on: 10m, off: 10");
             DistShowUnit = Config.Bind("Visuals - Units", "2. Show unit for dist", true, "(example) on: 10km, off: 10");
             VertSpeedShowUnit = Config.Bind("Visuals - Units", "3. Show unit for vertical speed", false, "(example) on: 10m/s, off: 10");

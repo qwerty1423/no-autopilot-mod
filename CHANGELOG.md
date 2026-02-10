@@ -1,6 +1,6 @@
 # Changelog
 
-## [4.15.6]
+## [4.16.0]
 
 ### Added
 
@@ -222,7 +222,7 @@
 
 ## [4.8.4] - 2025-12-29
 
-[4.15.6]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.5...v4.15.6
+[4.16.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.5...v4.16.0
 [4.15.5]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.4...v4.15.5
 [4.15.4]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.3...v4.15.4
 [4.15.3]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.2...v4.15.3

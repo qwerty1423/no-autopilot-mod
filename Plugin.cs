@@ -27,6 +27,8 @@ namespace NOAutopilot
         internal new static ManualLogSource Logger;
         private Harmony harmony;
 
+        public static bool IsBroken = false;
+
         // controls table
         private readonly string table =
         $"<b>Toggle AP GUI:</b> F8\n" +
@@ -108,7 +110,7 @@ namespace NOAutopilot
         public static ConfigEntry<bool> Conf_InvertCourseRoll, DisableATAPKey;
         public static ConfigEntry<bool> DisableATAPGCAS, DisableATAPGUI, DisableATAPStick,
         DisableNavAPKey, DisableNavAPStick, KeepSetAltKey, KeepSetAltStick;
-        public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom, SaveMapState;
+        public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom, SaveMapState, UnpatchIfBroken;
 
         // Auto Jammer
         public static ConfigEntry<bool> EnableAutoJammer;
@@ -228,7 +230,7 @@ namespace NOAutopilot
             UnlockMapPan = Config.Bind("Settings - Misc", "Unlock Map Pan", true, "Requires restart to apply.");
             UnlockMapZoom = Config.Bind("Settings - Misc", "Unlock Map Zoom", true, "Requires restart to apply.");
             SaveMapState = Config.Bind("Settings - Misc", "Save Map State", false, "Prevent map from resetting position/zoom when reopened.");
-            APData.SaveMapState = SaveMapState.Value;
+            UnpatchIfBroken = Config.Bind("Settings - Misc", "Unpatch on error", true, "Unload this mod when it throws an error");
 
             // nav
             NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f, "Distance in meters to consider a waypoint reached.");
@@ -366,9 +368,17 @@ namespace NOAutopilot
             Rand_Acc_Outer = Config.Bind("Settings - Random", "22. Accel Tolerance Outer", 0.5f, "Wake Up (m/s² acceleration)");
 
             harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
-            harmony.PatchAll();
-            SceneManager.sceneUnloaded += OnSceneUnloaded;
-            Logger.LogInfo($"v{Version} loaded.");
+            try
+            {
+                harmony.PatchAll();
+                SceneManager.sceneUnloaded += OnSceneUnloaded;
+                Logger.LogInfo($"v{Version} loaded.");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex);
+                IsBroken = true;
+            }
         }
 
         private void OnDestroy()
@@ -419,172 +429,205 @@ namespace NOAutopilot
 
         private void Update()
         {
-            RewiredConfigManager.Update();
-
-            if (InputHelper.IsDown(MenuRW) || MenuKey.Value.IsDown())
+            try
             {
-                _showMenu = !_showMenu;
-                if (_showMenu)
+                if (IsBroken && UnpatchIfBroken.Value)
                 {
-                    SyncMenuValues();
-                }
-            }
+                    Logger.LogWarning($"Unloading mod because it broke. You can disable this in Config - Misc.");
+                    harmony?.UnpatchSelf();
 
-            if (_showMenu && APData.Enabled)
-            {
-                bool isAdjusting =
-                    InputHelper.IsPressed(UpRW) || UpKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(DownRW) || DownKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(BigUpRW) || BigUpKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(BigDownRW) || BigDownKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(ClimbRateUpRW) || ClimbRateUpKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(ClimbRateDownRW) || ClimbRateDownKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(BankLeftRW) || BankLeftKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(BankRightRW) || BankRightKey.Value.IsPressed() ||
-                    InputHelper.IsPressed(ClearRW) || ClearKey.Value.IsPressed();
+                    SceneManager.sceneUnloaded -= OnSceneUnloaded;
 
-                if (isAdjusting)
-                {
-                    SyncMenuValues();
-                }
-            }
-
-            if (InputHelper.IsDown(ToggleRW) || ToggleKey.Value.IsDown())
-            {
-                APData.Enabled = !APData.Enabled;
-                if (!APData.Enabled)
-                {
-                    if (DisableNavAPKey.Value) APData.NavEnabled = false;
-                    if (DisableATAPKey.Value) APData.TargetSpeed = -1f;
-                }
-                else if (!KeepSetAltKey.Value)
-                {
-                    APData.TargetAlt = APData.CurrentAlt;
-                }
-                SyncMenuValues();
-            }
-
-            if (EnableAutoJammer.Value && (InputHelper.IsDown(AutoJammerRW) || AutoJammerKey.Value.IsDown()))
-            {
-                APData.AutoJammerActive = !APData.AutoJammerActive;
-            }
-
-            if (InputHelper.IsDown(ToggleGCASRW) || ToggleGCASKey.Value.IsDown())
-            {
-                APData.GCASEnabled = !APData.GCASEnabled;
-                if (!APData.GCASEnabled) { APData.GCASActive = false; APData.GCASWarning = false; }
-            }
-
-            if (InputHelper.IsDown(SpeedHoldRW) || SpeedHoldKey.Value.IsDown())
-            {
-                if (APData.TargetSpeed >= 0)
-                {
-                    APData.TargetSpeed = -1f;
-                    _bufSpeed = "";
-                }
-                else if (APData.PlayerRB != null && APData.LocalAircraft != null)
-                {
-                    float currentTAS = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
-                    if (APData.SpeedHoldIsMach)
+                    APData.Reset();
+                    ControlOverridePatch.Reset();
+                    HUDVisualsPatch.Reset();
+                    HudPatch.Reset();
+                    MapInteractionPatch.Reset();
+                    MapWaypointPatch.Reset();
+                    RewiredConfigManager.Reset();
+                    if (APData.NavVisuals != null)
                     {
-                        float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
-                        float sos = LevelInfo.GetSpeedOfSound(currentAlt);
-                        APData.TargetSpeed = currentTAS / sos;
-                        _bufSpeed = APData.TargetSpeed.ToString("F2");
+                        foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
                     }
-                    else
+
+                    ClearAllStatics();
+
+                    harmony = null;
+                    Logger = null;
+                    enabled = false;
+                }
+                RewiredConfigManager.Update();
+
+                if (InputHelper.IsDown(MenuRW) || MenuKey.Value.IsDown())
+                {
+                    _showMenu = !_showMenu;
+                    if (_showMenu)
                     {
-                        APData.TargetSpeed = currentTAS;
-                        _bufSpeed = ModUtils.ConvertSpeed_ToDisplay(currentTAS).ToString("F0");
+                        SyncMenuValues();
                     }
                 }
-                SyncMenuValues();
-                GUI.FocusControl(null);
-            }
 
-            if (APData.TargetSpeed >= 0f)
-            {
-                bool speedUp = InputHelper.IsPressed(SpeedUpRW) || SpeedUpKey.Value.IsPressed();
-                bool speedDown = InputHelper.IsPressed(SpeedDownRW) || SpeedDownKey.Value.IsPressed();
-                if (speedUp || speedDown)
+                if (_showMenu && APData.Enabled)
                 {
-                    if (APData.TargetSpeed < 0)
+                    bool isAdjusting =
+                        InputHelper.IsPressed(UpRW) || UpKey.Value.IsPressed() ||
+                        InputHelper.IsPressed(DownRW) || DownKey.Value.IsPressed() ||
+                        InputHelper.IsPressed(BigUpRW) || BigUpKey.Value.IsPressed() ||
+                        InputHelper.IsPressed(BigDownRW) || BigDownKey.Value.IsPressed() ||
+                        InputHelper.IsPressed(ClimbRateUpRW) || ClimbRateUpKey.Value.IsPressed() ||
+                        InputHelper.IsPressed(ClimbRateDownRW) || ClimbRateDownKey.Value.IsPressed() ||
+                        InputHelper.IsPressed(BankLeftRW) || BankLeftKey.Value.IsPressed() ||
+                        InputHelper.IsPressed(BankRightRW) || BankRightKey.Value.IsPressed() ||
+                        InputHelper.IsPressed(ClearRW) || ClearKey.Value.IsPressed();
+
+                    if (isAdjusting)
+                    {
+                        SyncMenuValues();
+                    }
+                }
+
+                if (InputHelper.IsDown(ToggleRW) || ToggleKey.Value.IsDown())
+                {
+                    APData.Enabled = !APData.Enabled;
+                    if (!APData.Enabled)
+                    {
+                        if (DisableNavAPKey.Value) APData.NavEnabled = false;
+                        if (DisableATAPKey.Value) APData.TargetSpeed = -1f;
+                    }
+                    else if (!KeepSetAltKey.Value)
+                    {
+                        APData.TargetAlt = APData.CurrentAlt;
+                    }
+                    SyncMenuValues();
+                }
+
+                if (EnableAutoJammer.Value && (InputHelper.IsDown(AutoJammerRW) || AutoJammerKey.Value.IsDown()))
+                {
+                    APData.AutoJammerActive = !APData.AutoJammerActive;
+                }
+
+                if (InputHelper.IsDown(ToggleGCASRW) || ToggleGCASKey.Value.IsDown())
+                {
+                    APData.GCASEnabled = !APData.GCASEnabled;
+                    if (!APData.GCASEnabled) { APData.GCASActive = false; APData.GCASWarning = false; }
+                }
+
+                if (InputHelper.IsDown(SpeedHoldRW) || SpeedHoldKey.Value.IsDown())
+                {
+                    if (APData.TargetSpeed >= 0)
+                    {
+                        APData.TargetSpeed = -1f;
+                        _bufSpeed = "";
+                    }
+                    else if (APData.PlayerRB != null && APData.LocalAircraft != null)
                     {
                         float currentTAS = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
                         if (APData.SpeedHoldIsMach)
                         {
                             float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
-                            APData.TargetSpeed = currentTAS / LevelInfo.GetSpeedOfSound(currentAlt);
-                        }
-                        else APData.TargetSpeed = currentTAS;
-                    }
-
-                    float step = SpeedStep.Value * 60f * Time.deltaTime;
-                    if (APData.SpeedHoldIsMach)
-                    {
-                        float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
-                        float sos = LevelInfo.GetSpeedOfSound(currentAlt);
-                        step /= Mathf.Max(sos, 1f);
-                    }
-
-                    if (speedUp) APData.TargetSpeed += step;
-                    if (speedDown) APData.TargetSpeed = Mathf.Max(0, APData.TargetSpeed - step);
-                    SyncMenuValues();
-                }
-                else if (InputHelper.IsDown(ToggleMachRW) || ToggleMachKey.Value.IsDown())
-                {
-                    if (float.TryParse(_bufSpeed, out float val))
-                    {
-                        float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
-                        float sos = LevelInfo.GetSpeedOfSound(currentAlt);
-                        if (!APData.SpeedHoldIsMach)
-                        {
-                            float ms = ModUtils.ConvertSpeed_FromDisplay(val);
-                            APData.TargetSpeed = Mathf.Max(0, ms / sos);
+                            float sos = LevelInfo.GetSpeedOfSound(currentAlt);
+                            APData.TargetSpeed = currentTAS / sos;
+                            _bufSpeed = APData.TargetSpeed.ToString("F2");
                         }
                         else
                         {
-                            float ms = val * sos;
-                            APData.TargetSpeed = Mathf.Max(0, ms);
+                            APData.TargetSpeed = currentTAS;
+                            _bufSpeed = ModUtils.ConvertSpeed_ToDisplay(currentTAS).ToString("F0");
                         }
                     }
-                    APData.SpeedHoldIsMach = !APData.SpeedHoldIsMach;
                     SyncMenuValues();
+                    GUI.FocusControl(null);
                 }
 
-                if (InputHelper.IsDown(ToggleABRW) || ToggleABKey.Value.IsDown())
+                if (APData.TargetSpeed >= 0f)
                 {
-                    APData.AllowExtremeThrottle = !APData.AllowExtremeThrottle;
+                    bool speedUp = InputHelper.IsPressed(SpeedUpRW) || SpeedUpKey.Value.IsPressed();
+                    bool speedDown = InputHelper.IsPressed(SpeedDownRW) || SpeedDownKey.Value.IsPressed();
+                    if (speedUp || speedDown)
+                    {
+                        if (APData.TargetSpeed < 0)
+                        {
+                            float currentTAS = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
+                            if (APData.SpeedHoldIsMach)
+                            {
+                                float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
+                                APData.TargetSpeed = currentTAS / LevelInfo.GetSpeedOfSound(currentAlt);
+                            }
+                            else APData.TargetSpeed = currentTAS;
+                        }
+
+                        float step = SpeedStep.Value * 60f * Time.deltaTime;
+                        if (APData.SpeedHoldIsMach)
+                        {
+                            float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
+                            float sos = LevelInfo.GetSpeedOfSound(currentAlt);
+                            step /= Mathf.Max(sos, 1f);
+                        }
+
+                        if (speedUp) APData.TargetSpeed += step;
+                        if (speedDown) APData.TargetSpeed = Mathf.Max(0, APData.TargetSpeed - step);
+                        SyncMenuValues();
+                    }
+                    else if (InputHelper.IsDown(ToggleMachRW) || ToggleMachKey.Value.IsDown())
+                    {
+                        if (float.TryParse(_bufSpeed, out float val))
+                        {
+                            float currentAlt = (APData.LocalAircraft != null) ? APData.LocalAircraft.GlobalPosition().y : 0f;
+                            float sos = LevelInfo.GetSpeedOfSound(currentAlt);
+                            if (!APData.SpeedHoldIsMach)
+                            {
+                                float ms = ModUtils.ConvertSpeed_FromDisplay(val);
+                                APData.TargetSpeed = Mathf.Max(0, ms / sos);
+                            }
+                            else
+                            {
+                                float ms = val * sos;
+                                APData.TargetSpeed = Mathf.Max(0, ms);
+                            }
+                        }
+                        APData.SpeedHoldIsMach = !APData.SpeedHoldIsMach;
+                        SyncMenuValues();
+                    }
+
+                    if (InputHelper.IsDown(ToggleABRW) || ToggleABKey.Value.IsDown())
+                    {
+                        APData.AllowExtremeThrottle = !APData.AllowExtremeThrottle;
+                    }
+                }
+
+                if (InputHelper.IsDown(ToggleFBWRW) || ToggleFBWKey.Value.IsDown())
+                {
+                    APData.NextMultiplayerCheck = 0f;
+                    if (IsMultiplayer())
+                    {
+                        APData.FBWDisabled = false;
+                    }
+                    else
+                    {
+                        APData.FBWDisabled = !APData.FBWDisabled;
+                    }
+                    UpdateFBWState();
+                }
+
+                // no need because plane respawns and the toggle above exists
+                // not worth the lag spikes
+                // if (APData.FBWDisabled && IsMultiplayer())
+                // {
+                //     APData.FBWDisabled = false;
+                //     UpdateFBWState();
+                // }
+
+                if (APData.PlayerRB != null)
+                {
+                    float rawSpeed = APData.PlayerRB.velocity.magnitude;
+                    float alpha = 1.0f - Mathf.Exp(-Time.deltaTime * 2.0f);
+                    APData.SpeedEma = Mathf.Max(Mathf.Lerp(APData.SpeedEma, rawSpeed, alpha), 0.0001f);
                 }
             }
-
-            if (InputHelper.IsDown(ToggleFBWRW) || ToggleFBWKey.Value.IsDown())
+            catch (Exception ex)
             {
-                APData.NextMultiplayerCheck = 0f;
-                if (IsMultiplayer())
-                {
-                    APData.FBWDisabled = false;
-                }
-                else
-                {
-                    APData.FBWDisabled = !APData.FBWDisabled;
-                }
-                UpdateFBWState();
-            }
-
-            // no need because plane respawns and the toggle above exists
-            // not worth the lag spikes
-            // if (APData.FBWDisabled && IsMultiplayer())
-            // {
-            //     APData.FBWDisabled = false;
-            //     UpdateFBWState();
-            // }
-
-            if (APData.PlayerRB != null)
-            {
-                float rawSpeed = APData.PlayerRB.velocity.magnitude;
-                float alpha = 1.0f - Mathf.Exp(-Time.deltaTime * 2.0f);
-                APData.SpeedEma = Mathf.Max(Mathf.Lerp(APData.SpeedEma, rawSpeed, alpha), 0.0001f);
+                Logger.LogError($"[Update] Error: {ex}");
+                IsBroken = true;
             }
         }
 
@@ -1344,7 +1387,7 @@ namespace NOAutopilot
             catch (Exception ex)
             {
                 Logger.LogError($"[UpdateFBWState] Error: {ex.Message}");
-                APData.FBWDisabled = false;
+                IsBroken = true;
             }
         }
 
@@ -1404,6 +1447,7 @@ namespace NOAutopilot
             catch (Exception ex)
             {
                 Logger.LogError($"[IsMultiplayer] Error: {ex}");
+                IsBroken = true;
             }
 
             APData.IsMultiplayerCached = false;
@@ -1634,6 +1678,7 @@ namespace NOAutopilot
 
         private static void Postfix(object playerVehicle, float altitude)
         {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
             try
             {
                 APData.CurrentAlt = altitude;
@@ -1659,6 +1704,7 @@ namespace NOAutopilot
                     APData.TargetRoll = 0f;
                     APData.GCASEnabled = Plugin.EnableGCAS.Value;
                     APData.LocalWeaponManager = APData.LocalAircraft.weaponManager;
+                    APData.SaveMapState = Plugin.SaveMapState.Value;
 
                     var pilots = APData.LocalAircraft.pilots;
                     if (pilots != null && pilots.Length > 0) APData.LocalPilot = pilots[0];
@@ -1670,6 +1716,7 @@ namespace NOAutopilot
             catch (Exception ex)
             {
                 Plugin.Logger.LogError($"[HudPatch] Error: {ex}");
+                Plugin.IsBroken = true;
             }
         }
     }
@@ -1780,7 +1827,8 @@ namespace NOAutopilot
 
         private static void Postfix(PilotPlayerState __instance)
         {
-            if (APData.LocalAircraft == null || APData.PlayerRB == null || APData.PlayerTransform == null)
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
+            if (__instance == null || APData.LocalAircraft == null || APData.PlayerRB == null || APData.PlayerTransform == null)
             {
                 APData.Enabled = false;
                 APData.GCASActive = false;
@@ -1789,6 +1837,11 @@ namespace NOAutopilot
 
             try
             {
+                // if (Input.GetKeyDown(KeyCode.F9))
+                // {
+                //     Plugin.Logger.LogWarning("simulating error");
+                //     throw new Exception("simulated error???");
+                // }
                 if (APData.CurrentMaxClimbRate < 0f) APData.CurrentMaxClimbRate = Plugin.DefaultMaxClimbRate.Value;
                 APData.CurrentRoll = APData.PlayerTransform.eulerAngles.z;
                 if (APData.CurrentRoll > 180f) APData.CurrentRoll -= 360f;
@@ -2551,7 +2604,7 @@ namespace NOAutopilot
             catch (Exception ex)
             {
                 Plugin.Logger.LogError($"[ControlOverridePatch] Error: {ex}");
-                APData.Enabled = false;
+                Plugin.IsBroken = true;
             }
         }
     }
@@ -2609,6 +2662,7 @@ namespace NOAutopilot
 
         private static void Postfix(FlightHud __instance)
         {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
             if (!Plugin.ShowExtraInfo.Value) return;
 
             try
@@ -2919,6 +2973,7 @@ namespace NOAutopilot
             catch (Exception ex)
             {
                 Plugin.Logger.LogError($"[HUDVisualsPatch] Error: {ex}");
+                Plugin.IsBroken = true;
             }
         }
     }
@@ -2929,6 +2984,7 @@ namespace NOAutopilot
         public static void Reset() { }
         static void Postfix(DynamicMap __instance)
         {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
             if (__instance == null || !DynamicMap.mapMaximized || !Input.GetMouseButtonDown(1)) return;
 
             if (!__instance.TryGetCursorCoordinates(out var clickedGlobalPos)) return;
@@ -3068,6 +3124,7 @@ namespace NOAutopilot
     {
         static void Prefix(DynamicMap __instance)
         {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
             if (!APData.SaveMapState || __instance == null) return;
 
             try
@@ -3077,7 +3134,11 @@ namespace NOAutopilot
                 APData.SavedMapZoom = __instance.GetZoomLevel();
                 APData.MapStateStored = true;
             }
-            catch (Exception ex) { Plugin.Logger.LogError($"SaveMapState Error: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"SaveMapState Error: {ex.Message}");
+                Plugin.IsBroken = true;
+            }
         }
     }
 
@@ -3086,6 +3147,7 @@ namespace NOAutopilot
     {
         static void Postfix(DynamicMap __instance)
         {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
             if (!APData.SaveMapState || !APData.MapStateStored || __instance == null) return;
 
             try
@@ -3095,7 +3157,11 @@ namespace NOAutopilot
                 __instance.SetZoomLevel(APData.SavedMapZoom);
                 __instance.UpdateMap();
             }
-            catch (Exception ex) { Plugin.Logger.LogError($"LoadMapState Error: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"LoadMapState Error: {ex.Message}");
+                Plugin.IsBroken = true;
+            }
         }
     }
 

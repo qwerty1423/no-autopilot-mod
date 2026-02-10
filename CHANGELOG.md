@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.15.6]
+
+### Added
+
+- unload on error so no log spam? (configurable)
+
+### Changed
+
+- removed most reflection
+- reference dll straight from game directory
+
 ## [4.15.5]
 
 ### attempt to fix

@@ -12,6 +12,8 @@
 
 - removed most reflection
 - reference dll straight from game directory
+- reduced default course roll limit
+- changed some default config
 
 ## [4.15.5]
 

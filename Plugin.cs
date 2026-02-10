@@ -239,13 +239,13 @@ namespace NOAutopilot
 
             // nav
             NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f, "Distance in meters to consider a waypoint reached.");
-            NavPassedDistance = Config.Bind("Settings - Navigation", "2. Passed Distance", 25000f, "Distance in meters after waypoint is behind plane to consider it reached");
+            NavPassedDistance = Config.Bind("Settings - Navigation", "2. Passed Distance", 10000f, "Distance in meters after waypoint is behind plane to consider it reached");
             NavCycle = Config.Bind("Settings - Navigation", "3. Cycle wp", true, "On: cycles to next wp upon reaching wp, Off: Deletes wp upon reaching wp");
 
             // Auto Jammer
             EnableAutoJammer = Config.Bind("Auto Jammer", "1. Enable Auto Jammer", true, "Allow the feature");
             AutoJammerThreshold = Config.Bind("Auto Jammer", "3. Energy Threshold", 0.99f, "Fire when energy > this %");
-            AutoJammerRandom = Config.Bind("Auto Jammer", "4. Random Delay", true, "Add random delay");
+            AutoJammerRandom = Config.Bind("Auto Jammer", "4. Random Delay", false, "Add random delay");
             AutoJammerMinDelay = Config.Bind("Auto Jammer", "5. Delay Min", 0.02f, "Seconds");
             AutoJammerMaxDelay = Config.Bind("Auto Jammer", "6. Delay Max", 0.04f, "Seconds");
             AutoJammerReleaseMin = Config.Bind("Auto Jammer", "7. Release Delay Min", 0.02f, "Seconds");
@@ -304,7 +304,7 @@ namespace NOAutopilot
             // Tuning
             DefaultMaxClimbRate = Config.Bind("Tuning - 0. Limits", "1. Default Max Climb Rate", 10f, "Startup value");
             Conf_VS_MaxAngle = Config.Bind("Tuning - 0. Limits", "2. Max Pitch Angle", 30.0f, "anti stall limit?");
-            DefaultCRLimit = Config.Bind("Tuning - 0. Limits", "3. Default course roll limit", 30.0f, "roll limit when turning in course/nav mode");
+            DefaultCRLimit = Config.Bind("Tuning - 0. Limits", "3. Default course roll limit", 10.0f, "default roll limit when turning in course/nav mode");
 
             // Loops
             Conf_Alt_P = Config.Bind("Tuning - 1. Altitude", "1. Alt P", 0.5f, "Alt Error -> Target VS");

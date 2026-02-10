@@ -171,40 +171,6 @@ namespace NOAutopilot
         public static ConfigEntry<float> Rand_Spd_SleepMin, Rand_Spd_SleepMax;
         public static ConfigEntry<float> Rand_Acc_Inner, Rand_Acc_Outer;
 
-        // reflection
-        internal static FieldInfo f_playerVehicle;
-        internal static FieldInfo f_controlInputs;
-        internal static FieldInfo f_pitch, f_roll;
-        internal static FieldInfo f_throttle;
-        internal static FieldInfo f_targetList;
-        internal static FieldInfo f_currentWeaponStation;
-        internal static FieldInfo f_stationWeapons;
-
-        internal static FieldInfo f_fuelLabel, f_fuelCapacity, f_controlsFilter;
-        internal static FieldInfo f_pilots, f_gearState, f_weaponManager, f_radarAlt;
-
-        internal static FieldInfo f_powerSupply, f_charge, f_maxCharge;
-
-        internal static MethodInfo m_Fire, m_GetAccel;
-
-        internal static Type t_JammingPod;
-
-        internal static MethodInfo m_GetFBWParams;
-        internal static MethodInfo m_SetFBWParams;
-        internal static FieldInfo f_fbw_item1_enabled;
-        internal static FieldInfo f_fbw_item2_tuning;
-
-        internal static Type t_NetworkServer;
-        internal static PropertyInfo p_serverActive, p_serverAllPlayers;
-        internal static Type t_NetworkClient;
-        internal static PropertyInfo p_clientActive, p_clientIsHost;
-
-        internal static FieldInfo f_mapPosOffset, f_mapStatOffset, f_mapFollow, f_onMapChanged;
-
-        internal static Type t_GLOC;
-        internal static FieldInfo f_bloodPressure;
-        internal static FieldInfo f_conscious;
-
         private void Awake()
         {
             Logger = base.Logger;
@@ -398,142 +364,6 @@ namespace NOAutopilot
             Rand_Spd_SleepMax = Config.Bind("Settings - Random", "20. Speed Sleep Max", 60.0f, "Seconds");
             Rand_Acc_Inner = Config.Bind("Settings - Random", "21. Accel Tolerance Inner", 0.05f, "Start Sleeping (m/s² acceleration)");
             Rand_Acc_Outer = Config.Bind("Settings - Random", "22. Accel Tolerance Outer", 0.5f, "Wake Up (m/s² acceleration)");
-
-            // reflection cache
-            try
-            {
-                static void Check(object obj, string name)
-                {
-                    if (obj == null) throw new Exception($"[Reflection] missing: {name}");
-                }
-
-                BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-                BindingFlags privateFlags = BindingFlags.NonPublic | BindingFlags.Instance;
-
-                f_playerVehicle = typeof(FlightHud).GetField("playerVehicle", flags);
-                Check(f_playerVehicle, "f_playerVehicle");
-
-                f_controlInputs = typeof(PilotPlayerState).GetField("controlInputs", flags);
-                if (f_controlInputs == null && typeof(PilotPlayerState).BaseType != null)
-                {
-                    f_controlInputs = typeof(PilotPlayerState).BaseType.GetField("controlInputs", flags);
-                }
-                Check(f_controlInputs, "f_controlInputs");
-
-                Type inputType = f_controlInputs.FieldType;
-                f_pitch = inputType.GetField("pitch", flags);
-                f_roll = inputType.GetField("roll", flags);
-                f_throttle = inputType.GetField("throttle", flags);
-
-                Check(f_pitch, "f_pitch");
-                Check(f_roll, "f_roll");
-                Check(f_throttle, "f_throttle");
-
-                f_controlsFilter = typeof(Aircraft).GetField("controlsFilter", flags);
-                f_fuelCapacity = typeof(Aircraft).GetField("fuelCapacity", flags);
-                f_pilots = typeof(Aircraft).GetField("pilots", flags);
-                f_gearState = typeof(Aircraft).GetField("gearState", flags);
-                f_weaponManager = typeof(Aircraft).GetField("weaponManager", flags);
-                f_radarAlt = typeof(Aircraft).GetField("radarAlt", flags);
-
-                Check(f_controlsFilter, "f_controlsFilter");
-                Check(f_fuelCapacity, "f_fuelCapacity");
-                Check(f_pilots, "f_pilots");
-                Check(f_gearState, "f_gearState");
-                Check(f_weaponManager, "f_weaponManager");
-                Check(f_radarAlt, "f_radarAlt");
-
-                Type psType = typeof(Aircraft).Assembly.GetType("PowerSupply");
-                Check(psType, "PowerSupply Type");
-
-                f_charge = psType.GetField("charge", flags);
-                f_maxCharge = psType.GetField("maxCharge", flags);
-                f_powerSupply = typeof(Aircraft).GetField("powerSupply", flags);
-
-                Check(f_charge, "f_charge");
-                Check(f_maxCharge, "f_maxCharge");
-                Check(f_powerSupply, "f_powerSupply");
-
-                Type t_Pilot = typeof(Aircraft).Assembly.GetType("Pilot");
-                Check(t_Pilot, "t_Pilot");
-
-                m_GetAccel = t_Pilot.GetMethod("GetAccel");
-                Check(m_GetAccel, "m_GetAccel");
-
-                Type t_WeaponManager = typeof(Aircraft).Assembly.GetType("WeaponManager");
-                Check(t_WeaponManager, "t_WeaponManager");
-
-                m_Fire = t_WeaponManager.GetMethod("Fire", flags, null, Type.EmptyTypes, null);
-                f_targetList = t_WeaponManager.GetField("targetList", flags);
-                f_currentWeaponStation = t_WeaponManager.GetField("currentWeaponStation", flags);
-
-                Check(m_Fire, "m_Fire");
-                Check(f_targetList, "f_targetList");
-                Check(f_currentWeaponStation, "f_currentWeaponStation");
-
-                Type t_WeaponStation = typeof(Aircraft).Assembly.GetType("WeaponStation");
-                Check(t_WeaponStation, "t_WeaponStation");
-
-                f_stationWeapons = t_WeaponStation.GetField("Weapons", flags);
-                Check(f_stationWeapons, "f_stationWeapons");
-
-                t_JammingPod = typeof(Aircraft).Assembly.GetType("JammingPod");
-                Check(t_JammingPod, "t_JammingPod");
-
-                Type t_FuelGauge = typeof(Aircraft).Assembly.GetType("FuelGauge");
-                Check(t_FuelGauge, "t_FuelGauge");
-                f_fuelLabel = t_FuelGauge.GetField("fuelLabel", flags);
-                Check(f_fuelLabel, "f_fuelLabel");
-
-                Type t_ControlsFilter = typeof(ControlsFilter);
-                Check(t_ControlsFilter, "t_ControlsFilter");
-                m_GetFBWParams = t_ControlsFilter.GetMethod("GetFlyByWireParameters", flags);
-                m_SetFBWParams = t_ControlsFilter.GetMethod("SetFlyByWireParameters", flags);
-                Check(m_GetFBWParams, "m_GetFBWParams");
-                Check(m_SetFBWParams, "m_SetFBWParams");
-                Type fbwTupleType = m_GetFBWParams.ReturnType;
-                f_fbw_item1_enabled = fbwTupleType.GetField("Item1");
-                Check(f_fbw_item1_enabled, "f_fbw_item1_enabled");
-                f_fbw_item2_tuning = fbwTupleType.GetField("Item2");
-                Check(f_fbw_item2_tuning, "f_fbw_item2_tuning");
-
-                t_NetworkServer = AccessTools.TypeByName("Mirage.NetworkServer");
-                Check(t_NetworkServer, "t_NetworkServer");
-                p_serverActive = AccessTools.Property(t_NetworkServer, "Active");
-                Check(p_serverActive, "p_serverActive");
-                p_serverAllPlayers = AccessTools.Property(t_NetworkServer, "AllPlayers");
-                Check(p_serverAllPlayers, "p_serverAllPlayers");
-                t_NetworkClient = AccessTools.TypeByName("Mirage.NetworkClient");
-                Check(t_NetworkClient, "t_NetworkClient");
-                p_clientActive = AccessTools.Property(t_NetworkClient, "Active");
-                Check(p_clientActive, "p_clientActive");
-                p_clientIsHost = AccessTools.Property(t_NetworkClient, "IsHost");
-                Check(p_clientIsHost, "p_clientIsHost");
-
-                Type t_Map = typeof(DynamicMap);
-                f_mapPosOffset = t_Map.GetField("positionOffset", flags);
-                Check(f_mapPosOffset, "f_mapPosOffset");
-                f_mapStatOffset = t_Map.GetField("stationaryOffset", flags);
-                Check(f_mapStatOffset, "f_mapStatOffset");
-                f_mapFollow = t_Map.GetField("followingCamera", flags);
-                Check(f_mapFollow, "f_mapFollow");
-                f_onMapChanged = t_Map.GetField("onMapChanged", flags | BindingFlags.Static);
-                Check(f_onMapChanged, "f_onMapChanged");
-
-                t_GLOC = typeof(Aircraft).Assembly.GetType("GLOC");
-                Check(t_GLOC, "t_GLOC");
-                f_bloodPressure = t_GLOC.GetField("bloodPressure", privateFlags);
-                f_conscious = t_GLOC.GetField("conscious", privateFlags);
-                Check(f_bloodPressure, "f_bloodPressure");
-                Check(f_conscious, "f_conscious");
-            }
-            catch (Exception ex)
-            {
-                Logger.LogFatal("Failed to cache reflection fields! " + ex);
-                Logger.LogFatal("The mod will now disable itself to prevent further issues.");
-                enabled = false;
-                return;
-            }
 
             harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
             harmony.PatchAll();
@@ -1243,11 +1073,11 @@ namespace NOAutopilot
             if (GUILayout.Button(new GUIContent("Center", "Pan to the center of the map"), _styleButton))
             {
                 var map = SceneSingleton<DynamicMap>.i;
-                if (map != null && f_mapPosOffset != null && f_mapStatOffset != null)
+                if (map != null)
                 {
-                    Vector2 stationary = (Vector2)f_mapStatOffset.GetValue(map);
-                    f_mapPosOffset.SetValue(map, -stationary);
-                    f_mapFollow?.SetValue(map, false);
+                    Vector2 stationary = map.stationaryOffset;
+                    map.positionOffset = -stationary;
+                    map.followingCamera = false;
                 }
                 GUI.FocusControl(null);
             }
@@ -1255,9 +1085,9 @@ namespace NOAutopilot
             if (GUILayout.Button(new GUIContent("Aircraft", "Pan map to your aircraft"), _styleButton))
             {
                 var map = SceneSingleton<DynamicMap>.i;
-                if (map != null && f_mapPosOffset != null)
+                if (map != null)
                 {
-                    f_mapPosOffset.SetValue(map, Vector2.zero);
+                    map.positionOffset = Vector2.zero;
                     map.CenterMap();
                 }
                 GUI.FocusControl(null);
@@ -1505,11 +1335,11 @@ namespace NOAutopilot
 
             try
             {
-                object filterObj = f_controlsFilter.GetValue(APData.LocalAircraft);
+                var filterObj = APData.LocalAircraft.controlsFilter;
                 if (filterObj == null) return;
-                object tupleResult = m_GetFBWParams.Invoke(filterObj, null);
-                float[] currentTuning = (float[])f_fbw_item2_tuning.GetValue(tupleResult);
-                m_SetFBWParams.Invoke(filterObj, [!shouldDisable, currentTuning]);
+                var tupleResult = filterObj.GetFlyByWireParameters();
+                float[] currentTuning = tupleResult.Item2;
+                filterObj.SetFlyByWireParameters(!shouldDisable, currentTuning);
             }
             catch (Exception ex)
             {
@@ -1544,36 +1374,30 @@ namespace NOAutopilot
 
             try
             {
-                if (t_NetworkServer != null)
+                var serverInstance = FindObjectOfType<Mirage.NetworkServer>();
+                if (serverInstance != null)
                 {
-                    UnityEngine.Object serverInstance = FindObjectOfType(t_NetworkServer);
-                    if (serverInstance != null)
+                    bool isServerActive = serverInstance.Active;
+                    if (isServerActive)
                     {
-                        bool isServerActive = (bool)p_serverActive.GetValue(serverInstance);
-                        if (isServerActive)
-                        {
-                            if (p_serverAllPlayers.GetValue(serverInstance) is IReadOnlyCollection<object> connections && connections.Count > 1)
-                            {
-                                APData.IsMultiplayerCached = true;
-                                return true;
-                            }
-                        }
-                    }
-                }
-
-                if (t_NetworkClient != null)
-                {
-                    UnityEngine.Object clientInstance = FindObjectOfType(t_NetworkClient);
-                    if (clientInstance != null)
-                    {
-                        bool isClientActive = (bool)p_clientActive.GetValue(clientInstance);
-                        bool isHost = (bool)p_clientIsHost.GetValue(clientInstance);
-
-                        if (isClientActive && !isHost)
+                        if (serverInstance.AllPlayers is IReadOnlyCollection<Mirage.INetworkPlayer> players && players.Count > 1)
                         {
                             APData.IsMultiplayerCached = true;
                             return true;
                         }
+                    }
+                }
+
+                var clientInstance = FindObjectOfType<Mirage.NetworkClient>();
+                if (clientInstance != null)
+                {
+                    bool isClientActive = clientInstance.Active;
+                    bool isHost = clientInstance.IsHost;
+
+                    if (isClientActive && !isHost)
+                    {
+                        APData.IsMultiplayerCached = true;
+                        return true;
                     }
                 }
             }
@@ -1731,7 +1555,7 @@ namespace NOAutopilot
         public static float CurrentMaxClimbRate = -1f;
         public static float SpeedEma = 0f;
         public static float LastOverrideInputTime = -999f;
-        public static object LocalPilot;
+        public static Pilot LocalPilot;
         public static List<Vector3> NavQueue = [];
         public static List<GameObject> NavVisuals = [];
         public static Transform PlayerTransform;
@@ -1834,15 +1658,10 @@ namespace NOAutopilot
                     APData.TargetAlt = altitude;
                     APData.TargetRoll = 0f;
                     APData.GCASEnabled = Plugin.EnableGCAS.Value;
+                    APData.LocalWeaponManager = APData.LocalAircraft.weaponManager;
 
-                    if (Plugin.f_weaponManager != null)
-                        APData.LocalWeaponManager = Plugin.f_weaponManager.GetValue(APData.LocalAircraft) as WeaponManager;
-
-                    if (Plugin.f_pilots != null)
-                    {
-                        IList pilots = (IList)Plugin.f_pilots.GetValue(APData.LocalAircraft);
-                        if (pilots != null && pilots.Count > 0) APData.LocalPilot = pilots[0];
-                    }
+                    var pilots = APData.LocalAircraft.pilots;
+                    if (pilots != null && pilots.Length > 0) APData.LocalPilot = pilots[0];
 
                     Plugin.SyncMenuValues();
                     Plugin.CleanUpFBW();
@@ -1968,21 +1787,19 @@ namespace NOAutopilot
                 return;
             }
 
-            if (Plugin.f_controlInputs == null || Plugin.f_pitch == null || Plugin.f_roll == null || Plugin.f_throttle == null) return;
-
             try
             {
                 if (APData.CurrentMaxClimbRate < 0f) APData.CurrentMaxClimbRate = Plugin.DefaultMaxClimbRate.Value;
                 APData.CurrentRoll = APData.PlayerTransform.eulerAngles.z;
                 if (APData.CurrentRoll > 180f) APData.CurrentRoll -= 360f;
-                object inputObj = Plugin.f_controlInputs.GetValue(__instance);
+                var inputObj = __instance.controlInputs;
                 if (inputObj == null) return;
                 float stickPitch = 0f;
                 float stickRoll = 0f;
                 float currentThrottle = 0f;
-                stickPitch = (float)Plugin.f_pitch.GetValue(inputObj);
-                stickRoll = (float)Plugin.f_roll.GetValue(inputObj);
-                currentThrottle = (float)Plugin.f_throttle.GetValue(inputObj);
+                stickPitch = inputObj.pitch;
+                stickRoll = inputObj.roll;
+                currentThrottle = inputObj.throttle;
 
                 Vector3 pForward = APData.PlayerTransform.forward;
                 Vector3 pUp = APData.PlayerTransform.up;
@@ -2044,19 +1861,19 @@ namespace NOAutopilot
                 }
 
                 // can a plane have no pilot?
-                if (APData.LocalPilot != null && Plugin.m_GetAccel != null)
+                if (APData.LocalPilot != null)
                 {
-                    Vector3 pAccel = (Vector3)Plugin.m_GetAccel.Invoke(APData.LocalPilot, null);
+                    Vector3 pAccel = ((Pilot)APData.LocalPilot).GetAccel();
                     currentG = Vector3.Dot(pAccel + Vector3.up, pUp);
 
                     Component pilotComp = APData.LocalPilot as Component;
                     if (pilotComp != null)
                     {
-                        var gloc = pilotComp.GetComponent(Plugin.t_GLOC);
+                        var gloc = pilotComp.GetComponent<GLOC>();
                         if (gloc != null)
                         {
-                            APData.BloodPressure = (float)Plugin.f_bloodPressure.GetValue(gloc);
-                            APData.IsConscious = (bool)Plugin.f_conscious.GetValue(gloc);
+                            APData.BloodPressure = gloc.bloodPressure;
+                            APData.IsConscious = gloc.conscious;
                         }
                     }
                 }
@@ -2066,14 +1883,13 @@ namespace NOAutopilot
                 {
                     bool gearDown = false;
                     Aircraft acRef = APData.LocalAircraft;
-                    if (acRef != null && Plugin.f_gearState != null)
+                    if (acRef.gearState != LandingGear.GearState.LockedRetracted)
                     {
-                        object gs = Plugin.f_gearState.GetValue(acRef);
-                        if (gs != null && !gs.ToString().Contains("LockedRetracted")) gearDown = true;
+                        gearDown = true;
                     }
 
                     APData.IsOnGround = false;
-                    float currentRadarAlt = (float)Plugin.f_radarAlt.GetValue(APData.LocalAircraft);
+                    float currentRadarAlt = APData.LocalAircraft.radarAlt;
                     if (gearDown && currentRadarAlt < 0.1f)
                     {
                         APData.IsOnGround = true;
@@ -2244,26 +2060,22 @@ namespace NOAutopilot
                 // auto jam
                 if (APData.LocalWeaponManager != null && APData.AutoJammerActive)
                 {
-                    object wm = APData.LocalWeaponManager;
+                    WeaponManager wm = APData.LocalWeaponManager;
                     if (wm != null)
                     {
                         bool fire = false;
-
-                        if (Plugin.f_currentWeaponStation != null && Plugin.f_stationWeapons != null)
+                        WeaponStation currStation = wm.currentWeaponStation;
+                        if (currStation != null)
                         {
-                            object currStation = Plugin.f_currentWeaponStation.GetValue(wm);
-                            if (currStation != null)
+                            if (currStation.Weapons is IList wpnList)
                             {
-                                if (Plugin.f_stationWeapons.GetValue(currStation) is IList wpnList)
+                                for (int i = 0; i < wpnList.Count; i++)
                                 {
-                                    for (int i = 0; i < wpnList.Count; i++)
+                                    object w = wpnList[i];
+                                    if (w is JammingPod)
                                     {
-                                        object w = wpnList[i];
-                                        if (w != null && Plugin.t_JammingPod != null && Plugin.t_JammingPod.IsInstanceOfType(w))
-                                        {
-                                            fire = true;
-                                            break;
-                                        }
+                                        fire = true;
+                                        break;
                                     }
                                 }
                             }
@@ -2272,48 +2084,43 @@ namespace NOAutopilot
                         if (fire)
                         {
                             fire = false;
-                            if (Plugin.f_targetList != null)
-                            {
-                                if (Plugin.f_targetList.GetValue(wm) is IList tList && tList.Count > 0) fire = true;
-                            }
+                            if (wm.targetList is IList tList && tList.Count > 0) fire = true;
                         }
 
                         if (fire)
                         {
-                            if (Plugin.f_charge != null && Plugin.f_powerSupply != null)
+                            var ps = APData.LocalAircraft.powerSupply;
+                            if (ps != null)
                             {
-                                object ps = Plugin.f_powerSupply.GetValue(APData.LocalAircraft);
-                                if (ps != null)
+                                float cur = ps.charge;
+                                float max = ps.maxCharge;
+                                if (max <= 1f) max = 100f;
+
+                                if ((cur / max) >= Plugin.AutoJammerThreshold.Value)
                                 {
-                                    float cur = (float)Plugin.f_charge.GetValue(ps);
-                                    float max = (float)Plugin.f_maxCharge.GetValue(ps);
-                                    if (max <= 1f) max = 100f;
-
-                                    if ((cur / max) >= Plugin.AutoJammerThreshold.Value)
+                                    if (!isJammerHoldingTrigger)
                                     {
-                                        if (!isJammerHoldingTrigger)
-                                        {
-                                            if (jammerNextFireTime == 0f)
-                                                jammerNextFireTime = Time.time + (Plugin.AutoJammerRandom.Value ? UnityEngine.Random.Range(Plugin.AutoJammerMinDelay.Value, Plugin.AutoJammerMaxDelay.Value) : 0f);
+                                        if (jammerNextFireTime == 0f)
+                                            jammerNextFireTime = Time.time + (Plugin.AutoJammerRandom.Value ? UnityEngine.Random.Range(Plugin.AutoJammerMinDelay.Value, Plugin.AutoJammerMaxDelay.Value) : 0f);
 
-                                            if (Time.time >= jammerNextFireTime) { isJammerHoldingTrigger = true; jammerNextFireTime = 0f; }
-                                        }
+                                        if (Time.time >= jammerNextFireTime) { isJammerHoldingTrigger = true; jammerNextFireTime = 0f; }
                                     }
-                                    else
-                                    {
-                                        if (isJammerHoldingTrigger)
-                                        {
-                                            if (jammerNextReleaseTime == 0f)
-                                                jammerNextReleaseTime = Time.time + (Plugin.AutoJammerRandom.Value ? UnityEngine.Random.Range(Plugin.AutoJammerReleaseMin.Value, Plugin.AutoJammerReleaseMax.Value) : 0f);
-
-                                            if (Time.time >= jammerNextReleaseTime) { isJammerHoldingTrigger = false; jammerNextReleaseTime = 0f; }
-                                        }
-                                    }
-
-                                    if (isJammerHoldingTrigger && Plugin.m_Fire != null)
-                                        Plugin.m_Fire.Invoke(wm, null);
                                 }
+                                else
+                                {
+                                    if (isJammerHoldingTrigger)
+                                    {
+                                        if (jammerNextReleaseTime == 0f)
+                                            jammerNextReleaseTime = Time.time + (Plugin.AutoJammerRandom.Value ? UnityEngine.Random.Range(Plugin.AutoJammerReleaseMin.Value, Plugin.AutoJammerReleaseMax.Value) : 0f);
+
+                                        if (Time.time >= jammerNextReleaseTime) { isJammerHoldingTrigger = false; jammerNextReleaseTime = 0f; }
+                                    }
+                                }
+
+                                if (isJammerHoldingTrigger)
+                                    wm.Fire();
                             }
+
                         }
                         else
                         {
@@ -2376,7 +2183,7 @@ namespace NOAutopilot
                 bool isWaitingToReengage = (Time.time - APData.LastOverrideInputTime) < Plugin.ReengageDelay.Value;
 
                 // throttle control
-                if (APData.TargetSpeed >= 0 && Plugin.f_throttle != null)
+                if (APData.TargetSpeed >= 0)
                 {
                     float currentSpeed = (APData.LocalAircraft != null) ? APData.LocalAircraft.speed : APData.PlayerRB.velocity.magnitude;
                     float targetSpeedMS;
@@ -2434,7 +2241,7 @@ namespace NOAutopilot
                         desiredLeverPos,
                         Plugin.ThrottleSlewRate.Value * dt
                     );
-                    Plugin.f_throttle.SetValue(inputObj, currentAppliedThrottle);
+                    inputObj.throttle = currentAppliedThrottle;
                 }
 
                 // autopilot
@@ -2616,7 +2423,7 @@ namespace NOAutopilot
                                 if (useRandom) rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.RandomStrength.Value;
                             }
 
-                            Plugin.f_roll?.SetValue(inputObj, Mathf.Clamp(rollOut, -1f, 1f));
+                            inputObj.roll = Mathf.Clamp(rollOut, -1f, 1f);
                         }
                     }
 
@@ -2736,7 +2543,7 @@ namespace NOAutopilot
 
                             if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
                             pitchOut = Mathf.Clamp(pitchOut, -1f, 1f);
-                            Plugin.f_pitch?.SetValue(inputObj, pitchOut);
+                            inputObj.pitch = pitchOut;
                         }
                     }
                 }
@@ -2806,10 +2613,10 @@ namespace NOAutopilot
 
             try
             {
-                if (__instance == null || Plugin.f_playerVehicle == null) return;
+                if (__instance == null) return;
 
-                object vehicleRaw = Plugin.f_playerVehicle.GetValue(__instance);
-                UnityEngine.Object unityObj = vehicleRaw as UnityEngine.Object;
+                var vehicleRaw = __instance.playerVehicle;
+                UnityEngine.Object unityObj = vehicleRaw;
 
                 if (unityObj == null) return;
                 if (vehicleRaw is not Component vehicleComponent) return;
@@ -2833,7 +2640,7 @@ namespace NOAutopilot
 
                     if (_cachedFuelGauge != null)
                     {
-                        _cachedRefLabel = (Text)Plugin.f_fuelLabel.GetValue(_cachedFuelGauge);
+                        _cachedRefLabel = _cachedFuelGauge.fuelLabel;
                     }
                 }
 
@@ -2868,9 +2675,9 @@ namespace NOAutopilot
                 infoOverlayObj.transform.localPosition = refLocalPos + new Vector3(finalX, finalY, 0);
 
                 Aircraft aircraft = APData.LocalAircraft;
-                if (aircraft != null && Plugin.f_fuelCapacity != null)
+                if (aircraft != null)
                 {
-                    float currentFuel = (float)Plugin.f_fuelCapacity.GetValue(aircraft) * aircraft.GetFuelLevel();
+                    float currentFuel = aircraft.fuelCapacity * aircraft.GetFuelLevel();
                     float time = Time.time;
                     if (lastUpdateTime != 0f && lastFuelMass > 0f)
                     {
@@ -3265,8 +3072,8 @@ namespace NOAutopilot
 
             try
             {
-                APData.SavedMapPos = (Vector2)Plugin.f_mapPosOffset.GetValue(__instance);
-                APData.SavedMapFollow = (bool)Plugin.f_mapFollow.GetValue(__instance);
+                APData.SavedMapPos = __instance.positionOffset;
+                APData.SavedMapFollow = __instance.followingCamera;
                 APData.SavedMapZoom = __instance.GetZoomLevel();
                 APData.MapStateStored = true;
             }
@@ -3283,14 +3090,10 @@ namespace NOAutopilot
 
             try
             {
-                Plugin.f_mapPosOffset.SetValue(__instance, APData.SavedMapPos);
-                Plugin.f_mapFollow.SetValue(__instance, APData.SavedMapFollow);
+                __instance.positionOffset = APData.SavedMapPos;
+                __instance.followingCamera = APData.SavedMapFollow;
                 __instance.SetZoomLevel(APData.SavedMapZoom);
-                if (Plugin.f_onMapChanged != null)
-                {
-                    var delegateObj = Plugin.f_onMapChanged.GetValue(null) as Action;
-                    delegateObj?.Invoke();
-                }
+                __instance.UpdateMap();
             }
             catch (Exception ex) { Plugin.Logger.LogError($"LoadMapState Error: {ex.Message}"); }
         }

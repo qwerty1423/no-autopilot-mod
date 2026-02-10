@@ -3031,14 +3031,14 @@ namespace NOAutopilot
                 if (Plugin.EnableNavonWP.Value)
                 {
                     APData.NavEnabled = true;
-                }
-                float currentTargetRoll = APData.TargetRoll;
-                if (currentTargetRoll == -999f || currentTargetRoll == 0f)
-                {
-                    APData.TargetRoll = Plugin.DefaultCRLimit.Value;
+                    float currentTargetRoll = APData.TargetRoll;
+                    if (currentTargetRoll == -999f || currentTargetRoll == 0f)
+                    {
+                        APData.TargetRoll = Plugin.DefaultCRLimit.Value;
+                    }
+                    Plugin.SyncMenuValues();
                 }
                 Plugin.RefreshNavVisuals();
-                Plugin.SyncMenuValues();
             }
         }
     }

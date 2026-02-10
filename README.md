@@ -145,7 +145,7 @@ If you are making large inputs, it will not pull up.
 <https://github.com/user-attachments/assets/1ac109a4-bc84-49ed-8141-55bc9a217607>
 
 Simple how to use guide:
-Right click / shift + right click on the map to make a path, then press equals and f8. Hover mouse over the UI for tooltips.
+Right click / shift + right click on the map to make a path, then press equals (to enable autopilot) and f8 (to bring up the UI). Click the nav mode toggle to enable nav mode. Hover mouse over the UI for tooltips.
 
 Setting waypoints will work as long as you don't create any yellow unit path lines, so as long as the first unit you have selected is not commandable then you can make a waypoint.
 

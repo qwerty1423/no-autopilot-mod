@@ -13,7 +13,8 @@
 - removed most reflection
 - reference dll straight from game directory
 - reduced default course roll limit
-- changed some default config
+- wp passed distance now 10km by default
+- creating wp does not enable nav by default anymore
 
 ## [4.15.5]
 

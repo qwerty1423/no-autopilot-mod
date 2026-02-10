@@ -229,7 +229,7 @@ namespace NOAutopilot
             DisableATAPStick = Config.Bind("Settings - Misc", "Disable autothrottle with AP (stick)", false, "Disable autothrottle when AP is disengaged by stick input");
             DisableNavAPKey = Config.Bind("Settings - Misc", "Disable nav mode with AP (key)", false, "Disable nav mode when AP is disengaged by key");
             DisableNavAPStick = Config.Bind("Settings - Misc", "Disable nav mode with AP (stick)", false, "Disable nav mode when AP is disengaged by stick input");
-            EnableNavonWP = Config.Bind("Settings - Misc", "Enable nav mode on WP creation", true, "Whether to enable nav mode on creation of new waypoint");
+            EnableNavonWP = Config.Bind("Settings - Misc", "Enable nav mode on WP creation", false, "Whether to enable nav mode on creation of new waypoint");
             KeepSetAltKey = Config.Bind("Settings - Misc", "Keep set altitude when AP engaged (key)", false, "AP will use previously set alt instead of current alt when engaged by keyboard key");
             KeepSetAltStick = Config.Bind("Settings - Misc", "Keep set altitude when stick inputs made", true, "AP will not reset alt to current alt when stick inputs are made");
             UnlockMapPan = Config.Bind("Settings - Misc", "Unlock Map Pan", true, "Requires restart to apply.");

@@ -160,7 +160,7 @@ namespace NOAutopilot
         public static ConfigEntry<float> Conf_Crs_P, Conf_Crs_I, Conf_Crs_D, Conf_Crs_ILimit;
 
         // Auto GCAS
-        public static ConfigEntry<bool> EnableGCAS;
+        public static ConfigEntry<bool> EnableGCAS, EnableGCASHelo;
         public static ConfigEntry<float> GCAS_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
         public static ConfigEntry<float> GCAS_P, GCAS_I, GCAS_D, GCAS_ILimit;
 
@@ -338,7 +338,8 @@ namespace NOAutopilot
             Conf_Crs_ILimit = Config.Bind("Tuning - 5. Course", "4. Course I Limit", 70.0f, "Max Integral Bank");
 
             // Auto GCAS
-            EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS on start", true, "GCAS off at start if disabled");
+            EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS on start", true, "GCAS off at start if disabled (anything that isn't a helo)");
+            EnableGCASHelo = Config.Bind("Auto GCAS", "2. Enable GCAS on start (Helo)", false, "If disabled, GCAS starts off for helicopters.");
             GCAS_MaxG = Config.Bind("Auto GCAS", "3. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
             GCAS_WarnBuffer = Config.Bind("Auto GCAS", "4. Warning Buffer", 20.0f, "GCAS warning indicator first appearance");
             GCAS_AutoBuffer = Config.Bind("Auto GCAS", "5. Auto-Pull Buffer", 0.5f, "Safety margin seconds");
@@ -1708,12 +1709,22 @@ namespace NOAutopilot
 
                     APData.TargetAlt = altitude;
                     APData.TargetRoll = 0f;
-                    APData.GCASEnabled = Plugin.EnableGCAS.Value;
                     APData.LocalWeaponManager = APData.LocalAircraft.weaponManager;
                     APData.SaveMapState = Plugin.SaveMapState.Value;
 
                     var pilots = APData.LocalAircraft.pilots;
-                    if (pilots != null && pilots.Length > 0) APData.LocalPilot = pilots[0];
+                    if (pilots != null && pilots.Length > 0)
+                    {
+                        APData.LocalPilot = pilots[0];
+                        if (APData.LocalPilot.pilotType == Pilot.PilotType.Helo)
+                        {
+                            APData.GCASEnabled = Plugin.EnableGCASHelo.Value;
+                        }
+                        else
+                        {
+                            APData.GCASEnabled = Plugin.EnableGCAS.Value;
+                        }
+                    }
 
                     Plugin.SyncMenuValues();
                     Plugin.CleanUpFBW();

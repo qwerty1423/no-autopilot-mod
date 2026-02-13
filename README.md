@@ -10,6 +10,14 @@ As of 2026-02-02, Talon Two allows the use of this mod on their servers, and Gra
 
 ## Installation
 
+### Mod manager
+
+[NOMM](https://github.com/Combat787/NOMM)
+
+[Yellowcake](https://github.com/NaghDiefallah/Yellowcake)
+
+### Manual installation
+
 1. Install BepInEx 5.
    - [their github has install instructions](https://github.com/BepInEx/BepInEx/)
    - if you are on linux, add override in steam launch options: WINEDLLOVERRIDES="winhttp=n,b" %command%

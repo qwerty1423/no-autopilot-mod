@@ -98,7 +98,7 @@ namespace NOAutopilot
         public static ConfigEntry<int> FuelWarnMinutes, FuelCritMinutes;
         public static ConfigEntry<bool> ShowExtraInfo;
         public static ConfigEntry<bool> ShowFuelOverlay, ShowAPOverlay;
-        public static ConfigEntry<bool> ShowGCASOff, ShowOverride, ShowPlaceholders;
+        public static ConfigEntry<bool> ShowGCASOff, ShowGCASChevronOff, ShowOverride, ShowPlaceholders;
         public static ConfigEntry<bool> AltShowUnit;
         public static ConfigEntry<bool> DistShowUnit;
         public static ConfigEntry<bool> VertSpeedShowUnit;
@@ -194,7 +194,8 @@ namespace NOAutopilot
             ShowExtraInfo = Config.Bind("Visuals", "Show Fuel/AP Info", true, "Show extra info on Fuel Gauge");
             ShowFuelOverlay = Config.Bind("Visuals", "Show Fuel Overlay", true, "Draw fuel info text on the HUD.");
             ShowAPOverlay = Config.Bind("Visuals", "Show AP Overlay", true, "Draw AP status text on the HUD. Turn off if you want, there's a window now.");
-            ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show GCAS OFF on HUD");
+            ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show GCAS- on HUD");
+            ShowGCASChevronOff = Config.Bind("Visuals", "Show GCAS chevron while disabled", true, "Show chevron while GCAS disabled");
             ShowOverride = Config.Bind("Visuals", "Show Override Delay", true, "Show Override on HUD");
             ShowPlaceholders = Config.Bind("Visuals", "Show Overlay Placeholders", false, "Show the A, V, W, when values default/null");
             FuelFormatString = Config.Bind("Visuals", "Fuel time format string", "hh\\:mm", "e.g. hh\\:mm\\:ss, hh\\:mm, mm\\:ss, h\\h\\ m\\m\\ s\\s, etc.\nhttps://learn.microsoft.com/en-us/dotnet/standard/base-types/custom-timespan-format-strings");
@@ -1923,10 +1924,10 @@ namespace NOAutopilot
                 // can a plane have no pilot?
                 if (APData.LocalPilot != null)
                 {
-                    Vector3 pAccel = ((Pilot)APData.LocalPilot).GetAccel();
+                    Vector3 pAccel = APData.LocalPilot.GetAccel();
                     currentG = Vector3.Dot(pAccel + Vector3.up, pUp);
 
-                    Component pilotComp = APData.LocalPilot as Component;
+                    Component pilotComp = APData.LocalPilot;
                     if (pilotComp != null)
                     {
                         var gloc = pilotComp.GetComponent<GLOC>();
@@ -1939,7 +1940,7 @@ namespace NOAutopilot
                 }
 
                 // gcas
-                if (APData.GCASEnabled)
+                if (APData.GCASEnabled || Plugin.ShowGCASChevronOff.Value)
                 {
                     bool gearDown = false;
                     Aircraft acRef = APData.LocalAircraft;
@@ -2093,7 +2094,7 @@ namespace NOAutopilot
                         }
                         else if (dangerImminent)
                         {
-                            if (!pilotOverride)
+                            if (!pilotOverride && APData.GCASEnabled)
                             {
                                 apStateBeforeGCAS = APData.Enabled;
                                 APData.Enabled = true;
@@ -2949,7 +2950,7 @@ namespace NOAutopilot
 
                     gcasLeftObj.SetActive(true);
                     gcasRightObj.SetActive(true);
-                    gcasTopObj.SetActive(APData.GCASActive);
+                    gcasTopObj.SetActive(target >= 1);
 
                     Color gcasColor = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
 

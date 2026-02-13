@@ -160,7 +160,7 @@ namespace NOAutopilot
         public static ConfigEntry<float> Conf_Crs_P, Conf_Crs_I, Conf_Crs_D, Conf_Crs_ILimit;
 
         // Auto GCAS
-        public static ConfigEntry<bool> EnableGCAS, EnableGCASHelo;
+        public static ConfigEntry<bool> EnableGCAS, EnableGCASHelo, EnableGCASTiltwing;
         public static ConfigEntry<float> GCAS_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
         public static ConfigEntry<float> GCAS_P, GCAS_I, GCAS_D, GCAS_ILimit;
 
@@ -340,11 +340,12 @@ namespace NOAutopilot
             // Auto GCAS
             EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS on start", true, "GCAS off at start if disabled (anything that isn't a helo)");
             EnableGCASHelo = Config.Bind("Auto GCAS", "2. Enable GCAS on start (Helo)", false, "If disabled, GCAS starts off for helicopters.");
-            GCAS_MaxG = Config.Bind("Auto GCAS", "3. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
-            GCAS_WarnBuffer = Config.Bind("Auto GCAS", "4. Warning Buffer", 20.0f, "GCAS warning indicator first appearance");
-            GCAS_AutoBuffer = Config.Bind("Auto GCAS", "5. Auto-Pull Buffer", 0.5f, "Safety margin seconds");
-            GCAS_Deadzone = Config.Bind("Auto GCAS", "6. GCAS Deadzone", 0.5f, "GCAS override deadzone");
-            GCAS_ScanRadius = Config.Bind("Auto GCAS", "7. Scan Radius", 2.0f, "Width of the spherecast (m)");
+            EnableGCASTiltwing = Config.Bind("Auto GCAS", "3. Enable GCAS on start (Tiltwing)", true, "If disabled, gcas starts off for tiltwings.");
+            GCAS_MaxG = Config.Bind("Auto GCAS", "4. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
+            GCAS_WarnBuffer = Config.Bind("Auto GCAS", "5. Warning Buffer", 20.0f, "GCAS warning indicator first appearance");
+            GCAS_AutoBuffer = Config.Bind("Auto GCAS", "6. Auto-Pull Buffer", 0.5f, "Safety margin seconds");
+            GCAS_Deadzone = Config.Bind("Auto GCAS", "7. GCAS Deadzone", 0.5f, "GCAS override deadzone");
+            GCAS_ScanRadius = Config.Bind("Auto GCAS", "8. Scan Radius", 2.0f, "Width of the spherecast (m)");
             GCAS_P = Config.Bind("GCAS PID", "1. GCAS P", 0.1f, "G Error -> Stick");
             GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 0.5f, "Builds pull over time");
             GCAS_D = Config.Bind("GCAS PID", "3. GCAS D", 0.0f, "Dampens G overshoot");
@@ -1716,14 +1717,12 @@ namespace NOAutopilot
                     if (pilots != null && pilots.Length > 0)
                     {
                         APData.LocalPilot = pilots[0];
-                        if (APData.LocalPilot.pilotType == Pilot.PilotType.Helo)
+                        APData.GCASEnabled = APData.LocalPilot.pilotType switch
                         {
-                            APData.GCASEnabled = Plugin.EnableGCASHelo.Value;
-                        }
-                        else
-                        {
-                            APData.GCASEnabled = Plugin.EnableGCAS.Value;
-                        }
+                            Pilot.PilotType.Helo => Plugin.EnableGCASHelo.Value,
+                            Pilot.PilotType.Tiltwing => Plugin.EnableGCASTiltwing.Value,
+                            _ => Plugin.EnableGCAS.Value,
+                        };
                     }
 
                     Plugin.SyncMenuValues();

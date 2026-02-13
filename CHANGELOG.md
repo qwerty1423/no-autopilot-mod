@@ -2,9 +2,15 @@
 
 ## [4.16.1]
 
+### added
+
+- a separate gcas on start toggle for helicopters (defaults to false)
+- another toggle for tiltwings (defaults to true)
+
 ### Changed
 
-- GCAS will now pull until level unless interrupted by pilot input
+- gcas will now pull until level unless interrupted by pilot input
+- gcas disable now leaves chevrons enabled by default
 
 ## [4.16.0]
 

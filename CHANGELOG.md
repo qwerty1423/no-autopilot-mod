@@ -1,8 +1,8 @@
 # Changelog
 
-## [4.16.1]
+## [4.16.1] - 2026-02-13
 
-### added
+### Added
 
 - a separate gcas on start toggle for helicopters (defaults to false)
 - another toggle for tiltwings (defaults to true)
@@ -12,7 +12,7 @@
 - gcas will now pull until level unless interrupted by pilot input
 - gcas disable now leaves chevrons enabled by default
 
-## [4.16.0]
+## [4.16.0] - 2026-02-10
 
 ### Added
 
@@ -28,13 +28,13 @@
 - wp passed distance now 10km by default
 - creating wp does not enable nav by default anymore
 
-## [4.15.5]
+## [4.15.5] - 2026-02-07
 
 ### attempt to fix
 
 - multiplayer issue on respawn
 
-## [4.15.4]
+## [4.15.4] - 2026-02-07
 
 ### Fixed
 
@@ -44,7 +44,7 @@
 
 - multiplayer issue on respawn
 
-## [4.15.3]
+## [4.15.3] - 2026-02-06
 
 ### Fixed
 
@@ -54,7 +54,7 @@
 
 - renamed some variables
 
-## [4.15.2] - 2026-02-06
+## [4.15.2] - 2026-02-05
 
 ### Fixed
 

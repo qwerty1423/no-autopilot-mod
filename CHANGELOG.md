@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.16.1]
+
+### Changed
+
+- GCAS will now pull until level unless interrupted by pilot input
+
 ## [4.16.0]
 
 ### Added

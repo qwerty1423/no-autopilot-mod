@@ -1858,6 +1858,8 @@ namespace NOAutopilot
                 stickPitch = inputObj.pitch;
                 stickRoll = inputObj.roll;
                 currentThrottle = inputObj.throttle;
+                bool pilotPitch = Mathf.Abs(stickPitch) > Plugin.StickTempThreshold.Value;
+                bool pilotRoll = Mathf.Abs(stickRoll) > Plugin.StickTempThreshold.Value;
 
                 Vector3 pForward = APData.PlayerTransform.forward;
                 Vector3 pUp = APData.PlayerTransform.up;
@@ -2063,10 +2065,8 @@ namespace NOAutopilot
 
                             if (!dangerImminent)
                             {
-                                // if (isWallThreat || APData.CurrentAlt > 100f) safeToRelease = true;
-                                // else if (velocity.y >= 0f) safeToRelease = true;
-
-                                safeToRelease = true;
+                                if (velocity.y >= 0f) safeToRelease = true;
+                                else if (pilotPitch || pilotRoll) safeToRelease = true;
                             }
 
                             if (safeToRelease)
@@ -2187,9 +2187,6 @@ namespace NOAutopilot
                         }
                     }
                 }
-
-                bool pilotPitch = Mathf.Abs(stickPitch) > Plugin.StickTempThreshold.Value;
-                bool pilotRoll = Mathf.Abs(stickRoll) > Plugin.StickTempThreshold.Value;
 
                 if (pilotPitch || pilotRoll)
                 {

@@ -171,5 +171,3 @@ steps
 3. `dotnet build -c Release`
 
 Latest release might be reproducible as long as no silent hotfix or game update has occurred. (no guarantees here, so this is rather useless)
-
-Getting the correct versions of the dlls might be difficult since the game updates regularly and silently. You also have to clone the repo and checkout the specific version.

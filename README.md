@@ -1,6 +1,6 @@
 # Nuclear Option Autopilot Mod
 
-Adds autopilot and some other features. Clientside and multiplayer compatible.
+Adds autopilot and some other features. Clientside and multiplayer compatible. 
 
 It would be best to make sure the host is ok with you using the mod, especially in PVP.
 
@@ -116,46 +116,33 @@ In approximate likelihood of implementation order descending.
 
 <https://github.com/user-attachments/assets/3d2eaeaa-b810-4353-a4b6-90a1107e3cb9>
 
-Autopilot controls roll and pitch. (helicopters somehow work, but probably require small ascent/descent rate limits).
+Autopilot controls roll and pitch. (helicopters somehow work, but probably require small ascent/descent rate limits). Ascent/descent rate limits and target altitude can be configured with keyboard while flying. Target bank angle can be set so that plane turns in a circle. Should be useful for Medusa, for easier loitering. Large stick inputs will disengage the autopilot. 
 
-Ascent/descent rate limits and target altitude can be configured with keyboard while flying. There is also GUI that opens with F8 key by default.
+Displays current settings on the HUD. There is also a GUI that opens with F8 key by default.
 
-Target bank angle can be set so that plane turns in a circle. Should be useful for Medusa, for easier loitering.
-
-Large stick inputs will disengage the autopilot.
-
-Displays current settings on the HUD.
-
-PID values can be tuned further if you like, but the defaults should be quite effective. They may not work in all situations or in all aircraft, however.
-
-There is no limit to the minimum altitude or maximum altitude, but crashes and engine flameouts may result from flying too low or too high.
+PID values can be tuned further if you like, but the defaults should be quite effective. They may not work in all situations or in all aircraft, however. There is no limit to the minimum altitude or maximum altitude, but crashes and engine flameouts may result from flying too low or too high.
 
 ## Auto Jammer
 
-There is also an auto jammer mode for Medusa, that will jam if capacitor is full. The auto jammer will hit the fire button if there is a target selected and the jammer pods are selected.
+Adds an auto jammer for offensive jamming pods, that will jam if capacitor is full (by default). The auto jammer will hit the fire button if there is a target selected and the jammer pods are selected.
 
 ## Fuel time and range display
 
-Also displays fuel time remaining and range.
-
-Units use the game's metric/imperial setting.
+Displays fuel time remaining and range. Units use the game's metric/imperial setting.
 
 ## Auto-GCAS
 
 <https://github.com/user-attachments/assets/aca3060d-a035-4750-953d-b189f833b2e2>
 
-Will pull up if you are going to hit the ground and warns you a while before. Can be disabled with `\` key by default, and can be configured to start disabled. GCAS OFF warning can be disabled as well.
+Will pull up if you are going to hit the ground and warns you a while before. Can be disabled with `\` key by default, and can be configured to start disabled. GCAS OFF warning can be disabled as well. If you are making large inputs, it will not pull up.
 
-If you are making large inputs, it will not pull up.
+Video is old, so the chevron indicator is missing.
 
 ## Waypoints
 
 <https://github.com/user-attachments/assets/1ac109a4-bc84-49ed-8141-55bc9a217607>
 
-Simple how to use guide:
-Right click / shift + right click on the map to make a path, then press equals (to enable autopilot) and f8 (to bring up the UI). Click the nav mode toggle to enable nav mode. Hover mouse over the UI for tooltips.
-
-Setting waypoints will work as long as you don't create any yellow unit path lines, so as long as the first unit you have selected is not commandable then you can make a waypoint.
+Right click / shift + right click on the map to make a path, then press equals (to enable autopilot) and F8 (to bring up the UI). Click the nav mode toggle to enable nav mode. Hover mouse over the UI for tooltips. Setting waypoints will work as long as you don't create any yellow unit path lines, so as long as the first unit you have selected is not commandable then you can make a waypoint.
 
 ## Building from source
 
@@ -170,4 +157,4 @@ steps
 2. maybe change path to nuclear option directory in the `.csproj` (will have to fix this later)
 3. `dotnet build -c Release`
 
-Latest release might be reproducible as long as no silent hotfix or game update has occurred. (no guarantees here, so this is rather useless)
+Latest release might be reproducible as long as no silent hotfix or game update has occurred. (no guarantee here, so this is rather useless)

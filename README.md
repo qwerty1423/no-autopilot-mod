@@ -56,7 +56,7 @@ After updates, it is sometimes recommended to regenerate your config file at `Be
 ## Default Controls
 
 The autopilot can be configured using only the `F8` gui window and the map, so `F8` is probably the most important keybind to remember.
-Leave blank the text boxes that you don't want to be controlled by the autopilot, then click set values (a few times just in case).
+Leave blank the text boxes that you don't want to be controlled by the autopilot, then click set values.
 A more up to date version of the table below is included in one of the tooltips in the GUI, although without the table formatting. Currently only default controls included.
 
 | Action                      | Key                    | Description                                  |

@@ -57,10 +57,11 @@ namespace NOAutopilot
         private enum RectEdge { None, Top, Bottom, Left, Right, TopLeft, TopRight, BottomLeft, BottomRight }
 
         private static string _bufAlt = "";
-        private static string _bufClimb = "40";
+        private static string _bufClimb = "10";
         private static string _bufRoll = "";
         private static string _bufSpeed = "";
         private static string _bufCourse = "";
+        private static string _bufTFR = "60";
 
         public static ConfigEntry<float> NavReachDistance, NavPassedDistance;
         public static ConfigEntry<string> ColorNav;
@@ -124,8 +125,8 @@ namespace NOAutopilot
 
         // Controls
         public static ConfigEntry<KeyboardShortcut> MenuKey;
-        public static ConfigEntry<KeyboardShortcut> ToggleKey, ToggleFBWKey;
-        public static ConfigEntry<KeyboardShortcut> AutoJammerKey, ToggleGCASKey, ClearKey;
+        public static ConfigEntry<KeyboardShortcut> ToggleKey, ToggleFBWKey, AutoJammerKey;
+        public static ConfigEntry<KeyboardShortcut> ToggleGCASKey, ToggleTFRKey, ClearKey;
         public static ConfigEntry<KeyboardShortcut> UpKey, DownKey, BigUpKey, BigDownKey;
         public static ConfigEntry<KeyboardShortcut> ClimbRateUpKey, ClimbRateDownKey;
         public static ConfigEntry<KeyboardShortcut> BankLeftKey, BankRightKey;
@@ -133,8 +134,8 @@ namespace NOAutopilot
         public static ConfigEntry<KeyboardShortcut> ToggleMachKey, ToggleABKey;
 
         public static ConfigEntry<string> MenuRW;
-        public static ConfigEntry<string> ToggleRW, ToggleFBWRW;
-        public static ConfigEntry<string> AutoJammerRW, ToggleGCASRW, ClearRW;
+        public static ConfigEntry<string> ToggleRW, ToggleFBWRW, AutoJammerRW;
+        public static ConfigEntry<string> ToggleGCASRW, ToggleTFRRW, ClearRW;
         public static ConfigEntry<string> UpRW, DownRW, BigUpRW, BigDownRW;
         public static ConfigEntry<string> ClimbRateUpRW, ClimbRateDownRW;
         public static ConfigEntry<string> BankLeftRW, BankRightRW;
@@ -142,7 +143,8 @@ namespace NOAutopilot
         public static ConfigEntry<string> ToggleMachRW, ToggleABRW;
 
         // Flight Values
-        public static ConfigEntry<float> AltStep, BigAltStep, ClimbRateStep, BankStep, SpeedStep, MinAltitude;
+        public static ConfigEntry<float> AltStep, BigAltStep, ClimbRateStep,
+        BankStep, SpeedStep, MinAltitude;
 
         // Tuning
         public static ConfigEntry<float> DefaultMaxClimbRate, Conf_VS_MaxAngle, DefaultCRLimit;
@@ -163,6 +165,10 @@ namespace NOAutopilot
         public static ConfigEntry<bool> EnableGCAS, EnableGCASHelo, EnableGCASTiltwing;
         public static ConfigEntry<float> GCAS_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
         public static ConfigEntry<float> GCAS_P, GCAS_I, GCAS_D, GCAS_ILimit;
+
+        // tf
+        public static ConfigEntry<bool> EnableTFR;
+        public static ConfigEntry<float> TFR_DefaultClearance, TFR_MaxPull, TFR_MaxPush;
 
         // Random
         public static ConfigEntry<bool> RandomEnabled;
@@ -350,6 +356,11 @@ namespace NOAutopilot
             GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 0.5f, "Builds pull over time");
             GCAS_D = Config.Bind("GCAS PID", "3. GCAS D", 0.0f, "Dampens G overshoot");
             GCAS_ILimit = Config.Bind("GCAS PID", "4. GCAS I Limit", 1.0f, "Max stick influence");
+
+            // TFR
+            TFR_DefaultClearance = Config.Bind("TFR", "1. Default Clearance (m)", 60f, "Target altitude above ground");
+            TFR_MaxPull = Config.Bind("TFR", "2. Max TFR Pull G", 3.0f, "Maximum G-load for TFR maneuvers");
+            TFR_MaxPush = Config.Bind("TFR", "3. Max TFR Push G", -0.5f, "Maximum push-over G (usually negative)");
 
             // Random
             RandomEnabled = Config.Bind("Settings - Random", "01. Random Enabled", false, "Add imperfections (needs some work i think)");
@@ -1097,18 +1108,26 @@ namespace NOAutopilot
             // auto jam/gcas
             GUILayout.BeginHorizontal();
             GUI.backgroundColor = APData.AutoJammerActive ? Color.green : Color.white;
-            string ajText = "AJ: " + (APData.AutoJammerActive ? "ON" : "OFF");
+            string ajText = "AJ" + (APData.AutoJammerActive ? "1" : "0");
             if (GUILayout.Button(new GUIContent(ajText, "Toggle Auto Jammer"), _styleButton))
             {
                 APData.AutoJammerActive = !APData.AutoJammerActive;
                 GUI.FocusControl(null);
             }
             GUI.backgroundColor = APData.GCASEnabled ? Color.green : Color.white;
-            string gcasText = "GCAS: " + (APData.GCASEnabled ? "ON" : "OFF");
+            string gcasText = "GCAS" + (APData.GCASEnabled ? "1" : "0");
             if (GUILayout.Button(new GUIContent(gcasText, "Toggle Auto-GCAS"), _styleButton))
             {
                 APData.GCASEnabled = !APData.GCASEnabled;
                 if (!APData.GCASEnabled) APData.GCASActive = false;
+                GUI.FocusControl(null);
+            }
+            GUI.backgroundColor = APData.TFREnabled ? Color.green : Color.white;
+            string tfrText = "TFR" + (APData.TFREnabled ? "1" : "0");
+            if (GUILayout.Button(new GUIContent(tfrText, "Toggle TFR"), _styleButton))
+            {
+                APData.TFREnabled = !APData.TFREnabled;
+                if (APData.TFREnabled) { APData.TargetAlt = -1f; APData.NavEnabled = false; }
                 GUI.FocusControl(null);
             }
             GUI.backgroundColor = Color.white;
@@ -1597,6 +1616,10 @@ namespace NOAutopilot
         public static bool AllowExtremeThrottle = false;
         public static bool SpeedHoldIsMach = false;
         public static bool NavEnabled = false;
+        public static bool TFREnabled = false;
+        public static float TFRClearance = 60f;
+        public static List<Vector3> TFRMemory = new List<Vector3>();
+        public static float LastTFRScanTime = 0f;
         public static bool FBWDisabled = false;
         public static float TargetAlt = -1f;
         public static float TargetRoll = -999f;
@@ -2310,6 +2333,81 @@ namespace NOAutopilot
                     inputObj.throttle = currentAppliedThrottle;
                 }
 
+                bool pitchAxisActive = APData.GCASActive || APData.TargetAlt > 0f;
+
+                if (APData.Enabled && APData.TFREnabled && !APData.GCASActive)
+                {
+                    if (APData.Enabled && APData.TFREnabled && !APData.GCASActive)
+                    {
+                        Vector3 pPosG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+                        Vector3 velocity = APData.PlayerRB.velocity;
+                        float speed = velocity.magnitude;
+                        Vector3 velocityDir = velocity.normalized;
+
+                        if (Time.time - APData.LastTFRScanTime > 0.1f)
+                        {
+                            APData.LastTFRScanTime = Time.time;
+                            float[] vAngles = { 5f, 0f, -5f, -15f, -25f };
+                            float[] hAngles = { -10f, 0f, 10f };
+
+                            foreach (float h in hAngles)
+                            {
+                                foreach (float v in vAngles)
+                                {
+                                    Vector3 scanDir = Quaternion.AngleAxis(h, APData.PlayerTransform.up) *
+                                                      Quaternion.AngleAxis(v, APData.PlayerTransform.right) * velocityDir;
+
+                                    if (Physics.Raycast(APData.PlayerRB.position, scanDir, out RaycastHit hit, 5000f, 8256))
+                                    {
+                                        APData.TFRMemory.Add(hit.point.ToGlobalPosition().AsVector3());
+                                    }
+                                }
+                            }
+                        }
+
+                        APData.TFRMemory.RemoveAll(pt =>
+                        {
+                            Vector3 rel = pt - pPosG;
+                            return Vector3.Dot(rel, velocityDir) < -10f || rel.sqrMagnitude > 36000000f; // 6km
+                        });
+
+                        float maxReqG = -0.1f;
+
+                        foreach (Vector3 worldPt in APData.TFRMemory)
+                        {
+                            Vector3 rel = worldPt - pPosG;
+                            float dist = Vector3.Dot(rel, velocityDir);
+
+                            Vector3 lateralOffset = Vector3.ProjectOnPlane(rel, velocityDir);
+                            if (lateralOffset.sqrMagnitude < 2500f)
+                            {
+                                float relHeight = worldPt.y - pPosG.y;
+
+                                float effDist = Mathf.Max(dist - (speed * 0.5f), 30f);
+                                float hTarget = relHeight + APData.TFRClearance;
+
+                                float gNeeded = (2f * hTarget * (speed * speed)) / (9.81f * (effDist * effDist));
+                                if (gNeeded > maxReqG) maxReqG = gNeeded;
+                            }
+                        }
+
+                        float bankComp = 1f / Mathf.Max(Mathf.Cos(APData.CurrentRoll * Mathf.Deg2Rad), 0.5f);
+                        float finalTargetG = Mathf.Clamp(maxReqG * bankComp, -0.6f, Plugin.GCAS_MaxG.Value);
+
+                        float gError = finalTargetG - currentG;
+                        float tfrPitchOut = pidGCAS.Evaluate(gError, currentG, dt,
+                                            Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,
+                                            Plugin.GCAS_ILimit.Value, true);
+
+                        if (Plugin.InvertPitch.Value) tfrPitchOut = -tfrPitchOut;
+                        inputObj.pitch = Mathf.Clamp(tfrPitchOut, -1f, 1f);
+                    }
+                    else if (!APData.TFREnabled)
+                    {
+                        APData.TFRMemory.Clear();
+                    }
+                }
+
                 // autopilot
                 if (APData.Enabled || APData.GCASActive)
                 {
@@ -2494,8 +2592,6 @@ namespace NOAutopilot
                     }
 
                     // pitch control
-                    bool pitchAxisActive = APData.GCASActive || APData.TargetAlt > 0f;
-
                     if (pitchAxisActive)
                     {
                         if ((pilotPitch || isWaitingToReengage) && !APData.GCASActive)

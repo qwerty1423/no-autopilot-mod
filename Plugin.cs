@@ -2410,6 +2410,9 @@ namespace NOAutopilot
                         if (Plugin.InvertPitch.Value) tfrPitchOut = -tfrPitchOut;
                         inputObj.pitch = Mathf.Clamp(tfrPitchOut, -1f, 1f);
                         pitchAxisActive = false;
+                        pidAlt.Reset();
+                        pidVS.Reset();
+                        pidAngle.Reset();
                     }
                 }
 

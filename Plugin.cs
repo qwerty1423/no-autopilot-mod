@@ -2369,6 +2369,7 @@ namespace NOAutopilot
                     float baselineG = altError * 0.15f;
 
                     float obstacleG = -999f;
+                    bool pullNeeded = false;
 
                     foreach (Vector3 worldPt in APData.TFRMemory)
                     {
@@ -2388,24 +2389,28 @@ namespace NOAutopilot
                             {
                                 float gNeeded = (2f * effectiveH * (speed * speed)) / (9.81f * (dist * dist));
                                 if (gNeeded > obstacleG) obstacleG = gNeeded;
+                                pullNeeded = true;
                             }
                         }
                     }
-                    float finalTargetG = Mathf.Max(baselineG, obstacleG);
+                    if (pullNeeded)
+                    {
+                        float finalTargetG = Mathf.Max(baselineG, obstacleG);
 
-                    float bankAngleRad = APData.CurrentRoll * Mathf.Deg2Rad;
-                    float bankComp = 1f / Mathf.Max(Mathf.Cos(bankAngleRad), 0.5f);
+                        float bankAngleRad = APData.CurrentRoll * Mathf.Deg2Rad;
+                        float bankComp = 1f / Mathf.Max(Mathf.Cos(bankAngleRad), 0.5f);
 
-                    finalTargetG = Mathf.Clamp(finalTargetG * bankComp, Plugin.TFR_MaxPush.Value, Plugin.TFR_MaxPull.Value);
+                        finalTargetG = Mathf.Clamp(finalTargetG * bankComp, Plugin.TFR_MaxPush.Value, Plugin.TFR_MaxPull.Value);
 
-                    float gError = finalTargetG - currentG;
-                    float tfrPitchOut = pidGCAS.Evaluate(gError, currentG, dt,
-                                        Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,
-                                        Plugin.GCAS_ILimit.Value, true);
+                        float gError = finalTargetG - currentG;
+                        float tfrPitchOut = pidGCAS.Evaluate(gError, currentG, dt,
+                                            Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,
+                                            Plugin.GCAS_ILimit.Value, true);
 
-                    if (Plugin.InvertPitch.Value) tfrPitchOut = -tfrPitchOut;
-                    inputObj.pitch = Mathf.Clamp(tfrPitchOut, -1f, 1f);
-                    pitchAxisActive = false;
+                        if (Plugin.InvertPitch.Value) tfrPitchOut = -tfrPitchOut;
+                        inputObj.pitch = Mathf.Clamp(tfrPitchOut, -1f, 1f);
+                        pitchAxisActive = false;
+                    }
                 }
 
                 // autopilot

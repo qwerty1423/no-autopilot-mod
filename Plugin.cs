@@ -1127,7 +1127,11 @@ namespace NOAutopilot
             if (GUILayout.Button(new GUIContent(tfrText, "Toggle TFR"), _styleButton))
             {
                 APData.TFREnabled = !APData.TFREnabled;
-                if (APData.TFREnabled) { APData.TargetAlt = -1f; APData.NavEnabled = false; }
+                if (APData.TFREnabled)
+                {
+                    APData.TargetAlt = -1f;
+                    APData.NavEnabled = false;
+                }
                 GUI.FocusControl(null);
             }
             GUI.backgroundColor = Color.white;
@@ -2334,78 +2338,83 @@ namespace NOAutopilot
                 }
 
                 bool pitchAxisActive = APData.GCASActive || APData.TargetAlt > 0f;
+
+                // tfr
                 if (APData.Enabled && APData.TFREnabled && !APData.GCASActive)
                 {
-                    if (APData.Enabled && APData.TFREnabled && !APData.GCASActive)
+                    Vector3 pPosG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+                    Vector3 velocity = APData.PlayerRB.velocity;
+                    float speed = velocity.magnitude;
+                    Vector3 velocityDir = velocity.normalized;
+
+                    if (Time.time - APData.LastTFRScanTime > 0.1f)
                     {
-                        Vector3 pPosG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
-                        Vector3 velocity = APData.PlayerRB.velocity;
-                        float speed = velocity.magnitude;
-                        Vector3 velocityDir = velocity.normalized;
+                        APData.LastTFRScanTime = Time.time;
+                        float[] vAngles = { 60f, 30f, 15f, 0f, -15f, -30f, -60f };
+                        float[] hAngles = { -5f, 0f, 5f };
 
-                        if (Time.time - APData.LastTFRScanTime > 0.1f)
+                        foreach (float h in hAngles)
                         {
-                            APData.LastTFRScanTime = Time.time;
-                            float[] vAngles = { 5f, 0f, -5f, -15f, -25f };
-                            float[] hAngles = { -10f, 0f, 10f };
-
-                            foreach (float h in hAngles)
+                            foreach (float v in vAngles)
                             {
-                                foreach (float v in vAngles)
-                                {
-                                    Vector3 scanDir = Quaternion.AngleAxis(h, APData.PlayerTransform.up) *
-                                                      Quaternion.AngleAxis(v, APData.PlayerTransform.right) * velocityDir;
+                                Vector3 scanDir = Quaternion.AngleAxis(h, APData.PlayerTransform.up) *
+                                                  Quaternion.AngleAxis(v, APData.PlayerTransform.right) * velocityDir;
 
-                                    if (Physics.Raycast(APData.PlayerRB.position, scanDir, out RaycastHit hit, 5000f, 8256))
-                                    {
-                                        APData.TFRMemory.Add(hit.point.ToGlobalPosition().AsVector3());
-                                        if (APData.TFRMemory.Count > 3600) APData.TFRMemory.RemoveAt(0);
-                                    }
+                                if (Physics.Raycast(APData.PlayerRB.position, scanDir, out RaycastHit hit, 5000f, 8256))
+                                {
+                                    APData.TFRMemory.Add(hit.point.ToGlobalPosition().AsVector3());
                                 }
                             }
                         }
 
-                        APData.TFRMemory.RemoveAll(pt =>
-                        {
-                            Vector3 rel = pt - pPosG;
-                            return Vector3.Dot(rel, velocityDir) < -10f || rel.sqrMagnitude > 36000000f; // 6km
-                        });
-
-                        float maxReqG = -0.1f;
-
-                        foreach (Vector3 worldPt in APData.TFRMemory)
-                        {
-                            Vector3 rel = worldPt - pPosG;
-                            float dist = Vector3.Dot(rel, velocityDir);
-
-                            Vector3 lateralOffset = Vector3.ProjectOnPlane(rel, velocityDir);
-                            if (lateralOffset.sqrMagnitude < 2500f)
-                            {
-                                float relHeight = worldPt.y - pPosG.y;
-
-                                float effDist = Mathf.Max(dist - (speed * 0.5f), 30f);
-                                float hTarget = relHeight + APData.TFRClearance;
-
-                                float gNeeded = (2f * hTarget * (speed * speed)) / (9.81f * (effDist * effDist));
-                                if (gNeeded > maxReqG) maxReqG = gNeeded;
-                            }
-                        }
-
-                        float bankComp = 1f / Mathf.Max(Mathf.Cos(APData.CurrentRoll * Mathf.Deg2Rad), 0.5f);
-                        float finalTargetG = Mathf.Clamp(maxReqG * bankComp, -0.6f, Plugin.GCAS_MaxG.Value);
-
-                        float gError = finalTargetG - currentG;
-                        float tfrPitchOut = pidGCAS.Evaluate(gError, currentG, dt,
-                                            Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,
-                                            Plugin.GCAS_ILimit.Value, true);
-
-                        if (Plugin.InvertPitch.Value) tfrPitchOut = -tfrPitchOut;
-                        inputObj.pitch = Mathf.Clamp(tfrPitchOut, -1f, 1f);
+                        if (APData.TFRMemory.Count > 500)
+                            APData.TFRMemory.RemoveRange(0, APData.TFRMemory.Count - 500);
                     }
-                    else if (!APData.TFREnabled)
+
+                    APData.TFRMemory.RemoveAll(pt => Vector3.Dot(pt - pPosG, velocityDir) < -20f);
+
+                    float maxReqG = Plugin.TFR_MaxPush.Value;
+                    float reactionTime = 0f;
+
+                    foreach (Vector3 worldPt in APData.TFRMemory)
                     {
-                        APData.TFRMemory.Clear();
+                        Vector3 rel = worldPt - pPosG;
+                        float dist = Vector3.Dot(rel, velocityDir);
+
+                        Vector3 lateralOffset = Vector3.ProjectOnPlane(rel, velocityDir);
+                        if (dist > 10f && lateralOffset.sqrMagnitude < 40000f)
+                        {
+                            float relHeight = worldPt.y - pPosG.y;
+                            float hTarget = relHeight + APData.TFRClearance;
+
+                            float timeToReach = dist / Mathf.Max(speed, 0.0001f);
+                            float predictedHeightAtPoint = velocity.y * timeToReach;
+
+                            float effectiveH = hTarget - predictedHeightAtPoint;
+                            float effDist = Mathf.Max(dist - (speed * reactionTime), 0.0001f);
+                            float gNeeded = (2f * effectiveH * (speed * speed)) / (9.81f * (effDist * effDist));
+
+                            if (gNeeded > maxReqG) maxReqG = gNeeded;
+                        }
                     }
+
+                    float bankAngleRad = APData.CurrentRoll * Mathf.Deg2Rad;
+                    float bankComp = 1f / Mathf.Max(Mathf.Cos(bankAngleRad), 0.5f);
+
+                    float finalTargetG = Mathf.Clamp(maxReqG * bankComp, Plugin.TFR_MaxPush.Value, Plugin.TFR_MaxPull.Value);
+
+                    float gError = finalTargetG - currentG;
+                    float tfrPitchOut = pidGCAS.Evaluate(gError, currentG, dt,
+                                        Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,
+                                        Plugin.GCAS_ILimit.Value, true);
+
+                    if (Plugin.InvertPitch.Value) tfrPitchOut = -tfrPitchOut;
+                    inputObj.pitch = Mathf.Clamp(tfrPitchOut, -1f, 1f);
+                    pitchAxisActive = false;
+                }
+                else if (!APData.TFREnabled)
+                {
+                    if (APData.TFRMemory.Count > 0) APData.TFRMemory.Clear();
                 }
 
                 // autopilot

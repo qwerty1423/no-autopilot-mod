@@ -2334,7 +2334,6 @@ namespace NOAutopilot
                 }
 
                 bool pitchAxisActive = APData.GCASActive || APData.TargetAlt > 0f;
-
                 if (APData.Enabled && APData.TFREnabled && !APData.GCASActive)
                 {
                     if (APData.Enabled && APData.TFREnabled && !APData.GCASActive)
@@ -2360,6 +2359,7 @@ namespace NOAutopilot
                                     if (Physics.Raycast(APData.PlayerRB.position, scanDir, out RaycastHit hit, 5000f, 8256))
                                     {
                                         APData.TFRMemory.Add(hit.point.ToGlobalPosition().AsVector3());
+                                        if (APData.TFRMemory.Count > 3600) APData.TFRMemory.RemoveAt(0);
                                     }
                                 }
                             }

@@ -61,7 +61,6 @@ namespace NOAutopilot
         private static string _bufRoll = "";
         private static string _bufSpeed = "";
         private static string _bufCourse = "";
-        private static string _bufTFR = "60";
 
         public static ConfigEntry<float> NavReachDistance, NavPassedDistance;
         public static ConfigEntry<string> ColorNav;
@@ -1127,11 +1126,6 @@ namespace NOAutopilot
             if (GUILayout.Button(new GUIContent(tfrText, "Toggle TFR"), _styleButton))
             {
                 APData.TFREnabled = !APData.TFREnabled;
-                if (APData.TFREnabled)
-                {
-                    APData.TargetAlt = -1f;
-                    APData.NavEnabled = false;
-                }
                 GUI.FocusControl(null);
             }
             GUI.backgroundColor = Color.white;
@@ -2350,8 +2344,8 @@ namespace NOAutopilot
                     if (Time.time - APData.LastTFRScanTime > 0.1f)
                     {
                         APData.LastTFRScanTime = Time.time;
-                        float[] vAngles = { 60f, 30f, 15f, 0f, -15f, -30f, -60f };
-                        float[] hAngles = { -5f, 0f, 5f };
+                        float[] vAngles = { 45f, 15f, 0f, -15f, -45f };
+                        float[] hAngles = { -3f, 0f, 3f };
 
                         foreach (float h in hAngles)
                         {
@@ -2360,21 +2354,21 @@ namespace NOAutopilot
                                 Vector3 scanDir = Quaternion.AngleAxis(h, APData.PlayerTransform.up) *
                                                   Quaternion.AngleAxis(v, APData.PlayerTransform.right) * velocityDir;
 
-                                if (Physics.Raycast(APData.PlayerRB.position, scanDir, out RaycastHit hit, 5000f, 8256))
+                                if (Physics.Raycast(APData.PlayerRB.position, scanDir, out RaycastHit hit, 4000f, 8256))
                                 {
                                     APData.TFRMemory.Add(hit.point.ToGlobalPosition().AsVector3());
                                 }
                             }
                         }
-
-                        if (APData.TFRMemory.Count > 500)
-                            APData.TFRMemory.RemoveRange(0, APData.TFRMemory.Count - 500);
+                        if (APData.TFRMemory.Count > 300) APData.TFRMemory.RemoveRange(0, APData.TFRMemory.Count - 300);
                     }
+                    APData.TFRMemory.RemoveAll(pt => Vector3.Dot(pt - pPosG, velocityDir) < -5f);
 
-                    APData.TFRMemory.RemoveAll(pt => Vector3.Dot(pt - pPosG, velocityDir) < -20f);
+                    float currentRadarAlt = APData.LocalAircraft.radarAlt;
+                    float altError = APData.TargetAlt - currentRadarAlt;
+                    float baselineG = altError * 0.15f;
 
-                    float maxReqG = Plugin.TFR_MaxPush.Value;
-                    float reactionTime = 0f;
+                    float obstacleG = -999f;
 
                     foreach (Vector3 worldPt in APData.TFRMemory)
                     {
@@ -2382,26 +2376,27 @@ namespace NOAutopilot
                         float dist = Vector3.Dot(rel, velocityDir);
 
                         Vector3 lateralOffset = Vector3.ProjectOnPlane(rel, velocityDir);
-                        if (dist > 10f && lateralOffset.sqrMagnitude < 40000f)
+                        if (dist > 0 && lateralOffset.sqrMagnitude < 400f)
                         {
-                            float relHeight = worldPt.y - pPosG.y;
-                            float hTarget = relHeight + APData.TFRClearance;
+                            float hTarget = (worldPt.y + APData.TargetAlt) - pPosG.y;
 
                             float timeToReach = dist / Mathf.Max(speed, 0.0001f);
-                            float predictedHeightAtPoint = velocity.y * timeToReach;
+                            float trajectoryHeightAtPoint = velocity.y * timeToReach;
+                            float effectiveH = hTarget - trajectoryHeightAtPoint;
 
-                            float effectiveH = hTarget - predictedHeightAtPoint;
-                            float effDist = Mathf.Max(dist - (speed * reactionTime), 0.0001f);
-                            float gNeeded = (2f * effectiveH * (speed * speed)) / (9.81f * (effDist * effDist));
-
-                            if (gNeeded > maxReqG) maxReqG = gNeeded;
+                            if (effectiveH > 0)
+                            {
+                                float gNeeded = (2f * effectiveH * (speed * speed)) / (9.81f * (dist * dist));
+                                if (gNeeded > obstacleG) obstacleG = gNeeded;
+                            }
                         }
                     }
+                    float finalTargetG = Mathf.Max(baselineG, obstacleG);
 
                     float bankAngleRad = APData.CurrentRoll * Mathf.Deg2Rad;
                     float bankComp = 1f / Mathf.Max(Mathf.Cos(bankAngleRad), 0.5f);
 
-                    float finalTargetG = Mathf.Clamp(maxReqG * bankComp, Plugin.TFR_MaxPush.Value, Plugin.TFR_MaxPull.Value);
+                    finalTargetG = Mathf.Clamp(finalTargetG * bankComp, Plugin.TFR_MaxPush.Value, Plugin.TFR_MaxPull.Value);
 
                     float gError = finalTargetG - currentG;
                     float tfrPitchOut = pidGCAS.Evaluate(gError, currentG, dt,
@@ -2411,10 +2406,6 @@ namespace NOAutopilot
                     if (Plugin.InvertPitch.Value) tfrPitchOut = -tfrPitchOut;
                     inputObj.pitch = Mathf.Clamp(tfrPitchOut, -1f, 1f);
                     pitchAxisActive = false;
-                }
-                else if (!APData.TFREnabled)
-                {
-                    if (APData.TFRMemory.Count > 0) APData.TFRMemory.Clear();
                 }
 
                 // autopilot

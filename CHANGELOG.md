@@ -1,5 +1,7 @@
 # Changelog
 
+## [Unreleased]
+
 ## [4.16.1] - 2026-02-13
 
 ### Added
@@ -72,7 +74,7 @@
 
 ## Added
 
-- rewired input (for hotas, controller) (thanks to George for original implementation in [NOTT](https://github.com/clumzy/NO_Tactitools))
+- rewired input (for hotas, controller)
 - gloc support for the gui
 
 ## [4.14.0] - 2026-02-04
@@ -235,6 +237,7 @@
 
 ## [4.8.4] - 2025-12-29
 
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.16.1...HEAD
 [4.16.1]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.16.0...v4.16.1
 [4.16.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.5...v4.16.0
 [4.15.5]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.4...v4.15.5

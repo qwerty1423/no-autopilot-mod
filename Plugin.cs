@@ -1616,7 +1616,7 @@ namespace NOAutopilot
         public static bool NavEnabled = false;
         public static bool TFREnabled = false;
         public static float TFRClearance = 60f;
-        public static List<Vector3> TFRMemory = new List<Vector3>();
+        public static List<Vector3> TFRMemory = [];
         public static float LastTFRScanTime = 0f;
         public static bool FBWDisabled = false;
         public static float TargetAlt = -1f;
@@ -2344,8 +2344,8 @@ namespace NOAutopilot
                     if (Time.time - APData.LastTFRScanTime > 0.1f)
                     {
                         APData.LastTFRScanTime = Time.time;
-                        float[] vAngles = { 45f, 40f, 35f, 30f, 25f, 20f, 15f, 10f, 5f, 0f, -5f, -10f, -15f, -20f, -25f, -30f, -35f, -40f, -45f };
-                        float[] hAngles = { 0f };
+                        float[] vAngles = [45f, 40f, 35f, 30f, 25f, 20f, 15f, 10f, 5f, 0f, -5f, -10f, -15f, -20f, -25f, -30f, -35f, -40f, -45f];
+                        float[] hAngles = [0f];
 
                         foreach (float h in hAngles)
                         {

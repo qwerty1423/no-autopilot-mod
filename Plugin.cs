@@ -2379,7 +2379,7 @@ namespace NOAutopilot
                         Vector3 lateralOffset = Vector3.ProjectOnPlane(rel, velocityDir);
                         if (dist > 0 && lateralOffset.sqrMagnitude < 400f)
                         {
-                            float hTarget = (worldPt.y + APData.TargetAlt) - pPosG.y;
+                            float hTarget = worldPt.y + APData.TargetAlt - pPosG.y;
 
                             float timeToReach = dist / Mathf.Max(speed, 0.0001f);
                             float trajectoryHeightAtPoint = velocity.y * timeToReach;
@@ -2387,7 +2387,7 @@ namespace NOAutopilot
 
                             if (effectiveH > 0)
                             {
-                                float gNeeded = (2f * effectiveH * (speed * speed)) / (9.81f * (dist * dist));
+                                float gNeeded = 2f * effectiveH * (speed * speed) / (9.81f * (dist * dist));
                                 if (gNeeded > obstacleG) obstacleG = gNeeded;
                                 pullNeeded = true;
                             }

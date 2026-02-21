@@ -156,5 +156,3 @@ steps
 1. clone the repo, cd no-autopilot-mod, checkout a release version.
 2. maybe change path to nuclear option directory in the `.csproj` (will have to fix this later)
 3. `dotnet build -c Release`
-
-Latest release might be reproducible as long as no silent hotfix or game update has occurred. (no guarantee here, so this is rather useless)

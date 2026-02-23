@@ -39,15 +39,14 @@ public class ACLSConfig
     public float TerminalPitchAngle { get; set; }
     public string KeyName { get; set; }
 
-    private static string _pluginDir = "";
+    private static string _assetsDir = "";
     /// <summary>
     /// Load either the legacy single-profile config or the newer multi-profile config set.
     /// </summary>
-    public static void LoadSingleton(string pluginDir = null)
+    public static void LoadSingleton(string assetsDir = null)
     {
-        if (!string.IsNullOrEmpty(pluginDir)) _pluginDir = pluginDir;
-        string assetsDir = Path.Combine(_pluginDir, "Assets");
-        string path = Path.Combine(assetsDir, "acls_config.json");
+        if (!string.IsNullOrEmpty(assetsDir)) _assetsDir = assetsDir;
+        string path = Path.Combine(_assetsDir, "acls_config.json");
 
         if (File.Exists(path))
         {

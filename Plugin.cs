@@ -178,17 +178,43 @@ namespace NOAutopilot
         public static ConfigEntry<float> Rand_Acc_Inner, Rand_Acc_Outer;
 
         private ResolveEventHandler _resolveEventHandler;
+        public static string AssetsDir;
 
         private void Awake()
         {
             Logger = base.Logger;
-            string pluginDir = Path.GetDirectoryName(Info.Location);
+
+            AssetsDir = "";
+            string[] searchBases = [Paths.PluginPath, Path.Combine(Paths.BepInExRootPath, "scripts")];
+
+            foreach (var basePath in searchBases)
+            {
+                if (!Directory.Exists(basePath)) continue;
+
+                string[] foundDirs = Directory.GetDirectories(basePath, "Assets", SearchOption.AllDirectories);
+                foreach (var dir in foundDirs)
+                {
+                    if (File.Exists(Path.Combine(dir, "Newtonsoft.Json.dll")) || File.Exists(Path.Combine(dir, "acls_config.json")))
+                    {
+                        AssetsDir = dir;
+                        break;
+                    }
+                }
+                if (!string.IsNullOrEmpty(AssetsDir)) break;
+            }
+
+            if (string.IsNullOrEmpty(AssetsDir))
+            {
+                AssetsDir = Path.Combine(Paths.PluginPath, "no-autopilot-mod", "Assets");
+                Directory.CreateDirectory(AssetsDir);
+            }
+
             _resolveEventHandler = (sender, args) =>
             {
                 string assemblyName = new AssemblyName(args.Name).Name;
                 if (assemblyName == "Newtonsoft.Json")
                 {
-                    string resourcePath = Path.Combine(pluginDir, "Assets", "Newtonsoft.Json.dll");
+                    string resourcePath = Path.Combine(AssetsDir, "Newtonsoft.Json.dll");
                     if (File.Exists(resourcePath))
                     {
                         return Assembly.LoadFrom(resourcePath);
@@ -393,10 +419,10 @@ namespace NOAutopilot
             Rand_Acc_Inner = Config.Bind("Settings - Random", "21. Accel Tolerance Inner", 0.05f, "Start Sleeping (m/s² acceleration)");
             Rand_Acc_Outer = Config.Bind("Settings - Random", "22. Accel Tolerance Outer", 0.5f, "Wake Up (m/s² acceleration)");
 
-            ACLS.ACLSConfig.LoadSingleton(pluginDir);
             harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
             try
             {
+                ACLS.ACLSConfig.LoadSingleton(AssetsDir);
                 harmony.PatchAll();
                 SceneManager.sceneUnloaded += OnSceneUnloaded;
                 Logger.LogInfo($"v{Version} loaded.");

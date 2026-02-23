@@ -1909,12 +1909,17 @@ namespace NOAutopilot
         public static void InitializeACLSPIDs()
         {
             if (ACLS.ACLSConfig.singleton == null) ACLS.ACLSConfig.LoadSingleton();
-
             var cfg = ACLS.ACLSConfig.singleton;
+
             aclsRollController = ACLS.ACLSPIDController.FromConfig(0f, cfg.RollController);
             aclsYawController = ACLS.ACLSPIDController.FromConfig(0f, cfg.YawController);
             aclsPitchController = ACLS.ACLSPIDController.FromConfig(0f, cfg.PitchController);
             aclsThrottleController = ACLS.ACLSPIDController.FromConfig(cfg.LandingSpeed, cfg.ThrottleController);
+
+            aclsRollController.Reset();
+            aclsYawController.Reset();
+            aclsPitchController.Reset();
+            aclsThrottleController.Reset();
         }
 
         private static void Postfix(PilotPlayerState __instance)

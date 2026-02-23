@@ -2813,7 +2813,7 @@ namespace NOAutopilot
 
                             aclsPitchController.targetState = ACLS.ACLSConfig.singleton.TerminalPitchAngle;
                             inputObj.pitch = aclsPitchController.Update(aNosePitch);
-                            inputObj.throttle = 0f;
+                            inputObj.throttle = 1f;
 
                             APData.ACLSStatusText = "ALS: FALL";
                             APData.ACLSStatusColor = Color.yellow;

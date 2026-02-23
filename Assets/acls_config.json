@@ -17,7 +17,7 @@
         "Invert": false
       },
       "PitchController": {
-        "Kp": 0.08,
+        "Kp": 0.03,
         "Ki": 0.01,
         "Kd": 0.01,
         "BufferDuration": 1.0,
@@ -32,7 +32,7 @@
       },
       "TerminalPhaseHeight": 11.0,
       "MaxControlAngle": 45.0,
-      "CruisingSpeed": 150.0,
+      "CruisingSpeed": 130.0,
       "LandingSpeed": 72.0,
       "SpeedTransitionDistance": 6000.0,
       "TerminalPitchAngle": 7.0,

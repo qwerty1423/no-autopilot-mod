@@ -13,9 +13,8 @@ public class AlignmentCoordinateSystem
     public void UpdateFromAlignment(Vector3 alignmentVector)
     {
         Forward = alignmentVector.normalized;
-        Vector3 val = new(Forward.z, 0f, 0f - Forward.x);
-        Right = val.normalized;
-        Up = Vector3.Cross(Forward, Right);
+        Right = Vector3.Cross(Vector3.up, Forward).normalized;
+        Up = Vector3.Cross(Forward, Right).normalized;
     }
 
     public (float yaw, float pitch, float roll) GetRelativeAngles(Vector3 direction, Quaternion rotation)

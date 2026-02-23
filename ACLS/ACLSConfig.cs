@@ -222,12 +222,12 @@ public class ACLSConfigSet
     /// <summary>
     /// Profiles by name (e.g. "ifrit", "compass").
     /// </summary>
-    public Dictionary<string, ACLSConfig> Profiles { get; set; } = new Dictionary<string, ACLSConfig>();
+    public Dictionary<string, ACLSConfig> Profiles { get; set; } = [];
 
     /// <summary>
     /// Map by Aircraft.definition.jsonKey (mission/unit key, e.g. "Multirole1").
     /// </summary>
-    public Dictionary<string, string> AircraftJsonKeyToProfile { get; set; } = new Dictionary<string, string>();
+    public Dictionary<string, string> AircraftJsonKeyToProfile { get; set; } = [];
 
     /// <summary>
     /// Map by Unit.unitName (runtime unit name).

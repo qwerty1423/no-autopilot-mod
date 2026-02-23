@@ -2808,11 +2808,6 @@ namespace NOAutopilot
                             APData.ACLSStatusText = "ALS: GLIDE";
                             APData.ACLSStatusColor = Color.green;
                         }
-                        else if (APData.ACLSStatusText == "ACLS: WIRE")
-                        {
-                            inputObj.brake = 1f;
-                            inputObj.throttle = 0f;
-                        }
                         else
                         {
                             aclsYawController.targetState = 0f;
@@ -2825,6 +2820,11 @@ namespace NOAutopilot
                             APData.ACLSStatusText = "ALS: FALL";
                             APData.ACLSStatusColor = Color.yellow;
                         }
+                    }
+                    if (APData.ACLSStatusText == "ACLS: WIRE")
+                    {
+                        inputObj.brake = 1f;
+                        inputObj.throttle = 0f;
                     }
                 }
             }

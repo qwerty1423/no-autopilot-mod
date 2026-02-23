@@ -1034,7 +1034,7 @@ namespace NOAutopilot
 
             // set values
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(new GUIContent("Set Values", "Applies typed values"), _styleButton))
+            if (GUILayout.Button(new GUIContent("Set", "Applies typed values"), _styleButton))
             {
                 if (float.TryParse(_bufAlt, out float a))
                     APData.TargetAlt = ModUtils.ConvertAlt_FromDisplay(a);
@@ -1113,6 +1113,20 @@ namespace NOAutopilot
                 {
                     APData.TargetSpeed = -1f;
                     SyncMenuValues();
+                }
+                GUI.FocusControl(null);
+            }
+            GUI.backgroundColor = APData.ACLSActive ? Color.green : Color.white;
+            if (GUILayout.Button(new GUIContent(APData.ACLSActive ? "ACLS: ON" : "ACLS: OFF", "Auto Carrier Landing System"), _styleButton))
+            {
+                APData.ACLSActive = !APData.ACLSActive;
+                if (APData.ACLSActive)
+                {
+                    APData.Enabled = false;
+                }
+                else
+                {
+                    APData.ACLSStatusText = "OFF";
                 }
                 GUI.FocusControl(null);
             }
@@ -2695,10 +2709,7 @@ namespace NOAutopilot
                     {
                         APData.ACLSStatusText = "ALS: RDY";
                         APData.ACLSStatusColor = Color.green;
-                    }
 
-                    if (APData.ACLSActive)
-                    {
                         var alignNose = alignCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
                         var alignProg = alignCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
                         var alignGlide = alignCoord.GetRelativeAngles(ACLS.ACLSAirbaseOverlayPatch.glideslopeDirection, APData.AircraftRotation);

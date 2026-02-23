@@ -21,12 +21,13 @@ public class AlignmentCoordinateSystem
     public (float yaw, float pitch, float roll) GetRelativeAngles(Vector3 direction, Quaternion rotation)
     {
         direction = direction.normalized;
-        Vector3 val = Vector3.ProjectOnPlane(direction, Up);
-        float item = Vector3.SignedAngle(Forward, val, Up);
-        float item2 = Vector3.SignedAngle(direction, val, Right);
-        Vector3 val2 = rotation * Vector3.up;
-        Vector3 val3 = Vector3.ProjectOnPlane(val2, Forward);
-        float item3 = Vector3.SignedAngle(val3, Up, Forward);
-        return (yaw: item, pitch: item2, roll: item3);
+        Vector3 horizontalProj = Vector3.ProjectOnPlane(direction, Up);
+        float yaw = Vector3.SignedAngle(Forward, horizontalProj, Up);
+        float pitch = Vector3.SignedAngle(horizontalProj, direction, -Right);
+        Vector3 aircraftUp = rotation * Vector3.up;
+        Vector3 projectedUp = Vector3.ProjectOnPlane(aircraftUp, Forward);
+        float roll = Vector3.SignedAngle(projectedUp, Up, Forward);
+
+        return (yaw, pitch, roll);
     }
 }

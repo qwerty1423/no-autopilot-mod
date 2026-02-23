@@ -153,7 +153,7 @@ public class ACLSConfig
         {
             RollController = new PIDConfig
             {
-                Kp = 0.025f,
+                Kp = 0.015f,
                 Ki = 0f,
                 Kd = 0f,
                 BufferDuration = 0f,
@@ -161,17 +161,17 @@ public class ACLSConfig
             },
             YawController = new PIDConfig
             {
-                Kp = 0.1f,
+                Kp = 0.07f,
                 Ki = 0f,
-                Kd = 0.3f,
+                Kd = 0.07f,
                 BufferDuration = 0f,
                 Invert = false
             },
             PitchController = new PIDConfig
             {
-                Kp = 0.1f,
+                Kp = 0.08f,
                 Ki = 0.01f,
-                Kd = 0.05f,
+                Kd = 0.01f,
                 BufferDuration = 1f,
                 Invert = true
             },
@@ -183,12 +183,12 @@ public class ACLSConfig
                 BufferDuration = 2f,
                 Invert = false
             },
-            TerminalPhaseHeight = 15f,
+            TerminalPhaseHeight = 11f,
             MaxControlAngle = 45f,
-            CruisingSpeed = 138f,
+            CruisingSpeed = 150f,
             LandingSpeed = 72f,
             SpeedTransitionDistance = 6000f,
-            TerminalPitchAngle = 10f,
+            TerminalPitchAngle = 7f,
             KeyName = "Equals"
         };
     }

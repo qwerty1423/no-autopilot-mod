@@ -1,0 +1,94 @@
+{
+  "DefaultProfile": "ifrit",
+  "Profiles": {
+    "ifrit": {
+      "RollController": {
+        "Kp": 0.015,
+        "Ki": 0.0,
+        "Kd": 0.0,
+        "BufferDuration": 0.0,
+        "Invert": false
+      },
+      "YawController": {
+        "Kp": 0.070,
+        "Ki": 0.0,
+        "Kd": 0.070,
+        "BufferDuration": 0.0,
+        "Invert": false
+      },
+      "PitchController": {
+        "Kp": 0.08,
+        "Ki": 0.01,
+        "Kd": 0.01,
+        "BufferDuration": 1.0,
+        "Invert": true
+      },
+      "ThrottleController": {
+        "Kp": 0.2,
+        "Ki": 0.0,
+        "Kd": 0.0,
+        "BufferDuration": 2.0,
+        "Invert": false
+      },
+      "TerminalPhaseHeight": 11.0,
+      "MaxControlAngle": 45.0,
+      "CruisingSpeed": 150.0,
+      "LandingSpeed": 72.0,
+      "SpeedTransitionDistance": 6000.0,
+      "TerminalPitchAngle": 7.0,
+      "KeyName": "Equals"
+    },
+    "compass": {
+      "RollController": {
+        "Kp": 0.015,
+        "Ki": 0.0,
+        "Kd": 0.0,
+        "BufferDuration": 0.0,
+        "Invert": false
+      },
+      "YawController": {
+        "Kp": 0.070,
+        "Ki": 0.0,
+        "Kd": 0.070,
+        "BufferDuration": 0.0,
+        "Invert": false
+      },
+      "PitchController": {
+        "Kp": 0.08,
+        "Ki": 0.01,
+        "Kd": 0.01,
+        "BufferDuration": 1.0,
+        "Invert": true
+      },
+      "ThrottleController": {
+        "Kp": 0.2,
+        "Ki": 0.0,
+        "Kd": 0.0,
+        "BufferDuration": 2.0,
+        "Invert": false
+      },
+      "TerminalPhaseHeight": 8.0,
+      "MaxControlAngle": 45.0,
+      "CruisingSpeed": 130.0,
+      "LandingSpeed": 72.0,
+      "SpeedTransitionDistance": 6000.0,
+      "TerminalPitchAngle": 5.0,
+      "KeyName": "Equals"
+    }
+  },
+  "AircraftJsonKeyToProfile": {
+    "Multirole1": "ifrit",
+    "SmallFighter1": "compass",
+    "Fighter1": "compass"
+  },
+  "AircraftUnitNameToProfile": {
+    "Ifrit": "ifrit",
+    "Compass": "compass",
+    "KR-67 Ifrit": "ifrit"
+  },
+  "AircraftDefinitionNameToProfile": {
+    "Ifrit": "ifrit",
+    "Compass": "compass",
+    "KR-67 Ifrit": "ifrit"
+  }
+}

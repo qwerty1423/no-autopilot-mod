@@ -104,6 +104,7 @@
     </PropertyGroup>
     <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(DeployRoot)" />
     <Copy SourceFiles="$(OutputPath)$(AssemblyName).pdb" DestinationFolder="$(DeployRoot)" />
+    <Copy SourceFiles="Assets/acls_config.json" DestinationFolder="$(DeployAssets)" />
     <Copy SourceFiles="$(PkgNewtonsoft_Json)/lib/netstandard2.0/Newtonsoft.Json.dll" 
           DestinationFolder="$(DeployAssets)" />
   </Target>
@@ -120,6 +121,8 @@
 
     <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(RootModFolder)" />
     <Copy SourceFiles="LICENSE" DestinationFolder="$(RootModFolder)" />
+
+    <Copy SourceFiles="Assets/acls_config.json" DestinationFolder="$(AssetsFolder)" />
 
     <Copy SourceFiles="$(PkgNewtonsoft_Json)/lib/netstandard2.0/Newtonsoft.Json.dll" DestinationFolder="$(AssetsFolder)" />
     <Copy SourceFiles="$(PkgNewtonsoft_Json)/LICENSE.md" 

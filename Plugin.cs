@@ -2774,6 +2774,7 @@ namespace NOAutopilot
                         var (aProgYaw, aProgPitch, _) = alignCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
                         var (aGlideYaw, aGlidePitch, _) = alignCoord.GetRelativeAngles(ACLS.ACLSAirbaseOverlayManager.glideslopeDirection, APData.AircraftRotation);
 
+                        aclsRollController.targetState = 0f;
                         inputObj.roll = aclsRollController.Update(aNoseRoll);
 
                         float distance = ACLS.ACLSAirbaseOverlayManager.distanceToLand;

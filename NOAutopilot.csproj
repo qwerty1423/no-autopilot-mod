@@ -59,11 +59,10 @@
 
   <ItemGroup>
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
-    <PackageReference Include="BepInEx.Core" Version="5.*" />
+    <PackageReference Include="BepInEx.Core" Version="5.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.2" PrivateAssets="all" />
-    <PackageReference Include="HarmonyX" Version="2.16.0" />
-    <EmbeddedResource Include="LICENSE" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" GeneratePathProperty="true" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
@@ -99,21 +98,35 @@
   </PropertyGroup>
 
   <Target Name="DeployPlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' AND '$(PluginDeployPath)' != ''">
-    
-    <ItemGroup>
-      <PluginFiles Include="$(OutputPath)$(AssemblyName).dll" />
-      <PluginFiles Include="$(OutputPath)$(AssemblyName).pdb" />
-    </ItemGroup>
-
-    <Message Text="Deploying plugin to: $(PluginDeployPath)" Importance="high" />
-    
-    <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(PluginDeployPath)" SkipUnchangedFiles="true" />
+    <PropertyGroup>
+      <DeployRoot>$(PluginDeployPath)</DeployRoot>
+      <DeployAssets>$(DeployRoot)/Assets</DeployAssets>
+    </PropertyGroup>
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(DeployRoot)" />
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).pdb" DestinationFolder="$(DeployRoot)" />
+    <Copy SourceFiles="$(PkgNewtonsoft_Json)/lib/netstandard2.0/Newtonsoft.Json.dll" 
+          DestinationFolder="$(DeployAssets)" />
   </Target>
 
-  <Target Name="CreateZip" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'" Inputs="$(OutputPath)$(AssemblyName).dll" Outputs="$(OutputPath)$(AssemblyName)-$(Version).zip">
+  <Target Name="CreateZip" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <PropertyGroup>
+      <StagingDir>$(OutputPath)Staging</StagingDir>
+      <RootModFolder>$(StagingDir)/no-autopilot-mod</RootModFolder>
+      <AssetsFolder>$(RootModFolder)/Assets</AssetsFolder>
+    </PropertyGroup>
 
-  <Message Text="Creating ZIP archive for $(AssemblyName)..." Importance="high" />
+    <RemoveDir Directories="$(StagingDir)" />
+    <MakeDir Directories="$(AssetsFolder)" />
 
-  <Exec Command="7z a -tzip -mx=9 &quot;$(AssemblyName)-$(Version).zip&quot; &quot;$(AssemblyName).dll&quot;" WorkingDirectory="$(OutputPath)" />
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(RootModFolder)" />
+    <Copy SourceFiles="LICENSE" DestinationFolder="$(RootModFolder)" />
+
+    <Copy SourceFiles="$(PkgNewtonsoft_Json)/lib/netstandard2.0/Newtonsoft.Json.dll" DestinationFolder="$(AssetsFolder)" />
+    <Copy SourceFiles="$(PkgNewtonsoft_Json)/LICENSE.md" 
+          DestinationFiles="$(AssetsFolder)/Newtonsoft.Json.LICENSE.md" 
+          Condition="Exists('$(PkgNewtonsoft_Json)/LICENSE.md')" />
+
+    <Exec Command="7z a -tzip -mx=9 &quot;../$(AssemblyName)-$(Version).zip&quot; &quot;no-autopilot-mod&quot;" WorkingDirectory="$(StagingDir)" />
+    <RemoveDir Directories="$(StagingDir)" />
   </Target>
 </Project>

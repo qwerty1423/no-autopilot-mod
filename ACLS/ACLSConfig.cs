@@ -2,8 +2,8 @@ using System;
 using System.Reflection;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace NOAutopilot.ACLS;
 
@@ -31,7 +31,6 @@ public class ACLSConfig
     public PIDConfig YawController { get; set; }
     public PIDConfig PitchController { get; set; }
     public PIDConfig ThrottleController { get; set; }
-
     public float TerminalPhaseHeight { get; set; }
     public float MaxControlAngle { get; set; }
     public float CruisingSpeed { get; set; }
@@ -46,31 +45,24 @@ public class ACLSConfig
     public static void LoadSingleton()
     {
         string pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-        string path = Path.Combine(pluginDir, "acls_config.json");
+        string assetsDir = Path.Combine(pluginDir, "Assets");
+        string path = Path.Combine(assetsDir, "acls_config.json");
 
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNameCaseInsensitive = true,
-            ReadCommentHandling = JsonCommentHandling.Skip
-        };
-
-        // Try to load as config-set first (new format)
         if (File.Exists(path))
         {
             try
             {
                 string json = File.ReadAllText(path);
-                using JsonDocument doc = JsonDocument.Parse(json);
-                // Check if the root has a "Profiles" property to distinguish 
-                // between the new Set format and the legacy single Profile format
-                if (doc.RootElement.TryGetProperty("Profiles", out _))
+                JObject doc = JObject.Parse(json);
+
+                // Check if it's the new format or legacy
+                if (doc.ContainsKey("Profiles"))
                 {
-                    setSingleton = JsonSerializer.Deserialize<ACLSConfigSet>(json, options);
+                    setSingleton = JsonConvert.DeserializeObject<ACLSConfigSet>(json);
                 }
                 else
                 {
-                    ACLSConfig legacy = JsonSerializer.Deserialize<ACLSConfig>(json, options);
+                    ACLSConfig legacy = JsonConvert.DeserializeObject<ACLSConfig>(json);
                     setSingleton = ACLSConfigSet.FromLegacy(legacy);
                 }
             }
@@ -143,14 +135,7 @@ public class ACLSConfig
     {
         try
         {
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = JsonCommentHandling.Skip
-            };
-
-            string contents = JsonSerializer.Serialize(set, options);
+            string contents = JsonConvert.SerializeObject(set, Formatting.Indented);
             File.WriteAllText(path, contents);
         }
         catch (Exception ex)
@@ -222,22 +207,22 @@ public class ACLSConfigSet
     /// <summary>
     /// Profiles by name (e.g. "ifrit", "compass").
     /// </summary>
-    public Dictionary<string, ACLSConfig> Profiles { get; set; } = [];
+    public Dictionary<string, ACLSConfig> Profiles { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Map by Aircraft.definition.jsonKey (mission/unit key, e.g. "Multirole1").
     /// </summary>
-    public Dictionary<string, string> AircraftJsonKeyToProfile { get; set; } = [];
+    public Dictionary<string, string> AircraftJsonKeyToProfile { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Map by Unit.unitName (runtime unit name).
     /// </summary>
-    public Dictionary<string, string> AircraftUnitNameToProfile { get; set; } = [];
+    public Dictionary<string, string> AircraftUnitNameToProfile { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Map by Aircraft.definition.unitName (display/unit name).
     /// </summary>
-    public Dictionary<string, string> AircraftDefinitionNameToProfile { get; set; } = [];
+    public Dictionary<string, string> AircraftDefinitionNameToProfile { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Create default config set with two profiles and conservative mappings.
@@ -249,7 +234,6 @@ public class ACLSConfigSet
 
         // By default we clone ifrit so the mod stays usable even before tuning compass.
         var compass = CloneProfile(ifrit);
-
         var set = new ACLSConfigSet
         {
             DefaultProfile = "ifrit",
@@ -261,21 +245,18 @@ public class ACLSConfigSet
             AircraftJsonKeyToProfile = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 // These keys come from unit jsonKey / mission unit key.
-                // If your aircraft keys differ, edit this mapping.
                 ["Multirole1"] = "ifrit",
                 ["SmallFighter1"] = "compass",
                 ["Fighter1"] = "compass"
             },
             AircraftUnitNameToProfile = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                // Optional: runtime unitName matching (if you see these in logs).
                 ["Ifrit"] = "ifrit",
                 ["Compass"] = "compass",
                 ["KR-67 Ifrit"] = "ifrit"
             },
             AircraftDefinitionNameToProfile = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                // Optional: ScriptableObject UnitDefinition.unitName matching.
                 ["Ifrit"] = "ifrit",
                 ["Compass"] = "compass",
                 ["KR-67 Ifrit"] = "ifrit"
@@ -289,82 +270,35 @@ public class ACLSConfigSet
 
     public static ACLSConfigSet FromLegacy(ACLSConfig legacy)
     {
-        if (legacy == null)
-        {
-            return CreateDefault();
-        }
-
+        if (legacy == null) return CreateDefault();
         var set = new ACLSConfigSet
         {
             DefaultProfile = "ifrit",
-            Profiles = new Dictionary<string, ACLSConfig>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["ifrit"] = legacy,
-                ["compass"] = CloneProfile(legacy)
-            },
-            AircraftJsonKeyToProfile = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["Multirole1"] = "ifrit",
-                ["SmallFighter1"] = "compass",
-                ["Fighter1"] = "compass"
-            }
+            Profiles = { ["ifrit"] = legacy, ["compass"] = CloneProfile(legacy) },
+            AircraftJsonKeyToProfile = { ["Multirole1"] = "ifrit", ["SmallFighter1"] = "compass", ["Fighter1"] = "compass" }
         };
-
         set.NormalizeComparers();
         return set;
     }
 
     public ACLSConfig GetProfileOrDefault(string name)
     {
-        NormalizeComparers();
-        if (!string.IsNullOrWhiteSpace(name) && Profiles != null && Profiles.TryGetValue(name, out var cfg) && cfg != null)
-        {
-            return cfg;
-        }
-
-        // Fall back: ifrit -> first profile -> default profile values
-        if (Profiles != null && Profiles.TryGetValue("ifrit", out var ifrit) && ifrit != null) return ifrit;
-        if (Profiles != null)
-        {
-            foreach (var kv in Profiles)
-            {
-                if (kv.Value != null) return kv.Value;
-            }
-        }
+        if (!string.IsNullOrWhiteSpace(name) && Profiles.TryGetValue(name, out var cfg)) return cfg;
+        if (Profiles.TryGetValue("ifrit", out var ifrit)) return ifrit;
         return ACLSConfig.GetDefaultProfileIfrit();
     }
 
     public string ResolveProfileForAircraft(Aircraft aircraft)
     {
-        NormalizeComparers();
-        if ((UnityEngine.Object)(object)aircraft == null) return DefaultProfile;
+        if (aircraft == null) return DefaultProfile;
+        string jsonKey = aircraft.definition?.jsonKey;
+        if (!string.IsNullOrWhiteSpace(jsonKey) && AircraftJsonKeyToProfile.TryGetValue(jsonKey, out var p1)) return p1;
 
-        try
-        {
-            // Best signal: mission key (UnitDefinition.jsonKey) - often things like "Multirole1"
-            string jsonKey = aircraft.definition?.jsonKey;
-            if (!string.IsNullOrWhiteSpace(jsonKey) && AircraftJsonKeyToProfile != null && AircraftJsonKeyToProfile.TryGetValue(jsonKey, out var p1))
-                return p1;
+        string defName = aircraft.definition?.unitName;
+        if (!string.IsNullOrWhiteSpace(defName) && AircraftDefinitionNameToProfile.TryGetValue(defName, out var p2)) return p2;
 
-            // Next: ScriptableObject unitName
-            string defName = aircraft.definition?.unitName;
-            if (!string.IsNullOrWhiteSpace(defName) && AircraftDefinitionNameToProfile != null && AircraftDefinitionNameToProfile.TryGetValue(defName, out var p2))
-                return p2;
-
-            // Next: runtime Unit.unitName
-            string unitName = aircraft.unitName;
-            if (!string.IsNullOrWhiteSpace(unitName) && AircraftUnitNameToProfile != null && AircraftUnitNameToProfile.TryGetValue(unitName, out var p3))
-                return p3;
-
-            // Last chance: substring match for common names
-            string hay = $"{jsonKey} {defName} {unitName}".ToLowerInvariant();
-            if (hay.Contains("ifrit")) return "ifrit";
-            if (hay.Contains("compass")) return "compass";
-        }
-        catch
-        {
-            // ignore and fall back
-        }
+        string unitName = aircraft.unitName;
+        if (!string.IsNullOrWhiteSpace(unitName) && AircraftUnitNameToProfile.TryGetValue(unitName, out var p3)) return p3;
 
         return DefaultProfile;
     }
@@ -393,7 +327,6 @@ public class ACLSConfigSet
     private static ACLSConfig CloneProfile(ACLSConfig src)
     {
         if (src == null) return ACLSConfig.GetDefaultProfileIfrit();
-        string json = JsonSerializer.Serialize(src);
-        return JsonSerializer.Deserialize<ACLSConfig>(json);
+        return JsonConvert.DeserializeObject<ACLSConfig>(JsonConvert.SerializeObject(src));
     }
 }

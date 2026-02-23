@@ -48,8 +48,6 @@ namespace NOAutopilot
         $"<b>Mach/TAS hold:</b> Home | Switch between Mach/TAS\n" +
         $"<b>Toggle AB:</b> End | Toggle Afterburner/Airbrake\n";
 
-        private string licenseText = "";
-
         // ap menu?
         private Rect _windowRect = new(50, 50, 227, 330);
         private bool _showMenu = false;
@@ -182,28 +180,21 @@ namespace NOAutopilot
         private void Awake()
         {
             Logger = base.Logger;
-            try
+            AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
             {
-                var assembly = Assembly.GetExecutingAssembly();
-                string resourceName = "NOAutopilot.LICENSE";
+                string assemblyName = new AssemblyName(args.Name).Name;
+                if (assemblyName == "Newtonsoft.Json")
+                {
+                    string pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                    string resourcePath = Path.Combine(pluginDir, "Assets", "Newtonsoft.Json.dll");
 
-                using Stream stream = assembly.GetManifestResourceStream(resourceName);
-                if (stream != null)
-                {
-                    using StreamReader reader = new(stream);
-                    licenseText = reader.ReadToEnd();
-                    Logger.LogInfo("License Loaded: " + (licenseText.Length > 50 ? licenseText[..50] : licenseText) + "...");
+                    if (File.Exists(resourcePath))
+                    {
+                        return Assembly.LoadFrom(resourcePath);
+                    }
                 }
-                else
-                {
-                    Logger.LogWarning("License file not found inside DLL resources.");
-                }
-            }
-            catch (Exception e)
-            {
-                Logger.LogWarning("Could not read embedded license: " + e.Message);
-            }
-            ACLS.ACLSConfig.LoadSingleton();
+                return null;
+            };
 
             // Visuals
             ColorAPOn = Config.Bind("Visuals - Colors", "1. Color AP On", "#00FF00", "Green");
@@ -400,6 +391,7 @@ namespace NOAutopilot
             Rand_Acc_Inner = Config.Bind("Settings - Random", "21. Accel Tolerance Inner", 0.05f, "Start Sleeping (m/s² acceleration)");
             Rand_Acc_Outer = Config.Bind("Settings - Random", "22. Accel Tolerance Outer", 0.5f, "Wake Up (m/s² acceleration)");
 
+            ACLS.ACLSConfig.LoadSingleton();
             harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
             try
             {
@@ -1266,7 +1258,7 @@ namespace NOAutopilot
             {
                 // display massive tooltips??
                 GUILayout.EndHorizontal();
-                GUILayout.Label(new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.", "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the item.\n\n" + licenseText), _styleLabel);
+                GUILayout.Label(new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.", "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the item.\n\n"), _styleLabel);
 
                 GUILayout.Label(_cachedExtraInfoContent, _styleLabel);
             }
@@ -1345,61 +1337,69 @@ namespace NOAutopilot
 
         public static void RefreshNavVisuals()
         {
-            foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
-            APData.NavVisuals.Clear();
-
-            var map = SceneSingleton<DynamicMap>.i;
-            if (APData.NavQueue.Count == 0 || map == null || APData.PlayerRB == null) return;
-
-            float factor = 900f / map.mapDimension;
-            float zoom = map.mapImage.transform.localScale.x;
-            Color navCol = ModUtils.GetColor(ColorNav.Value, Color.cyan);
-
-            Vector3 pPosG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
-            Vector3 lastPoint = new(pPosG.x * factor, pPosG.z * factor, 0f);
-
-            void DrawLine(Vector3 start, Vector3 end, string name, bool isLoop = false)
+            try
             {
-                GameObject line = Instantiate(map.mapWaypointVector, map.mapImage.transform);
-                line.name = name;
+                foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
+                APData.NavVisuals.Clear();
 
-                line.transform.localPosition = end;
+                var map = SceneSingleton<DynamicMap>.i;
+                if (APData.NavQueue.Count == 0 || map == null || APData.PlayerRB == null) return;
 
-                float angle = -Mathf.Atan2(end.x - start.x, end.y - start.y) * Mathf.Rad2Deg + 180f;
+                float factor = 900f / map.mapDimension;
+                float zoom = map.mapImage.transform.localScale.x;
+                Color navCol = ModUtils.GetColor(ColorNav.Value, Color.cyan);
 
-                line.transform.localEulerAngles = new Vector3(0, 0, angle);
+                Vector3 pPosG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+                Vector3 lastPoint = new(pPosG.x * factor, pPosG.z * factor, 0f);
 
-                line.transform.localScale = new Vector3(4f / zoom, Vector3.Distance(start, end), 4f / zoom);
-
-                if (line.TryGetComponent(out Image img))
+                void DrawLine(Vector3 start, Vector3 end, string name, bool isLoop = false)
                 {
-                    img.color = isLoop ? new Color(navCol.r, navCol.g, navCol.b, navCol.a * 0.4f) : navCol;
-                }
-                APData.NavVisuals.Add(line);
-            }
+                    GameObject line = Instantiate(map.mapWaypointVector, map.mapImage.transform);
+                    line.name = name;
 
-            for (int i = 0; i < APData.NavQueue.Count; i++)
-            {
-                Vector3 currentMap = new(APData.NavQueue[i].x * factor, APData.NavQueue[i].z * factor, 0f);
+                    line.transform.localPosition = end;
 
-                if (i == APData.NavQueue.Count - 1)
-                {
-                    GameObject marker = Instantiate(map.mapWaypoint, map.mapImage.transform);
-                    marker.name = "AP_NavMarker";
-                    marker.transform.localPosition = currentMap;
-                    marker.transform.localScale = Vector3.one * (1f / zoom);
-                    if (marker.TryGetComponent(out Image mImg)) mImg.color = navCol;
-                    APData.NavVisuals.Add(marker);
+                    float angle = -Mathf.Atan2(end.x - start.x, end.y - start.y) * Mathf.Rad2Deg + 180f;
+
+                    line.transform.localEulerAngles = new Vector3(0, 0, angle);
+
+                    line.transform.localScale = new Vector3(4f / zoom, Vector3.Distance(start, end), 4f / zoom);
+
+                    if (line.TryGetComponent(out Image img))
+                    {
+                        img.color = isLoop ? new Color(navCol.r, navCol.g, navCol.b, navCol.a * 0.4f) : navCol;
+                    }
+                    APData.NavVisuals.Add(line);
                 }
 
-                DrawLine(lastPoint, currentMap, (i == 0) ? "AP_NavLine_Player" : "AP_NavLine");
-                lastPoint = currentMap;
-            }
+                for (int i = 0; i < APData.NavQueue.Count; i++)
+                {
+                    Vector3 currentMap = new(APData.NavQueue[i].x * factor, APData.NavQueue[i].z * factor, 0f);
 
-            if (NavCycle.Value && APData.NavQueue.Count > 1)
+                    if (i == APData.NavQueue.Count - 1)
+                    {
+                        GameObject marker = Instantiate(map.mapWaypoint, map.mapImage.transform);
+                        marker.name = "AP_NavMarker";
+                        marker.transform.localPosition = currentMap;
+                        marker.transform.localScale = Vector3.one * (1f / zoom);
+                        if (marker.TryGetComponent(out Image mImg)) mImg.color = navCol;
+                        APData.NavVisuals.Add(marker);
+                    }
+
+                    DrawLine(lastPoint, currentMap, (i == 0) ? "AP_NavLine_Player" : "AP_NavLine");
+                    lastPoint = currentMap;
+                }
+
+                if (NavCycle.Value && APData.NavQueue.Count > 1)
+                {
+                    Vector3 firstMap = new(APData.NavQueue[0].x * factor, APData.NavQueue[0].z * factor, 0f);
+                    DrawLine(lastPoint, firstMap, "AP_NavLine_Loop", true);
+                }
+            }
+            catch (Exception ex)
             {
-                Vector3 firstMap = new(APData.NavQueue[0].x * factor, APData.NavQueue[0].z * factor, 0f);
-                DrawLine(lastPoint, firstMap, "AP_NavLine_Loop", true);
+                Logger.LogError($"[RefreshNavVisuals] Error: {ex}");
+                IsBroken = true;
             }
         }
 
@@ -1908,18 +1908,26 @@ namespace NOAutopilot
 
         public static void InitializeACLSPIDs()
         {
-            if (ACLS.ACLSConfig.singleton == null) ACLS.ACLSConfig.LoadSingleton();
-            var cfg = ACLS.ACLSConfig.singleton;
+            try
+            {
+                if (ACLS.ACLSConfig.singleton == null) ACLS.ACLSConfig.LoadSingleton();
+                var cfg = ACLS.ACLSConfig.singleton;
 
-            aclsRollController = ACLS.ACLSPIDController.FromConfig(0f, cfg.RollController);
-            aclsYawController = ACLS.ACLSPIDController.FromConfig(0f, cfg.YawController);
-            aclsPitchController = ACLS.ACLSPIDController.FromConfig(0f, cfg.PitchController);
-            aclsThrottleController = ACLS.ACLSPIDController.FromConfig(cfg.LandingSpeed, cfg.ThrottleController);
+                aclsRollController = ACLS.ACLSPIDController.FromConfig(0f, cfg.RollController);
+                aclsYawController = ACLS.ACLSPIDController.FromConfig(0f, cfg.YawController);
+                aclsPitchController = ACLS.ACLSPIDController.FromConfig(0f, cfg.PitchController);
+                aclsThrottleController = ACLS.ACLSPIDController.FromConfig(cfg.LandingSpeed, cfg.ThrottleController);
 
-            aclsRollController.Reset();
-            aclsYawController.Reset();
-            aclsPitchController.Reset();
-            aclsThrottleController.Reset();
+                aclsRollController.Reset();
+                aclsYawController.Reset();
+                aclsPitchController.Reset();
+                aclsThrottleController.Reset();
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError(ex);
+                Plugin.IsBroken = true;
+            }
         }
 
         private static void Postfix(PilotPlayerState __instance)
@@ -3167,45 +3175,53 @@ namespace NOAutopilot
         public static void Reset() { }
         static void Postfix(DynamicMap __instance)
         {
-            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
-            if (__instance == null || !DynamicMap.mapMaximized || !Input.GetMouseButtonDown(1)) return;
-
-            if (!__instance.TryGetCursorCoordinates(out var clickedGlobalPos)) return;
-
-            if (__instance.selectedIcons != null && __instance.selectedIcons.Count > 0)
+            try
             {
-                if (__instance.selectedIcons[0] is UnitMapIcon unitIcon)
+                if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
+                if (__instance == null || !DynamicMap.mapMaximized || !Input.GetMouseButtonDown(1)) return;
+
+                if (!__instance.TryGetCursorCoordinates(out var clickedGlobalPos)) return;
+
+                if (__instance.selectedIcons != null && __instance.selectedIcons.Count > 0)
                 {
-                    if (unitIcon.unit != null)
+                    if (__instance.selectedIcons[0] is UnitMapIcon unitIcon)
                     {
-                        if (DynamicMap.GetFactionMode(unitIcon.unit.NetworkHQ, false) == FactionMode.Friendly
-                            && unitIcon.unit is not Building)
+                        if (unitIcon.unit != null)
                         {
-                            return; // there was friendly unit selected as first unit
+                            if (DynamicMap.GetFactionMode(unitIcon.unit.NetworkHQ, false) == FactionMode.Friendly
+                                && unitIcon.unit is not Building)
+                            {
+                                return; // there was friendly unit selected as first unit
+                            }
                         }
                     }
                 }
-            }
 
-            if (APData.LocalAircraft != null)
-            {
-                if (!Input.GetKey(KeyCode.LeftShift))
+                if (APData.LocalAircraft != null)
                 {
-                    APData.NavQueue.Clear();
-                }
-
-                APData.NavQueue.Add(clickedGlobalPos.AsVector3());
-                if (Plugin.EnableNavonWP.Value)
-                {
-                    APData.NavEnabled = true;
-                    float currentTargetRoll = APData.TargetRoll;
-                    if (currentTargetRoll == -999f || currentTargetRoll == 0f)
+                    if (!Input.GetKey(KeyCode.LeftShift))
                     {
-                        APData.TargetRoll = Plugin.DefaultCRLimit.Value;
+                        APData.NavQueue.Clear();
                     }
-                    Plugin.SyncMenuValues();
+
+                    APData.NavQueue.Add(clickedGlobalPos.AsVector3());
+                    if (Plugin.EnableNavonWP.Value)
+                    {
+                        APData.NavEnabled = true;
+                        float currentTargetRoll = APData.TargetRoll;
+                        if (currentTargetRoll == -999f || currentTargetRoll == 0f)
+                        {
+                            APData.TargetRoll = Plugin.DefaultCRLimit.Value;
+                        }
+                        Plugin.SyncMenuValues();
+                    }
+                    Plugin.RefreshNavVisuals();
                 }
-                Plugin.RefreshNavVisuals();
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[MapInteractionPatch] Error: {ex}");
+                Plugin.IsBroken = true;
             }
         }
     }

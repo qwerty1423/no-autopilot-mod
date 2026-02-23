@@ -7,21 +7,21 @@
         "Ki": 0.0,
         "Kd": 0.0,
         "BufferDuration": 0.0,
-        "Invert": true
+        "Invert": false
       },
       "YawController": {
         "Kp": 0.070,
         "Ki": 0.0,
         "Kd": 0.070,
         "BufferDuration": 0.0,
-        "Invert": true
+        "Invert": false
       },
       "PitchController": {
         "Kp": 0.08,
         "Ki": 0.01,
         "Kd": 0.01,
         "BufferDuration": 1.0,
-        "Invert": false
+        "Invert": true
       },
       "ThrottleController": {
         "Kp": 0.2,
@@ -44,21 +44,21 @@
         "Ki": 0.0,
         "Kd": 0.0,
         "BufferDuration": 0.0,
-        "Invert": true
+        "Invert": false
       },
       "YawController": {
         "Kp": 0.070,
         "Ki": 0.0,
         "Kd": 0.070,
         "BufferDuration": 0.0,
-        "Invert": true
+        "Invert": false
       },
       "PitchController": {
         "Kp": 0.08,
         "Ki": 0.01,
         "Kd": 0.01,
         "BufferDuration": 1.0,
-        "Invert": false
+        "Invert": true
       },
       "ThrottleController": {
         "Kp": 0.2,

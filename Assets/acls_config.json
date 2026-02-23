@@ -30,12 +30,12 @@
         "BufferDuration": 2.0,
         "Invert": false
       },
-      "TerminalPhaseHeight": 11.0,
+      "TerminalPhaseHeight": 8.0,
       "MaxControlAngle": 45.0,
       "CruisingSpeed": 130.0,
       "LandingSpeed": 72.0,
       "SpeedTransitionDistance": 6000.0,
-      "TerminalPitchAngle": 7.0,
+      "TerminalPitchAngle": 5.0,
       "KeyName": "Equals"
     },
     "compass": {

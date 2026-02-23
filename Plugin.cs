@@ -2760,71 +2760,74 @@ namespace NOAutopilot
                         }
                     }
                 }
-                else if (APData.ACLSActive && ACLS.ACLSAirbaseOverlayManager.isActive)
+                else if (APData.ACLSActive)
                 {
-                    var runwayCoord = ACLS.ACLSAirbaseOverlayManager.runwayCoordinateSystem;
-                    var glideCoord = ACLS.ACLSAirbaseOverlayManager.glideslopeCoordinateSystem;
-                    var alignCoord = ACLS.ACLSAirbaseOverlayManager.alignmentCoordinateSystem;
-                    var (noseYaw, nosePitch, _) = runwayCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
-                    var (progYaw, progPitch, _) = runwayCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
-                    var (glideYaw, glidePitch, _) = glideCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
-
-                    float maxAngle = ACLS.ACLSConfig.singleton.MaxControlAngle;
-                    bool isValid = true;
-
-                    if (Mathf.Abs(noseYaw) > maxAngle || Mathf.Abs(nosePitch) > maxAngle) { APData.ACLSStatusText = "ALS: NOSE"; APData.ACLSStatusColor = Color.red; isValid = false; }
-                    if (Mathf.Abs(progYaw) > maxAngle || Mathf.Abs(progPitch) > maxAngle) { APData.ACLSStatusText = "ALS: PROG"; APData.ACLSStatusColor = Color.red; isValid = false; }
-                    if (Mathf.Abs(glideYaw) > maxAngle || Mathf.Abs(glidePitch) > maxAngle) { APData.ACLSStatusText = "ALS: GSI"; APData.ACLSStatusColor = Color.red; isValid = false; }
-
-                    float runwayAlt = ACLS.ACLSAirbaseOverlayManager.runwayAltitude;
-                    if (runwayAlt <= ACLS.ACLSConfig.singleton.TerminalPhaseHeight) isValid = true;
-
-                    if (isValid)
-                    {
-                        APData.ACLSStatusText = "ALS: RDY";
-                        APData.ACLSStatusColor = Color.green;
-
-                        var (aNoseYaw, aNosePitch, aNoseRoll) = alignCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
-                        var (aProgYaw, aProgPitch, _) = alignCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
-                        var (aGlideYaw, aGlidePitch, _) = alignCoord.GetRelativeAngles(ACLS.ACLSAirbaseOverlayManager.glideslopeDirection, APData.AircraftRotation);
-
-                        aclsRollController.targetState = 0f;
-                        inputObj.roll = aclsRollController.Update(aNoseRoll);
-
-                        float distance = ACLS.ACLSAirbaseOverlayManager.distanceToLand;
-
-                        if (runwayAlt > ACLS.ACLSConfig.singleton.TerminalPhaseHeight)
-                        {
-                            aclsYawController.targetState = aGlideYaw;
-                            inputObj.yaw = aclsYawController.Update(aProgYaw);
-
-                            aclsPitchController.targetState = aGlidePitch;
-                            inputObj.pitch = aclsPitchController.Update(aProgPitch);
-
-                            float targetSpd = CurrentTargetSpeed(distance);
-                            aclsThrottleController.targetState = targetSpd;
-                            inputObj.throttle = Mathf.Clamp01(inputObj.throttle + aclsThrottleController.Update(APData.AirSpeed));
-
-                            APData.ACLSStatusText = "ALS: GLIDE";
-                            APData.ACLSStatusColor = Color.green;
-                        }
-                        else
-                        {
-                            aclsYawController.targetState = 0f;
-                            inputObj.yaw = aclsYawController.Update(aNoseYaw);
-
-                            aclsPitchController.targetState = ACLS.ACLSConfig.singleton.TerminalPitchAngle;
-                            inputObj.pitch = aclsPitchController.Update(aNosePitch);
-                            inputObj.throttle = 1f;
-
-                            APData.ACLSStatusText = "ALS: FALL";
-                            APData.ACLSStatusColor = Color.yellow;
-                        }
-                    }
                     if (APData.ACLSStatusText == "ACLS: WIRE")
                     {
                         inputObj.brake = 1f;
                         inputObj.throttle = 0f;
+                    }
+                    else if (ACLS.ACLSAirbaseOverlayManager.isActive)
+                    {
+                        var runwayCoord = ACLS.ACLSAirbaseOverlayManager.runwayCoordinateSystem;
+                        var glideCoord = ACLS.ACLSAirbaseOverlayManager.glideslopeCoordinateSystem;
+                        var alignCoord = ACLS.ACLSAirbaseOverlayManager.alignmentCoordinateSystem;
+                        var (noseYaw, nosePitch, _) = runwayCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
+                        var (progYaw, progPitch, _) = runwayCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
+                        var (glideYaw, glidePitch, _) = glideCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
+
+                        float maxAngle = ACLS.ACLSConfig.singleton.MaxControlAngle;
+                        bool isValid = true;
+
+                        if (Mathf.Abs(noseYaw) > maxAngle || Mathf.Abs(nosePitch) > maxAngle) { APData.ACLSStatusText = "ALS: NOSE"; APData.ACLSStatusColor = Color.red; isValid = false; }
+                        if (Mathf.Abs(progYaw) > maxAngle || Mathf.Abs(progPitch) > maxAngle) { APData.ACLSStatusText = "ALS: PROG"; APData.ACLSStatusColor = Color.red; isValid = false; }
+                        if (Mathf.Abs(glideYaw) > maxAngle || Mathf.Abs(glidePitch) > maxAngle) { APData.ACLSStatusText = "ALS: GSI"; APData.ACLSStatusColor = Color.red; isValid = false; }
+
+                        float runwayAlt = ACLS.ACLSAirbaseOverlayManager.runwayAltitude;
+                        if (runwayAlt <= ACLS.ACLSConfig.singleton.TerminalPhaseHeight) isValid = true;
+
+                        if (isValid)
+                        {
+                            APData.ACLSStatusText = "ALS: RDY";
+                            APData.ACLSStatusColor = Color.green;
+
+                            var (aNoseYaw, aNosePitch, aNoseRoll) = alignCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
+                            var (aProgYaw, aProgPitch, _) = alignCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
+                            var (aGlideYaw, aGlidePitch, _) = alignCoord.GetRelativeAngles(ACLS.ACLSAirbaseOverlayManager.glideslopeDirection, APData.AircraftRotation);
+
+                            aclsRollController.targetState = 0f;
+                            inputObj.roll = aclsRollController.Update(aNoseRoll);
+
+                            float distance = ACLS.ACLSAirbaseOverlayManager.distanceToLand;
+
+                            if (runwayAlt > ACLS.ACLSConfig.singleton.TerminalPhaseHeight)
+                            {
+                                aclsYawController.targetState = aGlideYaw;
+                                inputObj.yaw = aclsYawController.Update(aProgYaw);
+
+                                aclsPitchController.targetState = aGlidePitch;
+                                inputObj.pitch = aclsPitchController.Update(aProgPitch);
+
+                                float targetSpd = CurrentTargetSpeed(distance);
+                                aclsThrottleController.targetState = targetSpd;
+                                inputObj.throttle = Mathf.Clamp01(inputObj.throttle + aclsThrottleController.Update(APData.AirSpeed));
+
+                                APData.ACLSStatusText = "ALS: GLIDE";
+                                APData.ACLSStatusColor = Color.green;
+                            }
+                            else
+                            {
+                                aclsYawController.targetState = 0f;
+                                inputObj.yaw = aclsYawController.Update(aNoseYaw);
+
+                                aclsPitchController.targetState = ACLS.ACLSConfig.singleton.TerminalPitchAngle;
+                                inputObj.pitch = aclsPitchController.Update(aNosePitch);
+                                inputObj.throttle = 1f;
+
+                                APData.ACLSStatusText = "ALS: FALL";
+                                APData.ACLSStatusColor = Color.yellow;
+                            }
+                        }
                     }
                 }
             }

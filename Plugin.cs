@@ -1712,7 +1712,7 @@ namespace NOAutopilot
         public static bool IsOnGround = false;
 
         // ACLS
-        public static bool ACLSActive = true;
+        public static bool ACLSActive = false;
         public static string ACLSStatusText = "OFF";
         public static Color ACLSStatusColor = Color.white;
         public static Vector3 ProgradeVector;
@@ -1758,7 +1758,7 @@ namespace NOAutopilot
             IsConscious = true;
             LocalLandingGears.Clear();
             IsOnGround = false;
-            ACLSActive = true;
+            ACLSActive = false;
             ACLSStatusText = "OFF";
             LocalAirbaseOverlay = null;
 
@@ -1801,7 +1801,7 @@ namespace NOAutopilot
                 {
                     lastVehicleObj = v.gameObject;
                     APData.Reset();
-                    APData.LocalAirbaseOverlay = UnityEngine.Object.FindObjectOfType<AirbaseOverlay>();
+                    APData.LocalAirbaseOverlay = UnityEngine.Object.FindObjectOfType<AirbaseOverlay>(true);
                     APData.LocalAircraft = foundAircraft;
                     APData.PlayerTransform = v.transform;
                     APData.PlayerRB = v.GetComponent<Rigidbody>();
@@ -1828,13 +1828,6 @@ namespace NOAutopilot
 
                     ACLS.ACLSConfig.SelectForAircraft(foundAircraft);
                     ControlOverridePatch.InitializeACLSPIDs();
-                    if (APData.PlayerRB != null)
-                    {
-                        APData.ProgradeVector = APData.PlayerRB.velocity;
-                        APData.AircraftRotation = APData.PlayerRB.rotation;
-                        APData.NoseVector = APData.AircraftRotation * Vector3.forward;
-                        APData.AirSpeed = APData.PlayerRB.velocity.magnitude;
-                    }
                 }
             }
             catch (Exception ex)
@@ -2001,9 +1994,16 @@ namespace NOAutopilot
                 var inputObj = __instance.controlInputs;
                 if (inputObj == null) return;
 
-                if (APData.ACLSActive && APData.LocalAirbaseOverlay != null)
+                if (APData.ACLSActive)
                 {
-                    ACLS.ACLSAirbaseOverlayManager.UpdateACLSData(APData.LocalAirbaseOverlay, APData.LocalAircraft);
+                    if (APData.LocalAirbaseOverlay != null)
+                    {
+                        ACLS.ACLSAirbaseOverlayManager.UpdateACLSData(APData.LocalAirbaseOverlay, APData.LocalAircraft);
+                    }
+                    else
+                    {
+                        APData.LocalAirbaseOverlay = UnityEngine.Object.FindObjectOfType<AirbaseOverlay>(true);
+                    }
                 }
 
                 float stickPitch = 0f;
@@ -2019,6 +2019,11 @@ namespace NOAutopilot
                 Vector3 pUp = APData.PlayerTransform.up;
                 Vector3 pEuler = APData.PlayerTransform.eulerAngles;
                 Vector3 localAngVel = APData.PlayerTransform.InverseTransformDirection(APData.PlayerRB.angularVelocity);
+
+                APData.ProgradeVector = APData.PlayerRB.velocity;
+                APData.AircraftRotation = APData.PlayerRB.rotation;
+                APData.NoseVector = APData.AircraftRotation * Vector3.forward;
+                APData.AirSpeed = APData.PlayerRB.velocity.magnitude;
 
                 float dt = Mathf.Max(Time.deltaTime, 0.0001f);
                 float noiseT = Time.time * Plugin.RandomSpeed.Value;

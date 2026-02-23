@@ -17,7 +17,7 @@
         "Invert": true
       },
       "PitchController": {
-        "Kp": 0.08,
+        "Kp": 0.01,
         "Ki": 0.01,
         "Kd": 0.01,
         "BufferDuration": 1.0,

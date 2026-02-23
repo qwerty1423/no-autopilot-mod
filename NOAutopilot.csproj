@@ -4,9 +4,9 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>com.qwerty1423.NOAutopilot</AssemblyName>
     <AssemblyCopyright>
+    Copyright (c) 2026 qwerty1423 and NOAutopilot contributors
     Copyright (c) 2024 mkualquiera
     Copyright (c) 2026 The-Underground
-    Copyright (c) 2026 qwerty1423 and NOAutopilot contributors
     </AssemblyCopyright>
     <Product>NOAutopilot</Product>
     <Description>no autopilot?</Description>

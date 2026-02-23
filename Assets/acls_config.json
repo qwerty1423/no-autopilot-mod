@@ -21,7 +21,7 @@
         "Ki": 0.01,
         "Kd": 0.01,
         "BufferDuration": 1.0,
-        "Invert": false
+        "Invert": true
       },
       "ThrottleController": {
         "Kp": 0.2,
@@ -58,7 +58,7 @@
         "Ki": 0.01,
         "Kd": 0.01,
         "BufferDuration": 1.0,
-        "Invert": false
+        "Invert": true
       },
       "ThrottleController": {
         "Kp": 0.2,

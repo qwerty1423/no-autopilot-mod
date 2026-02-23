@@ -1705,7 +1705,7 @@ namespace NOAutopilot
         public static bool IsOnGround = false;
 
         // ACLS
-        public static bool ACLSActive = false;
+        public static bool ACLSActive = true;
         public static string ACLSStatusText = "OFF";
         public static Color ACLSStatusColor = Color.white;
         public static Vector3 ProgradeVector;
@@ -1751,7 +1751,7 @@ namespace NOAutopilot
             IsConscious = true;
             LocalLandingGears.Clear();
             IsOnGround = false;
-            ACLSActive = false;
+            ACLSActive = true;
             ACLSStatusText = "OFF";
             LocalAirbaseOverlay = null;
 

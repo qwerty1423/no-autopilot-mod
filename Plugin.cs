@@ -1713,7 +1713,7 @@ namespace NOAutopilot
 
         // ACLS
         public static bool ACLSActive = false;
-        public static string ACLSStatusText = "OFF";
+        public static string ACLSStatusText = "";
         public static Color ACLSStatusColor = Color.white;
         public static Vector3 ProgradeVector;
         public static Quaternion AircraftRotation;
@@ -1759,7 +1759,8 @@ namespace NOAutopilot
             LocalLandingGears.Clear();
             IsOnGround = false;
             ACLSActive = false;
-            ACLSStatusText = "OFF";
+            ACLSStatusText = "";
+            ACLSStatusColor = Color.white;
             LocalAirbaseOverlay = null;
 
             NavQueue.Clear();
@@ -2112,6 +2113,7 @@ namespace NOAutopilot
                     if (gearDown && currentRadarAlt < 0.1f)
                     {
                         APData.IsOnGround = true;
+                        APData.ACLSActive = false;
                     }
 
                     bool pilotOverride = Mathf.Abs(stickPitch) > Plugin.GCAS_Deadzone.Value || Mathf.Abs(stickRoll) > Plugin.GCAS_Deadzone.Value || gearDown;
@@ -2805,6 +2807,11 @@ namespace NOAutopilot
 
                             APData.ACLSStatusText = "ALS: GLIDE";
                             APData.ACLSStatusColor = Color.green;
+                        }
+                        else if (APData.ACLSStatusText == "ACLS: WIRE")
+                        {
+                            inputObj.brake = 1f;
+                            inputObj.throttle = 0f;
                         }
                         else
                         {

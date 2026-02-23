@@ -10,7 +10,7 @@ namespace NOAutopilot.ACLS;
 [HarmonyPatch(typeof(TailHook), "FixedUpdate")]
 internal class ACLSAutoDisengageOnWirePatch
 {
-    private static readonly ConditionalWeakTable<TailHook, HookState> _state = new();
+    private static readonly ConditionalWeakTable<TailHook, HookState> _state = [];
 
     private class HookState
     {
@@ -36,8 +36,7 @@ internal class ACLSAutoDisengageOnWirePatch
 
             if (aircraft != null && SceneSingleton<CombatHUD>.i != null && aircraft == SceneSingleton<CombatHUD>.i.aircraft)
             {
-                APData.ACLSActive = false;
-                APData.ACLSStatusText = "ALS: OFF";
+                APData.ACLSStatusText = "ACLS: WIRE";
                 APData.ACLSStatusColor = Color.white;
             }
         }

@@ -182,12 +182,12 @@ namespace NOAutopilot
         private void Awake()
         {
             Logger = base.Logger;
+            string pluginDir = Path.GetDirectoryName(Info.Location);
             _resolveEventHandler = (sender, args) =>
             {
                 string assemblyName = new AssemblyName(args.Name).Name;
                 if (assemblyName == "Newtonsoft.Json")
                 {
-                    string pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                     string resourcePath = Path.Combine(pluginDir, "Assets", "Newtonsoft.Json.dll");
                     if (File.Exists(resourcePath))
                     {
@@ -393,7 +393,7 @@ namespace NOAutopilot
             Rand_Acc_Inner = Config.Bind("Settings - Random", "21. Accel Tolerance Inner", 0.05f, "Start Sleeping (m/s² acceleration)");
             Rand_Acc_Outer = Config.Bind("Settings - Random", "22. Accel Tolerance Outer", 0.5f, "Wake Up (m/s² acceleration)");
 
-            ACLS.ACLSConfig.LoadSingleton();
+            ACLS.ACLSConfig.LoadSingleton(pluginDir);
             harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
             try
             {

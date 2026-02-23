@@ -7,7 +7,7 @@
         "Ki": 0.0,
         "Kd": 0.0,
         "BufferDuration": 0.0,
-        "Invert": false
+        "Invert": true
       },
       "YawController": {
         "Kp": 0.070,
@@ -44,7 +44,7 @@
         "Ki": 0.0,
         "Kd": 0.0,
         "BufferDuration": 0.0,
-        "Invert": false
+        "Invert": true
       },
       "YawController": {
         "Kp": 0.070,

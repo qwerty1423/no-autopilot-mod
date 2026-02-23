@@ -125,7 +125,7 @@ namespace NOAutopilot
 
         // Controls
         public static ConfigEntry<KeyboardShortcut> MenuKey;
-        public static ConfigEntry<KeyboardShortcut> ToggleKey, ToggleFBWKey;
+        public static ConfigEntry<KeyboardShortcut> ToggleKey, ToggleFBWKey, ToggleALSKey;
         public static ConfigEntry<KeyboardShortcut> AutoJammerKey, ToggleGCASKey, ClearKey;
         public static ConfigEntry<KeyboardShortcut> UpKey, DownKey, BigUpKey, BigDownKey;
         public static ConfigEntry<KeyboardShortcut> ClimbRateUpKey, ClimbRateDownKey;
@@ -134,7 +134,7 @@ namespace NOAutopilot
         public static ConfigEntry<KeyboardShortcut> ToggleMachKey, ToggleABKey;
 
         public static ConfigEntry<string> MenuRW;
-        public static ConfigEntry<string> ToggleRW, ToggleFBWRW;
+        public static ConfigEntry<string> ToggleRW, ToggleFBWRW, ToggleALSRW;
         public static ConfigEntry<string> AutoJammerRW, ToggleGCASRW, ClearRW;
         public static ConfigEntry<string> UpRW, DownRW, BigUpRW, BigDownRW;
         public static ConfigEntry<string> ClimbRateUpRW, ClimbRateDownRW;
@@ -302,6 +302,7 @@ namespace NOAutopilot
             ToggleFBWKey = Config.Bind("Controls", "3. Toggle FBW Key", new KeyboardShortcut(KeyCode.Delete), "works in singleplayer");
             AutoJammerKey = Config.Bind("Controls", "4. Auto Jammer Key", new KeyboardShortcut(KeyCode.Slash), "Key to toggle jamming");
             ToggleGCASKey = Config.Bind("Controls", "5. Toggle GCAS Key", new KeyboardShortcut(KeyCode.Backslash), "Turn Auto-GCAS on/off");
+            ToggleALSKey = Config.Bind("Controls", "5.1 Toggle ALS Key", new KeyboardShortcut(KeyCode.Equals, KeyCode.LeftShift), "Turn autoland on/off");
             ClearKey = Config.Bind("Controls", "6. clear roll/nav/crs/roll/alt/roll", new KeyboardShortcut(KeyCode.Quote), "every press will clear/reset first thing it sees isn't clear from left to right");
             UpKey = Config.Bind("Controls - Altitude", "1. Altitude Up (Small)", new KeyboardShortcut(KeyCode.UpArrow), "small increase");
             DownKey = Config.Bind("Controls - Altitude", "2. Altitude Down (Small)", new KeyboardShortcut(KeyCode.DownArrow), "small decrease");
@@ -323,6 +324,7 @@ namespace NOAutopilot
             ToggleFBWRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "3. Toggle FBW", "works in singleplayer");
             AutoJammerRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "4. Toggle AJ", "Toggle auto jamming with jamming pods");
             ToggleGCASRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5. Toggle GCAS", "Turn Auto-GCAS on/off");
+            ToggleALSRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5.1 Toggle ALS", "Turn autoland on/off");
             ClearRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear roll/nav/crs/roll/alt/roll", "every use will clear/reset first thing it sees isn't clear from left to right");
             UpRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "1. Altitude Up (Small)", "small increase");
             DownRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "2. Altitude Down (Small)", "small decrease");
@@ -573,6 +575,15 @@ namespace NOAutopilot
                 {
                     APData.GCASEnabled = !APData.GCASEnabled;
                     if (!APData.GCASEnabled) { APData.GCASActive = false; APData.GCASWarning = false; }
+                }
+
+                if (InputHelper.IsDown(ToggleALSRW) || ToggleALSKey.Value.IsDown())
+                {
+                    APData.ACLSActive = !APData.ACLSActive;
+                    if (!APData.ACLSActive)
+                    {
+                        APData.ACLSStatusText = "";
+                    }
                 }
 
                 if (InputHelper.IsDown(SpeedHoldRW) || SpeedHoldKey.Value.IsDown())
@@ -1150,13 +1161,9 @@ namespace NOAutopilot
             if (GUILayout.Button(new GUIContent(APData.ACLSActive ? "ACLS: ON" : "ACLS: OFF", "Auto Carrier Landing System"), _styleButton))
             {
                 APData.ACLSActive = !APData.ACLSActive;
-                if (APData.ACLSActive)
+                if (!APData.ACLSActive)
                 {
-                    APData.Enabled = false;
-                }
-                else
-                {
-                    APData.ACLSStatusText = "OFF";
+                    APData.ACLSStatusText = "";
                 }
                 GUI.FocusControl(null);
             }

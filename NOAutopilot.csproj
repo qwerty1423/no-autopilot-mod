@@ -57,6 +57,7 @@
     <PackageReference Include="BepInEx.Core" Version="5.*" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.2" PrivateAssets="all" />
+    <PackageReference Include="HarmonyX" Version="2.16.0" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
@@ -100,23 +101,13 @@
 
     <Message Text="Deploying plugin to: $(PluginDeployPath)" Importance="high" />
     
-    <Copy
-      SourceFiles="@(PluginFiles)"
-      DestinationFolder="$(PluginDeployPath)"
-      SkipUnchangedFiles="true"
-    />
+    <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(PluginDeployPath)" SkipUnchangedFiles="true" />
   </Target>
 
-  <Target Name="CreateZip"
-        AfterTargets="Build"
-        Condition="'$(Configuration)' == 'Release'"
-        Inputs="$(OutputPath)$(AssemblyName).dll"
-        Outputs="$(OutputPath)$(AssemblyName)-$(Version).zip">
+  <Target Name="CreateZip" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'" Inputs="$(OutputPath)$(AssemblyName).dll" Outputs="$(OutputPath)$(AssemblyName)-$(Version).zip">
 
   <Message Text="Creating ZIP archive for $(AssemblyName)..." Importance="high" />
 
-  <Exec
-    Command="7z a -tzip -mx=9 &quot;$(AssemblyName)-$(Version).zip&quot; &quot;$(AssemblyName).dll&quot;"
-    WorkingDirectory="$(OutputPath)" />
+  <Exec Command="7z a -tzip -mx=9 &quot;$(AssemblyName)-$(Version).zip&quot; &quot;$(AssemblyName).dll&quot;" WorkingDirectory="$(OutputPath)" />
   </Target>
 </Project>

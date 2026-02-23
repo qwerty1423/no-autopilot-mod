@@ -47,7 +47,6 @@ public class ACLSConfig
     {
         string pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
         string path = Path.Combine(pluginDir, "acls_config.json");
-        Plugin.Logger.LogInfo("Loading ACLS config from " + path);
 
         var options = new JsonSerializerOptions
         {
@@ -62,19 +61,17 @@ public class ACLSConfig
             try
             {
                 string json = File.ReadAllText(path);
-                using (JsonDocument doc = JsonDocument.Parse(json))
+                using JsonDocument doc = JsonDocument.Parse(json);
+                // Check if the root has a "Profiles" property to distinguish 
+                // between the new Set format and the legacy single Profile format
+                if (doc.RootElement.TryGetProperty("Profiles", out _))
                 {
-                    // Check if the root has a "Profiles" property to distinguish 
-                    // between the new Set format and the legacy single Profile format
-                    if (doc.RootElement.TryGetProperty("Profiles", out _))
-                    {
-                        setSingleton = JsonSerializer.Deserialize<ACLSConfigSet>(json, options);
-                    }
-                    else
-                    {
-                        ACLSConfig legacy = JsonSerializer.Deserialize<ACLSConfig>(json, options);
-                        setSingleton = ACLSConfigSet.FromLegacy(legacy);
-                    }
+                    setSingleton = JsonSerializer.Deserialize<ACLSConfigSet>(json, options);
+                }
+                else
+                {
+                    ACLSConfig legacy = JsonSerializer.Deserialize<ACLSConfig>(json, options);
+                    setSingleton = ACLSConfigSet.FromLegacy(legacy);
                 }
             }
             catch (Exception ex)
@@ -92,8 +89,6 @@ public class ACLSConfig
 
         activeProfileName = string.IsNullOrWhiteSpace(setSingleton.DefaultProfile) ? "ifrit" : setSingleton.DefaultProfile;
         singleton = setSingleton.GetProfileOrDefault(activeProfileName);
-
-        Plugin.Logger.LogInfo($"ACLS active profile: {activeProfileName}");
     }
 
     /// <summary>
@@ -122,7 +117,6 @@ public class ACLSConfig
         {
             activeProfileName = profile;
             singleton = setSingleton.GetProfileOrDefault(activeProfileName);
-            Plugin.Logger.LogInfo($"ACLS switched profile -> {activeProfileName} ({DescribeAircraft(aircraft)})");
             return true;
         }
         return false;
@@ -238,12 +232,12 @@ public class ACLSConfigSet
     /// <summary>
     /// Map by Unit.unitName (runtime unit name).
     /// </summary>
-    public Dictionary<string, string> AircraftUnitNameToProfile { get; set; } = new Dictionary<string, string>();
+    public Dictionary<string, string> AircraftUnitNameToProfile { get; set; } = [];
 
     /// <summary>
     /// Map by Aircraft.definition.unitName (display/unit name).
     /// </summary>
-    public Dictionary<string, string> AircraftDefinitionNameToProfile { get; set; } = new Dictionary<string, string>();
+    public Dictionary<string, string> AircraftDefinitionNameToProfile { get; set; } = [];
 
     /// <summary>
     /// Create default config set with two profiles and conservative mappings.

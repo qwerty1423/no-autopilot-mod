@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -46,6 +47,8 @@ namespace NOAutopilot
         $"<b>Speed Up / Down:</b> LShift / LCtrl | Adjust target speed\n" +
         $"<b>Mach/TAS hold:</b> Home | Switch between Mach/TAS\n" +
         $"<b>Toggle AB:</b> End | Toggle Afterburner/Airbrake\n";
+
+        private string licenseText = "";
 
         // ap menu?
         private Rect _windowRect = new(50, 50, 227, 330);
@@ -179,6 +182,28 @@ namespace NOAutopilot
         private void Awake()
         {
             Logger = base.Logger;
+            try
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                string resourceName = "NOAutopilot.LICENSE";
+
+                using Stream stream = assembly.GetManifestResourceStream(resourceName);
+                if (stream != null)
+                {
+                    using StreamReader reader = new(stream);
+                    licenseText = reader.ReadToEnd();
+                    Logger.LogInfo("License Loaded: " + (licenseText.Length > 50 ? licenseText[..50] : licenseText) + "...");
+                }
+                else
+                {
+                    Logger.LogWarning("License file not found inside DLL resources.");
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning("Could not read embedded license: " + e.Message);
+            }
+            ACLS.ACLSConfig.LoadSingleton();
 
             // Visuals
             ColorAPOn = Config.Bind("Visuals - Colors", "1. Color AP On", "#00FF00", "Green");
@@ -1227,7 +1252,7 @@ namespace NOAutopilot
             {
                 // display massive tooltips??
                 GUILayout.EndHorizontal();
-                GUILayout.Label(new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.", "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the item."), _styleLabel);
+                GUILayout.Label(new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.", "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the item.\n" + licenseText), _styleLabel);
 
                 GUILayout.Label(_cachedExtraInfoContent, _styleLabel);
             }
@@ -1627,6 +1652,15 @@ namespace NOAutopilot
         public static List<Component> LocalLandingGears = [];
         public static bool IsOnGround = false;
 
+        // ACLS
+        public static bool ACLSActive = false;
+        public static string ACLSStatusText = "OFF";
+        public static Color ACLSStatusColor = Color.white;
+        public static Vector3 ProgradeVector;
+        public static Quaternion AircraftRotation;
+        public static Vector3 NoseVector;
+        public static float AirSpeed;
+
         public static void Reset()
         {
             Enabled = false;
@@ -1664,6 +1698,8 @@ namespace NOAutopilot
             IsConscious = true;
             LocalLandingGears.Clear();
             IsOnGround = false;
+            ACLSActive = false;
+            ACLSStatusText = "OFF";
 
             NavQueue.Clear();
             foreach (var obj in NavVisuals)
@@ -1727,6 +1763,16 @@ namespace NOAutopilot
 
                     Plugin.SyncMenuValues();
                     Plugin.CleanUpFBW();
+
+                    ACLS.ACLSConfig.SelectForAircraft(foundAircraft);
+                    ControlOverridePatch.InitializeACLSPIDs();
+                    if (APData.PlayerRB != null)
+                    {
+                        APData.ProgradeVector = APData.PlayerRB.velocity;
+                        APData.AircraftRotation = APData.PlayerRB.rotation;
+                        APData.NoseVector = APData.AircraftRotation * Vector3.forward;
+                        APData.AirSpeed = APData.PlayerRB.velocity.magnitude;
+                    }
                 }
             }
             catch (Exception ex)
@@ -1747,6 +1793,11 @@ namespace NOAutopilot
         private static readonly PIDController pidGCAS = new();
         private static readonly PIDController pidSpd = new();
         private static readonly PIDController pidCrs = new();
+
+        private static ACLS.ACLSPIDController aclsRollController;
+        private static ACLS.ACLSPIDController aclsYawController;
+        private static ACLS.ACLSPIDController aclsPitchController;
+        private static ACLS.ACLSPIDController aclsThrottleController;
 
         private static float lastSpdMeasurement = 0f;
 
@@ -1839,6 +1890,17 @@ namespace NOAutopilot
 
             isPitchSleeping = isRollSleeping = isSpdSleeping = false;
             pitchSleepUntil = rollSleepUntil = spdSleepUntil = 0f;
+        }
+
+        public static void InitializeACLSPIDs()
+        {
+            if (ACLS.ACLSConfig.singleton == null) ACLS.ACLSConfig.LoadSingleton();
+
+            var cfg = ACLS.ACLSConfig.singleton;
+            aclsRollController = ACLS.ACLSPIDController.FromConfig(0f, cfg.RollController);
+            aclsYawController = ACLS.ACLSPIDController.FromConfig(0f, cfg.YawController);
+            aclsPitchController = ACLS.ACLSPIDController.FromConfig(0f, cfg.PitchController);
+            aclsThrottleController = ACLS.ACLSPIDController.FromConfig(cfg.LandingSpeed, cfg.ThrottleController);
         }
 
         private static void Postfix(PilotPlayerState __instance)
@@ -2109,6 +2171,7 @@ namespace NOAutopilot
                                 apStateBeforeGCAS = APData.Enabled;
                                 APData.Enabled = true;
                                 APData.GCASActive = true;
+                                APData.ACLSActive = false;
                                 APData.TargetRoll = 0f;
                                 if (APData.FBWDisabled)
                                 {
@@ -2314,7 +2377,7 @@ namespace NOAutopilot
                 if (APData.Enabled || APData.GCASActive)
                 {
                     // keys
-                    if (!pilotPitch && !pilotRoll && !APData.GCASActive)
+                    if (!APData.ACLSActive)
                     {
                         float fpsRef = 60f;
                         float aStep = Plugin.AltStep.Value * fpsRef * dt;
@@ -2443,10 +2506,6 @@ namespace NOAutopilot
 
                                     activeTargetRoll = Mathf.Clamp(bankReq, -finalBankLimit, finalBankLimit);
                                 }
-                            }
-                            else if (APData.GCASActive)
-                            {
-                                activeTargetRoll = 0f;
                             }
 
                             float rollError = Mathf.DeltaAngle(APData.CurrentRoll, activeTargetRoll);
@@ -2613,12 +2672,87 @@ namespace NOAutopilot
                         }
                     }
                 }
+                else if (APData.ACLSActive && ACLS.ACLSAirbaseOverlayPatch.isActive)
+                {
+                    var runwayCoord = ACLS.ACLSAirbaseOverlayPatch.runwayCoordinateSystem;
+                    var glideCoord = ACLS.ACLSAirbaseOverlayPatch.glideslopeCoordinateSystem;
+                    var alignCoord = ACLS.ACLSAirbaseOverlayPatch.alignmentCoordinateSystem;
+                    var noseAngles = runwayCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
+                    var progAngles = runwayCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
+                    var glideAngles = glideCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
+
+                    float maxAngle = ACLS.ACLSConfig.singleton.MaxControlAngle;
+                    bool isValid = true;
+
+                    if (Mathf.Abs(noseAngles.yaw) > maxAngle || Mathf.Abs(noseAngles.pitch) > maxAngle) { APData.ACLSStatusText = "ALS: NOSE"; APData.ACLSStatusColor = Color.red; isValid = false; }
+                    if (Mathf.Abs(progAngles.yaw) > maxAngle || Mathf.Abs(progAngles.pitch) > maxAngle) { APData.ACLSStatusText = "ALS: PROG"; APData.ACLSStatusColor = Color.red; isValid = false; }
+                    if (Mathf.Abs(glideAngles.yaw) > maxAngle || Mathf.Abs(glideAngles.pitch) > maxAngle) { APData.ACLSStatusText = "ALS: GSI"; APData.ACLSStatusColor = Color.red; isValid = false; }
+
+                    float runwayAlt = ACLS.ACLSAirbaseOverlayPatch.runwayAltitude;
+                    if (runwayAlt <= ACLS.ACLSConfig.singleton.TerminalPhaseHeight) isValid = true;
+
+                    if (isValid)
+                    {
+                        APData.ACLSStatusText = "ALS: RDY";
+                        APData.ACLSStatusColor = Color.green;
+                    }
+
+                    if (APData.ACLSActive)
+                    {
+                        var alignNose = alignCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
+                        var alignProg = alignCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
+                        var alignGlide = alignCoord.GetRelativeAngles(ACLS.ACLSAirbaseOverlayPatch.glideslopeDirection, APData.AircraftRotation);
+
+                        inputObj.roll = aclsRollController.Update(alignNose.roll);
+
+                        float distance = ACLS.ACLSAirbaseOverlayPatch.distanceToLand;
+
+                        if (runwayAlt > ACLS.ACLSConfig.singleton.TerminalPhaseHeight)
+                        {
+                            aclsYawController.targetState = alignGlide.yaw;
+                            inputObj.yaw = aclsYawController.Update(alignProg.yaw);
+
+                            aclsPitchController.targetState = alignGlide.pitch;
+                            inputObj.pitch = aclsPitchController.Update(alignProg.pitch);
+
+                            float targetSpd = CurrentTargetSpeed(distance);
+                            aclsThrottleController.targetState = targetSpd;
+                            inputObj.throttle = Mathf.Clamp01(inputObj.throttle + aclsThrottleController.Update(APData.AirSpeed));
+
+                            APData.ACLSStatusText = "ALS: GLIDE";
+                            APData.ACLSStatusColor = Color.green;
+                        }
+                        else
+                        {
+                            aclsYawController.targetState = 0f;
+                            inputObj.yaw = aclsYawController.Update(alignNose.yaw);
+
+                            aclsPitchController.targetState = ACLS.ACLSConfig.singleton.TerminalPitchAngle;
+                            inputObj.pitch = aclsPitchController.Update(alignNose.pitch);
+                            inputObj.throttle = 0f;
+
+                            APData.ACLSStatusText = "ALS: FALL";
+                            APData.ACLSStatusColor = Color.yellow;
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
                 Plugin.Logger.LogError($"[ControlOverridePatch] Error: {ex}");
                 Plugin.IsBroken = true;
             }
+        }
+
+        public static float CurrentTargetSpeed(float distance)
+        {
+            if (distance > ACLS.ACLSConfig.singleton.SpeedTransitionDistance)
+            {
+                return ACLS.ACLSConfig.singleton.CruisingSpeed;
+            }
+            return ACLS.ACLSConfig.singleton.LandingSpeed +
+                   (ACLS.ACLSConfig.singleton.CruisingSpeed - ACLS.ACLSConfig.singleton.LandingSpeed) *
+                   (distance / ACLS.ACLSConfig.singleton.SpeedTransitionDistance);
         }
     }
 
@@ -2643,6 +2777,7 @@ namespace NOAutopilot
         private static float _lastStringUpdate = 0f;
         private static FuelGauge _cachedFuelGauge;
         private static Text _cachedRefLabel;
+        private static Vector3 _fuelLabelPosOffset;
         private static readonly StringBuilder _sbHud = new(1024);
         private static GameObject _lastVehicleChecked;
 
@@ -2708,6 +2843,7 @@ namespace NOAutopilot
                     if (_cachedFuelGauge != null)
                     {
                         _cachedRefLabel = _cachedFuelGauge.fuelLabel;
+                        _fuelLabelPosOffset = __instance.transform.InverseTransformPoint(_cachedRefLabel.transform.position);
                     }
                 }
 
@@ -2715,8 +2851,9 @@ namespace NOAutopilot
 
                 if (!infoOverlayObj)
                 {
-                    infoOverlayObj = UnityEngine.Object.Instantiate(_cachedRefLabel.gameObject, _cachedRefLabel.transform.parent);
+                    infoOverlayObj = UnityEngine.Object.Instantiate(_cachedRefLabel.gameObject, __instance.transform);
                     infoOverlayObj.name = "AP_CombinedOverlay";
+                    infoOverlayObj.transform.localPosition = _fuelLabelPosOffset;
                     overlayText = infoOverlayObj.GetComponent<Text>();
                     overlayText.resizeTextForBestFit = false;
                     overlayText.supportRichText = true;
@@ -2910,6 +3047,12 @@ namespace NOAutopilot
                         if (APData.FBWDisabled)
                         {
                             _sbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">FBW OFF</color>");
+                        }
+
+                        if (APData.ACLSActive || APData.ACLSStatusText != "OFF")
+                        {
+                            string hexColor = ColorUtility.ToHtmlStringRGBA(APData.ACLSStatusColor);
+                            _sbHud.Append($"\n<color=#{hexColor}>{APData.ACLSStatusText}</color>");
                         }
                         overlayText.text = _sbHud.ToString();
                     }

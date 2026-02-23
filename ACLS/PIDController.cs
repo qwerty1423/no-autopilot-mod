@@ -19,9 +19,9 @@ internal class ACLSPIDController
 
     public bool invert;
 
-    private Queue<float> errorBuffer;
+    private readonly Queue<float> errorBuffer;
 
-    private float bufferDuration;
+    private readonly float bufferDuration;
 
     private float integralSum;
 
@@ -69,7 +69,7 @@ internal class ACLSPIDController
 
     public void LogState()
     {
-        Plugin.Logger.LogInfo((object)($"Target: {targetState:0.00}," + $"Integral: {integralSum:0.00}, LastError: {lastError:0.00}, LastOutput: {lastOutput:0.00}"));
+        Plugin.Logger.LogInfo($"Target: {targetState:0.00}," + $"Integral: {integralSum:0.00}, LastError: {lastError:0.00}, LastOutput: {lastOutput:0.00}");
     }
 
     public static ACLSPIDController FromConfig(float targetState, PIDConfig config)

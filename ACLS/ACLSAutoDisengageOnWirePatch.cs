@@ -6,15 +6,11 @@ namespace NOAutopilot.ACLS
 {
     /// <summary>
     /// Auto-disengage ACLS when the player's tailhook catches an arresting wire.
-    ///
-    /// We hook TailHook.FixedUpdate and watch the private 'hooked' flag transition
-    /// from false -> true. This is the same moment the game prints "Caught Xth Wire"
-    /// via AircraftActionsReport.ReportText.
     /// </summary>
     [HarmonyPatch(typeof(TailHook), "FixedUpdate")]
     internal class ACLSAutoDisengageOnWirePatch
     {
-        private static readonly ConditionalWeakTable<TailHook, HookState> _state = new();
+        private static readonly ConditionalWeakTable<TailHook, HookState> _state = [];
 
         private class HookState
         {
@@ -51,19 +47,9 @@ namespace NOAutopilot.ACLS
                     var aircraft = Traverse.Create(__instance).Field("aircraft").GetValue<Aircraft>();
                     if (aircraft != null && SceneSingleton<CombatHUD>.i != null && aircraft == SceneSingleton<CombatHUD>.i.aircraft)
                     {
-                        // Disengage ACLS control
-                        ACLSPilotPlayerStatePatch.enableControl = false;
-                        // Optional: small UI feedback (reuse existing autopilot text if present)
-                        if (ThrottleGaugeRefreshPatch.autopilotText != null)
-                        {
-                            var txt = ThrottleGaugeRefreshPatch.autopilotText.GetComponent<UnityEngine.UI.Text>();
-                            if (txt != null)
-                            {
-                                txt.text = "ALS: OFF";
-                                ((UnityEngine.UI.Graphic)txt).color = Color.white;
-                            }
-                        }
-                        Plugin.Logger?.LogInfo("[ACLS] Auto-disengaged after wire catch.");
+                        APData.ACLSActive = false;
+                        APData.ACLSStatusText = "ALS: OFF";
+                        APData.ACLSStatusColor = Color.white;
                     }
                 }
                 catch

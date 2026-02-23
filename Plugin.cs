@@ -177,17 +177,18 @@ namespace NOAutopilot
         public static ConfigEntry<float> Rand_Spd_SleepMin, Rand_Spd_SleepMax;
         public static ConfigEntry<float> Rand_Acc_Inner, Rand_Acc_Outer;
 
+        private ResolveEventHandler _resolveEventHandler;
+
         private void Awake()
         {
             Logger = base.Logger;
-            AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
+            _resolveEventHandler = (sender, args) =>
             {
                 string assemblyName = new AssemblyName(args.Name).Name;
                 if (assemblyName == "Newtonsoft.Json")
                 {
                     string pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                     string resourcePath = Path.Combine(pluginDir, "Assets", "Newtonsoft.Json.dll");
-
                     if (File.Exists(resourcePath))
                     {
                         return Assembly.LoadFrom(resourcePath);
@@ -195,6 +196,7 @@ namespace NOAutopilot
                 }
                 return null;
             };
+            AppDomain.CurrentDomain.AssemblyResolve += _resolveEventHandler;
 
             // Visuals
             ColorAPOn = Config.Bind("Visuals - Colors", "1. Color AP On", "#00FF00", "Green");
@@ -408,6 +410,11 @@ namespace NOAutopilot
 
         private void OnDestroy()
         {
+            if (_resolveEventHandler != null)
+            {
+                AppDomain.CurrentDomain.AssemblyResolve -= _resolveEventHandler;
+                _resolveEventHandler = null;
+            }
             harmony?.UnpatchSelf();
 
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
@@ -459,6 +466,11 @@ namespace NOAutopilot
                 if (IsBroken && UnpatchIfBroken.Value)
                 {
                     Logger.LogWarning($"Unloading mod because it broke. You can disable this in Config - Misc.");
+                    if (_resolveEventHandler != null)
+                    {
+                        AppDomain.CurrentDomain.AssemblyResolve -= _resolveEventHandler;
+                        _resolveEventHandler = null;
+                    }
                     harmony?.UnpatchSelf();
 
                     SceneManager.sceneUnloaded -= OnSceneUnloaded;
@@ -1674,6 +1686,7 @@ namespace NOAutopilot
         public static Quaternion AircraftRotation;
         public static Vector3 NoseVector;
         public static float AirSpeed;
+        public static AirbaseOverlay LocalAirbaseOverlay;
 
         public static void Reset()
         {
@@ -1714,6 +1727,7 @@ namespace NOAutopilot
             IsOnGround = false;
             ACLSActive = false;
             ACLSStatusText = "OFF";
+            LocalAirbaseOverlay = null;
 
             NavQueue.Clear();
             foreach (var obj in NavVisuals)
@@ -1754,6 +1768,7 @@ namespace NOAutopilot
                 {
                     lastVehicleObj = v.gameObject;
                     APData.Reset();
+                    APData.LocalAirbaseOverlay = UnityEngine.Object.FindObjectOfType<AirbaseOverlay>();
                     APData.LocalAircraft = foundAircraft;
                     APData.PlayerTransform = v.transform;
                     APData.PlayerRB = v.GetComponent<Rigidbody>();
@@ -1952,6 +1967,12 @@ namespace NOAutopilot
                 if (APData.CurrentRoll > 180f) APData.CurrentRoll -= 360f;
                 var inputObj = __instance.controlInputs;
                 if (inputObj == null) return;
+
+                if (APData.ACLSActive && APData.LocalAirbaseOverlay != null)
+                {
+                    ACLS.ACLSAirbaseOverlayManager.UpdateACLSData(APData.LocalAirbaseOverlay, APData.LocalAircraft);
+                }
+
                 float stickPitch = 0f;
                 float stickRoll = 0f;
                 float currentThrottle = 0f;
@@ -2699,23 +2720,23 @@ namespace NOAutopilot
                         }
                     }
                 }
-                else if (APData.ACLSActive && ACLS.ACLSAirbaseOverlayPatch.isActive)
+                else if (APData.ACLSActive && ACLS.ACLSAirbaseOverlayManager.isActive)
                 {
-                    var runwayCoord = ACLS.ACLSAirbaseOverlayPatch.runwayCoordinateSystem;
-                    var glideCoord = ACLS.ACLSAirbaseOverlayPatch.glideslopeCoordinateSystem;
-                    var alignCoord = ACLS.ACLSAirbaseOverlayPatch.alignmentCoordinateSystem;
-                    var noseAngles = runwayCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
-                    var progAngles = runwayCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
-                    var glideAngles = glideCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
+                    var runwayCoord = ACLS.ACLSAirbaseOverlayManager.runwayCoordinateSystem;
+                    var glideCoord = ACLS.ACLSAirbaseOverlayManager.glideslopeCoordinateSystem;
+                    var alignCoord = ACLS.ACLSAirbaseOverlayManager.alignmentCoordinateSystem;
+                    var (noseYaw, nosePitch, _) = runwayCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
+                    var (progYaw, progPitch, _) = runwayCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
+                    var (glideYaw, glidePitch, _) = glideCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
 
                     float maxAngle = ACLS.ACLSConfig.singleton.MaxControlAngle;
                     bool isValid = true;
 
-                    if (Mathf.Abs(noseAngles.yaw) > maxAngle || Mathf.Abs(noseAngles.pitch) > maxAngle) { APData.ACLSStatusText = "ALS: NOSE"; APData.ACLSStatusColor = Color.red; isValid = false; }
-                    if (Mathf.Abs(progAngles.yaw) > maxAngle || Mathf.Abs(progAngles.pitch) > maxAngle) { APData.ACLSStatusText = "ALS: PROG"; APData.ACLSStatusColor = Color.red; isValid = false; }
-                    if (Mathf.Abs(glideAngles.yaw) > maxAngle || Mathf.Abs(glideAngles.pitch) > maxAngle) { APData.ACLSStatusText = "ALS: GSI"; APData.ACLSStatusColor = Color.red; isValid = false; }
+                    if (Mathf.Abs(noseYaw) > maxAngle || Mathf.Abs(nosePitch) > maxAngle) { APData.ACLSStatusText = "ALS: NOSE"; APData.ACLSStatusColor = Color.red; isValid = false; }
+                    if (Mathf.Abs(progYaw) > maxAngle || Mathf.Abs(progPitch) > maxAngle) { APData.ACLSStatusText = "ALS: PROG"; APData.ACLSStatusColor = Color.red; isValid = false; }
+                    if (Mathf.Abs(glideYaw) > maxAngle || Mathf.Abs(glidePitch) > maxAngle) { APData.ACLSStatusText = "ALS: GSI"; APData.ACLSStatusColor = Color.red; isValid = false; }
 
-                    float runwayAlt = ACLS.ACLSAirbaseOverlayPatch.runwayAltitude;
+                    float runwayAlt = ACLS.ACLSAirbaseOverlayManager.runwayAltitude;
                     if (runwayAlt <= ACLS.ACLSConfig.singleton.TerminalPhaseHeight) isValid = true;
 
                     if (isValid)
@@ -2723,21 +2744,21 @@ namespace NOAutopilot
                         APData.ACLSStatusText = "ALS: RDY";
                         APData.ACLSStatusColor = Color.green;
 
-                        var alignNose = alignCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
-                        var alignProg = alignCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
-                        var alignGlide = alignCoord.GetRelativeAngles(ACLS.ACLSAirbaseOverlayPatch.glideslopeDirection, APData.AircraftRotation);
+                        var (aNoseYaw, aNosePitch, aNoseRoll) = alignCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
+                        var (aProgYaw, aProgPitch, _) = alignCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
+                        var (aGlideYaw, aGlidePitch, _) = alignCoord.GetRelativeAngles(ACLS.ACLSAirbaseOverlayManager.glideslopeDirection, APData.AircraftRotation);
 
-                        inputObj.roll = aclsRollController.Update(alignNose.roll);
+                        inputObj.roll = aclsRollController.Update(aNoseRoll);
 
-                        float distance = ACLS.ACLSAirbaseOverlayPatch.distanceToLand;
+                        float distance = ACLS.ACLSAirbaseOverlayManager.distanceToLand;
 
                         if (runwayAlt > ACLS.ACLSConfig.singleton.TerminalPhaseHeight)
                         {
-                            aclsYawController.targetState = alignGlide.yaw;
-                            inputObj.yaw = aclsYawController.Update(alignProg.yaw);
+                            aclsYawController.targetState = aGlideYaw;
+                            inputObj.yaw = aclsYawController.Update(aProgYaw);
 
-                            aclsPitchController.targetState = alignGlide.pitch;
-                            inputObj.pitch = aclsPitchController.Update(alignProg.pitch);
+                            aclsPitchController.targetState = aGlidePitch;
+                            inputObj.pitch = aclsPitchController.Update(aProgPitch);
 
                             float targetSpd = CurrentTargetSpeed(distance);
                             aclsThrottleController.targetState = targetSpd;
@@ -2749,10 +2770,10 @@ namespace NOAutopilot
                         else
                         {
                             aclsYawController.targetState = 0f;
-                            inputObj.yaw = aclsYawController.Update(alignNose.yaw);
+                            inputObj.yaw = aclsYawController.Update(aNoseYaw);
 
                             aclsPitchController.targetState = ACLS.ACLSConfig.singleton.TerminalPitchAngle;
-                            inputObj.pitch = aclsPitchController.Update(alignNose.pitch);
+                            inputObj.pitch = aclsPitchController.Update(aNosePitch);
                             inputObj.throttle = 0f;
 
                             APData.ACLSStatusText = "ALS: FALL";
@@ -2867,7 +2888,7 @@ namespace NOAutopilot
                     if (_cachedFuelGauge != null)
                     {
                         _cachedRefLabel = _cachedFuelGauge.fuelLabel;
-                        _fuelLabelPosOffset = __instance.transform.InverseTransformPoint(_cachedRefLabel.transform.position);
+                        _fuelLabelPosOffset = __instance.GetHUDCenter().InverseTransformPoint(_cachedRefLabel.transform.position);
                     }
                 }
 
@@ -2875,7 +2896,7 @@ namespace NOAutopilot
 
                 if (!infoOverlayObj)
                 {
-                    infoOverlayObj = UnityEngine.Object.Instantiate(_cachedRefLabel.gameObject, __instance.transform);
+                    infoOverlayObj = UnityEngine.Object.Instantiate(_cachedRefLabel.gameObject, __instance.GetHUDCenter());
                     infoOverlayObj.name = "AP_CombinedOverlay";
                     infoOverlayObj.transform.localPosition = _fuelLabelPosOffset;
                     overlayText = infoOverlayObj.GetComponent<Text>();
@@ -2900,7 +2921,7 @@ namespace NOAutopilot
                 Vector3 refLocalPos = _cachedRefLabel.transform.localPosition;
                 float finalX = Plugin.OverlayOffsetX.Value * scaleRatio;
                 float finalY = Plugin.OverlayOffsetY.Value * scaleRatio;
-                infoOverlayObj.transform.localPosition = refLocalPos + new Vector3(finalX, finalY, 0);
+                infoOverlayObj.transform.localPosition = _fuelLabelPosOffset + new Vector3(finalX, finalY, 0);
 
                 Aircraft aircraft = APData.LocalAircraft;
                 if (aircraft != null)
@@ -3086,7 +3107,7 @@ namespace NOAutopilot
                 {
                     if (gcasLeftObj == null)
                     {
-                        Transform hudCenter = _cachedRefLabel.transform.parent;
+                        Transform hudCenter = __instance.GetHUDCenter();
 
                         GameObject CreateObj(string name, string txt)
                         {

@@ -1,4 +1,3 @@
-using System;
 using HarmonyLib;
 using UnityEngine;
 
@@ -8,74 +7,77 @@ namespace NOAutopilot.ACLS;
 internal class ACLSAirbaseOverlayPatch
 {
     public static Vector3 alignmentVector;
-
     public static AlignmentCoordinateSystem alignmentCoordinateSystem = new();
-
     public static AlignmentCoordinateSystem runwayCoordinateSystem = new();
-
     public static AlignmentCoordinateSystem glideslopeCoordinateSystem = new();
-
     public static Vector3 glideslopeDirection;
-
     public static bool isActive = false;
-
     public static float runwayAltitude;
-
     public static float distanceToLand;
-
     public static Vector3 towardsRunway;
 
     private static void Postfix(AirbaseOverlay __instance, Aircraft aircraft)
     {
-        Traverse val = Traverse.Create(__instance).Field("runwayUsage");
-        bool value = val.Field("Reverse").GetValue<bool>();
-        Traverse val2 = val.Field("Runway");
-        Vector3 position = val2.Field("End").GetValue<Transform>().position;
-        Vector3 position2 = val2.Field("Start").GetValue<Transform>().position;
-        alignmentVector = position - position2;
-        if (value)
+        if (!__instance.runwayUsage.HasValue) return;
+
+        var usage = __instance.runwayUsage.Value;
+        bool isReverse = usage.Reverse;
+        var runway = usage.Runway;
+
+        Vector3 posEnd = runway.End.position;
+        Vector3 posStart = runway.Start.position;
+
+        alignmentVector = posEnd - posStart;
+        if (isReverse)
         {
-            alignmentVector = position2 - position;
+            alignmentVector = posStart - posEnd;
         }
+
         alignmentCoordinateSystem.UpdateFromAlignment(alignmentVector);
-        Vector3 val3 = value ? position : position2;
-        float num = FastMath.Distance(aircraft.transform.position, val3);
-        Vector3 value2 = val2.Method("GetVelocity", Array.Empty<object>()).GetValue<Vector3>();
-        Vector3 val4 = aircraft.rb.velocity - value2;
-        Vector3 val5 = val3 - aircraft.transform.position;
-        float num2 = Vector3.Dot(val4, val5.normalized);
-        float num3 = num / num2;
-        Vector3 value3 = val2.Method("GetGlideslopeAimpoint",
-        [
+
+        Vector3 targetPos = isReverse ? posEnd : posStart;
+        float dist = FastMath.Distance(aircraft.transform.position, targetPos);
+
+        Vector3 runwayVel = runway.GetVelocity();
+        Vector3 relativeVel = aircraft.rb.velocity - runwayVel;
+        Vector3 toRunway = targetPos - aircraft.transform.position;
+
+        float dot = Vector3.Dot(relativeVel, toRunway.normalized);
+        float timeToLand = dist / dot;
+
+        Vector3 aimpoint = runway.GetGlideslopeAimpoint(
             aircraft,
-            num * 0.9f,
-            value,
-            num3 * 0.9f
-        ]).GetValue<Vector3>();
-        Vector3 position3 = aircraft.CockpitRB().position;
-        val5 = value3 - position3;
-        glideslopeDirection = val5.normalized;
+            dist * 0.9f,
+            isReverse,
+            timeToLand * 0.9f
+        );
+
+        Vector3 cockpitPos = aircraft.CockpitRB().position;
+        Vector3 aimDir = aimpoint - cockpitPos;
+
+        glideslopeDirection = aimDir.normalized;
         glideslopeCoordinateSystem.UpdateFromAlignment(glideslopeDirection);
-        runwayAltitude = position3.y - val3.y;
-        distanceToLand = num;
-        val5 = val3 - position3;
-        towardsRunway = val5.normalized;
+
+        runwayAltitude = cockpitPos.y - targetPos.y;
+        distanceToLand = dist;
+        towardsRunway = (targetPos - cockpitPos).normalized;
         runwayCoordinateSystem.UpdateFromAlignment(towardsRunway);
+
         isActive = true;
     }
 
     public static Vector3 AlignmentVector(AirbaseOverlay __instance)
     {
-        Traverse val = Traverse.Create(__instance).Field("runwayUsage");
-        bool value = val.Field("Reverse").GetValue<bool>();
-        Traverse val2 = val.Field("Runway");
-        Vector3 position = val2.Field("End").GetValue<Transform>().position;
-        Vector3 position2 = val2.Field("Start").GetValue<Transform>().position;
-        Vector3 val3 = position - position2;
-        if (value)
+        if (!__instance.runwayUsage.HasValue) return Vector3.forward;
+
+        var usage = __instance.runwayUsage.Value;
+        var runway = usage.Runway;
+
+        Vector3 vec = runway.End.position - runway.Start.position;
+        if (usage.Reverse)
         {
-            val3 = position2 - position;
+            vec = runway.Start.position - runway.End.position;
         }
-        return val3.normalized;
+        return vec.normalized;
     }
 }

@@ -146,6 +146,6 @@
     <Copy SourceFiles="$(PkgNewtonsoft_Json)/LICENSE.md" 
           DestinationFiles="$(AssetsFolder)/Newtonsoft.Json.LICENSE.md" SkipUnchangedFiles="true" />
 
-    <Exec Command="7z a -t7z -m0=lzma2 -mx=9 -ms=on &quot;../$(AssemblyName)-$(Version).7z&quot; &quot;no-autopilot-mod&quot;" WorkingDirectory="$(StagingDir)" />
+    <Exec Command="7z a -t7z -mx=9 -m0=lzma2 -md=1g -mfb=273 -ms=on -mpass=15 -mc=256 &quot;../$(AssemblyName)-$(Version).7z&quot; &quot;no-autopilot-mod&quot;" WorkingDirectory="$(StagingDir)" />
   </Target>
 </Project>

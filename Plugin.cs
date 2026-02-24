@@ -874,6 +874,11 @@ namespace NOAutopilot
                 GUI.depth = -1;
                 DrawCustomTooltip();
             }
+            catch (Exception ex)
+            {
+                Logger.LogError($"[OnGUI] Error: {ex}");
+                IsBroken = true;
+            }
             finally
             {
                 GUI.color = oldGuiColor;
@@ -1488,20 +1493,28 @@ namespace NOAutopilot
 
         private void OnSceneUnloaded(Scene scene)
         {
-            if (!string.Equals(scene.name, "GameWorld", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                APData.Enabled = false;
-                APData.GCASActive = false;
-                APData.LocalAircraft = null;
-                APData.PlayerRB = null;
-                APData.PlayerTransform = null;
-                APData.LocalPilot = null;
-                APData.LocalWeaponManager = null;
+                if (!string.Equals(scene.name, "GameWorld", StringComparison.OrdinalIgnoreCase))
+                {
+                    APData.Enabled = false;
+                    APData.GCASActive = false;
+                    APData.LocalAircraft = null;
+                    APData.PlayerRB = null;
+                    APData.PlayerTransform = null;
+                    APData.LocalPilot = null;
+                    APData.LocalWeaponManager = null;
 
-                APData.NavQueue.Clear();
-                foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
-                APData.NavVisuals.Clear();
-                CleanUpFBW();
+                    APData.NavQueue.Clear();
+                    foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
+                    APData.NavVisuals.Clear();
+                    CleanUpFBW();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"[OnSceneUnloaded] Error: {ex}");
+                IsBroken = true;
             }
         }
 
@@ -3308,41 +3321,50 @@ namespace NOAutopilot
         public static void Reset() { }
         static void Postfix()
         {
-            if (APData.NavVisuals.Count == 0 || APData.PlayerRB == null) return;
-
-            var map = SceneSingleton<DynamicMap>.i;
-            if (map == null || map.mapImage == null) return;
-
-            float zoom = map.mapImage.transform.localScale.x;
-            float invZoom = 1f / zoom;
-            float factor = 900f / map.mapDimension;
-
-            GameObject playerLine = null;
-
-            foreach (var obj in APData.NavVisuals)
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
+            try
             {
-                if (obj == null) continue;
-                if (obj.name == "AP_NavMarker") obj.transform.localScale = Vector3.one * invZoom;
-                else
+                if (APData.NavVisuals.Count == 0 || APData.PlayerRB == null) return;
+
+                var map = SceneSingleton<DynamicMap>.i;
+                if (map == null || map.mapImage == null) return;
+
+                float zoom = map.mapImage.transform.localScale.x;
+                float invZoom = 1f / zoom;
+                float factor = 900f / map.mapDimension;
+
+                GameObject playerLine = null;
+
+                foreach (var obj in APData.NavVisuals)
                 {
-                    obj.transform.localScale = new Vector3(4f * invZoom, obj.transform.localScale.y, 4f * invZoom);
-                    if (obj.name == "AP_NavLine_Player") playerLine = obj;
+                    if (obj == null) continue;
+                    if (obj.name == "AP_NavMarker") obj.transform.localScale = Vector3.one * invZoom;
+                    else
+                    {
+                        obj.transform.localScale = new Vector3(4f * invZoom, obj.transform.localScale.y, 4f * invZoom);
+                        if (obj.name == "AP_NavLine_Player") playerLine = obj;
+                    }
+                }
+
+                if (playerLine != null && APData.NavQueue.Count > 0)
+                {
+                    Vector3 pG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+                    Vector3 pMap = new(pG.x * factor, pG.z * factor, 0f);
+                    Vector3 targetMap = new(APData.NavQueue[0].x * factor, APData.NavQueue[0].z * factor, 0f);
+
+                    playerLine.transform.localPosition = targetMap;
+
+                    float angle = -Mathf.Atan2(targetMap.x - pMap.x, targetMap.y - pMap.y) * Mathf.Rad2Deg + 180f;
+
+                    playerLine.transform.localEulerAngles = new Vector3(0, 0, angle);
+
+                    playerLine.transform.localScale = new Vector3(4f * invZoom, Vector3.Distance(pMap, targetMap), 4f * invZoom);
                 }
             }
-
-            if (playerLine != null && APData.NavQueue.Count > 0)
+            catch (Exception ex)
             {
-                Vector3 pG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
-                Vector3 pMap = new(pG.x * factor, pG.z * factor, 0f);
-                Vector3 targetMap = new(APData.NavQueue[0].x * factor, APData.NavQueue[0].z * factor, 0f);
-
-                playerLine.transform.localPosition = targetMap;
-
-                float angle = -Mathf.Atan2(targetMap.x - pMap.x, targetMap.y - pMap.y) * Mathf.Rad2Deg + 180f;
-
-                playerLine.transform.localEulerAngles = new Vector3(0, 0, angle);
-
-                playerLine.transform.localScale = new Vector3(4f * invZoom, Vector3.Distance(pMap, targetMap), 4f * invZoom);
+                Plugin.Logger.LogError($"[MapWaypointPatch] Error: {ex}");
+                Plugin.IsBroken = true;
             }
         }
     }

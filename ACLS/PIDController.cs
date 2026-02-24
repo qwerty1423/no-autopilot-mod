@@ -59,6 +59,6 @@ internal class PIDController(float targetState, float Kp, float Ki, float Kd, bo
 
     public static PIDController FromConfig(float targetState, PIDConfig config)
     {
-        return new PIDController(targetState, config.Kp, config.Ki, config.Kd, config.BufferDuration, config.Invert);
+        return new PIDController(targetState, config.Kp, config.Ki, config.Kd, config.Invert);
     }
 }

@@ -6,23 +6,18 @@ namespace NOAutopilot.ACLS;
 internal class PIDController
 {
     public float targetState;
-
     public float Kp;
-
     public float Ki;
-
     public float Kd;
-
     public float lastError;
-
     public float lastOutput;
-
     public bool invert;
 
+    public float MinOutput = -1f;
+    public float MaxOutput = 1f;
+
     private readonly Queue<float> errorBuffer;
-
     private readonly float bufferDuration;
-
     private float integralSum;
 
     public PIDController(float targetState, float Kp, float Ki, float Kd, float bufferDuration = 1f, bool invert = false)
@@ -51,7 +46,9 @@ internal class PIDController
         float num2 = (num - lastError) / Time.fixedDeltaTime;
         lastError = num;
         float num3 = Kp * num + Ki * integralSum + Kd * num2;
-        lastOutput = Mathf.Clamp(num3, -1f, 1f);
+
+        lastOutput = Mathf.Clamp(num3, MinOutput, MaxOutput);
+
         if (invert)
         {
             lastOutput = 0f - lastOutput;

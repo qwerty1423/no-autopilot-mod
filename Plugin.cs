@@ -1981,8 +1981,8 @@ namespace NOAutopilot
                 var cfg = ACLS.Config.singleton;
 
                 aclsRollController = ACLS.PIDController.FromConfig(0f, cfg.RollController);
-                aclsYawRateController = ACLS.PIDController.FromConfig(0f, cfg.YawRateController);
                 aclsYawController = ACLS.PIDController.FromConfig(0f, cfg.YawController);
+                aclsYawRateController = ACLS.PIDController.FromConfig(0f, cfg.YawRateController);
                 aclsVSController = ACLS.PIDController.FromConfig(0f, cfg.VerticalSpeedController);
                 aclsPitchController = ACLS.PIDController.FromConfig(0f, cfg.PitchController);
                 aclsThrottleController = ACLS.PIDController.FromConfig(cfg.LandingSpeed, cfg.ThrottleController);

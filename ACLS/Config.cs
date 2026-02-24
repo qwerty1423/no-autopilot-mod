@@ -28,8 +28,8 @@ public class Config
     public static string activeProfileName = "ifrit";
 
     public PIDConfig RollController { get; set; }
-    public PIDConfig YawRateController { get; set; }
     public PIDConfig YawController { get; set; }
+    public PIDConfig YawRateController { get; set; }
     public PIDConfig VerticalSpeedController { get; set; }
     public PIDConfig PitchController { get; set; }
     public PIDConfig ThrottleController { get; set; }
@@ -162,7 +162,7 @@ public class Config
                 ILimit = 1.0f,
                 Invert = false
             },
-            YawRateController = new PIDConfig
+            YawController = new PIDConfig
             {
                 Kp = 0.05f,
                 Ki = 0.01f,
@@ -170,7 +170,7 @@ public class Config
                 ILimit = 30.0f,
                 Invert = false
             },
-            YawController = new PIDConfig
+            YawRateController = new PIDConfig
             {
                 Kp = 0.07f,
                 Ki = 0f,

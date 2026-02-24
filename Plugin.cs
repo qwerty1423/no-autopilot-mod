@@ -2818,29 +2818,30 @@ namespace NOAutopilot
                     float runwayAlt = ACLS.AirbaseOverlayManager.runwayAltitude;
                     if (runwayAlt <= ACLS.Config.singleton.TerminalPhaseHeight) isValid = true;
 
+                    var (aNoseYaw, aNosePitch, aNoseRoll) = alignCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
+
                     if (isValid)
                     {
-                        APData.ACLSStatusText = "ALS: RDY";
-                        APData.ACLSStatusColor = Color.green;
-
-                        var (aNoseYaw, aNosePitch, aNoseRoll) = alignCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
-                        var (aProgYaw, _, _) = alignCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
-
-                        aclsRollController.targetState = 0f;
-                        inputObj.roll = aclsRollController.Update(aNoseRoll);
-
-                        float distance = ACLS.AirbaseOverlayManager.distanceToLand;
+                        var (aProgYaw, _, _) = alignCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation); float distance = ACLS.AirbaseOverlayManager.distanceToLand;
 
                         if (runwayAlt > ACLS.Config.singleton.TerminalPhaseHeight)
                         {
-                            // yaw
                             var (aGlideYaw, aGlidePitch, _) = alignCoord.GetRelativeAngles(ACLS.AirbaseOverlayManager.glideslopeDirection, APData.AircraftRotation);
 
-                            aclsYawController.targetState = aGlideYaw;
-                            float targetYawRate = aclsYawController.Update(aNoseYaw);
-                            float currentYawRate = localAngVel.y * Mathf.Rad2Deg;
-                            aclsYawRateController.targetState = targetYawRate;
-                            inputObj.yaw = aclsYawRateController.Update(currentYawRate);
+                            // bank
+                            aclsYawController.targetState = 0f;
+                            float targetBank = aclsYawController.Update(aGlideYaw);
+
+                            targetBank = Mathf.Clamp(targetBank, -ACLS.Config.singleton.MaxControlAngle, ACLS.Config.singleton.MaxControlAngle);
+
+                            aclsRollController.targetState = targetBank;
+                            inputObj.roll = aclsRollController.Update(aNoseRoll);
+
+                            // yaw to prograde
+                            float sideslipError = aNoseYaw - aProgYaw;
+
+                            aclsYawRateController.targetState = 0f;
+                            inputObj.yaw = aclsYawRateController.Update(sideslipError);
 
                             // vs > pitch
                             float targetVS = ACLS.AirbaseOverlayManager.glideslopeDirection.y * APData.AirSpeed;
@@ -2862,6 +2863,9 @@ namespace NOAutopilot
                         }
                         else
                         {
+                            aclsRollController.targetState = 0f;
+                            inputObj.roll = aclsRollController.Update(aNoseRoll);
+
                             aclsYawController.targetState = 0f;
                             inputObj.yaw = aclsYawController.Update(aNoseYaw);
 

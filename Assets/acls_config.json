@@ -21,7 +21,7 @@
         "Ki": 0.05,
         "Kd": 0.1,
         "BufferDuration": 1.0,
-        "Invert": true
+        "Invert": false
       },
       "PitchController": {
         "Kp": 0.03,
@@ -65,7 +65,7 @@
         "Ki": 0.05,
         "Kd": 0.1,
         "BufferDuration": 1.0,
-        "Invert": true
+        "Invert": false
       },
       "PitchController": {
         "Kp": 0.03,

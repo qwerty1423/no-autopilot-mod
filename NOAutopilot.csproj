@@ -97,19 +97,31 @@
     <PluginDeployPath Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' ">C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option\BepInEx\plugins</PluginDeployPath>
   </PropertyGroup>
 
-  <Target Name="DeployPlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' AND '$(PluginDeployPath)' != ''">
+  <Target Name="DeployPlugin" 
+        AfterTargets="Build" 
+        Condition="'$(Configuration)' == 'Debug' AND '$(PluginDeployPath)' != ''"
+        Inputs="$(OutputPath)$(AssemblyName).dll;Assets/acls_config.json"
+        Outputs="$(PluginDeployPath)/$(AssemblyName).dll;$(PluginDeployPath)/Assets/acls_config.json">
     <PropertyGroup>
       <DeployRoot>$(PluginDeployPath)</DeployRoot>
       <DeployAssets>$(DeployRoot)/Assets</DeployAssets>
     </PropertyGroup>
-    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(DeployRoot)" />
-    <Copy SourceFiles="$(OutputPath)$(AssemblyName).pdb" DestinationFolder="$(DeployRoot)" />
-    <Copy SourceFiles="Assets/acls_config.json" DestinationFolder="$(DeployAssets)" />
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" 
+          DestinationFolder="$(DeployRoot)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).pdb" 
+          DestinationFolder="$(DeployRoot)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="Assets/acls_config.json" 
+          DestinationFolder="$(DeployAssets)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(PkgNewtonsoft_Json)/lib/netstandard2.0/Newtonsoft.Json.dll" 
-          DestinationFolder="$(DeployAssets)" />
+          DestinationFolder="$(DeployAssets)" SkipUnchangedFiles="true"/>
   </Target>
 
-  <Target Name="CreateZip" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+  <Target Name="CreateZip" 
+        AfterTargets="Build" 
+        Condition="'$(Configuration)' == 'Release'"
+        Inputs="$(OutputPath)$(AssemblyName).dll;Assets/acls_config.json"
+        Outputs="$(OutputPath)../$(AssemblyName)-$(Version).zip">
+
     <PropertyGroup>
       <StagingDir>$(OutputPath)Staging</StagingDir>
       <RootModFolder>$(StagingDir)/no-autopilot-mod</RootModFolder>
@@ -119,17 +131,21 @@
     <RemoveDir Directories="$(StagingDir)" />
     <MakeDir Directories="$(AssetsFolder)" />
 
-    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(RootModFolder)" />
-    <Copy SourceFiles="LICENSE" DestinationFolder="$(RootModFolder)" />
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" 
+          DestinationFolder="$(RootModFolder)" SkipUnchangedFiles="true" />
 
-    <Copy SourceFiles="Assets/acls_config.json" DestinationFolder="$(AssetsFolder)" />
+    <Copy SourceFiles="LICENSE" 
+          DestinationFolder="$(RootModFolder)" SkipUnchangedFiles="true" />
 
-    <Copy SourceFiles="$(PkgNewtonsoft_Json)/lib/netstandard2.0/Newtonsoft.Json.dll" DestinationFolder="$(AssetsFolder)" />
+    <Copy SourceFiles="Assets/acls_config.json" 
+          DestinationFolder="$(AssetsFolder)" SkipUnchangedFiles="true" />
+
+    <Copy SourceFiles="$(PkgNewtonsoft_Json)/lib/netstandard2.0/Newtonsoft.Json.dll" 
+          DestinationFolder="$(AssetsFolder)" SkipUnchangedFiles="true" />
+
     <Copy SourceFiles="$(PkgNewtonsoft_Json)/LICENSE.md" 
-          DestinationFiles="$(AssetsFolder)/Newtonsoft.Json.LICENSE.md" 
-          Condition="Exists('$(PkgNewtonsoft_Json)/LICENSE.md')" />
+          DestinationFiles="$(AssetsFolder)/Newtonsoft.Json.LICENSE.md" SkipUnchangedFiles="true" />
 
-    <Exec Command="7z a -tzip -mx=9 &quot;../$(AssemblyName)-$(Version).zip&quot; &quot;no-autopilot-mod&quot;" WorkingDirectory="$(StagingDir)" />
-    <RemoveDir Directories="$(StagingDir)" />
+    <Exec Command="7z a -t7z -m0=lzma2 -mx=9 -ms=on &quot;../$(AssemblyName)-$(Version).7z&quot; &quot;no-autopilot-mod&quot;" WorkingDirectory="$(StagingDir)" />
   </Target>
 </Project>

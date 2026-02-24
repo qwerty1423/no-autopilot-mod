@@ -16,11 +16,14 @@ As of 2026-02-02, Talon Two allows the use of this mod on their servers, and Gra
 
 [Yellowcake](https://github.com/NaghDiefallah/Yellowcake)
 
+If you are on linux, add override in steam launch options: `WINEDLLOVERRIDES="winhttp=n,b" %command%`.
+~~Wondering whether or not you're using linux? Then just ignore this because you're not.~~
+
 ### Manual installation
 
 1. Install BepInEx 5.
    - [their github has install instructions](https://github.com/BepInEx/BepInEx/)
-   - if you are on linux, add override in steam launch options: WINEDLLOVERRIDES="winhttp=n,b" %command%
+   - if you are on linux, add override in steam launch options: `WINEDLLOVERRIDES="winhttp=n,b" %command%`
    - run the game, then quit
    - edit BepInEx.cfg in BepInEx/config
 
@@ -34,8 +37,8 @@ As of 2026-02-02, Talon Two allows the use of this mod on their servers, and Gra
 2. (Recommended) Install BepInEx Configuration Manager. It is useful for editing settings ingame.
    - download [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager)
    - place extracted folder in BepInEx/plugins. (make sure your folder structure is like the image below)
-3. Download  `com.qwerty1423.NOAutopilot-{version}.zip` from releases (to the right if you are on pc) and extract the dll.
-4. Place the dll into your `BepInEx/plugins/` folder.
+3. Download  `com.qwerty1423.NOAutopilot-{version}.7z` from releases (to the right if you are on pc) and extract the `no-autopilot-mod` folder.
+4. Place the extracted `no-autopilot-mod` folder into your `BepInEx/plugins/` folder.
 5. Run the game again to generate the config file (for the mod). The mod should work at this point.
 
 folder structure after install (the names are wrong now but the locations are the same):
@@ -102,6 +105,7 @@ In order of implementation, earliest first
 - waypoints
 - minor map improvements
 - singleplayer fbw disabler
+- auto carrier landing from [ACLS](https://github.com/Talon-One-Fighter-Squadron/Auto-Carrier-Landing-System) mod
   
 ### features not in the mod (yet?)
 
@@ -110,7 +114,7 @@ In approximate likelihood of implementation order descending.
 - yaw control
 - nap of the earth flying
 - proper helicopter support
-- auto take-off and landing
+- auto take-off and landing (partially done due to ACLS merge)
 
 ## Autopilot
 

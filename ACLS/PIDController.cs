@@ -1,64 +1,52 @@
-using System.Collections.Generic;
 using UnityEngine;
-
 namespace NOAutopilot.ACLS;
 
-internal class PIDController
+internal class PIDController(float targetState, float Kp, float Ki, float Kd, bool invert = false)
 {
-    public float targetState;
-    public float Kp;
-    public float Ki;
-    public float Kd;
-    public float lastError;
+    public float targetState = targetState;
+    public float Kp = Kp;
+    public float Ki = Ki;
+    public float Kd = Kd;
+    public float lastError = 0f;
     public float lastOutput;
-    public bool invert;
+    public bool invert = invert;
 
     public float MinOutput = -1f;
     public float MaxOutput = 1f;
 
-    private readonly Queue<float> errorBuffer;
-    private readonly float bufferDuration;
-    private float integralSum;
+    public float IntegralLimit = 1000f;
 
-    public PIDController(float targetState, float Kp, float Ki, float Kd, float bufferDuration = 1f, bool invert = false)
-    {
-        this.targetState = targetState;
-        this.Kp = Kp;
-        this.Ki = Ki;
-        this.Kd = Kd;
-        lastError = 0f;
-        this.invert = invert;
-        this.bufferDuration = bufferDuration;
-        int capacity = Mathf.CeilToInt(bufferDuration / Time.fixedDeltaTime);
-        errorBuffer = new Queue<float>(capacity);
-        integralSum = 0f;
-    }
+    private float integralSum = 0f;
 
     public float Update(float currentState)
     {
-        float num = targetState - currentState;
-        errorBuffer.Enqueue(num * Time.fixedDeltaTime);
-        integralSum += num * Time.fixedDeltaTime;
-        if (errorBuffer.Count > Mathf.CeilToInt(bufferDuration / Time.fixedDeltaTime))
-        {
-            integralSum -= errorBuffer.Dequeue();
-        }
-        float num2 = (num - lastError) / Time.fixedDeltaTime;
-        lastError = num;
-        float num3 = Kp * num + Ki * integralSum + Kd * num2;
+        float error = targetState - currentState;
+        float dt = Time.fixedDeltaTime;
+        if (dt <= 0f) dt = 0.02f;
 
-        lastOutput = Mathf.Clamp(num3, MinOutput, MaxOutput);
+        integralSum += error * dt;
+
+        if (IntegralLimit > 0)
+        {
+            integralSum = Mathf.Clamp(integralSum, -IntegralLimit, IntegralLimit);
+        }
+
+        float derivative = (error - lastError) / dt;
+        lastError = error;
+
+        float output = Kp * error + Ki * integralSum + Kd * derivative;
+
+        lastOutput = Mathf.Clamp(output, MinOutput, MaxOutput);
 
         if (invert)
         {
-            lastOutput = 0f - lastOutput;
+            lastOutput = -lastOutput;
         }
         return lastOutput;
     }
 
     public void Reset()
     {
-        errorBuffer.Clear();
         integralSum = 0f;
         lastError = 0f;
         lastOutput = 0f;
@@ -66,7 +54,7 @@ internal class PIDController
 
     public void LogState()
     {
-        Plugin.Logger.LogInfo($"Target: {targetState:0.00}," + $"Integral: {integralSum:0.00}, LastError: {lastError:0.00}, LastOutput: {lastOutput:0.00}");
+        Plugin.Logger.LogInfo($"Target: {targetState:0.00}, Integral: {integralSum:0.00}, LastError: {lastError:0.00}, LastOutput: {lastOutput:0.00}");
     }
 
     public static PIDController FromConfig(float targetState, PIDConfig config)

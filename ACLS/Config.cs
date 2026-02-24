@@ -28,6 +28,7 @@ public class Config
     public static string activeProfileName = "ifrit";
 
     public PIDConfig RollController { get; set; }
+    public PIDConfig YawRateController { get; set; }
     public PIDConfig YawController { get; set; }
     public PIDConfig VerticalSpeedController { get; set; }
     public PIDConfig PitchController { get; set; }
@@ -60,6 +61,7 @@ public class Config
                 if (doc.ContainsKey("Profiles"))
                 {
                     setSingleton = JsonConvert.DeserializeObject<ACLSConfigSet>(json);
+                    setSingleton.NormalizeComparers();
                 }
                 else
                 {
@@ -158,6 +160,13 @@ public class Config
                 Ki = 0f,
                 Kd = 0f,
                 BufferDuration = 0f,
+                Invert = false
+            },
+            YawRateController = new PIDConfig
+            {
+                Kp = 0.05f,
+                Ki = 0.01f,
+                Kd = 0.005f,
                 Invert = false
             },
             YawController = new PIDConfig

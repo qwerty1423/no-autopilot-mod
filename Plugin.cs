@@ -1869,6 +1869,7 @@ namespace NOAutopilot
         private static readonly PIDController pidCrs = new();
 
         private static ACLS.PIDController aclsRollController;
+        private static ACLS.PIDController aclsYawRateController;
         private static ACLS.PIDController aclsYawController;
         private static ACLS.PIDController aclsVSController;
         private static ACLS.PIDController aclsPitchController;
@@ -1980,6 +1981,7 @@ namespace NOAutopilot
                 var cfg = ACLS.Config.singleton;
 
                 aclsRollController = ACLS.PIDController.FromConfig(0f, cfg.RollController);
+                aclsYawRateController = ACLS.PIDController.FromConfig(0f, cfg.YawRateController);
                 aclsYawController = ACLS.PIDController.FromConfig(0f, cfg.YawController);
                 aclsVSController = ACLS.PIDController.FromConfig(0f, cfg.VerticalSpeedController);
                 aclsPitchController = ACLS.PIDController.FromConfig(0f, cfg.PitchController);
@@ -1988,7 +1990,11 @@ namespace NOAutopilot
                 aclsVSController.MinOutput = -30f;
                 aclsVSController.MaxOutput = 30f;
 
+                aclsYawController.MinOutput = -15f;
+                aclsYawController.MaxOutput = 15f;
+
                 aclsRollController.Reset();
+                aclsYawRateController.Reset();
                 aclsYawController.Reset();
                 aclsVSController.Reset();
                 aclsPitchController.Reset();
@@ -2819,7 +2825,6 @@ namespace NOAutopilot
 
                         var (aNoseYaw, aNosePitch, aNoseRoll) = alignCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
                         var (aProgYaw, aProgPitch, _) = alignCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
-                        var (aGlideYaw, aGlidePitch, _) = alignCoord.GetRelativeAngles(ACLS.AirbaseOverlayManager.glideslopeDirection, APData.AircraftRotation);
 
                         aclsRollController.targetState = 0f;
                         inputObj.roll = aclsRollController.Update(aNoseRoll);
@@ -2828,17 +2833,24 @@ namespace NOAutopilot
 
                         if (runwayAlt > ACLS.Config.singleton.TerminalPhaseHeight)
                         {
-                            aclsYawController.targetState = aGlideYaw;
-                            inputObj.yaw = aclsYawController.Update(aProgYaw);
+                            // yaw
+                            var (aGlideYaw, aGlidePitch, _) = alignCoord.GetRelativeAngles(ACLS.AirbaseOverlayManager.glideslopeDirection, APData.AircraftRotation);
 
+                            aclsYawController.targetState = aGlideYaw;
+                            float targetYawRate = aclsYawController.Update(aProgYaw);
+                            float currentYawRate = localAngVel.y * Mathf.Rad2Deg;
+                            aclsYawRateController.targetState = targetYawRate;
+                            inputObj.yaw = aclsYawRateController.Update(currentYawRate);
+
+                            // vs > pitch
                             float targetVS = ACLS.AirbaseOverlayManager.glideslopeDirection.y * APData.AirSpeed;
                             float currentVS = APData.PlayerRB.velocity.y;
                             aclsVSController.targetState = targetVS;
                             float targetPitch = aclsVSController.Update(currentVS);
                             targetPitch = Mathf.Clamp(targetPitch, -20f, 20f);
+
                             aclsPitchController.targetState = targetPitch;
                             float currentPitch = Mathf.Asin(APData.PlayerTransform.forward.y) * Mathf.Rad2Deg;
-
                             inputObj.pitch = aclsPitchController.Update(currentPitch);
 
                             float targetSpd = CurrentTargetSpeed(distance);

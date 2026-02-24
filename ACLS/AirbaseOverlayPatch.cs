@@ -54,7 +54,7 @@ internal class AirbaseOverlayManager
                 isReverse,
                 timeToLand * 1.0f
             );
-            aimpoint += Vector3.up * 2.5f;
+            aimpoint += Vector3.up * 3f;
             Vector3 cockpitPos = aircraft.CockpitRB().position;
             Vector3 aimDir = aimpoint - cockpitPos;
             glideslopeDirection = aimDir.normalized;

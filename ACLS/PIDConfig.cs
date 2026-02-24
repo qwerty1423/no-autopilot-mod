@@ -8,7 +8,7 @@ public class PIDConfig
 
     public float Kd { get; set; }
 
-    public float BufferDuration { get; set; }
+    public float ILimit { get; set; }
 
     public bool Invert { get; set; }
 }

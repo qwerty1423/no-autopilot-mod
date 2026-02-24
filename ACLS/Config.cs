@@ -159,7 +159,7 @@ public class Config
                 Kp = 0.015f,
                 Ki = 0f,
                 Kd = 0f,
-                BufferDuration = 0f,
+                ILimit = 1.0f,
                 Invert = false
             },
             YawRateController = new PIDConfig
@@ -167,6 +167,7 @@ public class Config
                 Kp = 0.05f,
                 Ki = 0.01f,
                 Kd = 0.005f,
+                ILimit = 30.0f,
                 Invert = false
             },
             YawController = new PIDConfig
@@ -174,7 +175,7 @@ public class Config
                 Kp = 0.07f,
                 Ki = 0f,
                 Kd = 0.07f,
-                BufferDuration = 0f,
+                ILimit = 1.0f,
                 Invert = false
             },
             VerticalSpeedController = new PIDConfig
@@ -182,7 +183,7 @@ public class Config
                 Kp = 0.25f,
                 Ki = 0.05f,
                 Kd = 0.1f,
-                BufferDuration = 1f,
+                ILimit = 30.0f,
                 Invert = true
             },
             PitchController = new PIDConfig
@@ -190,7 +191,7 @@ public class Config
                 Kp = 0.03f,
                 Ki = 0.01f,
                 Kd = 0.01f,
-                BufferDuration = 1f,
+                ILimit = 1.0f,
                 Invert = true
             },
             ThrottleController = new PIDConfig
@@ -198,7 +199,7 @@ public class Config
                 Kp = 0.2f,
                 Ki = 0f,
                 Kd = 0f,
-                BufferDuration = 2f,
+                ILimit = 1.0f,
                 Invert = false
             },
             TerminalPhaseHeight = 8f,

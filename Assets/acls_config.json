@@ -6,35 +6,42 @@
         "Kp": 0.01,
         "Ki": 0.002,
         "Kd": 0.001,
-        "BufferDuration": 0.0,
+        "ILimit": 1.0,
+        "Invert": false
+      },
+      "YawRateController": {
+        "Kp": 0.05,
+        "Ki": 0.01,
+        "Kd": 0.005,
+        "ILimit": 30.0,
         "Invert": false
       },
       "YawController": {
         "Kp": 0.2,
         "Ki": 0.01,
         "Kd": 0.15,
-        "BufferDuration": 1.0,
+        "ILimit": 1.0,
         "Invert": false
       },
       "VerticalSpeedController": {
         "Kp": 0.25,
         "Ki": 0.05,
         "Kd": 0.1,
-        "BufferDuration": 1.0,
+        "ILimit": 30.0,
         "Invert": false
       },
       "PitchController": {
         "Kp": 0.03,
         "Ki": 0.01,
         "Kd": 0.01,
-        "BufferDuration": 1.0,
+        "ILimit": 1.0,
         "Invert": true
       },
       "ThrottleController": {
         "Kp": 0.5,
         "Ki": 0.1,
         "Kd": 0.0,
-        "BufferDuration": 2.0,
+        "ILimit": 1.0,
         "Invert": false
       },
       "TerminalPhaseHeight": 12.0,
@@ -46,39 +53,46 @@
       "KeyName": "Equals"
     },
     "compass": {
-       "RollController": {
+      "RollController": {
         "Kp": 0.01,
         "Ki": 0.002,
         "Kd": 0.001,
-        "BufferDuration": 0.0,
+        "ILimit": 1.0,
+        "Invert": false
+      },
+      "YawRateController": {
+        "Kp": 0.05,
+        "Ki": 0.01,
+        "Kd": 0.005,
+        "ILimit": 30.0,
         "Invert": false
       },
       "YawController": {
         "Kp": 0.2,
         "Ki": 0.01,
         "Kd": 0.15,
-        "BufferDuration": 1.0,
+        "ILimit": 1.0,
         "Invert": false
       },
       "VerticalSpeedController": {
         "Kp": 0.25,
         "Ki": 0.05,
         "Kd": 0.1,
-        "BufferDuration": 1.0,
+        "ILimit": 30.0,
         "Invert": false
       },
       "PitchController": {
         "Kp": 0.03,
         "Ki": 0.01,
         "Kd": 0.01,
-        "BufferDuration": 1.0,
+        "ILimit": 1.0,
         "Invert": true
       },
       "ThrottleController": {
         "Kp": 0.5,
         "Ki": 0.1,
         "Kd": 0.0,
-        "BufferDuration": 2.0,
+        "ILimit": 1.0,
         "Invert": false
       },
       "TerminalPhaseHeight": 12.0,

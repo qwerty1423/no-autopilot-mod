@@ -1,6 +1,6 @@
 # Nuclear Option Autopilot Mod
 
-Adds autopilot and some other features. Clientside and multiplayer compatible. 
+Adds autopilot and some other features. Clientside and multiplayer compatible.
 
 It would be best to make sure the host is ok with you using the mod, especially in PVP.
 
@@ -116,7 +116,7 @@ In approximate likelihood of implementation order descending.
 
 <https://github.com/user-attachments/assets/3d2eaeaa-b810-4353-a4b6-90a1107e3cb9>
 
-Autopilot controls roll and pitch. (helicopters somehow work, but probably require small ascent/descent rate limits). Ascent/descent rate limits and target altitude can be configured with keyboard while flying. Target bank angle can be set so that plane turns in a circle. Should be useful for Medusa, for easier loitering. Large stick inputs will disengage the autopilot. 
+Autopilot controls roll and pitch. (helicopters somehow work, but probably require small ascent/descent rate limits). Ascent/descent rate limits and target altitude can be configured with keyboard while flying. Target bank angle can be set so that plane turns in a circle. Should be useful for Medusa, for easier loitering. Large stick inputs will disengage the autopilot.
 
 Displays current settings on the HUD. There is also a GUI that opens with F8 key by default.
 
@@ -143,6 +143,10 @@ Video is old, so the chevron indicator is missing.
 <https://github.com/user-attachments/assets/1ac109a4-bc84-49ed-8141-55bc9a217607>
 
 Right click / shift + right click on the map to make a path, then press equals (to enable autopilot) and F8 (to bring up the UI). Click the nav mode toggle to enable nav mode. Hover mouse over the UI for tooltips. Setting waypoints will work as long as you don't create any yellow unit path lines, so as long as the first unit you have selected is not commandable then you can make a waypoint.
+
+## ACLS
+
+default shortcut is `shift` + `=`. ACLS will attempt to land your plane. It will set full throttle on landing, and cut throttle after a wire is caught.
 
 ## Building from source
 

@@ -424,7 +424,7 @@ namespace NOAutopilot
             harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
             try
             {
-                ACLS.ACLSConfig.LoadSingleton(AssetsDir);
+                ACLS.Config.LoadSingleton(AssetsDir);
                 harmony.PatchAll();
                 SceneManager.sceneUnloaded += OnSceneUnloaded;
                 Logger.LogInfo($"v{Version} loaded.");
@@ -454,6 +454,7 @@ namespace NOAutopilot
             MapInteractionPatch.Reset();
             MapWaypointPatch.Reset();
             RewiredConfigManager.Reset();
+            ACLS.AirbaseOverlayManager.Reset();
             if (APData.NavVisuals != null)
             {
                 foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
@@ -583,6 +584,7 @@ namespace NOAutopilot
                     if (!APData.ACLSActive)
                     {
                         APData.ACLSStatusText = "";
+                        APData.IsHooked = false;
                     }
                 }
 
@@ -1075,7 +1077,7 @@ namespace NOAutopilot
 
             // set values
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(new GUIContent("Set", "Applies typed values"), _styleButton))
+            if (GUILayout.Button(new GUIContent("Apply", "Applies typed values"), _styleButton))
             {
                 if (float.TryParse(_bufAlt, out float a))
                     APData.TargetAlt = ModUtils.ConvertAlt_FromDisplay(a);
@@ -1158,12 +1160,13 @@ namespace NOAutopilot
                 GUI.FocusControl(null);
             }
             GUI.backgroundColor = APData.ACLSActive ? Color.green : Color.white;
-            if (GUILayout.Button(new GUIContent(APData.ACLSActive ? "ACLS: ON" : "ACLS: OFF", "Auto Carrier Landing System"), _styleButton))
+            if (GUILayout.Button(new GUIContent(APData.ACLSActive ? "ALS" : "ALS-", "Auto Carrier Landing System"), _styleButton))
             {
                 APData.ACLSActive = !APData.ACLSActive;
                 if (!APData.ACLSActive)
                 {
                     APData.ACLSStatusText = "";
+                    APData.IsHooked = false;
                 }
                 GUI.FocusControl(null);
             }
@@ -1713,6 +1716,7 @@ namespace NOAutopilot
 
         // ACLS
         public static bool ACLSActive = false;
+        public static bool IsHooked = false;
         public static string ACLSStatusText = "";
         public static Color ACLSStatusColor = Color.white;
         public static Vector3 ProgradeVector;
@@ -1759,6 +1763,7 @@ namespace NOAutopilot
             LocalLandingGears.Clear();
             IsOnGround = false;
             ACLSActive = false;
+            IsHooked = false;
             ACLSStatusText = "";
             ACLSStatusColor = Color.white;
             LocalAirbaseOverlay = null;
@@ -1827,7 +1832,7 @@ namespace NOAutopilot
                     Plugin.SyncMenuValues();
                     Plugin.CleanUpFBW();
 
-                    ACLS.ACLSConfig.SelectForAircraft(foundAircraft);
+                    ACLS.Config.SelectForAircraft(foundAircraft);
                     ControlOverridePatch.InitializeACLSPIDs();
                 }
             }
@@ -1850,10 +1855,10 @@ namespace NOAutopilot
         private static readonly PIDController pidSpd = new();
         private static readonly PIDController pidCrs = new();
 
-        private static ACLS.ACLSPIDController aclsRollController;
-        private static ACLS.ACLSPIDController aclsYawController;
-        private static ACLS.ACLSPIDController aclsPitchController;
-        private static ACLS.ACLSPIDController aclsThrottleController;
+        private static ACLS.PIDController aclsRollController;
+        private static ACLS.PIDController aclsYawController;
+        private static ACLS.PIDController aclsPitchController;
+        private static ACLS.PIDController aclsThrottleController;
 
         private static float lastSpdMeasurement = 0f;
 
@@ -1921,6 +1926,11 @@ namespace NOAutopilot
             isJammerHoldingTrigger = false;
 
             _disengageTimer = 0f;
+
+            aclsRollController = null;
+            aclsYawController = null;
+            aclsPitchController = null;
+            aclsThrottleController = null;
         }
 
         private static void ResetIntegrators(float inputThrottle)
@@ -1952,13 +1962,13 @@ namespace NOAutopilot
         {
             try
             {
-                if (ACLS.ACLSConfig.singleton == null) ACLS.ACLSConfig.LoadSingleton();
-                var cfg = ACLS.ACLSConfig.singleton;
+                if (ACLS.Config.singleton == null) ACLS.Config.LoadSingleton();
+                var cfg = ACLS.Config.singleton;
 
-                aclsRollController = ACLS.ACLSPIDController.FromConfig(0f, cfg.RollController);
-                aclsYawController = ACLS.ACLSPIDController.FromConfig(0f, cfg.YawController);
-                aclsPitchController = ACLS.ACLSPIDController.FromConfig(0f, cfg.PitchController);
-                aclsThrottleController = ACLS.ACLSPIDController.FromConfig(cfg.LandingSpeed, cfg.ThrottleController);
+                aclsRollController = ACLS.PIDController.FromConfig(0f, cfg.RollController);
+                aclsYawController = ACLS.PIDController.FromConfig(0f, cfg.YawController);
+                aclsPitchController = ACLS.PIDController.FromConfig(0f, cfg.PitchController);
+                aclsThrottleController = ACLS.PIDController.FromConfig(cfg.LandingSpeed, cfg.ThrottleController);
 
                 aclsRollController.Reset();
                 aclsYawController.Reset();
@@ -1999,7 +2009,7 @@ namespace NOAutopilot
                 {
                     if (APData.LocalAirbaseOverlay != null)
                     {
-                        ACLS.ACLSAirbaseOverlayManager.UpdateACLSData(APData.LocalAirbaseOverlay, APData.LocalAircraft);
+                        ACLS.AirbaseOverlayManager.UpdateACLSData(APData.LocalAirbaseOverlay, APData.LocalAircraft);
                     }
                     else
                     {
@@ -2113,7 +2123,6 @@ namespace NOAutopilot
                     if (gearDown && currentRadarAlt < 0.1f)
                     {
                         APData.IsOnGround = true;
-                        APData.ACLSActive = false;
                     }
 
                     bool pilotOverride = Mathf.Abs(stickPitch) > Plugin.GCAS_Deadzone.Value || Mathf.Abs(stickRoll) > Plugin.GCAS_Deadzone.Value || gearDown;
@@ -2760,29 +2769,29 @@ namespace NOAutopilot
                         }
                     }
                 }
-                else if (APData.ACLSStatusText == "ACLS: WIRE")
+                else if (APData.ACLSActive && APData.IsHooked)
                 {
                     inputObj.brake = 1f;
                     inputObj.throttle = 0f;
                 }
-                else if (APData.ACLSActive && ACLS.ACLSAirbaseOverlayManager.isActive)
+                else if (APData.ACLSActive && ACLS.AirbaseOverlayManager.isActive)
                 {
-                    var runwayCoord = ACLS.ACLSAirbaseOverlayManager.runwayCoordinateSystem;
-                    var glideCoord = ACLS.ACLSAirbaseOverlayManager.glideslopeCoordinateSystem;
-                    var alignCoord = ACLS.ACLSAirbaseOverlayManager.alignmentCoordinateSystem;
+                    var runwayCoord = ACLS.AirbaseOverlayManager.runwayCoordinateSystem;
+                    var glideCoord = ACLS.AirbaseOverlayManager.glideslopeCoordinateSystem;
+                    var alignCoord = ACLS.AirbaseOverlayManager.alignmentCoordinateSystem;
                     var (noseYaw, nosePitch, _) = runwayCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
                     var (progYaw, progPitch, _) = runwayCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
                     var (glideYaw, glidePitch, _) = glideCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
 
-                    float maxAngle = ACLS.ACLSConfig.singleton.MaxControlAngle;
+                    float maxAngle = ACLS.Config.singleton.MaxControlAngle;
                     bool isValid = true;
 
                     if (Mathf.Abs(noseYaw) > maxAngle || Mathf.Abs(nosePitch) > maxAngle) { APData.ACLSStatusText = "ALS: NOSE"; APData.ACLSStatusColor = Color.red; isValid = false; }
                     if (Mathf.Abs(progYaw) > maxAngle || Mathf.Abs(progPitch) > maxAngle) { APData.ACLSStatusText = "ALS: PROG"; APData.ACLSStatusColor = Color.red; isValid = false; }
                     if (Mathf.Abs(glideYaw) > maxAngle || Mathf.Abs(glidePitch) > maxAngle) { APData.ACLSStatusText = "ALS: GSI"; APData.ACLSStatusColor = Color.red; isValid = false; }
 
-                    float runwayAlt = ACLS.ACLSAirbaseOverlayManager.runwayAltitude;
-                    if (runwayAlt <= ACLS.ACLSConfig.singleton.TerminalPhaseHeight) isValid = true;
+                    float runwayAlt = ACLS.AirbaseOverlayManager.runwayAltitude;
+                    if (runwayAlt <= ACLS.Config.singleton.TerminalPhaseHeight) isValid = true;
 
                     if (isValid)
                     {
@@ -2791,14 +2800,14 @@ namespace NOAutopilot
 
                         var (aNoseYaw, aNosePitch, aNoseRoll) = alignCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
                         var (aProgYaw, aProgPitch, _) = alignCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
-                        var (aGlideYaw, aGlidePitch, _) = alignCoord.GetRelativeAngles(ACLS.ACLSAirbaseOverlayManager.glideslopeDirection, APData.AircraftRotation);
+                        var (aGlideYaw, aGlidePitch, _) = alignCoord.GetRelativeAngles(ACLS.AirbaseOverlayManager.glideslopeDirection, APData.AircraftRotation);
 
                         aclsRollController.targetState = 0f;
                         inputObj.roll = aclsRollController.Update(aNoseRoll);
 
-                        float distance = ACLS.ACLSAirbaseOverlayManager.distanceToLand;
+                        float distance = ACLS.AirbaseOverlayManager.distanceToLand;
 
-                        if (runwayAlt > ACLS.ACLSConfig.singleton.TerminalPhaseHeight)
+                        if (runwayAlt > ACLS.Config.singleton.TerminalPhaseHeight)
                         {
                             aclsYawController.targetState = aGlideYaw;
                             inputObj.yaw = aclsYawController.Update(aProgYaw);
@@ -2818,7 +2827,7 @@ namespace NOAutopilot
                             aclsYawController.targetState = 0f;
                             inputObj.yaw = aclsYawController.Update(aNoseYaw);
 
-                            aclsPitchController.targetState = ACLS.ACLSConfig.singleton.TerminalPitchAngle;
+                            aclsPitchController.targetState = ACLS.Config.singleton.TerminalPitchAngle;
                             inputObj.pitch = aclsPitchController.Update(aNosePitch);
                             inputObj.throttle = 1f;
 
@@ -2837,13 +2846,13 @@ namespace NOAutopilot
 
         public static float CurrentTargetSpeed(float distance)
         {
-            if (distance > ACLS.ACLSConfig.singleton.SpeedTransitionDistance)
+            if (distance > ACLS.Config.singleton.SpeedTransitionDistance)
             {
-                return ACLS.ACLSConfig.singleton.CruisingSpeed;
+                return ACLS.Config.singleton.CruisingSpeed;
             }
-            return ACLS.ACLSConfig.singleton.LandingSpeed +
-                   (ACLS.ACLSConfig.singleton.CruisingSpeed - ACLS.ACLSConfig.singleton.LandingSpeed) *
-                   (distance / ACLS.ACLSConfig.singleton.SpeedTransitionDistance);
+            return ACLS.Config.singleton.LandingSpeed +
+                   (ACLS.Config.singleton.CruisingSpeed - ACLS.Config.singleton.LandingSpeed) *
+                   (distance / ACLS.Config.singleton.SpeedTransitionDistance);
         }
     }
 
@@ -3140,7 +3149,7 @@ namespace NOAutopilot
                             _sbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">FBW OFF</color>");
                         }
 
-                        if (APData.ACLSActive || APData.ACLSStatusText != "OFF")
+                        if (APData.ACLSActive || !string.IsNullOrEmpty(APData.ACLSStatusText))
                         {
                             string hexColor = ColorUtility.ToHtmlStringRGBA(APData.ACLSStatusColor);
                             _sbHud.Append($"\n<color=#{hexColor}>{APData.ACLSStatusText}</color>");

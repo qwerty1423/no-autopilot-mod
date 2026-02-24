@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace NOAutopilot.ACLS;
 
-internal class ACLSPIDController
+internal class PIDController
 {
     public float targetState;
 
@@ -25,7 +25,7 @@ internal class ACLSPIDController
 
     private float integralSum;
 
-    public ACLSPIDController(float targetState, float Kp, float Ki, float Kd, float bufferDuration = 1f, bool invert = false)
+    public PIDController(float targetState, float Kp, float Ki, float Kd, float bufferDuration = 1f, bool invert = false)
     {
         this.targetState = targetState;
         this.Kp = Kp;
@@ -72,8 +72,8 @@ internal class ACLSPIDController
         Plugin.Logger.LogInfo($"Target: {targetState:0.00}," + $"Integral: {integralSum:0.00}, LastError: {lastError:0.00}, LastOutput: {lastOutput:0.00}");
     }
 
-    public static ACLSPIDController FromConfig(float targetState, PIDConfig config)
+    public static PIDController FromConfig(float targetState, PIDConfig config)
     {
-        return new ACLSPIDController(targetState, config.Kp, config.Ki, config.Kd, config.BufferDuration, config.Invert);
+        return new PIDController(targetState, config.Kp, config.Ki, config.Kd, config.BufferDuration, config.Invert);
     }
 }

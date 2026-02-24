@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 namespace NOAutopilot.ACLS;
-internal class ACLSAirbaseOverlayManager
+internal class AirbaseOverlayManager
 {
     public static Vector3 alignmentVector;
     public static AlignmentCoordinateSystem alignmentCoordinateSystem = new();
@@ -12,6 +12,15 @@ internal class ACLSAirbaseOverlayManager
     public static float runwayAltitude;
     public static float distanceToLand;
     public static Vector3 towardsRunway;
+
+    public static void Reset()
+    {
+        isActive = false;
+        alignmentCoordinateSystem = new AlignmentCoordinateSystem();
+        runwayCoordinateSystem = new AlignmentCoordinateSystem();
+        glideslopeCoordinateSystem = new AlignmentCoordinateSystem();
+    }
+
     public static void UpdateACLSData(AirbaseOverlay overlay, Aircraft aircraft)
     {
         try

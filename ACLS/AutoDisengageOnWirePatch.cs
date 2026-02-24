@@ -8,7 +8,7 @@ namespace NOAutopilot.ACLS;
 /// Auto-disengage ACLS when the player's tailhook catches an arresting wire.
 /// </summary>
 [HarmonyPatch(typeof(TailHook), "FixedUpdate")]
-internal class ACLSAutoDisengageOnWirePatch
+internal class AutoDisengageOnWirePatch
 {
     private static readonly ConditionalWeakTable<TailHook, HookState> _state = [];
 
@@ -36,6 +36,7 @@ internal class ACLSAutoDisengageOnWirePatch
 
             if (aircraft != null && SceneSingleton<CombatHUD>.i != null && aircraft == SceneSingleton<CombatHUD>.i.aircraft)
             {
+                APData.IsHooked = true;
                 APData.ACLSStatusText = "ACLS: WIRE";
                 APData.ACLSStatusColor = Color.white;
             }

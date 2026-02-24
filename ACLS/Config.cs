@@ -10,12 +10,12 @@ namespace NOAutopilot.ACLS;
 /// <summary>
 /// Represents a single aircraft "profile" of ACLS tuning parameters.
 /// </summary>
-public class ACLSConfig
+public class Config
 {
     /// <summary>
     /// The currently active profile that the mod uses at runtime.
     /// </summary>
-    public static ACLSConfig singleton;
+    public static Config singleton;
 
     /// <summary>
     /// The loaded config set (multiple profiles + mappings). May be null if legacy config was loaded.
@@ -62,7 +62,7 @@ public class ACLSConfig
                 }
                 else
                 {
-                    ACLSConfig legacy = JsonConvert.DeserializeObject<ACLSConfig>(json);
+                    Config legacy = JsonConvert.DeserializeObject<Config>(json);
                     setSingleton = ACLSConfigSet.FromLegacy(legacy);
                 }
             }
@@ -147,9 +147,9 @@ public class ACLSConfig
     /// <summary>
     /// Default single-profile values (currently tuned for KR-67 Ifrit per user).
     /// </summary>
-    internal static ACLSConfig GetDefaultProfileIfrit()
+    internal static Config GetDefaultProfileIfrit()
     {
-        return new ACLSConfig
+        return new Config
         {
             RollController = new PIDConfig
             {
@@ -169,7 +169,7 @@ public class ACLSConfig
             },
             PitchController = new PIDConfig
             {
-                Kp = 0.08f,
+                Kp = 0.03f,
                 Ki = 0.01f,
                 Kd = 0.01f,
                 BufferDuration = 1f,
@@ -183,12 +183,12 @@ public class ACLSConfig
                 BufferDuration = 2f,
                 Invert = false
             },
-            TerminalPhaseHeight = 11f,
+            TerminalPhaseHeight = 8f,
             MaxControlAngle = 45f,
             CruisingSpeed = 150f,
             LandingSpeed = 72f,
             SpeedTransitionDistance = 6000f,
-            TerminalPitchAngle = 7f,
+            TerminalPitchAngle = 5f,
             KeyName = "Equals"
         };
     }
@@ -207,7 +207,7 @@ public class ACLSConfigSet
     /// <summary>
     /// Profiles by name (e.g. "ifrit", "compass").
     /// </summary>
-    public Dictionary<string, ACLSConfig> Profiles { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, Config> Profiles { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Map by Aircraft.definition.jsonKey (mission/unit key, e.g. "Multirole1").
@@ -230,14 +230,14 @@ public class ACLSConfigSet
     /// </summary>
     public static ACLSConfigSet CreateDefault()
     {
-        var ifrit = ACLSConfig.GetDefaultProfileIfrit();
+        var ifrit = Config.GetDefaultProfileIfrit();
 
         // By default we clone ifrit so the mod stays usable even before tuning compass.
         var compass = CloneProfile(ifrit);
         var set = new ACLSConfigSet
         {
             DefaultProfile = "ifrit",
-            Profiles = new Dictionary<string, ACLSConfig>(StringComparer.OrdinalIgnoreCase)
+            Profiles = new Dictionary<string, Config>(StringComparer.OrdinalIgnoreCase)
             {
                 ["ifrit"] = ifrit,
                 ["compass"] = compass
@@ -268,7 +268,7 @@ public class ACLSConfigSet
         return set;
     }
 
-    public static ACLSConfigSet FromLegacy(ACLSConfig legacy)
+    public static ACLSConfigSet FromLegacy(Config legacy)
     {
         if (legacy == null) return CreateDefault();
         var set = new ACLSConfigSet
@@ -281,11 +281,11 @@ public class ACLSConfigSet
         return set;
     }
 
-    public ACLSConfig GetProfileOrDefault(string name)
+    public Config GetProfileOrDefault(string name)
     {
         if (!string.IsNullOrWhiteSpace(name) && Profiles.TryGetValue(name, out var cfg)) return cfg;
         if (Profiles.TryGetValue("ifrit", out var ifrit)) return ifrit;
-        return ACLSConfig.GetDefaultProfileIfrit();
+        return Config.GetDefaultProfileIfrit();
     }
 
     public string ResolveProfileForAircraft(Aircraft aircraft)
@@ -324,9 +324,9 @@ public class ACLSConfigSet
         return fixedDict;
     }
 
-    private static ACLSConfig CloneProfile(ACLSConfig src)
+    private static Config CloneProfile(Config src)
     {
-        if (src == null) return ACLSConfig.GetDefaultProfileIfrit();
-        return JsonConvert.DeserializeObject<ACLSConfig>(JsonConvert.SerializeObject(src));
+        if (src == null) return Config.GetDefaultProfileIfrit();
+        return JsonConvert.DeserializeObject<Config>(JsonConvert.SerializeObject(src));
     }
 }

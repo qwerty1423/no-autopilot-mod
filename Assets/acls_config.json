@@ -10,16 +10,16 @@
         "Invert": false
       },
       "YawController": {
-        "Kp": 0.25,
-        "Ki": 0.05,
-        "Kd": 0.1,
-        "ILimit": 30.0,
+        "Kp": 0.5,
+        "Ki": 0.01,
+        "Kd": 0.15,
+        "ILimit": 45.0,
         "Invert": false
       },
       "YawRateController": {
         "Kp": 0.7,
         "Ki": 0.0,
-        "Kd": 0.7,
+        "Kd": 0.0,
         "ILimit": 1.0,
         "Invert": false
       },
@@ -27,7 +27,7 @@
         "Kp": 0.25,
         "Ki": 0.05,
         "Kd": 0.1,
-        "ILimit": 30.0,
+        "ILimit": 45.0,
         "Invert": false
       },
       "PitchController": {

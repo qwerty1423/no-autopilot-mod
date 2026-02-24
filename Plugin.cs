@@ -1987,11 +1987,11 @@ namespace NOAutopilot
                 aclsPitchController = ACLS.PIDController.FromConfig(0f, cfg.PitchController);
                 aclsThrottleController = ACLS.PIDController.FromConfig(cfg.LandingSpeed, cfg.ThrottleController);
 
-                aclsVSController.MinOutput = -30f;
-                aclsVSController.MaxOutput = 30f;
+                aclsVSController.MinOutput = -45f;
+                aclsVSController.MaxOutput = 45f;
 
-                aclsYawController.MinOutput = -15f;
-                aclsYawController.MaxOutput = 15f;
+                aclsYawController.MinOutput = -45f;
+                aclsYawController.MaxOutput = 45f;
 
                 aclsRollController.Reset();
                 aclsYawRateController.Reset();

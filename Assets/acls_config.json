@@ -3,18 +3,25 @@
   "Profiles": {
     "ifrit": {
       "RollController": {
-        "Kp": 0.015,
-        "Ki": 0.0,
-        "Kd": 0.0,
+        "Kp": 0.01,
+        "Ki": 0.002,
+        "Kd": 0.001,
         "BufferDuration": 0.0,
         "Invert": false
       },
       "YawController": {
-        "Kp": 0.07,
-        "Ki": 0.0,
-        "Kd": 0.07,
-        "BufferDuration": 0.0,
+        "Kp": 0.2,
+        "Ki": 0.01,
+        "Kd": 0.15,
+        "BufferDuration": 1.0,
         "Invert": false
+      },
+      "VerticalSpeedController": {
+        "Kp": 0.25,
+        "Ki": 0.05,
+        "Kd": 0.1,
+        "BufferDuration": 1.0,
+        "Invert": true
       },
       "PitchController": {
         "Kp": 0.03,
@@ -24,52 +31,59 @@
         "Invert": true
       },
       "ThrottleController": {
-        "Kp": 0.2,
-        "Ki": 0.0,
+        "Kp": 0.5,
+        "Ki": 0.1,
         "Kd": 0.0,
         "BufferDuration": 2.0,
         "Invert": false
       },
-      "TerminalPhaseHeight": 8.0,
+      "TerminalPhaseHeight": 12.0,
       "MaxControlAngle": 45.0,
-      "CruisingSpeed": 130.0,
+      "CruisingSpeed": 150.0,
       "LandingSpeed": 72.0,
       "SpeedTransitionDistance": 6000.0,
       "TerminalPitchAngle": 5.0,
       "KeyName": "Equals"
     },
     "compass": {
-      "RollController": {
-        "Kp": 0.015,
-        "Ki": 0.0,
-        "Kd": 0.0,
+       "RollController": {
+        "Kp": 0.01,
+        "Ki": 0.002,
+        "Kd": 0.001,
         "BufferDuration": 0.0,
         "Invert": false
       },
       "YawController": {
-        "Kp": 0.070,
-        "Ki": 0.0,
-        "Kd": 0.070,
-        "BufferDuration": 0.0,
+        "Kp": 0.2,
+        "Ki": 0.01,
+        "Kd": 0.15,
+        "BufferDuration": 1.0,
         "Invert": false
       },
+      "VerticalSpeedController": {
+        "Kp": 0.25,
+        "Ki": 0.05,
+        "Kd": 0.1,
+        "BufferDuration": 1.0,
+        "Invert": true
+      },
       "PitchController": {
-        "Kp": 0.08,
+        "Kp": 0.03,
         "Ki": 0.01,
         "Kd": 0.01,
         "BufferDuration": 1.0,
         "Invert": true
       },
       "ThrottleController": {
-        "Kp": 0.2,
-        "Ki": 0.0,
+        "Kp": 0.5,
+        "Ki": 0.1,
         "Kd": 0.0,
         "BufferDuration": 2.0,
         "Invert": false
       },
-      "TerminalPhaseHeight": 8.0,
+      "TerminalPhaseHeight": 12.0,
       "MaxControlAngle": 45.0,
-      "CruisingSpeed": 130.0,
+      "CruisingSpeed": 150.0,
       "LandingSpeed": 72.0,
       "SpeedTransitionDistance": 6000.0,
       "TerminalPitchAngle": 5.0,

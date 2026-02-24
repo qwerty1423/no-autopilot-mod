@@ -29,6 +29,7 @@ public class Config
 
     public PIDConfig RollController { get; set; }
     public PIDConfig YawController { get; set; }
+    public PIDConfig VerticalSpeedController { get; set; }
     public PIDConfig PitchController { get; set; }
     public PIDConfig ThrottleController { get; set; }
     public float TerminalPhaseHeight { get; set; }
@@ -165,6 +166,14 @@ public class Config
                 Ki = 0f,
                 Kd = 0.07f,
                 BufferDuration = 0f,
+                Invert = false
+            },
+            VerticalSpeedController = new PIDConfig
+            {
+                Kp = 0.25f,
+                Ki = 0.05f,
+                Kd = 0.1f,
+                BufferDuration = 1f,
                 Invert = false
             },
             PitchController = new PIDConfig

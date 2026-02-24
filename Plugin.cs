@@ -302,7 +302,7 @@ namespace NOAutopilot
             ToggleFBWKey = Config.Bind("Controls", "3. Toggle FBW Key", new KeyboardShortcut(KeyCode.Delete), "works in singleplayer");
             AutoJammerKey = Config.Bind("Controls", "4. Auto Jammer Key", new KeyboardShortcut(KeyCode.Slash), "Key to toggle jamming");
             ToggleGCASKey = Config.Bind("Controls", "5. Toggle GCAS Key", new KeyboardShortcut(KeyCode.Backslash), "Turn Auto-GCAS on/off");
-            ToggleALSKey = Config.Bind("Controls", "5.1 Toggle ALS Key", new KeyboardShortcut(KeyCode.Equals, KeyCode.LeftShift), "Turn autoland on/off");
+            ToggleALSKey = Config.Bind("Controls", "5.1 Toggle ALS Key", new KeyboardShortcut(KeyCode.Equals, KeyCode.LeftControl), "Turn autoland on/off");
             ClearKey = Config.Bind("Controls", "6. clear roll/nav/crs/roll/alt/roll", new KeyboardShortcut(KeyCode.Quote), "every press will clear/reset first thing it sees isn't clear from left to right");
             UpKey = Config.Bind("Controls - Altitude", "1. Altitude Up (Small)", new KeyboardShortcut(KeyCode.UpArrow), "small increase");
             DownKey = Config.Bind("Controls - Altitude", "2. Altitude Down (Small)", new KeyboardShortcut(KeyCode.DownArrow), "small decrease");
@@ -1164,6 +1164,26 @@ namespace NOAutopilot
                 }
                 GUI.FocusControl(null);
             }
+            GUI.backgroundColor = Color.white;
+            GUILayout.EndHorizontal();
+
+            // auto jam/gcas
+            GUILayout.BeginHorizontal();
+            GUI.backgroundColor = APData.AutoJammerActive ? Color.green : Color.white;
+            string ajText = APData.AutoJammerActive ? "AJ" : "AJ-";
+            if (GUILayout.Button(new GUIContent(ajText, "Toggle Auto Jammer"), _styleButton))
+            {
+                APData.AutoJammerActive = !APData.AutoJammerActive;
+                GUI.FocusControl(null);
+            }
+            GUI.backgroundColor = APData.GCASEnabled ? Color.green : Color.white;
+            string gcasText = APData.GCASEnabled ? "GCAS" : "GCAS-";
+            if (GUILayout.Button(new GUIContent(gcasText, "Toggle Auto-GCAS"), _styleButton))
+            {
+                APData.GCASEnabled = !APData.GCASEnabled;
+                if (!APData.GCASEnabled) APData.GCASActive = false;
+                GUI.FocusControl(null);
+            }
             GUI.backgroundColor = APData.ACLSActive ? Color.green : Color.white;
             if (GUILayout.Button(new GUIContent(APData.ACLSActive ? "ALS" : "ALS-", "Auto Carrier Landing System"), _styleButton))
             {
@@ -1173,26 +1193,6 @@ namespace NOAutopilot
                     APData.ACLSStatusText = "";
                     APData.IsHooked = false;
                 }
-                GUI.FocusControl(null);
-            }
-            GUI.backgroundColor = Color.white;
-            GUILayout.EndHorizontal();
-
-            // auto jam/gcas
-            GUILayout.BeginHorizontal();
-            GUI.backgroundColor = APData.AutoJammerActive ? Color.green : Color.white;
-            string ajText = "AJ: " + (APData.AutoJammerActive ? "ON" : "OFF");
-            if (GUILayout.Button(new GUIContent(ajText, "Toggle Auto Jammer"), _styleButton))
-            {
-                APData.AutoJammerActive = !APData.AutoJammerActive;
-                GUI.FocusControl(null);
-            }
-            GUI.backgroundColor = APData.GCASEnabled ? Color.green : Color.white;
-            string gcasText = "GCAS: " + (APData.GCASEnabled ? "ON" : "OFF");
-            if (GUILayout.Button(new GUIContent(gcasText, "Toggle Auto-GCAS"), _styleButton))
-            {
-                APData.GCASEnabled = !APData.GCASEnabled;
-                if (!APData.GCASEnabled) APData.GCASActive = false;
                 GUI.FocusControl(null);
             }
             GUI.backgroundColor = Color.white;
@@ -1870,6 +1870,7 @@ namespace NOAutopilot
 
         private static ACLS.PIDController aclsRollController;
         private static ACLS.PIDController aclsYawController;
+        private static ACLS.PIDController aclsVSController;
         private static ACLS.PIDController aclsPitchController;
         private static ACLS.PIDController aclsThrottleController;
 
@@ -1980,11 +1981,13 @@ namespace NOAutopilot
 
                 aclsRollController = ACLS.PIDController.FromConfig(0f, cfg.RollController);
                 aclsYawController = ACLS.PIDController.FromConfig(0f, cfg.YawController);
+                aclsVSController = ACLS.PIDController.FromConfig(0f, cfg.VerticalSpeedController);
                 aclsPitchController = ACLS.PIDController.FromConfig(0f, cfg.PitchController);
                 aclsThrottleController = ACLS.PIDController.FromConfig(cfg.LandingSpeed, cfg.ThrottleController);
 
                 aclsRollController.Reset();
                 aclsYawController.Reset();
+                aclsVSController.Reset();
                 aclsPitchController.Reset();
                 aclsThrottleController.Reset();
             }
@@ -2825,8 +2828,15 @@ namespace NOAutopilot
                             aclsYawController.targetState = aGlideYaw;
                             inputObj.yaw = aclsYawController.Update(aProgYaw);
 
-                            aclsPitchController.targetState = aGlidePitch;
-                            inputObj.pitch = aclsPitchController.Update(aProgPitch);
+                            float targetVS = ACLS.AirbaseOverlayManager.glideslopeDirection.y * APData.AirSpeed;
+                            float currentVS = APData.PlayerRB.velocity.y;
+                            aclsVSController.targetState = targetVS;
+                            float targetPitch = aclsVSController.Update(currentVS);
+                            targetPitch = Mathf.Clamp(targetPitch, -20f, 20f);
+                            aclsPitchController.targetState = targetPitch;
+                            float currentPitch = Mathf.Asin(APData.PlayerTransform.forward.y) * Mathf.Rad2Deg;
+
+                            inputObj.pitch = aclsPitchController.Update(currentPitch);
 
                             float targetSpd = CurrentTargetSpeed(distance);
                             aclsThrottleController.targetState = targetSpd;
@@ -2842,6 +2852,7 @@ namespace NOAutopilot
 
                             aclsPitchController.targetState = ACLS.Config.singleton.TerminalPitchAngle;
                             inputObj.pitch = aclsPitchController.Update(aNosePitch);
+
                             inputObj.throttle = 1f;
 
                             APData.ACLSStatusText = "ALS: FALL";

@@ -150,7 +150,7 @@ Right click / shift + right click on the map to make a path, then press equals (
 
 ## ACLS
 
-default shortcut is `shift` + `=`. ACLS will attempt to land your plane. It will set full throttle on landing, and cut throttle after a wire is caught.
+default shortcut is `left ctrl` + `=`. ACLS will attempt to land your plane. It will set full throttle on landing, and cut throttle after a wire is caught.
 
 ## Building from source
 

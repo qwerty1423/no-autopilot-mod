@@ -54,15 +54,15 @@
         "Invert": false
       },
       "YawController": {
-        "Kp": 0.2,
-        "Ki": 0.01,
+        "Kp": 0.01,
+        "Ki": 0.1,
         "Kd": 0.15,
         "BufferDuration": 1.0,
         "Invert": false
       },
       "VerticalSpeedController": {
-        "Kp": 0.25,
-        "Ki": 0.05,
+        "Kp": 0.5,
+        "Ki": 0.1,
         "Kd": 0.1,
         "BufferDuration": 1.0,
         "Invert": false

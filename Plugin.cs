@@ -586,6 +586,10 @@ namespace NOAutopilot
                         APData.ACLSStatusText = "";
                         APData.IsHooked = false;
                     }
+                    else
+                    {
+                        APData.ACLSStatusText = "ALS";
+                    }
                 }
 
                 if (InputHelper.IsDown(SpeedHoldRW) || SpeedHoldKey.Value.IsDown())
@@ -1192,6 +1196,10 @@ namespace NOAutopilot
                 {
                     APData.ACLSStatusText = "";
                     APData.IsHooked = false;
+                }
+                else
+                {
+                    APData.ACLSStatusText = "ALS";
                 }
                 GUI.FocusControl(null);
             }
@@ -1943,6 +1951,7 @@ namespace NOAutopilot
 
             aclsRollController = null;
             aclsYawController = null;
+            aclsVSController = null;
             aclsPitchController = null;
             aclsThrottleController = null;
         }

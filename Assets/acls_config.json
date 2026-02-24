@@ -92,17 +92,21 @@
   },
   "AircraftJsonKeyToProfile": {
     "Multirole1": "ifrit",
-    "SmallFighter1": "compass",
-    "Fighter1": "compass"
+    "trainer": "compass",
+    "SmallFighter1": "ifrit",
+    "Fighter1": "ifrit"
   },
   "AircraftUnitNameToProfile": {
     "Ifrit": "ifrit",
     "Compass": "compass",
-    "KR-67 Ifrit": "ifrit"
+    "Vortex": "ifrit",
+    "KR-67 Ifrit": "ifrit",
+    "FS-12 Compass": "compass"
   },
   "AircraftDefinitionNameToProfile": {
     "Ifrit": "ifrit",
     "Compass": "compass",
-    "KR-67 Ifrit": "ifrit"
+    "Vortex": "ifrit",
+    "trainer": "compass"
   }
 }

@@ -50,11 +50,10 @@ internal class AirbaseOverlayManager
             float timeToLand = dist / Mathf.Max(dot, 1f);
             Vector3 aimpoint = runway.GetGlideslopeAimpoint(
                 aircraft,
-                dist * 1.0f,
+                dist,
                 isReverse,
-                timeToLand * 1.0f
+                timeToLand
             );
-            aimpoint += Vector3.up * 3f;
             Vector3 cockpitPos = aircraft.CockpitRB().position;
             Vector3 aimDir = aimpoint - cockpitPos;
             glideslopeDirection = aimDir.normalized;

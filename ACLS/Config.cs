@@ -174,7 +174,7 @@ public class Config
                 Ki = 0.05f,
                 Kd = 0.1f,
                 BufferDuration = 1f,
-                Invert = false
+                Invert = true
             },
             PitchController = new PIDConfig
             {

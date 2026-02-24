@@ -11,15 +11,15 @@
       },
       "YawController": {
         "Kp": 0.5,
-        "Ki": 0.01,
+        "Ki": 0.0,
         "Kd": 0.15,
         "ILimit": 45.0,
         "Invert": false
       },
       "YawRateController": {
-        "Kp": 0.7,
+        "Kp": 1.0,
         "Ki": 0.0,
-        "Kd": 0.0,
+        "Kd": 1.0,
         "ILimit": 1.0,
         "Invert": false
       },

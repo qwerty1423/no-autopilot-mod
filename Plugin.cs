@@ -2824,7 +2824,7 @@ namespace NOAutopilot
                         APData.ACLSStatusColor = Color.green;
 
                         var (aNoseYaw, aNosePitch, aNoseRoll) = alignCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
-                        var (aProgYaw, aProgPitch, _) = alignCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
+                        var (aProgYaw, _, _) = alignCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
 
                         aclsRollController.targetState = 0f;
                         inputObj.roll = aclsRollController.Update(aNoseRoll);
@@ -2837,7 +2837,7 @@ namespace NOAutopilot
                             var (aGlideYaw, aGlidePitch, _) = alignCoord.GetRelativeAngles(ACLS.AirbaseOverlayManager.glideslopeDirection, APData.AircraftRotation);
 
                             aclsYawController.targetState = aGlideYaw;
-                            float targetYawRate = aclsYawController.Update(aProgYaw);
+                            float targetYawRate = aclsYawController.Update(aNoseYaw);
                             float currentYawRate = localAngVel.y * Mathf.Rad2Deg;
                             aclsYawRateController.targetState = targetYawRate;
                             inputObj.yaw = aclsYawRateController.Update(currentYawRate);

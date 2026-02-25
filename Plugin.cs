@@ -585,10 +585,20 @@ namespace NOAutopilot
                     {
                         APData.ACLSStatusText = "";
                         APData.IsHooked = false;
+                        if (APData.CustomAIState != null)
+                        {
+                            APData.CustomAIState.LeaveState();
+                            APData.CustomAIState = null;
+                        }
                     }
                     else
                     {
-                        APData.ACLSStatusText = "ALS";
+                        APData.ACLSStatusText = "ALS: AI";
+                        APData.CustomAIState = new AIPilotLandingState();
+                        if (APData.LocalPilot != null)
+                        {
+                            APData.CustomAIState.EnterState(APData.LocalPilot);
+                        }
                     }
                 }
 
@@ -1189,17 +1199,27 @@ namespace NOAutopilot
                 GUI.FocusControl(null);
             }
             GUI.backgroundColor = APData.ACLSActive ? Color.green : Color.white;
-            if (GUILayout.Button(new GUIContent(APData.ACLSActive ? "ALS" : "ALS-", "Auto Carrier Landing System"), _styleButton))
+            if (GUILayout.Button(new GUIContent(APData.ACLSActive ? "ALS" : "ALS-", "Auto Landing System"), _styleButton))
             {
                 APData.ACLSActive = !APData.ACLSActive;
                 if (!APData.ACLSActive)
                 {
                     APData.ACLSStatusText = "";
                     APData.IsHooked = false;
+                    if (APData.CustomAIState != null)
+                    {
+                        APData.CustomAIState.LeaveState();
+                        APData.CustomAIState = null;
+                    }
                 }
                 else
                 {
-                    APData.ACLSStatusText = "ALS";
+                    APData.ACLSStatusText = "ALS: AI INITIALIZING";
+                    APData.CustomAIState = new AIPilotLandingState();
+                    if (APData.LocalPilot != null)
+                    {
+                        APData.CustomAIState.EnterState(APData.LocalPilot);
+                    }
                 }
                 GUI.FocusControl(null);
             }
@@ -1745,6 +1765,10 @@ namespace NOAutopilot
         public static Vector3 NoseVector;
         public static float AirSpeed;
         public static AirbaseOverlay LocalAirbaseOverlay;
+        public static Airbase.Runway.RunwayUsage? CurrentRunwayUsage = null;
+        public static Airbase CurrentAirbase = null;
+        public static bool ReachedApproachPoint = false;
+        public static PilotBaseState CustomAIState = null;
 
         public static void Reset()
         {
@@ -1788,6 +1812,11 @@ namespace NOAutopilot
             ACLSStatusText = "";
             ACLSStatusColor = Color.white;
             LocalAirbaseOverlay = null;
+            CurrentRunwayUsage = null;
+            CurrentAirbase = null;
+            ReachedApproachPoint = false;
+            CustomAIState?.LeaveState();
+            CustomAIState = null;
 
             NavQueue.Clear();
             foreach (var obj in NavVisuals)
@@ -2035,13 +2064,47 @@ namespace NOAutopilot
 
                 if (APData.ACLSActive)
                 {
-                    if (APData.LocalAirbaseOverlay != null)
+                    if (APData.CustomAIState != null && APData.LocalPilot != null)
                     {
-                        ACLS.AirbaseOverlayManager.UpdateACLSData(APData.LocalAirbaseOverlay, APData.LocalAircraft);
+                        // 1. Save the real player state
+                        var realPlayerState = APData.LocalPilot.currentState;
+
+                        // 2. DISGUISE: Swap state so if the AI calls SwitchState(), it doesn't destroy PilotPlayerState
+                        APData.LocalPilot.currentState = APData.CustomAIState;
+
+                        // 3. Run the game's native AI logic natively
+                        APData.CustomAIState.FixedUpdateState(APData.LocalPilot);
+
+                        // 4. Check if the AI transitioned (e.g., AIPilotShortLandingState, AITaxiState)
+                        var stateAfterUpdate = APData.LocalPilot.currentState;
+
+                        // 5. UN-DISGUISE: Instantly restore player state to keep HUD/Camera intact
+                        APData.LocalPilot.currentState = realPlayerState;
+
+                        // 6. Update our sandbox tracker if the AI transitioned
+                        if (stateAfterUpdate != APData.CustomAIState)
+                        {
+                            APData.CustomAIState = stateAfterUpdate;
+                            if (APData.CustomAIState == null)
+                            {
+                                // AI finished or aborted
+                                APData.ACLSActive = false;
+                                APData.ACLSStatusText = "";
+                                return;
+                            }
+                        }
+
+                        // Status updates
+                        if (APData.CustomAIState.stateDisplayName != null)
+                        {
+                            APData.ACLSStatusText = $"ALS: {APData.CustomAIState.stateDisplayName.ToUpper()}";
+                            APData.ACLSStatusColor = Color.green;
+                        }
                     }
                     else
                     {
-                        APData.LocalAirbaseOverlay = UnityEngine.Object.FindObjectOfType<AirbaseOverlay>(true);
+                        APData.ACLSStatusText = "ALS: UNAVAILABLE";
+                        APData.ACLSStatusColor = Color.red;
                     }
                 }
 
@@ -2794,81 +2857,6 @@ namespace NOAutopilot
                             if (Plugin.InvertPitch.Value) pitchOut = -pitchOut;
                             pitchOut = Mathf.Clamp(pitchOut, -1f, 1f);
                             inputObj.pitch = pitchOut;
-                        }
-                    }
-                }
-                else if (APData.ACLSActive && APData.IsHooked)
-                {
-                    inputObj.brake = 1f;
-                    inputObj.throttle = 0f;
-                }
-                else if (APData.ACLSActive && ACLS.AirbaseOverlayManager.isActive)
-                {
-                    var runwayCoord = ACLS.AirbaseOverlayManager.runwayCoordinateSystem;
-                    var glideCoord = ACLS.AirbaseOverlayManager.glideslopeCoordinateSystem;
-                    var alignCoord = ACLS.AirbaseOverlayManager.alignmentCoordinateSystem;
-                    var (noseYaw, nosePitch, _) = runwayCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
-                    var (progYaw, progPitch, _) = runwayCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
-                    var (glideYaw, glidePitch, _) = glideCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
-
-                    float maxAngle = ACLS.Config.singleton.MaxControlAngle;
-                    bool isValid = true;
-
-                    if (Mathf.Abs(noseYaw) > maxAngle || Mathf.Abs(nosePitch) > maxAngle) { APData.ACLSStatusText = "ALS: NOSE"; APData.ACLSStatusColor = Color.red; isValid = false; }
-                    if (Mathf.Abs(progYaw) > maxAngle || Mathf.Abs(progPitch) > maxAngle) { APData.ACLSStatusText = "ALS: PROG"; APData.ACLSStatusColor = Color.red; isValid = false; }
-                    if (Mathf.Abs(glideYaw) > maxAngle || Mathf.Abs(glidePitch) > maxAngle) { APData.ACLSStatusText = "ALS: GSI"; APData.ACLSStatusColor = Color.red; isValid = false; }
-
-                    float runwayAlt = ACLS.AirbaseOverlayManager.runwayAltitude;
-                    if (runwayAlt <= ACLS.Config.singleton.TerminalPhaseHeight) isValid = true;
-
-                    if (isValid)
-                    {
-                        APData.ACLSStatusText = "ALS: RDY";
-                        APData.ACLSStatusColor = Color.green;
-
-                        var (aNoseYaw, aNosePitch, aNoseRoll) = alignCoord.GetRelativeAngles(APData.NoseVector, APData.AircraftRotation);
-                        var (aProgYaw, aProgPitch, _) = alignCoord.GetRelativeAngles(APData.ProgradeVector.normalized, APData.AircraftRotation);
-                        var (aGlideYaw, aGlidePitch, _) = alignCoord.GetRelativeAngles(ACLS.AirbaseOverlayManager.glideslopeDirection, APData.AircraftRotation);
-
-                        aclsRollController.targetState = 0f;
-                        inputObj.roll = aclsRollController.Update(aNoseRoll);
-
-                        float distance = ACLS.AirbaseOverlayManager.distanceToLand;
-
-                        if (runwayAlt > ACLS.Config.singleton.TerminalPhaseHeight)
-                        {
-                            aclsYawController.targetState = aGlideYaw;
-                            inputObj.yaw = aclsYawController.Update(aProgYaw);
-
-                            float targetVS = ACLS.AirbaseOverlayManager.glideslopeDirection.y * APData.AirSpeed;
-                            float currentVS = APData.PlayerRB.velocity.y;
-                            aclsVSController.targetState = targetVS;
-                            float targetPitch = aclsVSController.Update(currentVS);
-                            targetPitch = Mathf.Clamp(targetPitch, -20f, 20f);
-                            aclsPitchController.targetState = targetPitch;
-                            float currentPitch = Mathf.Asin(APData.PlayerTransform.forward.y) * Mathf.Rad2Deg;
-
-                            inputObj.pitch = aclsPitchController.Update(currentPitch);
-
-                            float targetSpd = CurrentTargetSpeed(distance);
-                            aclsThrottleController.targetState = targetSpd;
-                            inputObj.throttle = Mathf.Clamp01(inputObj.throttle + aclsThrottleController.Update(APData.AirSpeed));
-
-                            APData.ACLSStatusText = "ALS: GLIDE";
-                            APData.ACLSStatusColor = Color.green;
-                        }
-                        else
-                        {
-                            aclsYawController.targetState = 0f;
-                            inputObj.yaw = aclsYawController.Update(aNoseYaw);
-
-                            aclsPitchController.targetState = ACLS.Config.singleton.TerminalPitchAngle;
-                            inputObj.pitch = aclsPitchController.Update(aNosePitch);
-
-                            inputObj.throttle = 1f;
-
-                            APData.ACLSStatusText = "ALS: FALL";
-                            APData.ACLSStatusColor = Color.yellow;
                         }
                     }
                 }

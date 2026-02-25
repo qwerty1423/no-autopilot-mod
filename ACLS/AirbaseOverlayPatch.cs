@@ -12,6 +12,7 @@ internal class AirbaseOverlayManager
     public static float runwayAltitude;
     public static float distanceToLand;
     public static Vector3 towardsRunway;
+    public static Vector3 aimpoint;
 
     public static void Reset()
     {
@@ -48,7 +49,7 @@ internal class AirbaseOverlayManager
             Vector3 toRunway = targetPos - aircraft.transform.position;
             float dot = Vector3.Dot(relativeVel, toRunway.normalized);
             float timeToLand = dist / Mathf.Max(dot, 1f);
-            Vector3 aimpoint = runway.GetGlideslopeAimpoint(
+            aimpoint = runway.GetGlideslopeAimpoint(
                 aircraft,
                 dist * 1.0f,
                 isReverse,

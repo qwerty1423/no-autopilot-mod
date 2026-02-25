@@ -16,7 +16,7 @@ As of 2026-02-02, Talon Two allows the use of this mod on their servers, and Gra
 
 [Yellowcake](https://github.com/NaghDiefallah/Yellowcake)
 
-If you are on linux, add override in steam launch options: `WINEDLLOVERRIDES="winhttp=n,b" %command%`.
+If you are on linux, add override in steam launch options: `WINEDLLOVERRIDES="winhttp=n,b" %command%`
 ~~Wondering whether or not you're using linux? Then just ignore this because you're not.~~
 
 ### Manual installation
@@ -41,7 +41,7 @@ If you are on linux, add override in steam launch options: `WINEDLLOVERRIDES="wi
 4. Place the extracted `no-autopilot-mod` folder into your `BepInEx/plugins/` folder.
 5. Run the game again to generate the config file (for the mod). The mod should work at this point.
 
-folder structure after install (the names are wrong now but the locations are the same):
+folder structure after install (the names and locations are wrong now, but just imagine a `no-autopilot-mod` folder in `plugins`):
 
 ![no-folder-structure](https://github.com/user-attachments/assets/ff161a5b-676d-48eb-9eac-944afdeedb6c)
 

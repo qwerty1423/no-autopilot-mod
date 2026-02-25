@@ -2702,29 +2702,6 @@ namespace NOAutopilot
         }
     }
 
-    [HarmonyPatch(typeof(PilotPlayerState), "LeaveState")]
-    internal class PreventLeaveStateCleanup
-    {
-        static bool Prefix(PilotPlayerState __instance)
-        {
-            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
-            try
-            {
-                if (APData.ALSActive)
-                {
-                    __instance.gloc?.ResetGLOC();
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                Plugin.Logger.LogError($"[PreventLeaveStateCleanup] Error: {ex}");
-                Plugin.IsBroken = true;
-            }
-            return true;
-        }
-    }
-
     [HarmonyPatch(typeof(PilotPlayerState), "EnterState")]
     internal class FixGLOCLeakPatch
     {
@@ -2801,10 +2778,9 @@ namespace NOAutopilot
                     ac.GetInputs()
                 );
 
-                if (SceneSingleton<CombatHUD>.i.aircraft != ac)
+                if (SceneSingleton<CombatHUD>.i.aircraft == null)
                 {
-                    SceneSingleton<CombatHUD>.i.SetAircraft(ac);
-                    FlightHud.EnableCanvas(true);
+                    SceneSingleton<CombatHUD>.i.aircraft = ac;
                 }
             }
             catch (Exception ex)

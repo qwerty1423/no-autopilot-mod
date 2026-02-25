@@ -2850,21 +2850,6 @@ namespace NOAutopilot
         }
     }
 
-    [HarmonyPatch(typeof(AIPilotLandingState), "CheckApproachParameters")]
-    internal class ALSLandingPatch
-    {
-        static bool Prefix(AIPilotLandingState __instance)
-        {
-            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
-
-            if (__instance.runwayUsage.Runway == null)
-            {
-                return false;
-            }
-            return true;
-        }
-    }
-
     [HarmonyPatch(typeof(FlightHud), "Update")]
     internal class HUDVisualsPatch
     {

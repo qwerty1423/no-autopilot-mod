@@ -62,7 +62,6 @@
     <PackageReference Include="BepInEx.Core" Version="5.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.2" PrivateAssets="all" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" GeneratePathProperty="true" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
@@ -106,11 +105,8 @@
       <DeployRoot>$(PluginDeployPath)</DeployRoot>
       <DeployAssets>$(DeployRoot)/Assets</DeployAssets>
     </PropertyGroup>
-    <MakeDir Directories="$(DeployAssets)" Condition="!Exists('$(DeployAssets)')" />
     <Exec Command="rsync -rcv &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(DeployRoot)/&quot;" />
     <Exec Command="rsync -rcv &quot;$(OutputPath)$(AssemblyName).pdb&quot; &quot;$(DeployRoot)/&quot;" />
-    <Exec Command="rsync -rcv &quot;Assets/acls_config.json&quot; &quot;$(DeployAssets)/&quot;" />
-    <Exec Command="rsync -rcv &quot;$(PkgNewtonsoft_Json)/lib/netstandard2.0/Newtonsoft.Json.dll&quot; &quot;$(DeployAssets)/&quot;" />
   </Target>
 
   <Target Name="CreateZip" 
@@ -125,13 +121,8 @@
       <AssetsFolder>$(RootModFolder)/Assets</AssetsFolder>
     </PropertyGroup>
 
-    <MakeDir Directories="$(AssetsFolder)" Condition="!Exists('$(AssetsFolder)')" />
-
     <Exec Command="rsync -rcv &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(RootModFolder)/&quot;" />
     <Exec Command="rsync -rcv &quot;LICENSE&quot; &quot;$(RootModFolder)/&quot;" />
-    <Exec Command="rsync -rcv &quot;Assets/acls_config.json&quot; &quot;$(AssetsFolder)/&quot;" />
-    <Exec Command="rsync -rcv &quot;$(PkgNewtonsoft_Json)/lib/netstandard2.0/Newtonsoft.Json.dll&quot; &quot;$(AssetsFolder)/&quot;" />
-    <Exec Command="rsync -rcv &quot;$(PkgNewtonsoft_Json)/LICENSE.md&quot; &quot;$(AssetsFolder)/Newtonsoft.Json.LICENSE.md&quot;" />
 
     <Exec Command="7z a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on &quot;../$(AssemblyName)-$(Version).7z&quot; &quot;no-autopilot-mod&quot;" WorkingDirectory="$(StagingDir)" />
   </Target>

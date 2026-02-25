@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -176,9 +175,6 @@ namespace NOAutopilot
         public static ConfigEntry<float> Rand_Spd_Inner, Rand_Spd_Outer;
         public static ConfigEntry<float> Rand_Spd_SleepMin, Rand_Spd_SleepMax;
         public static ConfigEntry<float> Rand_Acc_Inner, Rand_Acc_Outer;
-
-        private ResolveEventHandler _resolveEventHandler;
-        public static string AssetsDir;
 
         private void Awake()
         {
@@ -397,11 +393,6 @@ namespace NOAutopilot
 
         private void OnDestroy()
         {
-            if (_resolveEventHandler != null)
-            {
-                AppDomain.CurrentDomain.AssemblyResolve -= _resolveEventHandler;
-                _resolveEventHandler = null;
-            }
             harmony?.UnpatchSelf();
 
             SceneManager.sceneUnloaded -= OnSceneUnloaded;
@@ -453,11 +444,6 @@ namespace NOAutopilot
                 if (IsBroken && UnpatchIfBroken.Value)
                 {
                     Logger.LogWarning($"Unloading mod because it broke. You can disable this in Config - Misc.");
-                    if (_resolveEventHandler != null)
-                    {
-                        AppDomain.CurrentDomain.AssemblyResolve -= _resolveEventHandler;
-                        _resolveEventHandler = null;
-                    }
                     harmony?.UnpatchSelf();
 
                     SceneManager.sceneUnloaded -= OnSceneUnloaded;
@@ -1299,7 +1285,7 @@ namespace NOAutopilot
             {
                 // display massive tooltips??
                 GUILayout.EndHorizontal();
-                GUILayout.Label(new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.", "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the item.\n\n"), _styleLabel);
+                GUILayout.Label(new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.", "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the item."), _styleLabel);
 
                 GUILayout.Label(_cachedExtraInfoContent, _styleLabel);
             }

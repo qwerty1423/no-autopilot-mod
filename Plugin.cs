@@ -2732,6 +2732,53 @@ namespace NOAutopilot
         }
     }
 
+    [HarmonyPatch(typeof(PilotPlayerState), "LeaveState")]
+    internal class PreventHudTeardownPatch
+    {
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator il)
+        {
+            var matcher = new CodeMatcher(instructions, il);
+
+            matcher.MatchForward(false,
+                new CodeMatch(OpCodes.Call),
+                new CodeMatch(OpCodes.Callvirt, AccessTools.Method(typeof(CombatHUD), "ClearIcons"))
+            );
+
+            if (matcher.IsValid)
+            {
+                Label continueLabel = il.DefineLabel();
+
+                matcher.InsertAndAdvance(
+                    new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(APData), "ALSActive")),
+                    new CodeInstruction(OpCodes.Brfalse, continueLabel),
+                    new CodeInstruction(OpCodes.Ret)
+                );
+
+                matcher.AddLabels([continueLabel]);
+            }
+            else
+            {
+                Plugin.Logger.LogError("Could not patch PilotPlayerState.LeaveState");
+            }
+
+            return matcher.InstructionEnumeration();
+        }
+    }
+
+    [HarmonyPatch(typeof(PilotPlayerState), "EnterState")]
+    internal class FixGLOCLeakPatch
+    {
+        static void Prefix(Pilot pilot)
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
+            var existingGloc = pilot.gameObject.GetComponent<GLOC>();
+            if (existingGloc != null)
+            {
+                UnityEngine.Object.DestroyImmediate(existingGloc);
+            }
+        }
+    }
+
     [HarmonyPatch(typeof(FlightHud), "Update")]
     internal class HUDVisualsPatch
     {

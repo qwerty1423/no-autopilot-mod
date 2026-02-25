@@ -105,7 +105,7 @@ In order of implementation, earliest first
 - waypoints
 - minor map improvements
 - singleplayer fbw disabler
-- auto carrier landing from [ACLS](https://github.com/Talon-One-Fighter-Squadron/Auto-Carrier-Landing-System) mod
+- autoland
   
 ### features not in the mod (yet?)
 
@@ -114,7 +114,7 @@ In approximate likelihood of implementation order descending.
 - yaw control
 - nap of the earth flying
 - proper helicopter support
-- auto take-off and landing (partially done due to ACLS merge)
+- auto take-off
 
 ## Autopilot
 
@@ -148,9 +148,9 @@ Video is old, so the chevron indicator is missing.
 
 Right click / shift + right click on the map to make a path, then press equals (to enable autopilot) and F8 (to bring up the UI). Click the nav mode toggle to enable nav mode. Hover mouse over the UI for tooltips. Setting waypoints will work as long as you don't create any yellow unit path lines, so as long as the first unit you have selected is not commandable then you can make a waypoint.
 
-## ACLS
+## ALS
 
-default shortcut is `left ctrl` + `=`. ACLS will attempt to land your plane. It will set full throttle on landing, and cut throttle after a wire is caught.
+default shortcut is `left ctrl` + `=`. The ~~AI~~ ~~finite state machine~~ computer will attempt to land your plane. uses the logic that AI planes use to land.
 
 ## Building from source
 

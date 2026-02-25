@@ -2,8 +2,8 @@
 
 ## [Unreleased]
 
-- ~~spaghettified the code more~~merged acls
-- use 7z
+- added autoland
+- 7z instead of zip
 
 ## [4.16.1] - 2026-02-13
 

@@ -585,20 +585,17 @@ namespace NOAutopilot
                     {
                         APData.ACLSStatusText = "";
                         APData.IsHooked = false;
-                        if (APData.CustomAIState != null)
+
+                        if (APData.LocalPilot != null && APData.LocalPilot.playerState != null)
                         {
-                            APData.CustomAIState.LeaveState();
-                            APData.CustomAIState = null;
+                            APData.LocalPilot.SwitchState(APData.LocalPilot.playerState);
                         }
                     }
                     else
                     {
-                        APData.ACLSStatusText = "ALS: AI";
-                        APData.CustomAIState = new AIPilotLandingState();
-                        if (APData.LocalPilot != null)
-                        {
-                            APData.CustomAIState.EnterState(APData.LocalPilot);
-                        }
+                        APData.ACLSStatusText = "ALS: AUTO";
+
+                        APData.LocalPilot?.SwitchState(new AIPilotLandingState());
                     }
                 }
 
@@ -1199,27 +1196,24 @@ namespace NOAutopilot
                 GUI.FocusControl(null);
             }
             GUI.backgroundColor = APData.ACLSActive ? Color.green : Color.white;
-            if (GUILayout.Button(new GUIContent(APData.ACLSActive ? "ALS" : "ALS-", "Auto Landing System"), _styleButton))
+            if (GUILayout.Button(new GUIContent(APData.ACLSActive ? "ALS" : "ALS-", "Auto Carrier Landing System"), _styleButton))
             {
                 APData.ACLSActive = !APData.ACLSActive;
                 if (!APData.ACLSActive)
                 {
                     APData.ACLSStatusText = "";
                     APData.IsHooked = false;
-                    if (APData.CustomAIState != null)
+
+                    if (APData.LocalPilot != null && APData.LocalPilot.playerState != null)
                     {
-                        APData.CustomAIState.LeaveState();
-                        APData.CustomAIState = null;
+                        APData.LocalPilot.SwitchState(APData.LocalPilot.playerState);
                     }
                 }
                 else
                 {
-                    APData.ACLSStatusText = "ALS: AI INITIALIZING";
-                    APData.CustomAIState = new AIPilotLandingState();
-                    if (APData.LocalPilot != null)
-                    {
-                        APData.CustomAIState.EnterState(APData.LocalPilot);
-                    }
+                    APData.ACLSStatusText = "ALS: AUTO";
+
+                    APData.LocalPilot?.SwitchState(new AIPilotLandingState());
                 }
                 GUI.FocusControl(null);
             }
@@ -1768,7 +1762,6 @@ namespace NOAutopilot
         public static Airbase.Runway.RunwayUsage? CurrentRunwayUsage = null;
         public static Airbase CurrentAirbase = null;
         public static bool ReachedApproachPoint = false;
-        public static PilotBaseState CustomAIState = null;
 
         public static void Reset()
         {
@@ -1815,8 +1808,6 @@ namespace NOAutopilot
             CurrentRunwayUsage = null;
             CurrentAirbase = null;
             ReachedApproachPoint = false;
-            CustomAIState?.LeaveState();
-            CustomAIState = null;
 
             NavQueue.Clear();
             foreach (var obj in NavVisuals)
@@ -2064,47 +2055,13 @@ namespace NOAutopilot
 
                 if (APData.ACLSActive)
                 {
-                    if (APData.CustomAIState != null && APData.LocalPilot != null)
+                    if (APData.LocalAirbaseOverlay != null)
                     {
-                        // 1. Save the real player state
-                        var realPlayerState = APData.LocalPilot.currentState;
-
-                        // 2. DISGUISE: Swap state so if the AI calls SwitchState(), it doesn't destroy PilotPlayerState
-                        APData.LocalPilot.currentState = APData.CustomAIState;
-
-                        // 3. Run the game's native AI logic natively
-                        APData.CustomAIState.FixedUpdateState(APData.LocalPilot);
-
-                        // 4. Check if the AI transitioned (e.g., AIPilotShortLandingState, AITaxiState)
-                        var stateAfterUpdate = APData.LocalPilot.currentState;
-
-                        // 5. UN-DISGUISE: Instantly restore player state to keep HUD/Camera intact
-                        APData.LocalPilot.currentState = realPlayerState;
-
-                        // 6. Update our sandbox tracker if the AI transitioned
-                        if (stateAfterUpdate != APData.CustomAIState)
-                        {
-                            APData.CustomAIState = stateAfterUpdate;
-                            if (APData.CustomAIState == null)
-                            {
-                                // AI finished or aborted
-                                APData.ACLSActive = false;
-                                APData.ACLSStatusText = "";
-                                return;
-                            }
-                        }
-
-                        // Status updates
-                        if (APData.CustomAIState.stateDisplayName != null)
-                        {
-                            APData.ACLSStatusText = $"ALS: {APData.CustomAIState.stateDisplayName.ToUpper()}";
-                            APData.ACLSStatusColor = Color.green;
-                        }
+                        ACLS.AirbaseOverlayManager.UpdateACLSData(APData.LocalAirbaseOverlay, APData.LocalAircraft);
                     }
                     else
                     {
-                        APData.ACLSStatusText = "ALS: UNAVAILABLE";
-                        APData.ACLSStatusColor = Color.red;
+                        APData.LocalAirbaseOverlay = UnityEngine.Object.FindObjectOfType<AirbaseOverlay>(true);
                     }
                 }
 

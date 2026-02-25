@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [4.17.0] - 2026-02-25
+
 - added autoland
 - 7z instead of zip
 
@@ -240,7 +242,8 @@
 
 ## [4.8.4] - 2025-12-29
 
-[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.16.1...HEAD
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.0...HEAD
+[4.17.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.16.1...v4.17.0
 [4.16.1]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.16.0...v4.16.1
 [4.16.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.5...v4.16.0
 [4.15.5]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.15.4...v4.15.5

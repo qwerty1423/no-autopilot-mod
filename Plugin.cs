@@ -3414,28 +3414,6 @@ namespace NOAutopilot
         }
     }
 
-    [HarmonyPatch(typeof(DynamicMap), "EnableCanvas")]
-    internal class KeepMapAlivePatch
-    {
-        static bool Prefix(bool enable)
-        {
-            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
-            try
-            {
-                if (!enable && APData.ALSActive && DynamicMap.mapMaximized)
-                {
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                Plugin.Logger.LogError($"KeepMapAlive Error: {ex.Message}");
-                Plugin.IsBroken = true;
-            }
-            return true;
-        }
-    }
-
     public class PIDController
     {
         public float Integral;

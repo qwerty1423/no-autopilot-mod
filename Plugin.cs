@@ -2804,9 +2804,10 @@ namespace NOAutopilot
                     ac.GetInputs()
                 );
 
-                if (SceneSingleton<CombatHUD>.i.aircraft == null)
+                if (SceneSingleton<CombatHUD>.i.aircraft != ac)
                 {
-                    SceneSingleton<CombatHUD>.i.aircraft = ac;
+                    SceneSingleton<CombatHUD>.i.SetAircraft(ac);
+                    FlightHud.EnableCanvas(true);
                 }
             }
             catch (Exception ex)

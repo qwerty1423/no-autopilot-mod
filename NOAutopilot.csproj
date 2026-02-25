@@ -99,7 +99,7 @@
   <Target Name="DeployPlugin" 
         AfterTargets="Build" 
         Condition="'$(Configuration)' == 'Debug' AND '$(PluginDeployPath)' != ''"
-        Inputs="$(OutputPath)$(AssemblyName).dll;Assets/acls_config.json"
+        Inputs="$(OutputPath)$(AssemblyName).dll;$(OutputPath)$(AssemblyName).pdb"
         Outputs="$(PluginDeployPath)/$(AssemblyName).dll;$(PluginDeployPath)/Assets/acls_config.json">
     <PropertyGroup>
       <DeployRoot>$(PluginDeployPath)</DeployRoot>
@@ -111,7 +111,7 @@
   <Target Name="CreateZip" 
         AfterTargets="Build" 
         Condition="'$(Configuration)' == 'Release'"
-        Inputs="$(OutputPath)$(AssemblyName).dll;Assets/acls_config.json"
+        Inputs="$(OutputPath)$(AssemblyName).dll;LICENSE"
         Outputs="$(OutputPath)../$(AssemblyName)-$(Version).7z">
 
     <PropertyGroup>

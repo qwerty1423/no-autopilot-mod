@@ -2734,10 +2734,18 @@ namespace NOAutopilot
         static void Prefix(Pilot pilot)
         {
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
-            var existingGloc = pilot.gameObject.GetComponent<GLOC>();
-            if (existingGloc != null)
+            try
             {
-                UnityEngine.Object.DestroyImmediate(existingGloc);
+                var existingGloc = pilot.gameObject.GetComponent<GLOC>();
+                if (existingGloc != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(existingGloc);
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[FixGLOCLeakPatch] Error: {ex}");
+                Plugin.IsBroken = true;
             }
         }
     }
@@ -2749,56 +2757,62 @@ namespace NOAutopilot
         {
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
             if (!APData.ALSActive) return;
-
             if (__instance.pilot != APData.LocalPilot) return;
-
-            if (__instance.runwayUsage.Runway == null)
+            try
             {
-                APData.ALSStatusText = "ALS: SEARCHING";
-                APData.ALSStatusColor = Color.yellow;
+                if (__instance.runwayUsage.Runway == null)
+                {
+                    APData.ALSStatusText = "ALS: SEARCHING";
+                    APData.ALSStatusColor = Color.yellow;
+                }
+                else if (__instance.touchedDown)
+                {
+                    APData.ALSStatusText = "ALS: LANDED";
+                    APData.ALSStatusColor = Color.cyan;
+                }
+                else
+                {
+                    string baseName = __instance.runwayUsage.Runway.airbase.name;
+                    APData.ALSStatusText = $"ALS: {baseName.ToUpper()}";
+                    APData.ALSStatusColor = Color.green;
+                }
+
+                Aircraft ac = __instance.pilot.aircraft;
+                Rigidbody rb = __instance.pilot.GetRB();
+
+                float airspeed = rb.velocity.magnitude;
+                float altitude = Mathf.Max(__instance.pilot.transform.position.GlobalY() - ac.definition.spawnOffset.y, 0f);
+
+                float currentG = __instance.pilot.gForce;
+
+                float climbRate = Vector3.Dot(rb.velocity, Vector3.up);
+
+                float angleOnAxis = TargetCalc.GetAngleOnAxis(rb.transform.forward, rb.velocity, rb.transform.right);
+
+                float radarAlt = Mathf.Min(ac.radarAlt, altitude);
+
+                SceneSingleton<FlightHud>.i.SetHUDInfo(
+                    ac,
+                    airspeed,
+                    altitude,
+                    radarAlt,
+                    __instance.pilot.GetAccel(),
+                    currentG,
+                    climbRate,
+                    angleOnAxis,
+                    rb.velocity,
+                    ac.GetInputs()
+                );
+
+                if (SceneSingleton<CombatHUD>.i.aircraft == null)
+                {
+                    SceneSingleton<CombatHUD>.i.aircraft = ac;
+                }
             }
-            else if (__instance.touchedDown)
+            catch (Exception ex)
             {
-                APData.ALSStatusText = "ALS: LANDED";
-                APData.ALSStatusColor = Color.cyan;
-            }
-            else
-            {
-                string baseName = __instance.runwayUsage.Runway.airbase.name;
-                APData.ALSStatusText = $"ALS: {baseName.ToUpper()}";
-                APData.ALSStatusColor = Color.green;
-            }
-
-            Aircraft ac = __instance.pilot.aircraft;
-            Rigidbody rb = __instance.pilot.GetRB();
-
-            float airspeed = rb.velocity.magnitude;
-            float altitude = Mathf.Max(__instance.pilot.transform.position.GlobalY() - ac.definition.spawnOffset.y, 0f);
-
-            float currentG = __instance.pilot.gForce;
-
-            float climbRate = Vector3.Dot(rb.velocity, Vector3.up);
-
-            float angleOnAxis = TargetCalc.GetAngleOnAxis(rb.transform.forward, rb.velocity, rb.transform.right);
-
-            float radarAlt = Mathf.Min(ac.radarAlt, altitude);
-
-            SceneSingleton<FlightHud>.i.SetHUDInfo(
-                ac,
-                airspeed,
-                altitude,
-                radarAlt,
-                __instance.pilot.GetAccel(),
-                currentG,
-                climbRate,
-                angleOnAxis,
-                rb.velocity,
-                ac.GetInputs()
-            );
-
-            if (SceneSingleton<CombatHUD>.i.aircraft == null)
-            {
-                SceneSingleton<CombatHUD>.i.aircraft = ac;
+                Plugin.Logger.LogError($"[UpdateHUDAutolandPatch] Error: {ex}");
+                Plugin.IsBroken = true;
             }
         }
     }
@@ -2806,13 +2820,47 @@ namespace NOAutopilot
     [HarmonyPatch(typeof(Airbase), "RpcRegisterUsage")]
     internal class SuppressAirbaseRpcPatch
     {
-        static bool Prefix()
+        static bool Prefix(Aircraft aircraft)
         {
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
-
-            if (APData.ALSActive)
+            try
             {
-                return false;
+                if (APData.ALSActive && aircraft == APData.LocalAircraft)
+                {
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[SuppressAirbaseRpcPatch] Error: {ex}");
+                Plugin.IsBroken = true;
+            }
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(AIPilotLandingState), "CheckApproachParameters")]
+    internal class ALSLandingPatch
+    {
+        static bool Prefix(AIPilotLandingState __instance)
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
+            try
+            {
+                if (__instance.pilot == APData.LocalPilot)
+                {
+                    __instance.SearchBestAirbase();
+
+                    if (__instance.runwayUsage.Runway == null)
+                    {
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[ALSLandingPatch] Error: {ex}");
+                Plugin.IsBroken = true;
             }
             return true;
         }

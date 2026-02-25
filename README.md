@@ -150,7 +150,7 @@ Right click / shift + right click on the map to make a path, then press equals (
 
 ## ALS
 
-default shortcut is `left ctrl` + `=`. The ~~AI~~ ~~finite state machine~~ computer will attempt to land your plane. uses the logic that AI planes use to land.
+default shortcut is `left ctrl` + `=`. Your plane will attempt to land itself. uses the logic that AI planes use to land. only works for planes.
 
 ## Building from source
 

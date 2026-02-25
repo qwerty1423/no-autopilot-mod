@@ -542,17 +542,22 @@ namespace NOAutopilot
                     if (!APData.ALSActive)
                     {
                         APData.ALSStatusText = "";
-
-                        if (APData.LocalPilot != null && APData.LocalPilot.playerState != null)
-                        {
-                            APData.LocalPilot.SwitchState(APData.LocalPilot.playerState);
-                        }
+                        APData.LocalPilot?.SwitchState(APData.LocalPilot.playerState);
                     }
                     else
                     {
-                        APData.ALSStatusText = "ALS: AUTO";
-
-                        APData.LocalPilot?.SwitchState(new AIPilotLandingState());
+                        var hq = APData.LocalAircraft?.NetworkHQ;
+                        if (hq != null)
+                        {
+                            if (hq.GetAirbases().Count() > 0)
+                            {
+                                APData.LocalPilot?.SwitchState(new AIPilotLandingState());
+                            }
+                            else
+                            {
+                                APData.ALSStatusText = "ALS: NO AIRBASE";
+                            }
+                        }
                     }
                 }
 
@@ -1159,17 +1164,22 @@ namespace NOAutopilot
                 if (!APData.ALSActive)
                 {
                     APData.ALSStatusText = "";
-
-                    if (APData.LocalPilot != null && APData.LocalPilot.playerState != null)
-                    {
-                        APData.LocalPilot.SwitchState(APData.LocalPilot.playerState);
-                    }
+                    APData.LocalPilot?.SwitchState(APData.LocalPilot.playerState);
                 }
                 else
                 {
-                    APData.ALSStatusText = "ALS: AUTO";
-
-                    APData.LocalPilot?.SwitchState(new AIPilotLandingState());
+                    var hq = APData.LocalAircraft?.NetworkHQ;
+                    if (hq != null)
+                    {
+                        if (hq.GetAirbases().Count() > 0)
+                        {
+                            APData.LocalPilot?.SwitchState(new AIPilotLandingState());
+                        }
+                        else
+                        {
+                            APData.ALSStatusText = "ALS: NO AIRBASE";
+                        }
+                    }
                 }
                 GUI.FocusControl(null);
             }
@@ -2776,6 +2786,82 @@ namespace NOAutopilot
             {
                 UnityEngine.Object.DestroyImmediate(existingGloc);
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(AIPilotLandingState), "FixedUpdateState")]
+    internal class UpdateHUDAutolandPatch
+    {
+        static void Postfix(AIPilotLandingState __instance)
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
+            if (!APData.ALSActive) return;
+
+            if (__instance.pilot != APData.LocalPilot) return;
+
+            if (__instance.runwayUsage.Runway == null)
+            {
+                APData.ALSStatusText = "ALS: SEARCHING";
+                APData.ALSStatusColor = Color.yellow;
+            }
+            else if (__instance.touchedDown)
+            {
+                APData.ALSStatusText = "ALS: LANDED";
+                APData.ALSStatusColor = Color.cyan;
+            }
+            else
+            {
+                string baseName = __instance.runwayUsage.Runway.airbase.name;
+                APData.ALSStatusText = $"ALS: {baseName.ToUpper()}";
+                APData.ALSStatusColor = Color.green;
+            }
+
+            Aircraft ac = __instance.pilot.aircraft;
+            Rigidbody rb = __instance.pilot.GetRB();
+
+            float airspeed = rb.velocity.magnitude;
+            float altitude = Mathf.Max(__instance.pilot.transform.position.GlobalY() - ac.definition.spawnOffset.y, 0f);
+
+            float currentG = __instance.pilot.gForce;
+
+            float climbRate = Vector3.Dot(rb.velocity, Vector3.up);
+
+            float angleOnAxis = TargetCalc.GetAngleOnAxis(rb.transform.forward, rb.velocity, rb.transform.right);
+
+            float radarAlt = Mathf.Min(ac.radarAlt, altitude);
+
+            SceneSingleton<FlightHud>.i.SetHUDInfo(
+                ac,
+                airspeed,
+                altitude,
+                radarAlt,
+                __instance.pilot.GetAccel(),
+                currentG,
+                climbRate,
+                angleOnAxis,
+                rb.velocity,
+                ac.GetInputs()
+            );
+
+            if (SceneSingleton<CombatHUD>.i.aircraft == null)
+            {
+                SceneSingleton<CombatHUD>.i.aircraft = ac;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(AIPilotLandingState), "CheckApproachParameters")]
+    internal class ALSLandingPatch
+    {
+        static bool Prefix(AIPilotLandingState __instance)
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
+
+            if (__instance.runwayUsage.Runway == null)
+            {
+                return false;
+            }
+            return true;
         }
     }
 

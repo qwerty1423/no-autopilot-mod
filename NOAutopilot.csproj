@@ -3,9 +3,12 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>com.qwerty1423.NOAutopilot</AssemblyName>
+    <AssemblyCopyright>
+    Copyright (c) 2026 qwerty1423 and NOAutopilot contributors
+    </AssemblyCopyright>
     <Product>NOAutopilot</Product>
     <Description>no autopilot?</Description>
-    <Version>4.16.1</Version>
+    <Version>4.17.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
@@ -54,7 +57,7 @@
 
   <ItemGroup>
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
-    <PackageReference Include="BepInEx.Core" Version="5.*" />
+    <PackageReference Include="BepInEx.Core" Version="5.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.2" PrivateAssets="all" />
   </ItemGroup>
@@ -91,32 +94,32 @@
     <PluginDeployPath Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' ">C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option\BepInEx\plugins</PluginDeployPath>
   </PropertyGroup>
 
-  <Target Name="DeployPlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' AND '$(PluginDeployPath)' != ''">
-    
-    <ItemGroup>
-      <PluginFiles Include="$(OutputPath)$(AssemblyName).dll" />
-      <PluginFiles Include="$(OutputPath)$(AssemblyName).pdb" />
-    </ItemGroup>
-
-    <Message Text="Deploying plugin to: $(PluginDeployPath)" Importance="high" />
-    
-    <Copy
-      SourceFiles="@(PluginFiles)"
-      DestinationFolder="$(PluginDeployPath)"
-      SkipUnchangedFiles="true"
-    />
+  <Target Name="DeployPlugin" 
+        AfterTargets="Build" 
+        Condition="'$(Configuration)' == 'Debug' AND '$(PluginDeployPath)' != ''"
+        Inputs="$(OutputPath)$(AssemblyName).dll;$(OutputPath)$(AssemblyName).pdb"
+        Outputs="$(PluginDeployPath)/$(AssemblyName).dll;$(PluginDeployPath)/Assets/acls_config.json">
+    <PropertyGroup>
+      <DeployRoot>$(PluginDeployPath)</DeployRoot>
+    </PropertyGroup>
+    <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(DeployRoot)/&quot;" />
+    <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).pdb&quot; &quot;$(DeployRoot)/&quot;" />
   </Target>
 
-  <Target Name="CreateZip"
-        AfterTargets="Build"
+  <Target Name="CreateZip" 
+        AfterTargets="Build" 
         Condition="'$(Configuration)' == 'Release'"
-        Inputs="$(OutputPath)$(AssemblyName).dll"
-        Outputs="$(OutputPath)$(AssemblyName)-$(Version).zip">
+        Inputs="$(OutputPath)$(AssemblyName).dll;LICENSE"
+        Outputs="$(OutputPath)../$(AssemblyName)-$(Version).7z">
 
-  <Message Text="Creating ZIP archive for $(AssemblyName)..." Importance="high" />
+    <PropertyGroup>
+      <StagingDir>$(OutputPath)Staging</StagingDir>
+      <RootModFolder>$(StagingDir)/no-autopilot-mod</RootModFolder>
+    </PropertyGroup>
 
-  <Exec
-    Command="7z a -tzip -mx=9 &quot;$(AssemblyName)-$(Version).zip&quot; &quot;$(AssemblyName).dll&quot;"
-    WorkingDirectory="$(OutputPath)" />
+    <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(RootModFolder)/&quot;" />
+    <Exec Command="rsync -rcv --mkpath &quot;LICENSE&quot; &quot;$(RootModFolder)/&quot;" />
+
+    <Exec Command="7z a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on &quot;../$(AssemblyName)-$(Version).7z&quot; &quot;no-autopilot-mod&quot;" WorkingDirectory="$(StagingDir)" />
   </Target>
 </Project>

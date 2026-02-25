@@ -124,7 +124,7 @@ namespace NOAutopilot
 
         // Controls
         public static ConfigEntry<KeyboardShortcut> MenuKey;
-        public static ConfigEntry<KeyboardShortcut> ToggleKey, ToggleFBWKey;
+        public static ConfigEntry<KeyboardShortcut> ToggleKey, ToggleFBWKey, ToggleALSKey;
         public static ConfigEntry<KeyboardShortcut> AutoJammerKey, ToggleGCASKey, ClearKey;
         public static ConfigEntry<KeyboardShortcut> UpKey, DownKey, BigUpKey, BigDownKey;
         public static ConfigEntry<KeyboardShortcut> ClimbRateUpKey, ClimbRateDownKey;
@@ -133,7 +133,7 @@ namespace NOAutopilot
         public static ConfigEntry<KeyboardShortcut> ToggleMachKey, ToggleABKey;
 
         public static ConfigEntry<string> MenuRW;
-        public static ConfigEntry<string> ToggleRW, ToggleFBWRW;
+        public static ConfigEntry<string> ToggleRW, ToggleFBWRW, ToggleALSRW;
         public static ConfigEntry<string> AutoJammerRW, ToggleGCASRW, ClearRW;
         public static ConfigEntry<string> UpRW, DownRW, BigUpRW, BigDownRW;
         public static ConfigEntry<string> ClimbRateUpRW, ClimbRateDownRW;
@@ -258,6 +258,7 @@ namespace NOAutopilot
             ToggleFBWKey = Config.Bind("Controls", "3. Toggle FBW Key", new KeyboardShortcut(KeyCode.Delete), "works in singleplayer");
             AutoJammerKey = Config.Bind("Controls", "4. Auto Jammer Key", new KeyboardShortcut(KeyCode.Slash), "Key to toggle jamming");
             ToggleGCASKey = Config.Bind("Controls", "5. Toggle GCAS Key", new KeyboardShortcut(KeyCode.Backslash), "Turn Auto-GCAS on/off");
+            ToggleALSKey = Config.Bind("Controls", "5.1 Toggle ALS Key", new KeyboardShortcut(KeyCode.Equals, KeyCode.LeftControl), "Turn autoland on/off");
             ClearKey = Config.Bind("Controls", "6. clear roll/nav/crs/roll/alt/roll", new KeyboardShortcut(KeyCode.Quote), "every press will clear/reset first thing it sees isn't clear from left to right");
             UpKey = Config.Bind("Controls - Altitude", "1. Altitude Up (Small)", new KeyboardShortcut(KeyCode.UpArrow), "small increase");
             DownKey = Config.Bind("Controls - Altitude", "2. Altitude Down (Small)", new KeyboardShortcut(KeyCode.DownArrow), "small decrease");
@@ -279,6 +280,7 @@ namespace NOAutopilot
             ToggleFBWRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "3. Toggle FBW", "works in singleplayer");
             AutoJammerRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "4. Toggle AJ", "Toggle auto jamming with jamming pods");
             ToggleGCASRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5. Toggle GCAS", "Turn Auto-GCAS on/off");
+            ToggleALSRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5.1 Toggle ALS", "Turn autoland on/off");
             ClearRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear roll/nav/crs/roll/alt/roll", "every use will clear/reset first thing it sees isn't clear from left to right");
             UpRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "1. Altitude Up (Small)", "small increase");
             DownRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "2. Altitude Down (Small)", "small decrease");
@@ -518,6 +520,31 @@ namespace NOAutopilot
                 {
                     APData.GCASEnabled = !APData.GCASEnabled;
                     if (!APData.GCASEnabled) { APData.GCASActive = false; APData.GCASWarning = false; }
+                }
+
+                if (InputHelper.IsDown(ToggleALSRW) || ToggleALSKey.Value.IsDown())
+                {
+                    APData.ALSActive = !APData.ALSActive;
+                    if (!APData.ALSActive)
+                    {
+                        APData.ALSStatusText = "";
+                        APData.LocalPilot?.SwitchState(APData.LocalPilot.playerState);
+                    }
+                    else
+                    {
+                        var hq = APData.LocalAircraft?.NetworkHQ;
+                        if (hq != null)
+                        {
+                            if (hq.GetAirbases().Count() > 0)
+                            {
+                                APData.LocalPilot?.SwitchState(new AIPilotLandingState());
+                            }
+                            else
+                            {
+                                APData.ALSStatusText = "ALS: NO AIRBASE";
+                            }
+                        }
+                    }
                 }
 
                 if (InputHelper.IsDown(SpeedHoldRW) || SpeedHoldKey.Value.IsDown())
@@ -806,6 +833,11 @@ namespace NOAutopilot
                 GUI.depth = -1;
                 DrawCustomTooltip();
             }
+            catch (Exception ex)
+            {
+                Logger.LogError($"[OnGUI] Error: {ex}");
+                IsBroken = true;
+            }
             finally
             {
                 GUI.color = oldGuiColor;
@@ -1009,7 +1041,7 @@ namespace NOAutopilot
 
             // set values
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(new GUIContent("Set Values", "Applies typed values"), _styleButton))
+            if (GUILayout.Button(new GUIContent("Apply", "Applies typed values"), _styleButton))
             {
                 if (float.TryParse(_bufAlt, out float a))
                     APData.TargetAlt = ModUtils.ConvertAlt_FromDisplay(a);
@@ -1097,18 +1129,44 @@ namespace NOAutopilot
             // auto jam/gcas
             GUILayout.BeginHorizontal();
             GUI.backgroundColor = APData.AutoJammerActive ? Color.green : Color.white;
-            string ajText = "AJ: " + (APData.AutoJammerActive ? "ON" : "OFF");
+            string ajText = APData.AutoJammerActive ? "AJ" : "AJ-";
             if (GUILayout.Button(new GUIContent(ajText, "Toggle Auto Jammer"), _styleButton))
             {
                 APData.AutoJammerActive = !APData.AutoJammerActive;
                 GUI.FocusControl(null);
             }
             GUI.backgroundColor = APData.GCASEnabled ? Color.green : Color.white;
-            string gcasText = "GCAS: " + (APData.GCASEnabled ? "ON" : "OFF");
+            string gcasText = APData.GCASEnabled ? "GCAS" : "GCAS-";
             if (GUILayout.Button(new GUIContent(gcasText, "Toggle Auto-GCAS"), _styleButton))
             {
                 APData.GCASEnabled = !APData.GCASEnabled;
                 if (!APData.GCASEnabled) APData.GCASActive = false;
+                GUI.FocusControl(null);
+            }
+            GUI.backgroundColor = APData.ALSActive ? Color.green : Color.white;
+            if (GUILayout.Button(new GUIContent(APData.ALSActive ? "ALS" : "ALS-", "autoland"), _styleButton))
+            {
+                APData.ALSActive = !APData.ALSActive;
+                if (!APData.ALSActive)
+                {
+                    APData.ALSStatusText = "";
+                    APData.LocalPilot?.SwitchState(APData.LocalPilot.playerState);
+                }
+                else
+                {
+                    var hq = APData.LocalAircraft?.NetworkHQ;
+                    if (hq != null)
+                    {
+                        if (hq.GetAirbases().Count() > 0)
+                        {
+                            APData.LocalPilot?.SwitchState(new AIPilotLandingState());
+                        }
+                        else
+                        {
+                            APData.ALSStatusText = "ALS: NO AIRBASE";
+                        }
+                    }
+                }
                 GUI.FocusControl(null);
             }
             GUI.backgroundColor = Color.white;
@@ -1306,61 +1364,69 @@ namespace NOAutopilot
 
         public static void RefreshNavVisuals()
         {
-            foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
-            APData.NavVisuals.Clear();
-
-            var map = SceneSingleton<DynamicMap>.i;
-            if (APData.NavQueue.Count == 0 || map == null || APData.PlayerRB == null) return;
-
-            float factor = 900f / map.mapDimension;
-            float zoom = map.mapImage.transform.localScale.x;
-            Color navCol = ModUtils.GetColor(ColorNav.Value, Color.cyan);
-
-            Vector3 pPosG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
-            Vector3 lastPoint = new(pPosG.x * factor, pPosG.z * factor, 0f);
-
-            void DrawLine(Vector3 start, Vector3 end, string name, bool isLoop = false)
+            try
             {
-                GameObject line = Instantiate(map.mapWaypointVector, map.mapImage.transform);
-                line.name = name;
+                foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
+                APData.NavVisuals.Clear();
 
-                line.transform.localPosition = end;
+                var map = SceneSingleton<DynamicMap>.i;
+                if (APData.NavQueue.Count == 0 || map == null || APData.PlayerRB == null) return;
 
-                float angle = -Mathf.Atan2(end.x - start.x, end.y - start.y) * Mathf.Rad2Deg + 180f;
+                float factor = 900f / map.mapDimension;
+                float zoom = map.mapImage.transform.localScale.x;
+                Color navCol = ModUtils.GetColor(ColorNav.Value, Color.cyan);
 
-                line.transform.localEulerAngles = new Vector3(0, 0, angle);
+                Vector3 pPosG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+                Vector3 lastPoint = new(pPosG.x * factor, pPosG.z * factor, 0f);
 
-                line.transform.localScale = new Vector3(4f / zoom, Vector3.Distance(start, end), 4f / zoom);
-
-                if (line.TryGetComponent(out Image img))
+                void DrawLine(Vector3 start, Vector3 end, string name, bool isLoop = false)
                 {
-                    img.color = isLoop ? new Color(navCol.r, navCol.g, navCol.b, navCol.a * 0.4f) : navCol;
-                }
-                APData.NavVisuals.Add(line);
-            }
+                    GameObject line = Instantiate(map.mapWaypointVector, map.mapImage.transform);
+                    line.name = name;
 
-            for (int i = 0; i < APData.NavQueue.Count; i++)
-            {
-                Vector3 currentMap = new(APData.NavQueue[i].x * factor, APData.NavQueue[i].z * factor, 0f);
+                    line.transform.localPosition = end;
 
-                if (i == APData.NavQueue.Count - 1)
-                {
-                    GameObject marker = Instantiate(map.mapWaypoint, map.mapImage.transform);
-                    marker.name = "AP_NavMarker";
-                    marker.transform.localPosition = currentMap;
-                    marker.transform.localScale = Vector3.one * (1f / zoom);
-                    if (marker.TryGetComponent(out Image mImg)) mImg.color = navCol;
-                    APData.NavVisuals.Add(marker);
+                    float angle = -Mathf.Atan2(end.x - start.x, end.y - start.y) * Mathf.Rad2Deg + 180f;
+
+                    line.transform.localEulerAngles = new Vector3(0, 0, angle);
+
+                    line.transform.localScale = new Vector3(4f / zoom, Vector3.Distance(start, end), 4f / zoom);
+
+                    if (line.TryGetComponent(out Image img))
+                    {
+                        img.color = isLoop ? new Color(navCol.r, navCol.g, navCol.b, navCol.a * 0.4f) : navCol;
+                    }
+                    APData.NavVisuals.Add(line);
                 }
 
-                DrawLine(lastPoint, currentMap, (i == 0) ? "AP_NavLine_Player" : "AP_NavLine");
-                lastPoint = currentMap;
-            }
+                for (int i = 0; i < APData.NavQueue.Count; i++)
+                {
+                    Vector3 currentMap = new(APData.NavQueue[i].x * factor, APData.NavQueue[i].z * factor, 0f);
 
-            if (NavCycle.Value && APData.NavQueue.Count > 1)
+                    if (i == APData.NavQueue.Count - 1)
+                    {
+                        GameObject marker = Instantiate(map.mapWaypoint, map.mapImage.transform);
+                        marker.name = "AP_NavMarker";
+                        marker.transform.localPosition = currentMap;
+                        marker.transform.localScale = Vector3.one * (1f / zoom);
+                        if (marker.TryGetComponent(out Image mImg)) mImg.color = navCol;
+                        APData.NavVisuals.Add(marker);
+                    }
+
+                    DrawLine(lastPoint, currentMap, (i == 0) ? "AP_NavLine_Player" : "AP_NavLine");
+                    lastPoint = currentMap;
+                }
+
+                if (NavCycle.Value && APData.NavQueue.Count > 1)
+                {
+                    Vector3 firstMap = new(APData.NavQueue[0].x * factor, APData.NavQueue[0].z * factor, 0f);
+                    DrawLine(lastPoint, firstMap, "AP_NavLine_Loop", true);
+                }
+            }
+            catch (Exception ex)
             {
-                Vector3 firstMap = new(APData.NavQueue[0].x * factor, APData.NavQueue[0].z * factor, 0f);
-                DrawLine(lastPoint, firstMap, "AP_NavLine_Loop", true);
+                Logger.LogError($"[RefreshNavVisuals] Error: {ex}");
+                IsBroken = true;
             }
         }
 
@@ -1401,20 +1467,28 @@ namespace NOAutopilot
 
         private void OnSceneUnloaded(Scene scene)
         {
-            if (!string.Equals(scene.name, "GameWorld", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                APData.Enabled = false;
-                APData.GCASActive = false;
-                APData.LocalAircraft = null;
-                APData.PlayerRB = null;
-                APData.PlayerTransform = null;
-                APData.LocalPilot = null;
-                APData.LocalWeaponManager = null;
+                if (!string.Equals(scene.name, "GameWorld", StringComparison.OrdinalIgnoreCase))
+                {
+                    APData.Enabled = false;
+                    APData.GCASActive = false;
+                    APData.LocalAircraft = null;
+                    APData.PlayerRB = null;
+                    APData.PlayerTransform = null;
+                    APData.LocalPilot = null;
+                    APData.LocalWeaponManager = null;
 
-                APData.NavQueue.Clear();
-                foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
-                APData.NavVisuals.Clear();
-                CleanUpFBW();
+                    APData.NavQueue.Clear();
+                    foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
+                    APData.NavVisuals.Clear();
+                    CleanUpFBW();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"[OnSceneUnloaded] Error: {ex}");
+                IsBroken = true;
             }
         }
 
@@ -1627,6 +1701,11 @@ namespace NOAutopilot
         public static List<Component> LocalLandingGears = [];
         public static bool IsOnGround = false;
 
+        // ALS
+        public static bool ALSActive = false;
+        public static string ALSStatusText = "";
+        public static Color ALSStatusColor = Color.white;
+
         public static void Reset()
         {
             Enabled = false;
@@ -1664,6 +1743,9 @@ namespace NOAutopilot
             IsConscious = true;
             LocalLandingGears.Clear();
             IsOnGround = false;
+            ALSActive = false;
+            ALSStatusText = "";
+            ALSStatusColor = Color.white;
 
             NavQueue.Clear();
             foreach (var obj in NavVisuals)
@@ -1863,6 +1945,7 @@ namespace NOAutopilot
                 if (APData.CurrentRoll > 180f) APData.CurrentRoll -= 360f;
                 var inputObj = __instance.controlInputs;
                 if (inputObj == null) return;
+
                 float stickPitch = 0f;
                 float stickRoll = 0f;
                 float currentThrottle = 0f;
@@ -2109,6 +2192,7 @@ namespace NOAutopilot
                                 apStateBeforeGCAS = APData.Enabled;
                                 APData.Enabled = true;
                                 APData.GCASActive = true;
+                                APData.ALSActive = false;
                                 APData.TargetRoll = 0f;
                                 if (APData.FBWDisabled)
                                 {
@@ -2314,7 +2398,7 @@ namespace NOAutopilot
                 if (APData.Enabled || APData.GCASActive)
                 {
                     // keys
-                    if (!pilotPitch && !pilotRoll && !APData.GCASActive)
+                    if (!APData.ALSActive)
                     {
                         float fpsRef = 60f;
                         float aStep = Plugin.AltStep.Value * fpsRef * dt;
@@ -2443,10 +2527,6 @@ namespace NOAutopilot
 
                                     activeTargetRoll = Mathf.Clamp(bankReq, -finalBankLimit, finalBankLimit);
                                 }
-                            }
-                            else if (APData.GCASActive)
-                            {
-                                activeTargetRoll = 0f;
                             }
 
                             float rollError = Mathf.DeltaAngle(APData.CurrentRoll, activeTargetRoll);
@@ -2622,6 +2702,170 @@ namespace NOAutopilot
         }
     }
 
+    [HarmonyPatch(typeof(PilotPlayerState), "EnterState")]
+    internal class FixGLOCLeakPatch
+    {
+        static void Prefix(Pilot pilot)
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
+            try
+            {
+                var existingGloc = pilot.gameObject.GetComponent<GLOC>();
+                if (existingGloc != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(existingGloc);
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[FixGLOCLeakPatch] Error: {ex}");
+                Plugin.IsBroken = true;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(AIPilotLandingState), "FixedUpdateState")]
+    internal class UpdateHUDAutolandPatch
+    {
+        static void Postfix(AIPilotLandingState __instance)
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
+            if (!APData.ALSActive) return;
+            if (__instance.pilot != APData.LocalPilot) return;
+            try
+            {
+                if (__instance.runwayUsage.Runway == null)
+                {
+                    APData.ALSStatusText = "ALS: SEARCHING";
+                    APData.ALSStatusColor = Color.yellow;
+                }
+                else if (__instance.touchedDown)
+                {
+                    APData.ALSStatusText = "ALS: LANDED";
+                    APData.ALSStatusColor = Color.cyan;
+                }
+                else
+                {
+                    string baseName = __instance.runwayUsage.Runway.airbase.name;
+                    APData.ALSStatusText = $"ALS: {baseName.ToUpper()}";
+                    APData.ALSStatusColor = Color.green;
+                }
+
+                Aircraft ac = __instance.pilot.aircraft;
+                Rigidbody rb = __instance.pilot.GetRB();
+
+                float airspeed = rb.velocity.magnitude;
+                float altitude = Mathf.Max(__instance.pilot.transform.position.GlobalY() - ac.definition.spawnOffset.y, 0f);
+
+                float currentG = __instance.pilot.gForce;
+
+                float climbRate = Vector3.Dot(rb.velocity, Vector3.up);
+
+                float angleOnAxis = TargetCalc.GetAngleOnAxis(rb.transform.forward, rb.velocity, rb.transform.right);
+
+                float radarAlt = Mathf.Min(ac.radarAlt, altitude);
+
+                SceneSingleton<FlightHud>.i.SetHUDInfo(
+                    ac,
+                    airspeed,
+                    altitude,
+                    radarAlt,
+                    __instance.pilot.GetAccel(),
+                    currentG,
+                    climbRate,
+                    angleOnAxis,
+                    rb.velocity,
+                    ac.GetInputs()
+                );
+
+                if (SceneSingleton<CombatHUD>.i.aircraft == null)
+                {
+                    SceneSingleton<CombatHUD>.i.aircraft = ac;
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[UpdateHUDAutolandPatch] Error: {ex}");
+                Plugin.IsBroken = true;
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Airbase), "RpcRegisterUsage")]
+    internal class SuppressAirbaseRpcPatch
+    {
+        static bool Prefix(Aircraft aircraft)
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
+            try
+            {
+                if (APData.ALSActive && aircraft == APData.LocalAircraft)
+                {
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[SuppressAirbaseRpcPatch] Error: {ex}");
+                Plugin.IsBroken = true;
+            }
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(AIPilotLandingState), "CheckApproachParameters")]
+    internal class ALSLandingPatch
+    {
+        static bool Prefix(AIPilotLandingState __instance)
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
+            try
+            {
+                if (__instance.pilot == APData.LocalPilot)
+                {
+                    __instance.SearchBestAirbase();
+
+                    if (__instance.runwayUsage.Runway == null)
+                    {
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[ALSLandingPatch] Error: {ex}");
+                Plugin.IsBroken = true;
+            }
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(FlightHud), "EnableCanvas")]
+    internal class KeepFlightHudAlivePatch
+    {
+        static bool Prefix(bool enable)
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
+            try
+            {
+                if (!enable && APData.ALSActive)
+                {
+                    var camManager = SceneSingleton<CameraStateManager>.i;
+                    if (camManager != null && camManager.currentState == camManager.cockpitState)
+                    {
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[KeepFlightHudAlive] Error: {ex}");
+                Plugin.IsBroken = true;
+            }
+            return true;
+        }
+    }
+
     [HarmonyPatch(typeof(FlightHud), "Update")]
     internal class HUDVisualsPatch
     {
@@ -2643,6 +2887,7 @@ namespace NOAutopilot
         private static float _lastStringUpdate = 0f;
         private static FuelGauge _cachedFuelGauge;
         private static Text _cachedRefLabel;
+        private static Vector3 _fuelLabelPosOffset;
         private static readonly StringBuilder _sbHud = new(1024);
         private static GameObject _lastVehicleChecked;
 
@@ -2708,6 +2953,7 @@ namespace NOAutopilot
                     if (_cachedFuelGauge != null)
                     {
                         _cachedRefLabel = _cachedFuelGauge.fuelLabel;
+                        _fuelLabelPosOffset = __instance.GetHUDCenter().InverseTransformPoint(_cachedRefLabel.transform.position);
                     }
                 }
 
@@ -2715,8 +2961,9 @@ namespace NOAutopilot
 
                 if (!infoOverlayObj)
                 {
-                    infoOverlayObj = UnityEngine.Object.Instantiate(_cachedRefLabel.gameObject, _cachedRefLabel.transform.parent);
+                    infoOverlayObj = UnityEngine.Object.Instantiate(_cachedRefLabel.gameObject, __instance.GetHUDCenter());
                     infoOverlayObj.name = "AP_CombinedOverlay";
+                    infoOverlayObj.transform.localPosition = _fuelLabelPosOffset;
                     overlayText = infoOverlayObj.GetComponent<Text>();
                     overlayText.resizeTextForBestFit = false;
                     overlayText.supportRichText = true;
@@ -2739,7 +2986,7 @@ namespace NOAutopilot
                 Vector3 refLocalPos = _cachedRefLabel.transform.localPosition;
                 float finalX = Plugin.OverlayOffsetX.Value * scaleRatio;
                 float finalY = Plugin.OverlayOffsetY.Value * scaleRatio;
-                infoOverlayObj.transform.localPosition = refLocalPos + new Vector3(finalX, finalY, 0);
+                infoOverlayObj.transform.localPosition = _fuelLabelPosOffset + new Vector3(finalX, finalY, 0);
 
                 Aircraft aircraft = APData.LocalAircraft;
                 if (aircraft != null)
@@ -2911,6 +3158,12 @@ namespace NOAutopilot
                         {
                             _sbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">FBW OFF</color>");
                         }
+
+                        if (APData.ALSActive || !string.IsNullOrEmpty(APData.ALSStatusText))
+                        {
+                            string hexColor = ColorUtility.ToHtmlStringRGBA(APData.ALSStatusColor);
+                            _sbHud.Append($"\n<color=#{hexColor}>{APData.ALSStatusText}</color>");
+                        }
                         overlayText.text = _sbHud.ToString();
                     }
                 }
@@ -2919,7 +3172,7 @@ namespace NOAutopilot
                 {
                     if (gcasLeftObj == null)
                     {
-                        Transform hudCenter = _cachedRefLabel.transform.parent;
+                        Transform hudCenter = __instance.GetHUDCenter();
 
                         GameObject CreateObj(string name, string txt)
                         {
@@ -3008,45 +3261,53 @@ namespace NOAutopilot
         public static void Reset() { }
         static void Postfix(DynamicMap __instance)
         {
-            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
-            if (__instance == null || !DynamicMap.mapMaximized || !Input.GetMouseButtonDown(1)) return;
-
-            if (!__instance.TryGetCursorCoordinates(out var clickedGlobalPos)) return;
-
-            if (__instance.selectedIcons != null && __instance.selectedIcons.Count > 0)
+            try
             {
-                if (__instance.selectedIcons[0] is UnitMapIcon unitIcon)
+                if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
+                if (__instance == null || !DynamicMap.mapMaximized || !Input.GetMouseButtonDown(1)) return;
+
+                if (!__instance.TryGetCursorCoordinates(out var clickedGlobalPos)) return;
+
+                if (__instance.selectedIcons != null && __instance.selectedIcons.Count > 0)
                 {
-                    if (unitIcon.unit != null)
+                    if (__instance.selectedIcons[0] is UnitMapIcon unitIcon)
                     {
-                        if (DynamicMap.GetFactionMode(unitIcon.unit.NetworkHQ, false) == FactionMode.Friendly
-                            && unitIcon.unit is not Building)
+                        if (unitIcon.unit != null)
                         {
-                            return; // there was friendly unit selected as first unit
+                            if (DynamicMap.GetFactionMode(unitIcon.unit.NetworkHQ, false) == FactionMode.Friendly
+                                && unitIcon.unit is not Building)
+                            {
+                                return; // there was friendly unit selected as first unit
+                            }
                         }
                     }
                 }
-            }
 
-            if (APData.LocalAircraft != null)
-            {
-                if (!Input.GetKey(KeyCode.LeftShift))
+                if (APData.LocalAircraft != null)
                 {
-                    APData.NavQueue.Clear();
-                }
-
-                APData.NavQueue.Add(clickedGlobalPos.AsVector3());
-                if (Plugin.EnableNavonWP.Value)
-                {
-                    APData.NavEnabled = true;
-                    float currentTargetRoll = APData.TargetRoll;
-                    if (currentTargetRoll == -999f || currentTargetRoll == 0f)
+                    if (!Input.GetKey(KeyCode.LeftShift))
                     {
-                        APData.TargetRoll = Plugin.DefaultCRLimit.Value;
+                        APData.NavQueue.Clear();
                     }
-                    Plugin.SyncMenuValues();
+
+                    APData.NavQueue.Add(clickedGlobalPos.AsVector3());
+                    if (Plugin.EnableNavonWP.Value)
+                    {
+                        APData.NavEnabled = true;
+                        float currentTargetRoll = APData.TargetRoll;
+                        if (currentTargetRoll == -999f || currentTargetRoll == 0f)
+                        {
+                            APData.TargetRoll = Plugin.DefaultCRLimit.Value;
+                        }
+                        Plugin.SyncMenuValues();
+                    }
+                    Plugin.RefreshNavVisuals();
                 }
-                Plugin.RefreshNavVisuals();
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[MapInteractionPatch] Error: {ex}");
+                Plugin.IsBroken = true;
             }
         }
     }
@@ -3057,41 +3318,50 @@ namespace NOAutopilot
         public static void Reset() { }
         static void Postfix()
         {
-            if (APData.NavVisuals.Count == 0 || APData.PlayerRB == null) return;
-
-            var map = SceneSingleton<DynamicMap>.i;
-            if (map == null || map.mapImage == null) return;
-
-            float zoom = map.mapImage.transform.localScale.x;
-            float invZoom = 1f / zoom;
-            float factor = 900f / map.mapDimension;
-
-            GameObject playerLine = null;
-
-            foreach (var obj in APData.NavVisuals)
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
+            try
             {
-                if (obj == null) continue;
-                if (obj.name == "AP_NavMarker") obj.transform.localScale = Vector3.one * invZoom;
-                else
+                if (APData.NavVisuals.Count == 0 || APData.PlayerRB == null) return;
+
+                var map = SceneSingleton<DynamicMap>.i;
+                if (map == null || map.mapImage == null) return;
+
+                float zoom = map.mapImage.transform.localScale.x;
+                float invZoom = 1f / zoom;
+                float factor = 900f / map.mapDimension;
+
+                GameObject playerLine = null;
+
+                foreach (var obj in APData.NavVisuals)
                 {
-                    obj.transform.localScale = new Vector3(4f * invZoom, obj.transform.localScale.y, 4f * invZoom);
-                    if (obj.name == "AP_NavLine_Player") playerLine = obj;
+                    if (obj == null) continue;
+                    if (obj.name == "AP_NavMarker") obj.transform.localScale = Vector3.one * invZoom;
+                    else
+                    {
+                        obj.transform.localScale = new Vector3(4f * invZoom, obj.transform.localScale.y, 4f * invZoom);
+                        if (obj.name == "AP_NavLine_Player") playerLine = obj;
+                    }
+                }
+
+                if (playerLine != null && APData.NavQueue.Count > 0)
+                {
+                    Vector3 pG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+                    Vector3 pMap = new(pG.x * factor, pG.z * factor, 0f);
+                    Vector3 targetMap = new(APData.NavQueue[0].x * factor, APData.NavQueue[0].z * factor, 0f);
+
+                    playerLine.transform.localPosition = targetMap;
+
+                    float angle = -Mathf.Atan2(targetMap.x - pMap.x, targetMap.y - pMap.y) * Mathf.Rad2Deg + 180f;
+
+                    playerLine.transform.localEulerAngles = new Vector3(0, 0, angle);
+
+                    playerLine.transform.localScale = new Vector3(4f * invZoom, Vector3.Distance(pMap, targetMap), 4f * invZoom);
                 }
             }
-
-            if (playerLine != null && APData.NavQueue.Count > 0)
+            catch (Exception ex)
             {
-                Vector3 pG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
-                Vector3 pMap = new(pG.x * factor, pG.z * factor, 0f);
-                Vector3 targetMap = new(APData.NavQueue[0].x * factor, APData.NavQueue[0].z * factor, 0f);
-
-                playerLine.transform.localPosition = targetMap;
-
-                float angle = -Mathf.Atan2(targetMap.x - pMap.x, targetMap.y - pMap.y) * Mathf.Rad2Deg + 180f;
-
-                playerLine.transform.localEulerAngles = new Vector3(0, 0, angle);
-
-                playerLine.transform.localScale = new Vector3(4f * invZoom, Vector3.Distance(pMap, targetMap), 4f * invZoom);
+                Plugin.Logger.LogError($"[MapWaypointPatch] Error: {ex}");
+                Plugin.IsBroken = true;
             }
         }
     }

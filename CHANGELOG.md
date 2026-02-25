@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- added autoland
+- 7z instead of zip
+
 ## [4.16.1] - 2026-02-13
 
 ### Added

@@ -1,6 +1,6 @@
 # Nuclear Option Autopilot Mod
 
-Adds autopilot and some other features. Clientside and multiplayer compatible. 
+Adds autopilot and some other features. Clientside and multiplayer compatible.
 
 It would be best to make sure the host is ok with you using the mod, especially in PVP.
 
@@ -16,11 +16,14 @@ As of 2026-02-02, Talon Two allows the use of this mod on their servers, and Gra
 
 [Yellowcake](https://github.com/NaghDiefallah/Yellowcake)
 
+If you are on linux, add override in steam launch options: `WINEDLLOVERRIDES="winhttp=n,b" %command%`.
+~~Wondering whether or not you're using linux? Then just ignore this because you're not.~~
+
 ### Manual installation
 
 1. Install BepInEx 5.
    - [their github has install instructions](https://github.com/BepInEx/BepInEx/)
-   - if you are on linux, add override in steam launch options: WINEDLLOVERRIDES="winhttp=n,b" %command%
+   - if you are on linux, add override in steam launch options: `WINEDLLOVERRIDES="winhttp=n,b" %command%`
    - run the game, then quit
    - edit BepInEx.cfg in BepInEx/config
 
@@ -34,8 +37,8 @@ As of 2026-02-02, Talon Two allows the use of this mod on their servers, and Gra
 2. (Recommended) Install BepInEx Configuration Manager. It is useful for editing settings ingame.
    - download [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager)
    - place extracted folder in BepInEx/plugins. (make sure your folder structure is like the image below)
-3. Download  `com.qwerty1423.NOAutopilot-{version}.zip` from releases (to the right if you are on pc) and extract the dll.
-4. Place the dll into your `BepInEx/plugins/` folder.
+3. Download  `com.qwerty1423.NOAutopilot-{version}.7z` from releases (to the right if you are on pc) and extract the `no-autopilot-mod` folder.
+4. Place the extracted `no-autopilot-mod` folder into your `BepInEx/plugins/` folder.
 5. Run the game again to generate the config file (for the mod). The mod should work at this point.
 
 folder structure after install (the names are wrong now but the locations are the same):
@@ -102,6 +105,7 @@ In order of implementation, earliest first
 - waypoints
 - minor map improvements
 - singleplayer fbw disabler
+- autoland
   
 ### features not in the mod (yet?)
 
@@ -110,13 +114,13 @@ In approximate likelihood of implementation order descending.
 - yaw control
 - nap of the earth flying
 - proper helicopter support
-- auto take-off and landing
+- auto take-off
 
 ## Autopilot
 
 <https://github.com/user-attachments/assets/3d2eaeaa-b810-4353-a4b6-90a1107e3cb9>
 
-Autopilot controls roll and pitch. (helicopters somehow work, but probably require small ascent/descent rate limits). Ascent/descent rate limits and target altitude can be configured with keyboard while flying. Target bank angle can be set so that plane turns in a circle. Should be useful for Medusa, for easier loitering. Large stick inputs will disengage the autopilot. 
+Autopilot controls roll and pitch. (helicopters somehow work, but probably require small ascent/descent rate limits). Ascent/descent rate limits and target altitude can be configured with keyboard while flying. Target bank angle can be set so that plane turns in a circle. Should be useful for Medusa, for easier loitering. Large stick inputs will disengage the autopilot.
 
 Displays current settings on the HUD. There is also a GUI that opens with F8 key by default.
 
@@ -143,6 +147,10 @@ Video is old, so the chevron indicator is missing.
 <https://github.com/user-attachments/assets/1ac109a4-bc84-49ed-8141-55bc9a217607>
 
 Right click / shift + right click on the map to make a path, then press equals (to enable autopilot) and F8 (to bring up the UI). Click the nav mode toggle to enable nav mode. Hover mouse over the UI for tooltips. Setting waypoints will work as long as you don't create any yellow unit path lines, so as long as the first unit you have selected is not commandable then you can make a waypoint.
+
+## ALS
+
+default shortcut is `left ctrl` + `=`. Your plane will attempt to land itself. uses the logic that AI planes use to land. only works for planes.
 
 ## Building from source
 

@@ -1158,7 +1158,7 @@ namespace NOAutopilot
                 GUI.FocusControl(null);
             }
             GUI.backgroundColor = APData.ALSActive ? Color.green : Color.white;
-            if (GUILayout.Button(new GUIContent(APData.ALSActive ? "ALS" : "ALS-", "Auto Carrier Landing System"), _styleButton))
+            if (GUILayout.Button(new GUIContent(APData.ALSActive ? "ALS" : "ALS-", "autoland"), _styleButton))
             {
                 APData.ALSActive = !APData.ALSActive;
                 if (!APData.ALSActive)

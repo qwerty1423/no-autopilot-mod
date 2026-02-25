@@ -1756,32 +1756,6 @@ namespace NOAutopilot
         }
     }
 
-    [HarmonyPatch(typeof(FlightHud), "EnableCanvas")]
-    internal class KeepFlightHudAlivePatch
-    {
-        static bool Prefix(bool enable)
-        {
-            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
-            try
-            {
-                if (!enable && APData.ALSActive)
-                {
-                    var camManager = SceneSingleton<CameraStateManager>.i;
-                    if (camManager != null && camManager.currentState == camManager.cockpitState)
-                    {
-                        return false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Plugin.Logger.LogError($"[KeepFlightHudAlive] Error: {ex}");
-                Plugin.IsBroken = true;
-            }
-            return true;
-        }
-    }
-
     [HarmonyPatch(typeof(FlightHud), "SetHUDInfo")]
     internal class HudPatch
     {
@@ -2728,6 +2702,29 @@ namespace NOAutopilot
         }
     }
 
+    [HarmonyPatch(typeof(PilotPlayerState), "LeaveState")]
+    internal class PreventLeaveStateCleanup
+    {
+        static bool Prefix(PilotPlayerState __instance)
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
+            try
+            {
+                if (APData.ALSActive)
+                {
+                    __instance.gloc?.ResetGLOC();
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[PreventLeaveStateCleanup] Error: {ex}");
+                Plugin.IsBroken = true;
+            }
+            return true;
+        }
+    }
+
     [HarmonyPatch(typeof(PilotPlayerState), "EnterState")]
     internal class FixGLOCLeakPatch
     {
@@ -2861,6 +2858,32 @@ namespace NOAutopilot
             catch (Exception ex)
             {
                 Plugin.Logger.LogError($"[ALSLandingPatch] Error: {ex}");
+                Plugin.IsBroken = true;
+            }
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(FlightHud), "EnableCanvas")]
+    internal class KeepFlightHudAlivePatch
+    {
+        static bool Prefix(bool enable)
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
+            try
+            {
+                if (!enable && APData.ALSActive)
+                {
+                    var camManager = SceneSingleton<CameraStateManager>.i;
+                    if (camManager != null && camManager.currentState == camManager.cockpitState)
+                    {
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[KeepFlightHudAlive] Error: {ex}");
                 Plugin.IsBroken = true;
             }
             return true;

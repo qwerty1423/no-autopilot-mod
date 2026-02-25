@@ -184,46 +184,6 @@ namespace NOAutopilot
         {
             Logger = base.Logger;
 
-            AssetsDir = "";
-            string[] searchBases = [Paths.PluginPath, Path.Combine(Paths.BepInExRootPath, "scripts")];
-
-            foreach (var basePath in searchBases)
-            {
-                if (!Directory.Exists(basePath)) continue;
-
-                string[] foundDirs = Directory.GetDirectories(basePath, "Assets", SearchOption.AllDirectories);
-                foreach (var dir in foundDirs)
-                {
-                    if (File.Exists(Path.Combine(dir, "Newtonsoft.Json.dll")) || File.Exists(Path.Combine(dir, "acls_config.json")))
-                    {
-                        AssetsDir = dir;
-                        break;
-                    }
-                }
-                if (!string.IsNullOrEmpty(AssetsDir)) break;
-            }
-
-            if (string.IsNullOrEmpty(AssetsDir))
-            {
-                AssetsDir = Path.Combine(Paths.PluginPath, "no-autopilot-mod", "Assets");
-                Directory.CreateDirectory(AssetsDir);
-            }
-
-            _resolveEventHandler = (sender, args) =>
-            {
-                string assemblyName = new AssemblyName(args.Name).Name;
-                if (assemblyName == "Newtonsoft.Json")
-                {
-                    string resourcePath = Path.Combine(AssetsDir, "Newtonsoft.Json.dll");
-                    if (File.Exists(resourcePath))
-                    {
-                        return Assembly.LoadFrom(resourcePath);
-                    }
-                }
-                return null;
-            };
-            AppDomain.CurrentDomain.AssemblyResolve += _resolveEventHandler;
-
             // Visuals
             ColorAPOn = Config.Bind("Visuals - Colors", "1. Color AP On", "#00FF00", "Green");
             ColorInfo = Config.Bind("Visuals - Colors", "2. Color Info", "#ffffff80", "color for override, gcas off");
@@ -424,7 +384,6 @@ namespace NOAutopilot
             harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
             try
             {
-                ACLS.Config.LoadSingleton(AssetsDir);
                 harmony.PatchAll();
                 SceneManager.sceneUnloaded += OnSceneUnloaded;
                 Logger.LogInfo($"v{Version} loaded.");
@@ -454,7 +413,6 @@ namespace NOAutopilot
             MapInteractionPatch.Reset();
             MapWaypointPatch.Reset();
             RewiredConfigManager.Reset();
-            ACLS.AirbaseOverlayManager.Reset();
             if (APData.NavVisuals != null)
             {
                 foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
@@ -580,11 +538,10 @@ namespace NOAutopilot
 
                 if (InputHelper.IsDown(ToggleALSRW) || ToggleALSKey.Value.IsDown())
                 {
-                    APData.ACLSActive = !APData.ACLSActive;
-                    if (!APData.ACLSActive)
+                    APData.ALSActive = !APData.ALSActive;
+                    if (!APData.ALSActive)
                     {
-                        APData.ACLSStatusText = "";
-                        APData.IsHooked = false;
+                        APData.ALSStatusText = "";
 
                         if (APData.LocalPilot != null && APData.LocalPilot.playerState != null)
                         {
@@ -593,7 +550,7 @@ namespace NOAutopilot
                     }
                     else
                     {
-                        APData.ACLSStatusText = "ALS: AUTO";
+                        APData.ALSStatusText = "ALS: AUTO";
 
                         APData.LocalPilot?.SwitchState(new AIPilotLandingState());
                     }
@@ -1195,14 +1152,13 @@ namespace NOAutopilot
                 if (!APData.GCASEnabled) APData.GCASActive = false;
                 GUI.FocusControl(null);
             }
-            GUI.backgroundColor = APData.ACLSActive ? Color.green : Color.white;
-            if (GUILayout.Button(new GUIContent(APData.ACLSActive ? "ALS" : "ALS-", "Auto Carrier Landing System"), _styleButton))
+            GUI.backgroundColor = APData.ALSActive ? Color.green : Color.white;
+            if (GUILayout.Button(new GUIContent(APData.ALSActive ? "ALS" : "ALS-", "Auto Carrier Landing System"), _styleButton))
             {
-                APData.ACLSActive = !APData.ACLSActive;
-                if (!APData.ACLSActive)
+                APData.ALSActive = !APData.ALSActive;
+                if (!APData.ALSActive)
                 {
-                    APData.ACLSStatusText = "";
-                    APData.IsHooked = false;
+                    APData.ALSStatusText = "";
 
                     if (APData.LocalPilot != null && APData.LocalPilot.playerState != null)
                     {
@@ -1211,7 +1167,7 @@ namespace NOAutopilot
                 }
                 else
                 {
-                    APData.ACLSStatusText = "ALS: AUTO";
+                    APData.ALSStatusText = "ALS: AUTO";
 
                     APData.LocalPilot?.SwitchState(new AIPilotLandingState());
                 }
@@ -1749,19 +1705,10 @@ namespace NOAutopilot
         public static List<Component> LocalLandingGears = [];
         public static bool IsOnGround = false;
 
-        // ACLS
-        public static bool ACLSActive = false;
-        public static bool IsHooked = false;
-        public static string ACLSStatusText = "";
-        public static Color ACLSStatusColor = Color.white;
-        public static Vector3 ProgradeVector;
-        public static Quaternion AircraftRotation;
-        public static Vector3 NoseVector;
-        public static float AirSpeed;
-        public static AirbaseOverlay LocalAirbaseOverlay;
-        public static Airbase.Runway.RunwayUsage? CurrentRunwayUsage = null;
-        public static Airbase CurrentAirbase = null;
-        public static bool ReachedApproachPoint = false;
+        // ALS
+        public static bool ALSActive = false;
+        public static string ALSStatusText = "";
+        public static Color ALSStatusColor = Color.white;
 
         public static void Reset()
         {
@@ -1800,14 +1747,9 @@ namespace NOAutopilot
             IsConscious = true;
             LocalLandingGears.Clear();
             IsOnGround = false;
-            ACLSActive = false;
-            IsHooked = false;
-            ACLSStatusText = "";
-            ACLSStatusColor = Color.white;
-            LocalAirbaseOverlay = null;
-            CurrentRunwayUsage = null;
-            CurrentAirbase = null;
-            ReachedApproachPoint = false;
+            ALSActive = false;
+            ALSStatusText = "";
+            ALSStatusColor = Color.white;
 
             NavQueue.Clear();
             foreach (var obj in NavVisuals)
@@ -1848,7 +1790,6 @@ namespace NOAutopilot
                 {
                     lastVehicleObj = v.gameObject;
                     APData.Reset();
-                    APData.LocalAirbaseOverlay = UnityEngine.Object.FindObjectOfType<AirbaseOverlay>(true);
                     APData.LocalAircraft = foundAircraft;
                     APData.PlayerTransform = v.transform;
                     APData.PlayerRB = v.GetComponent<Rigidbody>();
@@ -1872,9 +1813,6 @@ namespace NOAutopilot
 
                     Plugin.SyncMenuValues();
                     Plugin.CleanUpFBW();
-
-                    ACLS.Config.SelectForAircraft(foundAircraft);
-                    ControlOverridePatch.InitializeACLSPIDs();
                 }
             }
             catch (Exception ex)
@@ -1895,12 +1833,6 @@ namespace NOAutopilot
         private static readonly PIDController pidGCAS = new();
         private static readonly PIDController pidSpd = new();
         private static readonly PIDController pidCrs = new();
-
-        private static ACLS.PIDController aclsRollController;
-        private static ACLS.PIDController aclsYawController;
-        private static ACLS.PIDController aclsVSController;
-        private static ACLS.PIDController aclsPitchController;
-        private static ACLS.PIDController aclsThrottleController;
 
         private static float lastSpdMeasurement = 0f;
 
@@ -1968,12 +1900,6 @@ namespace NOAutopilot
             isJammerHoldingTrigger = false;
 
             _disengageTimer = 0f;
-
-            aclsRollController = null;
-            aclsYawController = null;
-            aclsVSController = null;
-            aclsPitchController = null;
-            aclsThrottleController = null;
         }
 
         private static void ResetIntegrators(float inputThrottle)
@@ -2001,35 +1927,6 @@ namespace NOAutopilot
             pitchSleepUntil = rollSleepUntil = spdSleepUntil = 0f;
         }
 
-        public static void InitializeACLSPIDs()
-        {
-            try
-            {
-                if (ACLS.Config.singleton == null) ACLS.Config.LoadSingleton();
-                var cfg = ACLS.Config.singleton;
-
-                aclsRollController = ACLS.PIDController.FromConfig(0f, cfg.RollController);
-                aclsYawController = ACLS.PIDController.FromConfig(0f, cfg.YawController);
-                aclsVSController = ACLS.PIDController.FromConfig(0f, cfg.VerticalSpeedController);
-                aclsPitchController = ACLS.PIDController.FromConfig(0f, cfg.PitchController);
-                aclsThrottleController = ACLS.PIDController.FromConfig(cfg.LandingSpeed, cfg.ThrottleController);
-
-                aclsVSController.MinOutput = -30f;
-                aclsVSController.MaxOutput = 30f;
-
-                aclsRollController.Reset();
-                aclsYawController.Reset();
-                aclsVSController.Reset();
-                aclsPitchController.Reset();
-                aclsThrottleController.Reset();
-            }
-            catch (Exception ex)
-            {
-                Plugin.Logger.LogError(ex);
-                Plugin.IsBroken = true;
-            }
-        }
-
         private static void Postfix(PilotPlayerState __instance)
         {
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
@@ -2053,18 +1950,6 @@ namespace NOAutopilot
                 var inputObj = __instance.controlInputs;
                 if (inputObj == null) return;
 
-                if (APData.ACLSActive)
-                {
-                    if (APData.LocalAirbaseOverlay != null)
-                    {
-                        ACLS.AirbaseOverlayManager.UpdateACLSData(APData.LocalAirbaseOverlay, APData.LocalAircraft);
-                    }
-                    else
-                    {
-                        APData.LocalAirbaseOverlay = UnityEngine.Object.FindObjectOfType<AirbaseOverlay>(true);
-                    }
-                }
-
                 float stickPitch = 0f;
                 float stickRoll = 0f;
                 float currentThrottle = 0f;
@@ -2078,11 +1963,6 @@ namespace NOAutopilot
                 Vector3 pUp = APData.PlayerTransform.up;
                 Vector3 pEuler = APData.PlayerTransform.eulerAngles;
                 Vector3 localAngVel = APData.PlayerTransform.InverseTransformDirection(APData.PlayerRB.angularVelocity);
-
-                APData.ProgradeVector = APData.PlayerRB.velocity;
-                APData.AircraftRotation = APData.PlayerRB.rotation;
-                APData.NoseVector = APData.AircraftRotation * Vector3.forward;
-                APData.AirSpeed = APData.PlayerRB.velocity.magnitude;
 
                 float dt = Mathf.Max(Time.deltaTime, 0.0001f);
                 float noiseT = Time.time * Plugin.RandomSpeed.Value;
@@ -2316,7 +2196,7 @@ namespace NOAutopilot
                                 apStateBeforeGCAS = APData.Enabled;
                                 APData.Enabled = true;
                                 APData.GCASActive = true;
-                                APData.ACLSActive = false;
+                                APData.ALSActive = false;
                                 APData.TargetRoll = 0f;
                                 if (APData.FBWDisabled)
                                 {
@@ -2522,7 +2402,7 @@ namespace NOAutopilot
                 if (APData.Enabled || APData.GCASActive)
                 {
                     // keys
-                    if (!APData.ACLSActive)
+                    if (!APData.ALSActive)
                     {
                         float fpsRef = 60f;
                         float aStep = Plugin.AltStep.Value * fpsRef * dt;
@@ -2824,17 +2704,6 @@ namespace NOAutopilot
                 Plugin.IsBroken = true;
             }
         }
-
-        public static float CurrentTargetSpeed(float distance)
-        {
-            if (distance > ACLS.Config.singleton.SpeedTransitionDistance)
-            {
-                return ACLS.Config.singleton.CruisingSpeed;
-            }
-            return ACLS.Config.singleton.LandingSpeed +
-                   (ACLS.Config.singleton.CruisingSpeed - ACLS.Config.singleton.LandingSpeed) *
-                   (distance / ACLS.Config.singleton.SpeedTransitionDistance);
-        }
     }
 
     [HarmonyPatch(typeof(FlightHud), "Update")]
@@ -3130,10 +2999,10 @@ namespace NOAutopilot
                             _sbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">FBW OFF</color>");
                         }
 
-                        if (APData.ACLSActive || !string.IsNullOrEmpty(APData.ACLSStatusText))
+                        if (APData.ALSActive || !string.IsNullOrEmpty(APData.ALSStatusText))
                         {
-                            string hexColor = ColorUtility.ToHtmlStringRGBA(APData.ACLSStatusColor);
-                            _sbHud.Append($"\n<color=#{hexColor}>{APData.ACLSStatusText}</color>");
+                            string hexColor = ColorUtility.ToHtmlStringRGBA(APData.ALSStatusColor);
+                            _sbHud.Append($"\n<color=#{hexColor}>{APData.ALSStatusText}</color>");
                         }
                         overlayText.text = _sbHud.ToString();
                     }

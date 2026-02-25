@@ -2850,6 +2850,21 @@ namespace NOAutopilot
         }
     }
 
+    [HarmonyPatch(typeof(Airbase), "RpcRegisterUsage")]
+    internal class SuppressAirbasePatch
+    {
+        static bool Prefix()
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
+
+            if (APData.ALSActive)
+            {
+                return false;
+            }
+            return true;
+        }
+    }
+
     [HarmonyPatch(typeof(FlightHud), "Update")]
     internal class HUDVisualsPatch
     {

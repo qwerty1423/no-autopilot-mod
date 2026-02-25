@@ -1760,6 +1760,32 @@ namespace NOAutopilot
         }
     }
 
+    [HarmonyPatch(typeof(FlightHud), "EnableCanvas")]
+    internal class KeepFlightHudAlivePatch
+    {
+        static bool Prefix(bool enable)
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
+            try
+            {
+                if (!enable && APData.ALSActive)
+                {
+                    var camManager = SceneSingleton<CameraStateManager>.i;
+                    if (camManager != null && camManager.currentState == camManager.cockpitState)
+                    {
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[KeepFlightHudAlive] Error: {ex}");
+                Plugin.IsBroken = true;
+            }
+            return true;
+        }
+    }
+
     [HarmonyPatch(typeof(FlightHud), "SetHUDInfo")]
     internal class HudPatch
     {
@@ -3299,6 +3325,28 @@ namespace NOAutopilot
                 Plugin.Logger.LogError($"LoadMapState Error: {ex.Message}");
                 Plugin.IsBroken = true;
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(DynamicMap), "EnableCanvas")]
+    internal class KeepMapAlivePatch
+    {
+        static bool Prefix(bool enable)
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
+            try
+            {
+                if (!enable && APData.ALSActive && DynamicMap.mapMaximized)
+                {
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"KeepMapAlive Error: {ex.Message}");
+                Plugin.IsBroken = true;
+            }
+            return true;
         }
     }
 

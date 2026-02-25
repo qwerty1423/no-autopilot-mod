@@ -2851,7 +2851,7 @@ namespace NOAutopilot
     }
 
     [HarmonyPatch(typeof(Airbase), "RpcRegisterUsage")]
-    internal class SuppressAirbasePatch
+    internal class SuppressAirbaseRpcPatch
     {
         static bool Prefix()
         {

@@ -103,10 +103,9 @@
         Outputs="$(PluginDeployPath)/$(AssemblyName).dll;$(PluginDeployPath)/Assets/acls_config.json">
     <PropertyGroup>
       <DeployRoot>$(PluginDeployPath)</DeployRoot>
-      <DeployAssets>$(DeployRoot)/Assets</DeployAssets>
     </PropertyGroup>
-    <Exec Command="rsync -rcv &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(DeployRoot)/&quot;" />
-    <Exec Command="rsync -rcv &quot;$(OutputPath)$(AssemblyName).pdb&quot; &quot;$(DeployRoot)/&quot;" />
+    <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(DeployRoot)/&quot;" />
+    <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).pdb&quot; &quot;$(DeployRoot)/&quot;" />
   </Target>
 
   <Target Name="CreateZip" 
@@ -118,11 +117,10 @@
     <PropertyGroup>
       <StagingDir>$(OutputPath)Staging</StagingDir>
       <RootModFolder>$(StagingDir)/no-autopilot-mod</RootModFolder>
-      <AssetsFolder>$(RootModFolder)/Assets</AssetsFolder>
     </PropertyGroup>
 
-    <Exec Command="rsync -rcv &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(RootModFolder)/&quot;" />
-    <Exec Command="rsync -rcv &quot;LICENSE&quot; &quot;$(RootModFolder)/&quot;" />
+    <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(RootModFolder)/&quot;" />
+    <Exec Command="rsync -rcv --mkpath &quot;LICENSE&quot; &quot;$(RootModFolder)/&quot;" />
 
     <Exec Command="7z a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on &quot;../$(AssemblyName)-$(Version).7z&quot; &quot;no-autopilot-mod&quot;" WorkingDirectory="$(StagingDir)" />
     <RemoveDir Directories="$(StagingDir)" />

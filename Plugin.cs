@@ -2702,6 +2702,29 @@ namespace NOAutopilot
         }
     }
 
+    [HarmonyPatch(typeof(PilotPlayerState), "LeaveState")]
+    internal class PreventLeaveStateCleanup
+    {
+        static bool Prefix(PilotPlayerState __instance)
+        {
+            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
+            try
+            {
+                if (APData.ALSActive)
+                {
+                    __instance.gloc?.ResetGLOC();
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Logger.LogError($"[PreventLeaveStateCleanup] Error: {ex}");
+                Plugin.IsBroken = true;
+            }
+            return true;
+        }
+    }
+
     [HarmonyPatch(typeof(PilotPlayerState), "EnterState")]
     internal class FixGLOCLeakPatch
     {
@@ -2724,29 +2747,57 @@ namespace NOAutopilot
         }
     }
 
-    [HarmonyPatch(typeof(AIPilotLandingState), "FixedUpdateState")]
+    [HarmonyPatch]
     internal class UpdateHUDAutolandPatch
     {
-        static void Postfix(AIPilotLandingState __instance)
+        [HarmonyPatch(typeof(AIPilotLandingState), nameof(AIPilotLandingState.FixedUpdateState))]
+        [HarmonyPatch(typeof(AIPilotShortLandingState), nameof(AIPilotShortLandingState.FixedUpdateState))]
+        [HarmonyPatch(typeof(AIPilotTaxiState), nameof(AIPilotTaxiState.FixedUpdateState))]
+        static void Postfix(PilotBaseState __instance)
         {
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return;
             if (!APData.ALSActive) return;
             if (__instance.pilot != APData.LocalPilot) return;
+
             try
             {
-                if (__instance.runwayUsage.Runway == null)
+                string baseName = "UNKNOWN";
+                bool searching = false;
+                bool landed = false;
+                bool isTaxi = false;
+
+                if (__instance is AIPilotLandingState ls)
                 {
-                    APData.ALSStatusText = "ALS: SEARCHING";
+                    if (ls.runwayUsage.Runway == null) searching = true;
+                    else baseName = ls.runwayUsage.Runway.airbase.name;
+                    landed = ls.touchedDown;
+                }
+                else if (__instance is AIPilotShortLandingState sls)
+                {
+                    if (sls.runwayUsage.Runway == null) searching = true;
+                    else baseName = sls.runwayUsage.Runway.airbase.name;
+                    landed = sls.touchedDown;
+                }
+                else if (__instance is AIPilotTaxiState ts)
+                {
+                    if (ts.airbase == null) searching = true;
+                    else baseName = ts.airbase.name;
+                    landed = true;
+                    isTaxi = true;
+                }
+
+                if (searching)
+                {
+                    APData.ALSStatusText = "ALS: SEARCH";
                     APData.ALSStatusColor = ModUtils.GetColor(Plugin.ColorWarn.Value, Color.yellow);
                 }
-                else if (__instance.touchedDown)
+                else if (landed)
                 {
-                    APData.ALSStatusText = "ALS: LANDED";
+                    APData.ALSStatusText = isTaxi ? "ALS: TAXI" : "ALS: LANDED";
                     APData.ALSStatusColor = ModUtils.GetColor(Plugin.ColorInfo.Value, Color.gray);
                 }
                 else
                 {
-                    string baseName = __instance.runwayUsage.Runway.airbase.name;
                     APData.ALSStatusText = $"ALS: {baseName.ToUpper()}";
                     APData.ALSStatusColor = ModUtils.GetColor(Plugin.ColorAPOn.Value, Color.green);
                 }
@@ -2756,13 +2807,9 @@ namespace NOAutopilot
 
                 float airspeed = rb.velocity.magnitude;
                 float altitude = Mathf.Max(__instance.pilot.transform.position.GlobalY() - ac.definition.spawnOffset.y, 0f);
-
                 float currentG = __instance.pilot.gForce;
-
                 float climbRate = Vector3.Dot(rb.velocity, Vector3.up);
-
                 float angleOnAxis = TargetCalc.GetAngleOnAxis(rb.transform.forward, rb.velocity, rb.transform.right);
-
                 float radarAlt = Mathf.Min(ac.radarAlt, altitude);
 
                 SceneSingleton<FlightHud>.i.SetHUDInfo(
@@ -2778,9 +2825,10 @@ namespace NOAutopilot
                     ac.GetInputs()
                 );
 
-                if (SceneSingleton<CombatHUD>.i.aircraft == null)
+                if (SceneSingleton<CombatHUD>.i.aircraft != ac)
                 {
-                    SceneSingleton<CombatHUD>.i.aircraft = ac;
+                    SceneSingleton<CombatHUD>.i.SetAircraft(ac);
+                    FlightHud.EnableCanvas(true);
                 }
             }
             catch (Exception ex)
@@ -2794,14 +2842,20 @@ namespace NOAutopilot
     [HarmonyPatch(typeof(Airbase), "RpcRegisterUsage")]
     internal class SuppressAirbaseRpcPatch
     {
-        static bool Prefix(Aircraft aircraft)
+        static bool Prefix(Airbase __instance, Aircraft aircraft, bool isUsing, byte? landingRunway)
         {
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
             try
             {
                 if (APData.ALSActive && aircraft == APData.LocalAircraft)
                 {
-                    return false;
+                    if (__instance.IsClientOnly)
+                    {
+                        // this is fine right?
+                        __instance.CmdRegisterUsage(aircraft, isUsing, landingRunway);
+                        return false;
+                    }
+                    return true;
                 }
             }
             catch (Exception ex)
@@ -2813,21 +2867,27 @@ namespace NOAutopilot
         }
     }
 
-    [HarmonyPatch(typeof(AIPilotLandingState), "CheckApproachParameters")]
+    [HarmonyPatch]
     internal class ALSLandingPatch
     {
-        static bool Prefix(AIPilotLandingState __instance)
+        [HarmonyPatch(typeof(AIPilotLandingState), nameof(AIPilotLandingState.CheckApproachParameters))]
+        [HarmonyPatch(typeof(AIPilotShortLandingState), nameof(AIPilotShortLandingState.CheckApproachParameters))]
+        static bool Prefix(PilotBaseState __instance)
         {
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value) return true;
             try
             {
                 if (__instance.pilot == APData.LocalPilot)
                 {
-                    __instance.SearchBestAirbase();
-
-                    if (__instance.runwayUsage.Runway == null)
+                    if (__instance is AIPilotLandingState ls)
                     {
-                        return false;
+                        ls.SearchBestAirbase();
+                        if (ls.runwayUsage.Runway == null) return false;
+                    }
+                    else if (__instance is AIPilotShortLandingState sls)
+                    {
+                        sls.SearchBestAirbase();
+                        if (sls.runwayUsage.Runway == null) return false;
                     }
                 }
             }

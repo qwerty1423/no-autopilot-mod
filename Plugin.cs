@@ -1226,7 +1226,7 @@ namespace NOAutopilot
                 float distNext = Vector2.Distance(new Vector2(playerPos.x, playerPos.z), new Vector2(APData.NavQueue[0].x, APData.NavQueue[0].z));
 
                 // next wp row
-                string nextDistStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distNext), Plugin.DistShowUnit.Value);
+                string nextDistStr = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distNext), DistShowUnit.Value);
                 GUILayout.Label(new GUIContent($"Next: {nextDistStr}", "Distance to next wp"), _styleLabel);
 
                 float etaNext = distNext / APData.SpeedEma;
@@ -2737,18 +2737,18 @@ namespace NOAutopilot
                 if (__instance.runwayUsage.Runway == null)
                 {
                     APData.ALSStatusText = "ALS: SEARCHING";
-                    APData.ALSStatusColor = Color.yellow;
+                    APData.ALSStatusColor = ModUtils.GetColor(Plugin.ColorWarn.Value, Color.yellow);
                 }
                 else if (__instance.touchedDown)
                 {
                     APData.ALSStatusText = "ALS: LANDED";
-                    APData.ALSStatusColor = Color.cyan;
+                    APData.ALSStatusColor = ModUtils.GetColor(Plugin.ColorInfo.Value, Color.gray);
                 }
                 else
                 {
                     string baseName = __instance.runwayUsage.Runway.airbase.name;
                     APData.ALSStatusText = $"ALS: {baseName.ToUpper()}";
-                    APData.ALSStatusColor = Color.green;
+                    APData.ALSStatusColor = ModUtils.GetColor(Plugin.ColorAPOn.Value, Color.green);
                 }
 
                 Aircraft ac = __instance.pilot.aircraft;

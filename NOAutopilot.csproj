@@ -8,7 +8,7 @@
     </AssemblyCopyright>
     <Product>NOAutopilot</Product>
     <Description>no autopilot?</Description>
-    <Version>4.17.1</Version>
+    <Version>4.17.2</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>

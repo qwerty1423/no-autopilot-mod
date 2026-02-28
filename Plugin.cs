@@ -327,12 +327,12 @@ namespace NOAutopilot
             RollP = Config.Bind("Tuning - 4. Roll", "1. Roll P", 0.01f, "P");
             RollI = Config.Bind("Tuning - 4. Roll", "2. Roll I", 0.002f, "I");
             RollD = Config.Bind("Tuning - 4. Roll", "3. Roll D", 0.001f, "D");
-            RollILimit = Config.Bind("Tuning - Roll", "5. Roll I Limit", 1.0f, "Limit");
+            RollILimit = Config.Bind("Tuning - 4. Roll", "5. Roll I Limit", 1.0f, "Limit");
 
-            Conf_Spd_P = Config.Bind("Tuning - 4. Speed>Accel", "1. Speed P", 0.3f, "Speed Error -> Target Accel");
-            Conf_Spd_I = Config.Bind("Tuning - 4. Speed>Accel", "2. Speed I", 0.05f, "Hold speed");
-            Conf_Spd_D = Config.Bind("Tuning - 4. Speed>Accel", "3. Speed D", 0.25f, "Dampen");
-            Conf_Spd_ILimit = Config.Bind("Tuning - 4. Speed>Accel", "4. Speed I Limit", 100.0f, "Max integral");
+            Conf_Spd_P = Config.Bind("Tuning - 5. Speed>Accel", "1. Speed P", 0.3f, "Speed Error -> Target Accel");
+            Conf_Spd_I = Config.Bind("Tuning - 5. Speed>Accel", "2. Speed I", 0.05f, "Hold speed");
+            Conf_Spd_D = Config.Bind("Tuning - 5. Speed>Accel", "3. Speed D", 0.25f, "Dampen");
+            Conf_Spd_ILimit = Config.Bind("Tuning - 5. Speed>Accel", "4. Speed I Limit", 100.0f, "Max integral");
             Conf_Acc_P = Config.Bind("Tuning - 5. Accel>Throttle", "1. Accel P", 0.1f, "Target Accel -> Throttle");
             Conf_Acc_I = Config.Bind("Tuning - 5. Accel>Throttle", "2. Accel I", 0.0f, "Hold acceleration");
             Conf_Acc_D = Config.Bind("Tuning - 5. Accel>Throttle", "3. Accel D", 0.0f, "Dampen");

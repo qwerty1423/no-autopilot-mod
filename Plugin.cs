@@ -154,7 +154,7 @@ namespace NOAutopilot
 
         public static ConfigEntry<float> RollP, RollI, RollD, RollILimit;
 
-        public static ConfigEntry<float> Conf_Spd_P, Conf_Spd_I, Conf_Spd_D, Conf_Spd_ILimit, Conf_Spd_C;
+        public static ConfigEntry<float> Conf_Spd_P, Conf_Spd_I, Conf_Spd_D, Conf_Spd_ILimit;
         public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, ThrottleSlewRate;
 
         public static ConfigEntry<float> Conf_Crs_P, Conf_Crs_I, Conf_Crs_D, Conf_Crs_ILimit;
@@ -326,14 +326,13 @@ namespace NOAutopilot
             RollI = Config.Bind("Tuning - Roll", "2. Roll I", 0.002f, "I");
             RollD = Config.Bind("Tuning - Roll", "3. Roll D", 0.001f, "D");
             RollILimit = Config.Bind("Tuning - Roll", "5. Roll I Limit", 1.0f, "Limit");
-            Conf_Spd_P = Config.Bind("Tuning - 4. Speed", "1. Speed P", 0.05f, "Error -> Throttle");
-            Conf_Spd_I = Config.Bind("Tuning - 4. Speed", "2. Speed I", 0.01f, "Hold speed");
-            Conf_Spd_D = Config.Bind("Tuning - 4. Speed", "3. Speed D", 0.0f, "Dampen");
+            Conf_Spd_P = Config.Bind("Tuning - 4. Speed", "1. Speed P", 0.3f, "Error -> Throttle");
+            Conf_Spd_I = Config.Bind("Tuning - 4. Speed", "2. Speed I", 0.05f, "Hold speed");
+            Conf_Spd_D = Config.Bind("Tuning - 4. Speed", "3. Speed D", 0.25f, "Dampen");
             Conf_Spd_ILimit = Config.Bind("Tuning - 4. Speed", "4. Speed I Limit", 1.0f, "Max Throttle Trim");
-            Conf_Spd_C = Config.Bind("Tuning - 4. Speed", "3. Pitch compensation", 0.4f, "Multiplier for throttle pitch compensation");
             ThrottleMinLimit = Config.Bind("Tuning - 4. Speed", "6. Safe Min Throttle", 0.01f, "Minimum throttle when limiter is active (prevents Airbrake)");
             ThrottleMaxLimit = Config.Bind("Tuning - 4. Speed", "7. Safe Max Throttle", 0.89f, "Maximum throttle when limiter is active (prevents Afterburner)");
-            ThrottleSlewRate = Config.Bind("Tuning - 4. Speed", "8. Throttle Slew Rate Limit", 0.2f, "in unit of throttle bars per second");
+            ThrottleSlewRate = Config.Bind("Tuning - 4. Speed", "8. Throttle Slew Rate Limit", 9999.0f, "in unit of throttle bars per second");
             Conf_Crs_P = Config.Bind("Tuning - 5. Course", "1. Course P", 0.5f, "Course Error -> Bank Angle");
             Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 0.01f, "Correction");
             Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.15f, "Dampen");
@@ -2015,9 +2014,10 @@ namespace NOAutopilot
                 }
 
                 // can a plane have no pilot?
+                Vector3 pAccel = default;
                 if (APData.LocalPilot != null)
                 {
-                    Vector3 pAccel = APData.LocalPilot.GetAccel();
+                    pAccel = APData.LocalPilot.GetAccel();
                     currentG = Vector3.Dot(pAccel + Vector3.up, pUp);
 
                     Component pilotComp = APData.LocalPilot;
@@ -2374,17 +2374,18 @@ namespace NOAutopilot
                     float minT = APData.AllowExtremeThrottle ? 0f : Plugin.ThrottleMinLimit.Value;
                     float maxT = APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value;
 
+                    float forwardAccel = Vector3.Dot(pAccel, pForward);
                     float pidOutput = pidSpd.Evaluate(sErr, currentSpeed, dt,
                         Plugin.Conf_Spd_P.Value, Plugin.Conf_Spd_I.Value, Plugin.Conf_Spd_D.Value,
-                        maxT, true, null,
+                        maxT, false, -forwardAccel,
                         lastThrottleOut, 0.95f);
 
                     lastThrottleOut = pidOutput;
 
-                    float currentPitch = Mathf.Asin(pForward.y);
-                    float pitchWorkload = Mathf.Sin(currentPitch) * Plugin.Conf_Spd_C.Value;
+                    // float currentPitch = Mathf.Asin(pForward.y);
+                    // float pitchWorkload = Mathf.Sin(currentPitch) * Plugin.Conf_Spd_C.Value;
 
-                    float desiredLeverPos = Mathf.Clamp((isSpdSleeping ? pidSpd.Integral : pidOutput) + pitchWorkload, minT, maxT);
+                    float desiredLeverPos = Mathf.Clamp(isSpdSleeping ? pidSpd.Integral : pidOutput, minT, maxT);
 
                     currentAppliedThrottle = Mathf.MoveTowards(
                         currentAppliedThrottle,
@@ -2501,10 +2502,11 @@ namespace NOAutopilot
                                 {
                                     float curCrs = Quaternion.LookRotation(flatVel).eulerAngles.y;
                                     float cErr = Mathf.DeltaAngle(curCrs, APData.TargetCourse);
+                                    float actualTurnRate = localAngVel.y * Mathf.Rad2Deg;
 
                                     float desiredTurnRate = pidCrs.Evaluate(cErr, curCrs, dt,
                                         Plugin.Conf_Crs_P.Value, Plugin.Conf_Crs_I.Value, Plugin.Conf_Crs_D.Value,
-                                        Plugin.Conf_Crs_ILimit.Value, true, null,
+                                        Plugin.Conf_Crs_ILimit.Value, false, -actualTurnRate,
                                         lastBankReq, 20f);
 
                                     lastBankReq = desiredTurnRate;
@@ -2610,7 +2612,7 @@ namespace NOAutopilot
                                 float gError = targetG - currentG;
                                 pitchOut = pidGCAS.Evaluate(gError, currentG, dt,
                                     Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,
-                                    Plugin.GCAS_ILimit.Value, true);
+                                    Plugin.GCAS_ILimit.Value, false);
                             }
                             // alt hold
                             else if (APData.TargetAlt > 0f)
@@ -2653,7 +2655,7 @@ namespace NOAutopilot
                                 {
                                     float targetVS = pidAlt.Evaluate(altError, APData.CurrentAlt, dt,
                                         Plugin.Conf_Alt_P.Value, Plugin.Conf_Alt_I.Value, Plugin.Conf_Alt_D.Value,
-                                        Plugin.Conf_Alt_ILimit.Value, false, null,
+                                        Plugin.Conf_Alt_ILimit.Value, false, -currentVS,
                                         lastVSReq, APData.CurrentMaxClimbRate * 0.95f);
 
                                     lastVSReq = targetVS;
@@ -2665,9 +2667,10 @@ namespace NOAutopilot
                                     targetVS = Mathf.Clamp(targetVS, -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
                                     float vsError = targetVS - currentVS;
 
+                                    float vsAccel = (currentG - 1.0f) * 9.81f;
                                     float targetPitchDeg = pidVS.Evaluate(vsError, currentVS, dt,
                                         Plugin.Conf_VS_P.Value, Plugin.Conf_VS_I.Value, Plugin.Conf_VS_D.Value,
-                                        Plugin.Conf_VS_ILimit.Value, true, null,
+                                        Plugin.Conf_VS_ILimit.Value, false, -vsAccel,
                                         lastAngleReq, Plugin.Conf_VS_MaxAngle.Value * 0.95f);
 
                                     lastAngleReq = targetPitchDeg;

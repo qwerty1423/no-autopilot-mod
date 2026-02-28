@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [4.17.2] - 2026-02-28
+
+### Changed
+
+- pid derivative stuff
+- speed pid terms
+
 ## [4.17.1] - 2026-02-27
 
 ### Fixed
@@ -254,7 +261,8 @@
 
 ## [4.8.4] - 2025-12-29
 
-[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.1...HEAD
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.2...HEAD
+[4.17.2]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.1...v4.17.2
 [4.17.1]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.0...v4.17.1
 [4.17.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.16.1...v4.17.0
 [4.16.1]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.16.0...v4.16.1

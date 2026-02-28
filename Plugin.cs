@@ -319,7 +319,7 @@ namespace NOAutopilot
             Conf_VS_P = Config.Bind("Tuning - 2. VS>Angle", "1. VS P", 0.5f, "VS Error -> Target Angle");
             Conf_VS_I = Config.Bind("Tuning - 2. VS>Angle", "2. VS I", 0.1f, "Trim Angle");
             Conf_VS_D = Config.Bind("Tuning - 2. VS>Angle", "3. VS D", 0.1f, "Dampens VS Change");
-            Conf_VS_ILimit = Config.Bind("Tuning - 2. VertSpeed>Angle", "4. VS I Limit", 90.0f, "Max Trim (Deg)");
+            Conf_VS_ILimit = Config.Bind("Tuning - 2. VS>Angle", "4. VS I Limit", 90.0f, "Max Trim (Deg)");
             Conf_Angle_P = Config.Bind("Tuning - 3. Angle>Stick", "1. Angle P", 0.01f, "Angle Error -> Stick");
             Conf_Angle_I = Config.Bind("Tuning - 3. Angle>Stick", "2. Angle I", 0.0f, "Holds Angle");
             Conf_Angle_D = Config.Bind("Tuning - 3. Angle>Stick", "3. Angle D", 0.0f, "Dampens Rotation");

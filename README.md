@@ -4,7 +4,11 @@ Adds autopilot and some other features. Clientside and multiplayer compatible.
 
 It would be best to make sure the host is ok with you using the mod, especially in PVP.
 
-As of 2026-02-02, Talon Two allows the use of this mod on their servers, and GrayWar does not.
+Hosts known to allow use
+Talon Two, DirtyMike and the Boys
+
+Hosts known to not allow use
+GrayWar
 
 Another list can be found in [this mod's post](https://discord.com/channels/909034158205059082/1458083280250208307/1458083280250208307) on the nuclear option discord's mod forum.
 

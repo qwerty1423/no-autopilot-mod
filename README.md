@@ -9,7 +9,7 @@ Hosts known to allow use:
 - Talon Two
 - DirtyMike and the Boys
 
-Hosts known to not allow use:
+Hosts known to disallow use:
 
 - GrayWar
 

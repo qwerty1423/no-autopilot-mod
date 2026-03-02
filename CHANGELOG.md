@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [4.17.3] - 2026-03-02
+
+### Fixed
+
+- course pid bug
+
 ## [4.17.2] - 2026-02-28
 
 ### Changed
@@ -261,7 +267,8 @@
 
 ## [4.8.4] - 2025-12-29
 
-[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.2...HEAD
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.3...HEAD
+[4.17.3]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.2...v4.17.3
 [4.17.2]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.1...v4.17.2
 [4.17.1]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.0...v4.17.1
 [4.17.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.16.1...v4.17.0

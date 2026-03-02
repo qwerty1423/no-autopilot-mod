@@ -314,11 +314,11 @@ namespace NOAutopilot
             Conf_Alt_I = Config.Bind("Tuning - 1. Altitude>VS", "2. Alt I", 0.0f, "Accumulates Error");
             Conf_Alt_D = Config.Bind("Tuning - 1. Altitude>VS", "3. Alt D", 1.5f, "Dampens Approach");
             Conf_Alt_ILimit = Config.Bind("Tuning - 1. Altitude>VS", "4. Alt I Limit", 10.0f, "Max Integral (m/s)");
-            Conf_VS_P = Config.Bind("Tuning - 2. VS>Angle", "1. VS P", 0.5f, "VS Error -> Target Angle");
-            Conf_VS_I = Config.Bind("Tuning - 2. VS>Angle", "2. VS I", 0.1f, "Trim Angle");
-            Conf_VS_D = Config.Bind("Tuning - 2. VS>Angle", "3. VS D", 0.1f, "Dampens VS Change");
+            Conf_VS_P = Config.Bind("Tuning - 2. VS>Angle", "1. VS P", 1.0f, "VS Error -> Target Angle");
+            Conf_VS_I = Config.Bind("Tuning - 2. VS>Angle", "2. VS I", 0.6f, "Trim Angle");
+            Conf_VS_D = Config.Bind("Tuning - 2. VS>Angle", "3. VS D", 0.8f, "Dampens VS Change");
             Conf_VS_ILimit = Config.Bind("Tuning - 2. VS>Angle", "4. VS I Limit", 90.0f, "Max Trim (Deg)");
-            Conf_Angle_P = Config.Bind("Tuning - 3. Angle>Stick", "1. Angle P", 0.01f, "Angle Error -> Stick");
+            Conf_Angle_P = Config.Bind("Tuning - 3. Angle>Stick", "1. Angle P", 0.03f, "Angle Error -> Stick");
             Conf_Angle_I = Config.Bind("Tuning - 3. Angle>Stick", "2. Angle I", 0.0f, "Holds Angle");
             Conf_Angle_D = Config.Bind("Tuning - 3. Angle>Stick", "3. Angle D", 0.0f, "Dampens Rotation");
             Conf_Angle_ILimit = Config.Bind("Tuning - 3. Angle>Stick", "4. Angle I Limit", 90.0f, "Max Integral (Stick)");
@@ -2507,13 +2507,13 @@ namespace NOAutopilot
                                 {
                                     float curCrs = Quaternion.LookRotation(flatVel).eulerAngles.y;
                                     float cErr = Mathf.DeltaAngle(curCrs, APData.TargetCourse);
-                                    float actualTurnRate = localAngVel.y * Mathf.Rad2Deg;
+                                    // float actualTurnRate = localAngVel.y * Mathf.Rad2Deg;
                                     float crsILimit = Plugin.Conf_Crs_ILimit.Value;
 
                                     float desiredTurnRate = pidCrs.Evaluate(cErr, curCrs, dt,
                                         Plugin.Conf_Crs_P.Value, Plugin.Conf_Crs_I.Value, Plugin.Conf_Crs_D.Value,
-                                        crsILimit, false, -actualTurnRate,
-                                        lastBankReq, crsILimit * 0.95f);
+                                        crsILimit, true, null,
+                                        lastBankReq, crsILimit * 0.95f, true);
 
                                     lastBankReq = desiredTurnRate;
 
@@ -2569,7 +2569,7 @@ namespace NOAutopilot
                                 rollOut = pidRoll.Evaluate(rollError, APData.CurrentRoll, dt,
                                     Plugin.RollP.Value, Plugin.RollI.Value, Plugin.RollD.Value,
                                     Plugin.RollILimit.Value, false, -rollRate,
-                                    lastRollOut, 0.95f);
+                                    lastRollOut, 0.95f, true);
 
                                 lastRollOut = rollOut;
 
@@ -2673,7 +2673,7 @@ namespace NOAutopilot
                                     targetVS = Mathf.Clamp(targetVS, -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
                                     float vsError = targetVS - currentVS;
 
-                                    float vsAccel = (currentG - 1.0f) * 9.81f;
+                                    float vsAccel = pAccel.y;
                                     float targetPitchDeg = pidVS.Evaluate(vsError, currentVS, dt,
                                         Plugin.Conf_VS_P.Value, Plugin.Conf_VS_I.Value, Plugin.Conf_VS_D.Value,
                                         Plugin.Conf_VS_ILimit.Value, false, -vsAccel,
@@ -2687,8 +2687,8 @@ namespace NOAutopilot
 
                                     pitchOut = pidAngle.Evaluate(angleError, currentPitch, dt,
                                         Plugin.Conf_Angle_P.Value, Plugin.Conf_Angle_I.Value, Plugin.Conf_Angle_D.Value,
-                                        Plugin.Conf_Angle_ILimit.Value, false, -pitchRate,
-                                        lastPitchOut, 0.95f);
+                                        Plugin.Conf_Angle_ILimit.Value, false, pitchRate,
+                                        lastPitchOut, 0.95f, true);
 
                                     lastPitchOut = pitchOut;
 
@@ -3544,7 +3544,7 @@ namespace NOAutopilot
             _initialized = false;
         }
 
-        public float Evaluate(float error, float measurement, float dt, float kp, float ki, float kd, float iLimit, bool useErrorDeriv = false, float? manualDeriv = null, float currentOutput = 0f, float limitThreshold = 0.95f)
+        public float Evaluate(float error, float measurement, float dt, float kp, float ki, float kd, float iLimit, bool useErrorDeriv = false, float? manualDeriv = null, float currentOutput = 0f, float limitThreshold = 0.95f, bool isAngle = false)
         {
             if (dt <= 0f) return 0f;
             if (!_initialized)
@@ -3564,7 +3564,19 @@ namespace NOAutopilot
 
             Integral = Mathf.Clamp(Integral, -iLimit, iLimit);
 
-            float derivative = manualDeriv ?? (useErrorDeriv ? (error - _lastError) / dt : -(measurement - _lastMeasurement) / dt);
+            float derivative;
+            if (manualDeriv.HasValue)
+            {
+                derivative = manualDeriv.Value;
+            }
+            else if (useErrorDeriv)
+            {
+                derivative = isAngle ? Mathf.DeltaAngle(_lastError, error) / dt : (error - _lastError) / dt;
+            }
+            else
+            {
+                derivative = isAngle ? -Mathf.DeltaAngle(_lastMeasurement, measurement) / dt : -(measurement - _lastMeasurement) / dt;
+            }
 
             _lastError = error;
             _lastMeasurement = measurement;

@@ -4,12 +4,12 @@ Adds autopilot and some other features. Clientside and multiplayer compatible.
 
 It would be best to make sure the host is ok with you using the mod, especially in PVP.
 
-Hosts known to allow use:
+Hosts known to permit use:
 
 - Talon Two
 - DirtyMike and the Boys
 
-Hosts known to disallow use:
+Hosts known to prohibit use:
 
 - GrayWar
 

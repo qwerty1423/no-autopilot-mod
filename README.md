@@ -173,3 +173,5 @@ steps
 1. clone the repo, cd no-autopilot-mod, checkout a release version.
 2. maybe change path to nuclear option directory in the `.csproj` (will have to fix this later)
 3. `dotnet build -c Release`
+
+-# PS the code is terrible, it badly needs a rewrite.

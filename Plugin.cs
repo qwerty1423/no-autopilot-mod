@@ -335,10 +335,10 @@ namespace NOAutopilot
             ThrottleMaxLimit = Config.Bind("Tuning - 6. Speed - Misc", "2. Safe Max Throttle", 0.89f, "Maximum throttle when limiter is active (prevents Afterburner)");
             ThrottleSlewRate = Config.Bind("Tuning - 6. Speed - Misc", "3. Throttle Slew Rate Limit", 0.0f, "in unit of throttle gauges per second (0 to disable)");
 
-            Conf_Crs_P = Config.Bind("Tuning - 5. Course", "1. Course P", 1.5f, "Course Error -> Bank Angle");
-            Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 0.01f, "Correction");
-            Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.0f, "Dampen");
-            Conf_Crs_ILimit = Config.Bind("Tuning - 5. Course", "4. Course I Limit", 70.0f, "Max Integral Bank");
+            Conf_Crs_P = Config.Bind("Tuning - 5. Course", "1. Course P", 1.0f, "Course Error -> Bank Angle");
+            Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 0.05f, "Correction");
+            Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.8f, "Dampen");
+            Conf_Crs_ILimit = Config.Bind("Tuning - 5. Course", "4. Course I Limit", 30.0f, "Max Integral Bank");
 
             // Auto GCAS
             EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS on start", true, "GCAS off at start if disabled (anything that isn't a helo)");

@@ -7,7 +7,7 @@
 ### Changed
 
 - vs>pitch pid terms for better altitude hold when banking
-- course d term removed
+- course d term removed, p term increased to 1.5
 
 ## [4.17.2] - 2026-02-28
 

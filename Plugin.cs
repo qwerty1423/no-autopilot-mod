@@ -1787,6 +1787,9 @@ namespace NOAutopilot
                 {
                     lastVehicleObj = v.gameObject;
                     APData.Reset();
+                    ControlOverridePatch.Reset();
+                    HUDVisualsPatch.Reset();
+
                     APData.LocalAircraft = foundAircraft;
                     APData.PlayerTransform = v.transform;
                     APData.PlayerRB = v.GetComponent<Rigidbody>();
@@ -3007,17 +3010,9 @@ namespace NOAutopilot
 
                 if (_lastVehicleChecked != currentVehicleObj || _cachedFuelGauge == null)
                 {
+                    Reset();
                     _lastVehicleChecked = currentVehicleObj;
-                    lastFuelMass = 0f;
-                    fuelFlowEma = 0f;
-                    lastUpdateTime = 0f;
                     _cachedFuelGauge = __instance.GetComponentInChildren<FuelGauge>(true);
-
-                    if (infoOverlayObj) UnityEngine.Object.Destroy(infoOverlayObj);
-                    infoOverlayObj = null;
-
-                    if (gcasLeftObj) UnityEngine.Object.Destroy(gcasLeftObj);
-                    gcasLeftObj = null;
 
                     if (_cachedFuelGauge != null)
                     {

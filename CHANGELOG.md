@@ -4,9 +4,10 @@
 
 ## [4.17.3] - 2026-03-02
 
-### Fixed
+### Changed
 
-- course pid bug
+- vs>pitch pid terms for better altitude hold when banking
+- course d term removed
 
 ## [4.17.2] - 2026-02-28
 

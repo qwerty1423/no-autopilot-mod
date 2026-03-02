@@ -337,7 +337,7 @@ namespace NOAutopilot
 
             Conf_Crs_P = Config.Bind("Tuning - 5. Course", "1. Course P", 0.5f, "Course Error -> Bank Angle");
             Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 0.01f, "Correction");
-            Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.15f, "Dampen");
+            Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.0f, "Dampen");
             Conf_Crs_ILimit = Config.Bind("Tuning - 5. Course", "4. Course I Limit", 70.0f, "Max Integral Bank");
 
             // Auto GCAS
@@ -2673,7 +2673,7 @@ namespace NOAutopilot
                                     targetVS = Mathf.Clamp(targetVS, -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
                                     float vsError = targetVS - currentVS;
 
-                                    float vsAccel = pAccel.y;
+                                    float vsAccel = (currentG - 1.0f) * 9.81f;
                                     float targetPitchDeg = pidVS.Evaluate(vsError, currentVS, dt,
                                         Plugin.Conf_VS_P.Value, Plugin.Conf_VS_I.Value, Plugin.Conf_VS_D.Value,
                                         Plugin.Conf_VS_ILimit.Value, false, -vsAccel,

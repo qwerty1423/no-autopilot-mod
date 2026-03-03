@@ -2401,7 +2401,7 @@ namespace NOAutopilot
                 if (APData.Enabled || APData.GCASActive)
                 {
                     // keys
-                    if (!APData.ALSActive || !CursorManager.GetFlag(CursorFlags.Chat))
+                    if (!APData.ALSActive && !CursorManager.GetFlag(CursorFlags.Chat))
                     {
                         float fpsRef = 60f;
                         float aStep = Plugin.AltStep.Value * fpsRef * dt;
@@ -3225,7 +3225,7 @@ namespace NOAutopilot
                     }
                 }
 
-                if (APData.GCASActive || APData.GCASWarning && !APData.IsOnGround)
+                if (!APData.ALSActive && (APData.GCASActive || APData.GCASWarning && !APData.IsOnGround))
                 {
                     if (gcasLeftObj == null)
                     {

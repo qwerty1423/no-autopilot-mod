@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [4.17.4] - 2026-03-03
+
+### Fixed
+
+- hud overlay not being destroyed on respawn
+- autopilot keybinds still working when using chat
+
+### Added
+
+- right shift as additional modifier for waypoints (so that you can use waypoints without increasing throttle hopefully)
+
 ## [4.17.3] - 2026-03-02
 
 ### Changed
@@ -268,7 +279,8 @@
 
 ## [4.8.4] - 2025-12-29
 
-[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.3...HEAD
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.4...HEAD
+[4.17.4]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.3...v4.17.4
 [4.17.3]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.2...v4.17.3
 [4.17.2]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.1...v4.17.2
 [4.17.1]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.0...v4.17.1

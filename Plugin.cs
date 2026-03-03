@@ -469,6 +469,15 @@ namespace NOAutopilot
                 }
                 RewiredConfigManager.Update();
 
+                if (APData.PlayerRB != null)
+                {
+                    float rawSpeed = APData.PlayerRB.velocity.magnitude;
+                    float alpha = 1.0f - Mathf.Exp(-Time.deltaTime * 2.0f);
+                    APData.SpeedEma = Mathf.Max(Mathf.Lerp(APData.SpeedEma, rawSpeed, alpha), 0.0001f);
+                }
+
+                if (CursorManager.GetFlag(CursorFlags.Chat)) return;
+
                 if (InputHelper.IsDown(MenuRW) || MenuKey.Value.IsDown())
                 {
                     _showMenu = !_showMenu;
@@ -652,13 +661,6 @@ namespace NOAutopilot
                 //     APData.FBWDisabled = false;
                 //     UpdateFBWState();
                 // }
-
-                if (APData.PlayerRB != null)
-                {
-                    float rawSpeed = APData.PlayerRB.velocity.magnitude;
-                    float alpha = 1.0f - Mathf.Exp(-Time.deltaTime * 2.0f);
-                    APData.SpeedEma = Mathf.Max(Mathf.Lerp(APData.SpeedEma, rawSpeed, alpha), 0.0001f);
-                }
             }
             catch (Exception ex)
             {
@@ -1472,17 +1474,9 @@ namespace NOAutopilot
             {
                 if (!string.Equals(scene.name, "GameWorld", StringComparison.OrdinalIgnoreCase))
                 {
-                    APData.Enabled = false;
-                    APData.GCASActive = false;
-                    APData.LocalAircraft = null;
-                    APData.PlayerRB = null;
-                    APData.PlayerTransform = null;
-                    APData.LocalPilot = null;
-                    APData.LocalWeaponManager = null;
-
-                    APData.NavQueue.Clear();
-                    foreach (var obj in APData.NavVisuals) if (obj != null) Destroy(obj);
-                    APData.NavVisuals.Clear();
+                    APData.Reset();
+                    ControlOverridePatch.Reset();
+                    HUDVisualsPatch.Reset();
                     CleanUpFBW();
                 }
             }
@@ -1961,7 +1955,7 @@ namespace NOAutopilot
                 Vector3 pEuler = APData.PlayerTransform.eulerAngles;
                 Vector3 localAngVel = APData.PlayerTransform.InverseTransformDirection(APData.PlayerRB.angularVelocity);
 
-                float dt = Mathf.Max(Time.deltaTime, 0.0001f);
+                float dt = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
                 float noiseT = Time.time * Plugin.RandomSpeed.Value;
                 bool useRandom = Plugin.RandomEnabled.Value && !APData.GCASActive;
                 APData.GCASWarning = false;
@@ -2407,7 +2401,7 @@ namespace NOAutopilot
                 if (APData.Enabled || APData.GCASActive)
                 {
                     // keys
-                    if (!APData.ALSActive)
+                    if (!APData.ALSActive || !CursorManager.GetFlag(CursorFlags.Chat))
                     {
                         float fpsRef = 60f;
                         float aStep = Plugin.AltStep.Value * fpsRef * dt;
@@ -3010,7 +3004,6 @@ namespace NOAutopilot
 
                 if (_lastVehicleChecked != currentVehicleObj || _cachedFuelGauge == null)
                 {
-                    Reset();
                     _lastVehicleChecked = currentVehicleObj;
                     _cachedFuelGauge = __instance.GetComponentInChildren<FuelGauge>(true);
 
@@ -3349,7 +3342,7 @@ namespace NOAutopilot
 
                 if (APData.LocalAircraft != null)
                 {
-                    if (!Input.GetKey(KeyCode.LeftShift))
+                    if (!Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift))
                     {
                         APData.NavQueue.Clear();
                     }

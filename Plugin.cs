@@ -2651,13 +2651,14 @@ internal class ControlOverridePatch
                 {
                     bool fire = false;
                     WeaponStation currStation = wm.currentWeaponStation;
-                    if (currStation != null)
+                    if (currStation?.Weapons is IList wpnList)
                     {
-                        if (currStation.Weapons is IList wpnList)
+                        for (int i = 0; i < wpnList.Count; i++)
                         {
-                            if (wpnList.OfType<JammingPod>().Any())
+                            if (wpnList[i] is JammingPod)
                             {
                                 fire = true;
+                                break;
                             }
                         }
                     }

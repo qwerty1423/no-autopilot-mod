@@ -25,12 +25,6 @@ using UnityEngine.UI;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 
-// ReSharper disable MemberCanBePrivate.Global
-
-// ReSharper disable UnusedMember.Local
-
-// ReSharper disable CompareOfFloatsByEqualityOperator
-
 namespace NOAutopilot;
 
 [BepInPlugin(Guid, Name, Version)]
@@ -1006,7 +1000,9 @@ public class Plugin : BaseUnityPlugin
 
         _styleReadout = new GUIStyle(GUI.skin.box)
         {
-            alignment = TextAnchor.UpperLeft, richText = true, padding = new RectOffset(3, 3, 3, 3)
+            alignment = TextAnchor.UpperLeft,
+            richText = true,
+            padding = new RectOffset(3, 3, 3, 3)
         };
 
         _styleButton = new GUIStyle(GUI.skin.button);
@@ -4431,7 +4427,9 @@ internal static class RewiredConfigManager
             new ConfigDescription(description, null,
                 new ConfigurationManagerAttributes
                 {
-                    CustomDrawer = RewiredButtonDrawer, ControllerName = cName, ButtonIndex = bIdx
+                    CustomDrawer = RewiredButtonDrawer,
+                    ControllerName = cName,
+                    ButtonIndex = bIdx
                 }));
     }
 

@@ -4,6 +4,7 @@ bin/
 obj/
 
 .vscode/
+.idea/
 
 *.user
 *.cfg

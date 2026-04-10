@@ -4,7 +4,7 @@ using System;
 
 using HarmonyLib;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core.Flight;
 
 [HarmonyPatch]
 internal static class ALSLandingPatch

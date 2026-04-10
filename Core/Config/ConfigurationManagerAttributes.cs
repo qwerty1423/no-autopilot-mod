@@ -4,7 +4,7 @@ using System;
 
 using BepInEx.Configuration;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core.Config;
 
 internal sealed class ConfigurationManagerAttributes
 {

@@ -8,7 +8,7 @@ using JetBrains.Annotations;
 
 using Object = UnityEngine.Object;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core.Flight;
 
 [HarmonyPatch(typeof(PilotPlayerState), "EnterState")]
 internal static class FixGLOCLeakPatch

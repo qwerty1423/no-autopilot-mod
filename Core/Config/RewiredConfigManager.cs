@@ -7,7 +7,7 @@ using Rewired;
 
 using UnityEngine;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core.Config;
 
 internal static class RewiredConfigManager
 {

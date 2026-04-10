@@ -8,7 +8,7 @@ using JetBrains.Annotations;
 
 using UnityEngine;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core.Map;
 
 [HarmonyPatch(typeof(DynamicMap), "UpdateMap")]
 internal static class MapWaypointPatch

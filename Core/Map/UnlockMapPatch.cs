@@ -5,9 +5,11 @@ using System.Reflection.Emit;
 
 using HarmonyLib;
 
+using NOAutopilot.Core;
+
 using UnityEngine;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core.Map;
 
 [HarmonyPatch(typeof(DynamicMap), "MapControls")]
 internal static class UnlockMapPatch

@@ -1,7 +1,7 @@
 extern alias JetBrains;
 using UnityEngine;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core.PID;
 
 public class PIDController
 {

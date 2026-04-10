@@ -3,7 +3,7 @@ using BepInEx.Configuration;
 
 using Rewired;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core.Config;
 
 public static class InputHelper
 {

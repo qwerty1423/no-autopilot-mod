@@ -6,7 +6,7 @@ using HarmonyLib;
 
 using JetBrains.Annotations;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core.Flight;
 
 [HarmonyPatch(typeof(Airbase), "RpcRegisterUsage")]
 internal static class SuppressAirbaseRpcPatch

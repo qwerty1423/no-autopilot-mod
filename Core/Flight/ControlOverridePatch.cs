@@ -7,11 +7,14 @@ using HarmonyLib;
 
 using JetBrains.Annotations;
 
+using NOAutopilot.Core.Config;
+using NOAutopilot.Core.PID;
+
 using UnityEngine;
 
 using Random = UnityEngine.Random;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core.Flight;
 
 [HarmonyPatch(typeof(PilotPlayerState), "PlayerAxisControls")]
 internal static class ControlOverridePatch

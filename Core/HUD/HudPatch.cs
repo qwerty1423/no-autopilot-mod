@@ -6,9 +6,11 @@ using HarmonyLib;
 
 using JetBrains.Annotations;
 
+using NOAutopilot.Core.Flight;
+
 using UnityEngine;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core.HUD;
 
 [HarmonyPatch(typeof(FlightHud), "SetHUDInfo")]
 internal static class HudPatch
@@ -41,7 +43,7 @@ internal static class HudPatch
 
             Aircraft foundAircraft = v.GetComponent<Aircraft>();
 
-            if (foundAircraft == null || (v.gameObject == s_lastVehicleObj && APData.LocalAircraft != null))
+            if (foundAircraft == null || v.gameObject == s_lastVehicleObj && APData.LocalAircraft != null)
             {
                 return;
             }

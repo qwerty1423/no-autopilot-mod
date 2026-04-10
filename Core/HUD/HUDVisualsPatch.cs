@@ -7,12 +7,14 @@ using HarmonyLib;
 
 using JetBrains.Annotations;
 
+using NOAutopilot.Core.Flight;
+
 using UnityEngine;
 using UnityEngine.UI;
 
 using Object = UnityEngine.Object;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core.HUD;
 
 [HarmonyPatch(typeof(FlightHud), "Update")]
 internal static class HUDVisualsPatch
@@ -248,8 +250,8 @@ internal static class HUDVisualsPatch
                     }
 
                     // (AP was on before GCAS) or (AP is on and no GCAS)
-                    bool apActive = (ControlOverridePatch.ApStateBeforeGCAS && APData.GCASActive) ||
-                                    (APData.Enabled && !APData.GCASActive);
+                    bool apActive = ControlOverridePatch.ApStateBeforeGCAS && APData.GCASActive ||
+                                    APData.Enabled && !APData.GCASActive;
                     bool speedActive = APData.TargetSpeed >= 0f;
 
                     if ((apActive || speedActive) && Plugin.ShowAPOverlay.Value)
@@ -444,7 +446,7 @@ internal static class HUDVisualsPatch
                 }
             }
 
-            if (!APData.ALSActive && (APData.GCASActive || (APData.GCASWarning && !APData.IsOnGround)))
+            if (!APData.ALSActive && (APData.GCASActive || APData.GCASWarning && !APData.IsOnGround))
             {
                 if (s_gcasLeftObj == null)
                 {

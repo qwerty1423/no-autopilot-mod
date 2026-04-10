@@ -15,11 +15,16 @@ using JetBrains.Annotations;
 
 using Mirage;
 
+using NOAutopilot.Core.Config;
+using NOAutopilot.Core.Flight;
+using NOAutopilot.Core.HUD;
+using NOAutopilot.Core.Map;
+
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core;
 
 [BepInPlugin(Guid, Name, Version)]
 public class Plugin : BaseUnityPlugin

@@ -6,7 +6,7 @@ using HarmonyLib;
 
 using UnityEngine;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core.HUD;
 
 [HarmonyPatch]
 internal static class UpdateHUDAutolandPatch

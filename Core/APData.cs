@@ -5,7 +5,7 @@ using UnityEngine;
 
 using Object = UnityEngine.Object;
 
-namespace NOAutopilot;
+namespace NOAutopilot.Core;
 
 public static class APData
 {

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- the code is hopefully nicer to look at now
+
 ## [4.17.4] - 2026-03-03
 
 ### Fixed

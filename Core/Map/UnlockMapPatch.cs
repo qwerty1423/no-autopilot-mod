@@ -5,8 +5,6 @@ using System.Reflection.Emit;
 
 using HarmonyLib;
 
-using NOAutopilot.Core;
-
 using UnityEngine;
 
 namespace NOAutopilot.Core.Map;

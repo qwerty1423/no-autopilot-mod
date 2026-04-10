@@ -43,7 +43,7 @@ internal static class HudPatch
 
             Aircraft foundAircraft = v.GetComponent<Aircraft>();
 
-            if (foundAircraft == null || v.gameObject == s_lastVehicleObj && APData.LocalAircraft != null)
+            if (foundAircraft == null || (v.gameObject == s_lastVehicleObj && APData.LocalAircraft != null))
             {
                 return;
             }

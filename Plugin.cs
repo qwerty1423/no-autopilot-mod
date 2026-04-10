@@ -31,12 +31,12 @@ using Random = UnityEngine.Random;
 
 namespace NOAutopilot;
 
-[BepInPlugin(GUID, NAME, VERSION)]
+[BepInPlugin(Guid, Name, Version)]
 public class Plugin : BaseUnityPlugin
 {
-    public const string GUID = MyPluginInfo.PLUGIN_GUID;
-    public const string NAME = MyPluginInfo.PLUGIN_NAME;
-    public const string VERSION = MyPluginInfo.PLUGIN_VERSION;
+    public const string Guid = MyPluginInfo.PLUGIN_GUID;
+    public const string Name = MyPluginInfo.PLUGIN_NAME;
+    public const string Version = MyPluginInfo.PLUGIN_VERSION;
 
     internal static new ManualLogSource Logger;
 
@@ -474,12 +474,12 @@ public class Plugin : BaseUnityPlugin
         Rand_Acc_Outer = Config.Bind("Settings - Random", "22. Accel Tolerance Outer", 0.5f,
             "Wake Up (m/s² acceleration)");
 
-        _harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
+        _harmony = new Harmony(Guid);
         try
         {
             _harmony.PatchAll();
             SceneManager.sceneUnloaded += OnSceneUnloaded;
-            Logger.LogInfo($"v{VERSION} loaded.");
+            Logger.LogInfo($"v{Version} loaded.");
         }
         catch (Exception ex)
         {

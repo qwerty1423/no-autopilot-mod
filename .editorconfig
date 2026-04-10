@@ -199,6 +199,18 @@ csharp_preserve_single_line_statements = true
 #### Naming styles ####
 [*.{cs,vb}]
 
+# harmony naming rules
+
+dotnet_naming_rule.harmony_parameters.severity = none
+dotnet_naming_rule.harmony_parameters.symbols = harmony_parameters_symbols
+dotnet_naming_rule.harmony_parameters.style = harmony_parameters_style
+
+dotnet_naming_symbols.harmony_parameters_symbols.applicable_kinds = parameter
+dotnet_naming_symbols.harmony_parameters_symbols.applicable_accessibilities = *
+
+dotnet_naming_style.harmony_parameters_style.required_prefix = __
+dotnet_naming_style.harmony_parameters_style.capitalization = camel_case
+
 # Naming rules
 
 dotnet_naming_rule.types_and_namespaces_should_be_pascalcase.severity = suggestion

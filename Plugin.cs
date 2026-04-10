@@ -1,3 +1,5 @@
+﻿extern alias JetBrains;
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,6 +16,8 @@ using BepInEx.Logging;
 
 using HarmonyLib;
 
+using JetBrains.Annotations;
+
 using Mirage;
 
 using Rewired;
@@ -27,23 +31,22 @@ using Random = UnityEngine.Random;
 
 namespace NOAutopilot;
 
-[BepInPlugin(Guid, Name, Version)]
+[BepInPlugin(GUID, NAME, VERSION)]
 public class Plugin : BaseUnityPlugin
 {
-    public const string Guid = MyPluginInfo.PLUGIN_GUID;
-    public const string Name = MyPluginInfo.PLUGIN_NAME;
-    public const string Version = MyPluginInfo.PLUGIN_VERSION;
+    public const string GUID = MyPluginInfo.PLUGIN_GUID;
+    public const string NAME = MyPluginInfo.PLUGIN_NAME;
+    public const string VERSION = MyPluginInfo.PLUGIN_VERSION;
 
     internal static new ManualLogSource Logger;
 
     public static bool IsBroken;
 
-    private static string _bufAlt = "";
-    private static string _bufClimb = "40";
-    private static string _bufRoll = "";
-    private static string _bufSpeed = "";
-    private static string _bufCourse = "";
-
+    private static string s_bufAlt = "";
+    private static string s_bufClimb = "40";
+    private static string s_bufRoll = "";
+    private static string s_bufSpeed = "";
+    private static string s_bufCourse = "";
     public static ConfigEntry<float> NavReachDistance, NavPassedDistance;
     public static ConfigEntry<string> ColorNav;
     public static ConfigEntry<bool> NavCycle;
@@ -144,23 +147,23 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> Rand_Acc_Inner, Rand_Acc_Outer;
     private readonly float _jitterThreshold = 7.0f;
     private readonly GUIContent _measuringContent = new();
-    private readonly float buttonWidth = 40f;
+    private readonly float _buttonWidth = 40f;
 
     // controls table
-    private readonly string table =
-        $"<b>Toggle AP GUI:</b> F8\n" +
-        $"<b>Toggle Autopilot:</b> = (Equals)\n" +
-        $"<b>Toggle AJ:</b> / (Slash)\n" +
-        $"<b>Toggle GCAS:</b> \\ (Backslash)\n" +
-        $"<b>Clear/Reset:</b> ' (Quote) | Roll>Nav>Crs>Roll>Alt>Roll><Roll\n\n" +
-        $"<b>Target Alt Small:</b> Up / Down Arrow | Small adjustment\n" +
-        $"<b>Target Alt Large:</b> Left / Right Arrow | Large adjustment\n" +
-        $"<b>Max Climb Rate:</b> PgUp / PgDn | Limit vertical speed\n" +
-        $"<b>Bank/Course L/R:</b> [ and ] | Adjust roll or heading\n\n" +
-        $"<b>Toggle Speed Hold:</b> ; (Semicolon) | Matches current speed\n" +
-        $"<b>Speed Up / Down:</b> LShift / LCtrl | Adjust target speed\n" +
-        $"<b>Mach/TAS hold:</b> Home | Switch between Mach/TAS\n" +
-        $"<b>Toggle AB:</b> End | Toggle Afterburner/Airbrake\n";
+    private readonly string _table =
+        "<b>Toggle AP GUI:</b> F8\n" +
+        "<b>Toggle Autopilot:</b> = (Equals)\n" +
+        "<b>Toggle AJ:</b> / (Slash)\n" +
+        "<b>Toggle GCAS:</b> \\ (Backslash)\n" +
+        "<b>Clear/Reset:</b> ' (Quote) | Roll>Nav>Crs>Roll>Alt>Roll><Roll\n\n" +
+        "<b>Target Alt Small:</b> Up / Down Arrow | Small adjustment\n" +
+        "<b>Target Alt Large:</b> Left / Right Arrow | Large adjustment\n" +
+        "<b>Max Climb Rate:</b> PgUp / PgDn | Limit vertical speed\n" +
+        "<b>Bank/Course L/R:</b> [ and ] | Adjust roll or heading\n\n" +
+        "<b>Toggle Speed Hold:</b> ; (Semicolon) | Matches current speed\n" +
+        "<b>Speed Up / Down:</b> LShift / LCtrl | Adjust target speed\n" +
+        "<b>Mach/TAS hold:</b> Home | Switch between Mach/TAS\n" +
+        "<b>Toggle AB:</b> End | Toggle Afterburner/Airbrake\n";
 
     private RectEdge _activeEdge = RectEdge.None;
     private GUIContent _cachedExtraInfoContent;
@@ -190,6 +193,7 @@ public class Plugin : BaseUnityPlugin
     // ap menu?
     private Rect _windowRect = new(50, 50, 227, 330);
 
+    [UsedImplicitly]
     private void Awake()
     {
         Logger = base.Logger;
@@ -475,7 +479,7 @@ public class Plugin : BaseUnityPlugin
         {
             _harmony.PatchAll();
             SceneManager.sceneUnloaded += OnSceneUnloaded;
-            Logger.LogInfo($"v{Version} loaded.");
+            Logger.LogInfo($"v{VERSION} loaded.");
         }
         catch (Exception ex)
         {
@@ -484,6 +488,7 @@ public class Plugin : BaseUnityPlugin
         }
     }
 
+    [UsedImplicitly]
     private void Update()
     {
         try
@@ -630,7 +635,7 @@ public class Plugin : BaseUnityPlugin
                 if (APData.TargetSpeed >= 0)
                 {
                     APData.TargetSpeed = -1f;
-                    _bufSpeed = "";
+                    s_bufSpeed = "";
                 }
                 else if (APData.PlayerRB != null && APData.LocalAircraft != null)
                 {
@@ -639,15 +644,15 @@ public class Plugin : BaseUnityPlugin
                         : APData.PlayerRB.velocity.magnitude;
                     if (APData.SpeedHoldIsMach)
                     {
-                        float currentAlt = APData.LocalAircraft != null ? APData.LocalAircraft.GlobalPosition().y : 0f;
+                        float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
                         float sos = LevelInfo.GetSpeedOfSound(currentAlt);
                         APData.TargetSpeed = currentTAS / sos;
-                        _bufSpeed = APData.TargetSpeed.ToString("F2");
+                        s_bufSpeed = APData.TargetSpeed.ToString("F2");
                     }
                     else
                     {
                         APData.TargetSpeed = currentTAS;
-                        _bufSpeed = ModUtils.ConvertSpeed_ToDisplay(currentTAS).ToString("F0");
+                        s_bufSpeed = ModUtils.ConvertSpeed_ToDisplay(currentTAS).ToString("F0");
                     }
                 }
 
@@ -668,9 +673,7 @@ public class Plugin : BaseUnityPlugin
                             : APData.PlayerRB.velocity.magnitude;
                         if (APData.SpeedHoldIsMach)
                         {
-                            float currentAlt = APData.LocalAircraft != null
-                                ? APData.LocalAircraft.GlobalPosition().y
-                                : 0f;
+                            float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
                             APData.TargetSpeed = currentTAS / LevelInfo.GetSpeedOfSound(currentAlt);
                         }
                         else
@@ -682,7 +685,7 @@ public class Plugin : BaseUnityPlugin
                     float step = SpeedStep.Value * 60f * Time.deltaTime;
                     if (APData.SpeedHoldIsMach)
                     {
-                        float currentAlt = APData.LocalAircraft != null ? APData.LocalAircraft.GlobalPosition().y : 0f;
+                        float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
                         float sos = LevelInfo.GetSpeedOfSound(currentAlt);
                         step /= Mathf.Max(sos, 1f);
                     }
@@ -701,9 +704,9 @@ public class Plugin : BaseUnityPlugin
                 }
                 else if (InputHelper.IsDown(ToggleMachRW) || ToggleMachKey.Value.IsDown())
                 {
-                    if (float.TryParse(_bufSpeed, out float val))
+                    if (float.TryParse(s_bufSpeed, out float val))
                     {
-                        float currentAlt = APData.LocalAircraft != null ? APData.LocalAircraft.GlobalPosition().y : 0f;
+                        float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
                         float sos = LevelInfo.GetSpeedOfSound(currentAlt);
                         if (!APData.SpeedHoldIsMach)
                         {
@@ -730,14 +733,7 @@ public class Plugin : BaseUnityPlugin
             if (InputHelper.IsDown(ToggleFBWRW) || ToggleFBWKey.Value.IsDown())
             {
                 APData.NextMultiplayerCheck = 0f;
-                if (IsMultiplayer())
-                {
-                    APData.FBWDisabled = false;
-                }
-                else
-                {
-                    APData.FBWDisabled = !APData.FBWDisabled;
-                }
+                APData.FBWDisabled = !IsMultiplayer() && !APData.FBWDisabled;
 
                 UpdateFBWState();
             }
@@ -757,6 +753,7 @@ public class Plugin : BaseUnityPlugin
         }
     }
 
+    [UsedImplicitly]
     private void OnDestroy()
     {
         _harmony?.UnpatchSelf();
@@ -787,13 +784,14 @@ public class Plugin : BaseUnityPlugin
         Logger = null;
     }
 
+    [UsedImplicitly]
     // gui
     private void OnGUI()
     {
         if (_cachedTableContent == null)
         {
-            _cachedTableContent = new GUIContent("(Hover for controls)", table);
-            _cachedExtraInfoContent = new GUIContent("(Hover above for some info)\n(Hover here for controls)", table);
+            _cachedTableContent = new GUIContent("(Hover for controls)", _table);
+            _cachedExtraInfoContent = new GUIContent("(Hover above for some info)\n(Hover here for controls)", _table);
         }
 
         if (!_showMenu)
@@ -801,16 +799,7 @@ public class Plugin : BaseUnityPlugin
             return;
         }
 
-        float guiAlpha;
-        if (!APData.IsConscious)
-        {
-            guiAlpha = 0f;
-        }
-        else
-        {
-            guiAlpha = Mathf.Clamp01((APData.BloodPressure - 0.2f) / 0.4f);
-        }
-
+        float guiAlpha = !APData.IsConscious ? 0f : Mathf.Clamp01((APData.BloodPressure - 0.2f) / 0.4f);
         if (guiAlpha <= 0f)
         {
             _isResizing = false;
@@ -837,8 +826,8 @@ public class Plugin : BaseUnityPlugin
                 else if (Event.current.type == EventType.MouseDrag)
                 {
                     Vector2 delta = Event.current.delta;
-                    float minW = 227f;
-                    float minH = 330f;
+                    const float minW = 227f;
+                    const float minH = 330f;
 
                     if (_activeEdge == RectEdge.Right || _activeEdge == RectEdge.TopRight ||
                         _activeEdge == RectEdge.BottomRight)
@@ -894,7 +883,7 @@ public class Plugin : BaseUnityPlugin
             }
 
             Vector2 mousePos = Event.current.mousePosition;
-            float thickness = 8f;
+            const float thickness = 8f;
 
             if (Event.current.type == EventType.MouseDown && _showMenu)
             {
@@ -1012,33 +1001,23 @@ public class Plugin : BaseUnityPlugin
 
     public static void SyncMenuValues()
     {
-        _bufAlt = APData.TargetAlt > 0
+        s_bufAlt = APData.TargetAlt > 0
             ? ModUtils.ConvertAlt_ToDisplay(APData.TargetAlt).ToString("F0")
             : "";
 
-        _bufClimb = APData.CurrentMaxClimbRate > 0
+        s_bufClimb = APData.CurrentMaxClimbRate > 0
             ? ModUtils.ConvertVS_ToDisplay(APData.CurrentMaxClimbRate).ToString("F0")
             : DefaultMaxClimbRate.Value.ToString(CultureInfo.CurrentCulture);
 
-        _bufRoll = APData.TargetRoll != -999f ? APData.TargetRoll.ToString("F0") : "";
+        s_bufRoll = APData.TargetRoll != -999f ? APData.TargetRoll.ToString("F0") : "";
 
-        if (APData.TargetSpeed >= 0)
-        {
-            if (APData.SpeedHoldIsMach)
-            {
-                _bufSpeed = APData.TargetSpeed.ToString("F2");
-            }
-            else
-            {
-                _bufSpeed = ModUtils.ConvertSpeed_ToDisplay(APData.TargetSpeed).ToString("F0");
-            }
-        }
-        else
-        {
-            _bufSpeed = "";
-        }
+        s_bufSpeed = APData.TargetSpeed < 0
+            ? ""
+            : APData.SpeedHoldIsMach
+            ? APData.TargetSpeed.ToString("F2")
+            : ModUtils.ConvertSpeed_ToDisplay(APData.TargetSpeed).ToString("F0");
 
-        _bufCourse = APData.TargetCourse >= 0 ? APData.TargetCourse.ToString("F0") : "";
+        s_bufCourse = APData.TargetCourse >= 0 ? APData.TargetCourse.ToString("F0") : "";
     }
 
     // gui
@@ -1051,14 +1030,14 @@ public class Plugin : BaseUnityPlugin
 
         GUILayout.BeginVertical();
 
-        float currentVS = APData.PlayerRB != null ? APData.PlayerRB.velocity.y : 0f;
+        float currentVS = (APData.PlayerRB?.velocity.y) ?? 0f;
 
-        float currentAlt = APData.LocalAircraft != null ? APData.LocalAircraft.GlobalPosition().y : 0f;
+        float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
         float sos = LevelInfo.GetSpeedOfSound(currentAlt);
-        float currentSpeed = APData.PlayerRB != null ? APData.PlayerRB.velocity.magnitude : 0f;
+        float currentSpeed = (APData.PlayerRB?.velocity.magnitude) ?? 0f;
 
         float currentCourse = 0f;
-        if (APData.PlayerRB != null && APData.PlayerRB.velocity.sqrMagnitude > 1f)
+        if (APData.PlayerRB?.velocity.sqrMagnitude > 1f)
         {
             Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
             currentCourse = Quaternion.LookRotation(flatVel).eulerAngles.y;
@@ -1101,17 +1080,17 @@ public class Plugin : BaseUnityPlugin
         if (GUILayout.Button(new GUIContent($"{sAlt}", "Current altitude\nGreen if alt AP on\nClick to copy"),
                 _styleReadout, GUILayout.Width(_dynamicLabelWidth)))
         {
-            _bufAlt = ModUtils.ConvertAlt_ToDisplay(APData.CurrentAlt).ToString("F0");
+            s_bufAlt = ModUtils.ConvertAlt_ToDisplay(APData.CurrentAlt).ToString("F0");
         }
 
         GUI.color = Color.white;
-        _bufAlt = GUILayout.TextField(_bufAlt);
+        s_bufAlt = GUILayout.TextField(s_bufAlt);
         GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target altitude"));
 
-        if (GUILayout.Button(new GUIContent("CLR", "disable alt hold"), _styleButton, GUILayout.Width(buttonWidth)))
+        if (GUILayout.Button(new GUIContent("CLR", "disable alt hold"), _styleButton, GUILayout.Width(_buttonWidth)))
         {
             APData.TargetAlt = -1f;
-            _bufAlt = "";
+            s_bufAlt = "";
             GUI.FocusControl(null);
         }
 
@@ -1124,17 +1103,17 @@ public class Plugin : BaseUnityPlugin
         if (GUILayout.Button(new GUIContent($"{sVS}", "Current climb/descent rate\nCyan if not default\nClick to copy"),
                 _styleReadout, GUILayout.Width(_dynamicLabelWidth)))
         {
-            _bufClimb = ModUtils.ConvertVS_ToDisplay(Mathf.Abs(currentVS)).ToString("F0");
+            s_bufClimb = ModUtils.ConvertVS_ToDisplay(Mathf.Abs(currentVS)).ToString("F0");
         }
 
         GUI.color = Color.white;
-        _bufClimb = GUILayout.TextField(_bufClimb);
+        s_bufClimb = GUILayout.TextField(s_bufClimb);
         GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Max vertical speed"));
 
-        if (GUILayout.Button(new GUIContent("RST", "Reset to default"), _styleButton, GUILayout.Width(buttonWidth)))
+        if (GUILayout.Button(new GUIContent("RST", "Reset to default"), _styleButton, GUILayout.Width(_buttonWidth)))
         {
             APData.CurrentMaxClimbRate = DefaultMaxClimbRate.Value;
-            _bufClimb = ModUtils.ConvertVS_ToDisplay(APData.CurrentMaxClimbRate).ToString("F0");
+            s_bufClimb = ModUtils.ConvertVS_ToDisplay(APData.CurrentMaxClimbRate).ToString("F0");
             GUI.FocusControl(null);
         }
 
@@ -1142,37 +1121,29 @@ public class Plugin : BaseUnityPlugin
 
         // bank angle
         GUILayout.BeginHorizontal();
-        if (APData.NavEnabled && APData.Enabled)
-        {
-            GUI.color = Color.cyan;
-        }
-        else if (APData.Enabled && APData.TargetRoll != -999f)
-        {
-            GUI.color = Color.green;
-        }
-        else
-        {
-            GUI.color = Color.white;
-        }
+        GUI.color = APData.NavEnabled && APData.Enabled
+            ? Color.cyan
+            : APData.Enabled && APData.TargetRoll != -999f
+                ? Color.green : Color.white;
 
         if (GUILayout.Button(
                 new GUIContent($"{sRoll}",
                     "Current bank angle\nCyan if Nav mode on\nGreen if roll AP on\nClick to copy"), _styleReadout,
                 GUILayout.Width(_dynamicLabelWidth)))
         {
-            _bufRoll = APData.NavEnabled || APData.TargetCourse >= 0
+            s_bufRoll = APData.NavEnabled || APData.TargetCourse >= 0
                 ? Mathf.Abs(APData.CurrentRoll).ToString("F0")
                 : APData.CurrentRoll.ToString("F0");
         }
 
         GUI.color = Color.white;
-        _bufRoll = GUILayout.TextField(_bufRoll);
+        s_bufRoll = GUILayout.TextField(s_bufRoll);
         GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target/limit bank angle"));
 
-        if (GUILayout.Button(new GUIContent("CLR", "disable roll hold"), _styleButton, GUILayout.Width(buttonWidth)))
+        if (GUILayout.Button(new GUIContent("CLR", "disable roll hold"), _styleButton, GUILayout.Width(_buttonWidth)))
         {
             APData.TargetRoll = -999f;
-            _bufRoll = "";
+            s_bufRoll = "";
             GUI.FocusControl(null);
         }
 
@@ -1187,30 +1158,30 @@ public class Plugin : BaseUnityPlugin
             if (APData.SpeedHoldIsMach)
             {
                 float currentMach = currentSpeed / Mathf.Max(sos, 1f);
-                _bufSpeed = currentMach.ToString("F2");
+                s_bufSpeed = currentMach.ToString("F2");
             }
             else
             {
-                _bufSpeed = ModUtils.ConvertSpeed_ToDisplay(currentSpeed).ToString("F0");
+                s_bufSpeed = ModUtils.ConvertSpeed_ToDisplay(currentSpeed).ToString("F0");
             }
         }
 
         GUI.color = Color.white;
-        _bufSpeed = GUILayout.TextField(_bufSpeed);
+        s_bufSpeed = GUILayout.TextField(s_bufSpeed);
         GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target speed"));
 
         // mach hold button
         string machText = APData.SpeedHoldIsMach ? "M" : "Spd";
         if (GUILayout.Button(new GUIContent(machText, "Mach Hold / TAS Hold"), _styleButton,
-                GUILayout.Width(buttonWidth)))
+                GUILayout.Width(_buttonWidth)))
         {
-            if (float.TryParse(_bufSpeed, out float val))
+            if (float.TryParse(s_bufSpeed, out float val))
             {
                 if (!APData.SpeedHoldIsMach)
                 {
                     float ms = ModUtils.ConvertSpeed_FromDisplay(val);
                     float mach = Mathf.Max(0, ms / sos);
-                    _bufSpeed = mach.ToString("F2");
+                    s_bufSpeed = mach.ToString("F2");
                     if (APData.TargetSpeed >= 0)
                     {
                         APData.TargetSpeed = mach;
@@ -1220,7 +1191,7 @@ public class Plugin : BaseUnityPlugin
                 {
                     float ms = Mathf.Max(0, val * sos);
                     float display = ModUtils.ConvertSpeed_ToDisplay(ms);
-                    _bufSpeed = display.ToString("F0");
+                    s_bufSpeed = display.ToString("F0");
                     if (APData.TargetSpeed >= 0)
                     {
                         APData.TargetSpeed = ms;
@@ -1240,7 +1211,7 @@ public class Plugin : BaseUnityPlugin
 
         string limitText = APData.AllowExtremeThrottle ? "AB1" : "AB0";
         if (GUILayout.Button(new GUIContent(limitText, "Toggle afterburner/airbrake"), _styleButton,
-                GUILayout.Width(buttonWidth)))
+                GUILayout.Width(_buttonWidth)))
         {
             APData.AllowExtremeThrottle = !APData.AllowExtremeThrottle;
             GUI.FocusControl(null);
@@ -1251,42 +1222,34 @@ public class Plugin : BaseUnityPlugin
 
         // course
         GUILayout.BeginHorizontal();
-        if (APData.NavEnabled && APData.Enabled)
-        {
-            GUI.color = Color.cyan;
-        }
-        else if (APData.Enabled && APData.TargetCourse >= 0)
-        {
-            GUI.color = Color.green;
-        }
-        else
-        {
-            GUI.color = Color.white;
-        }
+        GUI.color = APData.NavEnabled && APData.Enabled
+            ? Color.cyan
+            : APData.Enabled && APData.TargetCourse >= 0
+                ? Color.green : Color.white;
 
         if (GUILayout.Button(
                 new GUIContent($"{sCrs}", "Current course\nCyan if Nav mode on\nGreen if Course AP on\nClick to copy"),
                 _styleReadout, GUILayout.Width(_dynamicLabelWidth)))
         {
-            _bufCourse = currentCourse.ToString("F0");
+            s_bufCourse = currentCourse.ToString("F0");
         }
 
         GUI.color = Color.white;
         if (APData.NavEnabled && APData.TargetCourse >= 0)
         {
-            _bufCourse = APData.TargetCourse.ToString("F0");
+            s_bufCourse = APData.TargetCourse.ToString("F0");
         }
 
-        _bufCourse = GUILayout.TextField(_bufCourse);
+        s_bufCourse = GUILayout.TextField(s_bufCourse);
         GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target course"));
         if (GUILayout.Button(new GUIContent("CLR", "Disable course hold/nav"), _styleButton,
-                GUILayout.Width(buttonWidth)))
+                GUILayout.Width(_buttonWidth)))
         {
             APData.TargetCourse = -1f;
-            _bufCourse = "";
+            s_bufCourse = "";
             APData.NavEnabled = false;
             APData.TargetRoll = 0;
-            _bufRoll = "0";
+            s_bufRoll = "0";
             GUI.FocusControl(null);
         }
 
@@ -1296,58 +1259,36 @@ public class Plugin : BaseUnityPlugin
         GUILayout.BeginHorizontal();
         if (GUILayout.Button(new GUIContent("Apply", "Applies typed values"), _styleButton))
         {
-            if (float.TryParse(_bufAlt, out float a))
-            {
-                APData.TargetAlt = ModUtils.ConvertAlt_FromDisplay(a);
-            }
-            else
-            {
-                APData.TargetAlt = -1f;
-            }
+            APData.TargetAlt = float.TryParse(s_bufAlt, out float a)
+                ? ModUtils.ConvertAlt_FromDisplay(a) : -1f;
 
-            if (float.TryParse(_bufClimb, out float c))
+            if (float.TryParse(s_bufClimb, out float c))
             {
                 APData.CurrentMaxClimbRate = Mathf.Max(0.5f, ModUtils.ConvertVS_FromDisplay(c));
             }
 
-            if (float.TryParse(_bufSpeed, out float s))
-            {
-                APData.TargetSpeed = APData.SpeedHoldIsMach ? s : ModUtils.ConvertSpeed_FromDisplay(s);
-            }
-            else
-            {
-                APData.TargetSpeed = -1f;
-            }
+            APData.TargetSpeed = float.TryParse(s_bufSpeed, out float s)
+                ? APData.SpeedHoldIsMach
+                    ? s : ModUtils.ConvertSpeed_FromDisplay(s)
+                : -1f;
 
-            if (float.TryParse(_bufCourse, out float crs))
-            {
-                APData.TargetCourse = crs;
-            }
-            else
-            {
-                APData.TargetCourse = -1f;
-            }
+            APData.TargetCourse = float.TryParse(s_bufCourse, out float crs) ? crs : -1f;
 
-            if (float.TryParse(_bufRoll, out float r))
+            if (float.TryParse(s_bufRoll, out float r))
             {
-                if ((APData.NavEnabled || APData.TargetCourse >= 0) && APData.TargetRoll == 0)
-                {
-                    APData.TargetRoll = DefaultCRLimit.Value;
-                }
-                else
-                {
-                    APData.TargetRoll = r;
-                }
+                APData.TargetRoll = (APData.NavEnabled || APData.TargetCourse >= 0) &&
+                                    APData.TargetRoll == 0
+                    ? DefaultCRLimit.Value : r;
             }
             else if (APData.TargetCourse >= 0f || APData.NavEnabled)
             {
                 APData.TargetRoll = DefaultCRLimit.Value;
-                _bufRoll = APData.TargetRoll.ToString("F0");
+                s_bufRoll = APData.TargetRoll.ToString("F0");
             }
             else
             {
                 APData.TargetRoll = -999f;
-                _bufRoll = "";
+                s_bufRoll = "";
             }
 
             APData.Enabled = true;
@@ -1363,23 +1304,23 @@ public class Plugin : BaseUnityPlugin
             APData.Enabled = !APData.Enabled;
             if (APData.Enabled)
             {
-                if (string.IsNullOrEmpty(_bufAlt))
+                if (string.IsNullOrEmpty(s_bufAlt))
                 {
                     APData.TargetAlt = APData.CurrentAlt;
-                    _bufAlt = ModUtils.ConvertAlt_ToDisplay(APData.TargetAlt).ToString("F0");
+                    s_bufAlt = ModUtils.ConvertAlt_ToDisplay(APData.TargetAlt).ToString("F0");
                 }
 
-                if (string.IsNullOrEmpty(_bufCourse) && string.IsNullOrEmpty(_bufRoll))
+                if (string.IsNullOrEmpty(s_bufCourse) && string.IsNullOrEmpty(s_bufRoll))
                 {
                     if (APData.NavEnabled || APData.TargetCourse >= 0)
                     {
                         APData.TargetRoll = DefaultCRLimit.Value;
-                        _bufRoll = APData.TargetRoll.ToString("F0");
+                        s_bufRoll = APData.TargetRoll.ToString("F0");
                     }
                     else
                     {
                         APData.TargetRoll = 0f;
-                        _bufRoll = "0";
+                        s_bufRoll = "0";
                     }
                 }
 
@@ -1920,9 +1861,9 @@ public class Plugin : BaseUnityPlugin
 
 public static class ModUtils
 {
-    private static readonly Regex _rxSpaces = new(@"\s+", RegexOptions.Compiled);
-    private static readonly Regex _rxDecimals = new(@"[\.]\d+", RegexOptions.Compiled);
-    private static readonly Regex _rxNumber = new(@"-?\d+", RegexOptions.Compiled);
+    private static readonly Regex RxSpaces = new(@"\s+", RegexOptions.Compiled);
+    private static readonly Regex RxDecimals = new(@"[\.]\d+", RegexOptions.Compiled);
+    private static readonly Regex RxNumber = new(@"-?\d+", RegexOptions.Compiled);
 
     public static Color GetColor(string hex, Color fallback)
     {
@@ -1936,62 +1877,44 @@ public static class ModUtils
             hex = "#" + hex;
         }
 
-        if (ColorUtility.TryParseHtmlString(hex, out Color c))
-        {
-            return c;
-        }
-
-        return fallback;
+        return ColorUtility.TryParseHtmlString(hex, out Color c)
+            ? c : fallback;
     }
 
     public static float ConvertAlt_ToDisplay(float meters)
     {
-        if (PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial)
-        {
-            return meters * 3.28084f;
-        }
-
-        return meters;
+        return PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial
+            ? meters * 3.28084f : meters;
     }
 
     public static float ConvertAlt_FromDisplay(float displayVal)
     {
-        if (PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial)
-        {
-            return displayVal / 3.28084f;
-        }
-
-        return displayVal;
+        return PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial
+            ? displayVal / 3.28084f : displayVal;
     }
 
     public static float ConvertVS_ToDisplay(float metersPerSec)
     {
-        if (PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial)
-        {
-            return metersPerSec * 196.850394f;
-        }
-
-        return metersPerSec;
+        return PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial
+            ? metersPerSec * 196.850394f : metersPerSec;
     }
 
     public static float ConvertVS_FromDisplay(float displayVal)
     {
-        if (PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial)
-        {
-            return displayVal / 196.850394f;
-        }
-
-        return displayVal;
+        return PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial
+            ? displayVal / 196.850394f : displayVal;
     }
 
     public static float ConvertSpeed_ToDisplay(float ms)
     {
-        return PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial ? ms * 1.94384f : ms * 3.6f;
+        return PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial
+            ? ms * 1.94384f : ms * 3.6f;
     }
 
     public static float ConvertSpeed_FromDisplay(float val)
     {
-        return PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial ? val / 1.94384f : val / 3.6f;
+        return PlayerSettings.unitSystem == PlayerSettings.UnitSystem.Imperial
+            ? val / 1.94384f : val / 3.6f;
     }
 
     public static string ProcessGameString(string raw, bool keepUnit)
@@ -2002,12 +1925,12 @@ public static class ModUtils
         }
 
         // remove spaces
-        string clean = _rxSpaces.Replace(raw, "");
+        string clean = RxSpaces.Replace(raw, "");
 
         clean = clean.Replace("+", "");
 
         // remove decimals
-        clean = _rxDecimals.Replace(clean, "");
+        clean = RxDecimals.Replace(clean, "");
 
         if (keepUnit)
         {
@@ -2015,7 +1938,7 @@ public static class ModUtils
         }
 
         // remove units
-        Match match = _rxNumber.Match(clean);
+        Match match = RxNumber.Match(clean);
         return match.Success ? match.Value : clean;
     }
 
@@ -2025,8 +1948,8 @@ public static class ModUtils
         {
             grid = grid.Trim();
             float x = 0, z = 0;
-            float offX = 80000f; // offsetX from GridLabels class
-            float offY = 80000f; // offsetY also from GL class
+            const float offX = 80000f; // offsetX from GridLabels class
+            const float offY = 80000f; // offsetY also from GL class
 
             if (grid.Length == 2)
             {
@@ -2156,15 +2079,16 @@ public static class APData
 }
 
 [HarmonyPatch(typeof(FlightHud), "SetHUDInfo")]
-internal class HudPatch
+internal static class HudPatch
 {
-    private static GameObject lastVehicleObj;
+    private static GameObject s_lastVehicleObj;
 
     public static void Reset()
     {
-        lastVehicleObj = null;
+        s_lastVehicleObj = null;
     }
 
+    [UsedImplicitly]
     private static void Postfix(object playerVehicle, float altitude)
     {
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
@@ -2177,7 +2101,7 @@ internal class HudPatch
             APData.CurrentAlt = altitude;
             if (playerVehicle is not Component v)
             {
-                lastVehicleObj = null;
+                s_lastVehicleObj = null;
                 APData.LocalAircraft = null;
                 APData.PlayerRB = null;
                 return;
@@ -2185,12 +2109,12 @@ internal class HudPatch
 
             Aircraft foundAircraft = v.GetComponent<Aircraft>();
 
-            if (foundAircraft == null || (v.gameObject == lastVehicleObj && APData.LocalAircraft != null))
+            if (foundAircraft == null || (v.gameObject == s_lastVehicleObj && APData.LocalAircraft != null))
             {
                 return;
             }
 
-            lastVehicleObj = v.gameObject;
+            s_lastVehicleObj = v.gameObject;
             APData.Reset();
             ControlOverridePatch.Reset();
             HUDVisualsPatch.Reset();
@@ -2205,7 +2129,7 @@ internal class HudPatch
             APData.SaveMapState = Plugin.SaveMapState.Value;
 
             Pilot[] pilots = APData.LocalAircraft.pilots;
-            if (pilots != null && pilots.Length > 0)
+            if (pilots?.Length > 0)
             {
                 APData.LocalPilot = pilots[0];
                 APData.GCASEnabled = APData.LocalPilot.pilotType switch
@@ -2228,106 +2152,107 @@ internal class HudPatch
 }
 
 [HarmonyPatch(typeof(PilotPlayerState), "PlayerAxisControls")]
-internal class ControlOverridePatch
+internal static class ControlOverridePatch
 {
-    private static readonly PIDController pidAlt = new();
-    private static readonly PIDController pidVS = new();
-    private static readonly PIDController pidAngle = new();
-    private static readonly PIDController pidRoll = new();
-    private static readonly PIDController pidGCAS = new();
-    private static readonly PIDController pidSpd = new();
-    private static readonly PIDController pidCrs = new();
+    private static readonly PIDController PidAlt = new();
+    private static readonly PIDController PidVS = new();
+    private static readonly PIDController PidAngle = new();
+    private static readonly PIDController PidRoll = new();
+    private static readonly PIDController PidGCAS = new();
+    private static readonly PIDController PidSpd = new();
+    private static readonly PIDController PidCrs = new();
 
-    private static float lastVSReq;
-    private static float lastAngleReq;
-    private static float lastPitchOut;
-    private static float lastRollOut;
-    private static float lastThrottleOut;
-    private static float lastBankReq;
+    private static float s_lastVSReq;
+    private static float s_lastAngleReq;
+    private static float s_lastPitchOut;
+    private static float s_lastRollOut;
+    private static float s_lastThrottleOut;
+    private static float s_lastBankReq;
 
-    private static bool wasEnabled;
-    private static float pitchSleepUntil;
-    private static float rollSleepUntil;
-    private static float spdSleepUntil;
-    private static bool isPitchSleeping;
-    private static bool isRollSleeping;
-    private static bool isSpdSleeping;
-    private static float gcasNextScan;
-    private static float overGFactor = 1.0f;
-    private static bool dangerImminent;
-    private static bool warningZone;
-    public static bool apStateBeforeGCAS;
-    private static float currentAppliedThrottle;
+    private static bool s_wasEnabled;
+    private static float s_pitchSleepUntil;
+    private static float s_rollSleepUntil;
+    private static float s_spdSleepUntil;
+    private static bool s_isPitchSleeping;
+    private static bool s_isRollSleeping;
+    private static bool s_isSpdSleeping;
+    private static float s_gcasNextScan;
+    private static float s_overGFactor = 1.0f;
+    private static bool s_dangerImminent;
+    private static bool s_warningZone;
+    public static bool ApStateBeforeGCAS;
+    private static float s_currentAppliedThrottle;
 
-    private static float jammerNextFireTime;
-    private static float jammerNextReleaseTime;
-    private static bool isJammerHoldingTrigger;
+    private static float s_jammerNextFireTime;
+    private static float s_jammerNextReleaseTime;
+    private static bool s_isJammerHoldingTrigger;
 
-    private static float _disengageTimer;
+    private static float s_disengageTimer;
 
     public static void Reset()
     {
-        pidAlt.Reset();
-        pidVS.Reset();
-        pidAngle.Reset();
-        pidRoll.Reset();
-        pidGCAS.Reset();
-        pidSpd.Reset();
-        pidCrs.Reset();
+        PidAlt.Reset();
+        PidVS.Reset();
+        PidAngle.Reset();
+        PidRoll.Reset();
+        PidGCAS.Reset();
+        PidSpd.Reset();
+        PidCrs.Reset();
 
-        lastVSReq = 0f;
-        lastAngleReq = 0f;
-        lastPitchOut = 0f;
-        lastRollOut = 0f;
-        lastThrottleOut = 0f;
-        lastBankReq = 0f;
+        s_lastVSReq = 0f;
+        s_lastAngleReq = 0f;
+        s_lastPitchOut = 0f;
+        s_lastRollOut = 0f;
+        s_lastThrottleOut = 0f;
+        s_lastBankReq = 0f;
 
-        wasEnabled = false;
-        pitchSleepUntil = 0f;
-        rollSleepUntil = 0f;
-        spdSleepUntil = 0f;
-        isPitchSleeping = false;
-        isRollSleeping = false;
-        isSpdSleeping = false;
-        gcasNextScan = 0f;
-        overGFactor = 1.0f;
-        dangerImminent = false;
-        warningZone = false;
-        apStateBeforeGCAS = false;
-        currentAppliedThrottle = 0f;
+        s_wasEnabled = false;
+        s_pitchSleepUntil = 0f;
+        s_rollSleepUntil = 0f;
+        s_spdSleepUntil = 0f;
+        s_isPitchSleeping = false;
+        s_isRollSleeping = false;
+        s_isSpdSleeping = false;
+        s_gcasNextScan = 0f;
+        s_overGFactor = 1.0f;
+        s_dangerImminent = false;
+        s_warningZone = false;
+        ApStateBeforeGCAS = false;
+        s_currentAppliedThrottle = 0f;
 
-        jammerNextFireTime = 0f;
-        jammerNextReleaseTime = 0f;
-        isJammerHoldingTrigger = false;
+        s_jammerNextFireTime = 0f;
+        s_jammerNextReleaseTime = 0f;
+        s_isJammerHoldingTrigger = false;
 
-        _disengageTimer = 0f;
+        s_disengageTimer = 0f;
     }
 
     private static void ResetIntegrators(float inputThrottle)
     {
-        pidAlt.Reset();
-        pidVS.Reset();
-        pidAngle.Reset();
-        pidRoll.Reset();
-        pidGCAS.Reset();
-        pidCrs.Reset();
+        PidAlt.Reset();
+        PidVS.Reset();
+        PidAngle.Reset();
+        PidRoll.Reset();
+        PidGCAS.Reset();
+        PidCrs.Reset();
         if (APData.TargetSpeed < 0)
         {
-            pidSpd.Reset(Mathf.Clamp01(inputThrottle));
-            currentAppliedThrottle = inputThrottle;
-            lastThrottleOut = inputThrottle;
+            PidSpd.Reset(Mathf.Clamp01(inputThrottle));
+            s_currentAppliedThrottle = inputThrottle;
+            s_lastThrottleOut = inputThrottle;
         }
 
-        lastVSReq = 0f;
-        lastAngleReq = 0f;
-        lastPitchOut = 0f;
-        lastRollOut = 0f;
-        lastBankReq = 0f;
+        s_lastVSReq = 0f;
+        s_lastAngleReq = 0f;
+        s_lastPitchOut = 0f;
+        s_lastRollOut = 0f;
+        s_lastBankReq = 0f;
 
-        isPitchSleeping = isRollSleeping = isSpdSleeping = false;
-        pitchSleepUntil = rollSleepUntil = spdSleepUntil = 0f;
+        s_isPitchSleeping = s_isRollSleeping = s_isSpdSleeping = false;
+        s_pitchSleepUntil = s_rollSleepUntil = s_spdSleepUntil = 0f;
     }
 
+    [UsedImplicitly]
     private static void Postfix(PilotPlayerState __instance)
     {
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
@@ -2387,7 +2312,7 @@ internal class ControlOverridePatch
             APData.GCASWarning = false;
             float currentG = 1f;
 
-            if (APData.Enabled != wasEnabled)
+            if (APData.Enabled != s_wasEnabled)
             {
                 if (APData.Enabled)
                 {
@@ -2399,7 +2324,7 @@ internal class ControlOverridePatch
                     }
                 }
 
-                wasEnabled = APData.Enabled;
+                s_wasEnabled = APData.Enabled;
                 APData.UseSetValues = false;
             }
 
@@ -2492,7 +2417,7 @@ internal class ControlOverridePatch
                     float descentRate = velocity.y < 0 ? Mathf.Abs(velocity.y) : 0f;
 
                     float currentRollAbs = Mathf.Abs(APData.CurrentRoll);
-                    float estimatedRollRate = 60f;
+                    const float estimatedRollRate = 60f;
                     float timeToRollUpright = currentRollAbs / estimatedRollRate;
 
                     float gAccel = Plugin.GCAS_MaxG.Value * 9.81f;
@@ -2502,16 +2427,16 @@ internal class ControlOverridePatch
                     float reactionDist = speed * reactionTime;
                     float warnDist = speed * Plugin.GCAS_WarnBuffer.Value;
 
-                    overGFactor = 1.0f;
+                    s_overGFactor = 1.0f;
 
                     // bool isWallThreat = false;
 
-                    if (Time.time >= gcasNextScan)
+                    if (Time.time >= s_gcasNextScan)
                     {
-                        gcasNextScan = Time.time + 0.02f;
+                        s_gcasNextScan = Time.time + 0.02f;
 
-                        dangerImminent = false;
-                        warningZone = false;
+                        s_dangerImminent = false;
+                        s_warningZone = false;
 
                         APData.GCASConverge = 0f;
 
@@ -2528,7 +2453,7 @@ internal class ControlOverridePatch
 
                                 if (hit.distance < reqArc + reactionDist + 20f)
                                 {
-                                    dangerImminent = true;
+                                    s_dangerImminent = true;
 
                                     float availableArcDist = hit.distance - reactionDist - (speed * timeToRollUpright);
 
@@ -2538,12 +2463,12 @@ internal class ControlOverridePatch
                                         neededRadius = Mathf.Max(neededRadius, 1f);
                                         float gRequired = speed * speed / (neededRadius * 9.81f);
 
-                                        overGFactor = Mathf.Max(overGFactor, gRequired / Plugin.GCAS_MaxG.Value);
+                                        s_overGFactor = Mathf.Max(s_overGFactor, gRequired / Plugin.GCAS_MaxG.Value);
                                     }
                                 }
                                 else if (hit.distance < reqArc + reactionDist + warnDist)
                                 {
-                                    warningZone = true;
+                                    s_warningZone = true;
                                     float distToTrigger = hit.distance - (reqArc + reactionDist + 20f);
                                     float totalWarnRange = warnDist - 20f;
                                     float fraction = 1f - (distToTrigger / Mathf.Max(totalWarnRange, 1f));
@@ -2562,19 +2487,19 @@ internal class ControlOverridePatch
 
                         if (availablePullAlt < pullUpLoss)
                         {
-                            dangerImminent = true;
+                            s_dangerImminent = true;
 
                             float availableRadius = availablePullAlt / (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
                             availableRadius = Mathf.Max(availableRadius, 1f);
 
                             float gReqFloor = speed * speed / (availableRadius * 9.81f);
 
-                            overGFactor = Mathf.Max(overGFactor, gReqFloor / Plugin.GCAS_MaxG.Value);
+                            s_overGFactor = Mathf.Max(s_overGFactor, gReqFloor / Plugin.GCAS_MaxG.Value);
                         }
                         else if (APData.CurrentAlt <
                                  pullUpLoss + vertBuffer + (descentRate * Plugin.GCAS_WarnBuffer.Value))
                         {
-                            warningZone = true;
+                            s_warningZone = true;
                             float triggerAlt = pullUpLoss + vertBuffer;
                             float warnRange = descentRate * Plugin.GCAS_WarnBuffer.Value;
                             float distToTrigger = APData.CurrentAlt - triggerAlt;
@@ -2587,7 +2512,7 @@ internal class ControlOverridePatch
                     {
                         bool safeToRelease = false;
 
-                        if (!dangerImminent)
+                        if (!s_dangerImminent)
                         {
                             if (velocity.y >= 0f || pilotPitch || pilotRoll)
                             {
@@ -2600,10 +2525,10 @@ internal class ControlOverridePatch
                             APData.GCASActive = false;
                             // APData.Enabled = apStateBeforeGCAS;
                             APData.Enabled = false;
-                            pidGCAS.Reset();
-                            pidAlt.Reset();
-                            pidVS.Reset();
-                            pidAngle.Reset();
+                            PidGCAS.Reset();
+                            PidAlt.Reset();
+                            PidVS.Reset();
+                            PidAngle.Reset();
                             if (Plugin.DisableATAPGCAS.Value)
                             {
                                 APData.TargetSpeed = -1f;
@@ -2617,11 +2542,11 @@ internal class ControlOverridePatch
                             APData.GCASConverge = 1f;
                         }
                     }
-                    else if (dangerImminent)
+                    else if (s_dangerImminent)
                     {
                         if (!pilotOverride && APData.GCASEnabled)
                         {
-                            apStateBeforeGCAS = APData.Enabled;
+                            ApStateBeforeGCAS = APData.Enabled;
                             APData.Enabled = true;
                             APData.GCASActive = true;
                             APData.ALSActive = false;
@@ -2636,7 +2561,7 @@ internal class ControlOverridePatch
                         APData.GCASWarning = true;
                         APData.GCASConverge = 1f;
                     }
-                    else if (warningZone)
+                    else if (s_warningZone)
                     {
                         APData.GCASWarning = true;
                     }
@@ -2682,44 +2607,44 @@ internal class ControlOverridePatch
 
                             if (cur / max >= Plugin.AutoJammerThreshold.Value)
                             {
-                                if (!isJammerHoldingTrigger)
+                                if (!s_isJammerHoldingTrigger)
                                 {
-                                    if (jammerNextFireTime == 0f)
+                                    if (s_jammerNextFireTime == 0f)
                                     {
-                                        jammerNextFireTime = Time.time + (Plugin.AutoJammerRandom.Value
+                                        s_jammerNextFireTime = Time.time + (Plugin.AutoJammerRandom.Value
                                             ? Random.Range(Plugin.AutoJammerMinDelay.Value,
                                                 Plugin.AutoJammerMaxDelay.Value)
                                             : 0f);
                                     }
 
-                                    if (Time.time >= jammerNextFireTime)
+                                    if (Time.time >= s_jammerNextFireTime)
                                     {
-                                        isJammerHoldingTrigger = true;
-                                        jammerNextFireTime = 0f;
+                                        s_isJammerHoldingTrigger = true;
+                                        s_jammerNextFireTime = 0f;
                                     }
                                 }
                             }
                             else
                             {
-                                if (isJammerHoldingTrigger)
+                                if (s_isJammerHoldingTrigger)
                                 {
-                                    if (jammerNextReleaseTime == 0f)
+                                    if (s_jammerNextReleaseTime == 0f)
                                     {
-                                        jammerNextReleaseTime = Time.time + (Plugin.AutoJammerRandom.Value
+                                        s_jammerNextReleaseTime = Time.time + (Plugin.AutoJammerRandom.Value
                                             ? Random.Range(Plugin.AutoJammerReleaseMin.Value,
                                                 Plugin.AutoJammerReleaseMax.Value)
                                             : 0f);
                                     }
 
-                                    if (Time.time >= jammerNextReleaseTime)
+                                    if (Time.time >= s_jammerNextReleaseTime)
                                     {
-                                        isJammerHoldingTrigger = false;
-                                        jammerNextReleaseTime = 0f;
+                                        s_isJammerHoldingTrigger = false;
+                                        s_jammerNextReleaseTime = 0f;
                                     }
                                 }
                             }
 
-                            if (isJammerHoldingTrigger)
+                            if (s_isJammerHoldingTrigger)
                             {
                                 wm.Fire();
                             }
@@ -2727,8 +2652,8 @@ internal class ControlOverridePatch
                     }
                     else
                     {
-                        isJammerHoldingTrigger = false;
-                        jammerNextFireTime = 0f;
+                        s_isJammerHoldingTrigger = false;
+                        s_jammerNextFireTime = 0f;
                     }
                 }
             }
@@ -2752,8 +2677,8 @@ internal class ControlOverridePatch
 
                     if (Plugin.DisengageDelay.Value > 0)
                     {
-                        _disengageTimer += dt;
-                        if (_disengageTimer >= Plugin.DisengageDelay.Value)
+                        s_disengageTimer += dt;
+                        if (s_disengageTimer >= Plugin.DisengageDelay.Value)
                         {
                             triggerDisengage = true;
                         }
@@ -2773,13 +2698,13 @@ internal class ControlOverridePatch
                             Plugin.SyncMenuValues();
                         }
 
-                        _disengageTimer = 0f;
+                        s_disengageTimer = 0f;
                     }
                 }
             }
             else
             {
-                _disengageTimer = 0f;
+                s_disengageTimer = 0f;
             }
 
             bool isWaitingToReengage = Time.time - APData.LastOverrideInputTime < Plugin.ReengageDelay.Value;
@@ -2809,52 +2734,47 @@ internal class ControlOverridePatch
                 if (useRandom)
                 {
                     float sErrAbs = Mathf.Abs(sErr);
-                    if (!isSpdSleeping)
+                    if (!s_isSpdSleeping)
                     {
                         if (sErrAbs < Plugin.Rand_Spd_Inner.Value && forwardAccel < Plugin.Rand_Acc_Inner.Value)
                         {
-                            spdSleepUntil = Time.time + Random.Range(Plugin.Rand_Spd_SleepMin.Value,
+                            s_spdSleepUntil = Time.time + Random.Range(Plugin.Rand_Spd_SleepMin.Value,
                                 Plugin.Rand_Spd_SleepMax.Value);
-                            isSpdSleeping = true;
+                            s_isSpdSleeping = true;
                         }
                     }
                     else if (sErrAbs > Plugin.Rand_Spd_Outer.Value || forwardAccel > Plugin.Rand_Acc_Outer.Value ||
-                             Time.time > spdSleepUntil)
+                             Time.time > s_spdSleepUntil)
                     {
-                        isSpdSleeping = false;
+                        s_isSpdSleeping = false;
                     }
                 }
 
                 float minT = APData.AllowExtremeThrottle ? 0f : Plugin.ThrottleMinLimit.Value;
                 float maxT = APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value;
 
-                float pidOutput = pidSpd.Evaluate(sErr, currentSpeed, dt,
+                float pidOutput = PidSpd.Evaluate(sErr, currentSpeed, dt,
                     Plugin.Conf_Spd_P.Value, Plugin.Conf_Spd_I.Value, Plugin.Conf_Spd_D.Value,
                     Plugin.Conf_Spd_ILimit.Value, false, -forwardAccel,
-                    lastThrottleOut);
+                    s_lastThrottleOut);
 
-                lastThrottleOut = pidOutput;
+                s_lastThrottleOut = pidOutput;
 
                 // float currentPitch = Mathf.Asin(pForward.y);
                 // float pitchWorkload = Mathf.Sin(currentPitch) * Plugin.Conf_Spd_C.Value;
 
-                float desiredThrottle = Mathf.Clamp(isSpdSleeping ? pidSpd.Integral : pidOutput, minT, maxT);
+                float desiredThrottle = Mathf.Clamp(s_isSpdSleeping ? PidSpd.Integral : pidOutput, minT, maxT);
 
                 float slewLimit = Plugin.ThrottleSlewRate.Value;
-                if (slewLimit > 0)
-                {
-                    currentAppliedThrottle = Mathf.MoveTowards(
-                        currentAppliedThrottle,
+                s_currentAppliedThrottle = slewLimit > 0
+                    ? Mathf.MoveTowards(
+                        s_currentAppliedThrottle,
                         desiredThrottle,
                         slewLimit * dt
-                    );
-                }
-                else
-                {
-                    currentAppliedThrottle = desiredThrottle;
-                }
+                    )
+                    : desiredThrottle;
 
-                inputObj.throttle = currentAppliedThrottle;
+                inputObj.throttle = s_currentAppliedThrottle;
             }
 
             // autopilot
@@ -2867,7 +2787,7 @@ internal class ControlOverridePatch
                 // keys
                 if (!APData.ALSActive && !CursorManager.GetFlag(CursorFlags.Chat))
                 {
-                    float fpsRef = 60f;
+                    const float fpsRef = 60f;
                     float aStep = Plugin.AltStep.Value * fpsRef * dt;
                     float bStep = Plugin.BigAltStep.Value * fpsRef * dt;
                     float cStep = Plugin.ClimbRateStep.Value * fpsRef * dt;
@@ -3006,8 +2926,8 @@ internal class ControlOverridePatch
                 {
                     if ((pilotRoll || isWaitingToReengage) && !APData.GCASActive)
                     {
-                        pidRoll.Reset();
-                        pidCrs.Reset();
+                        PidRoll.Reset();
+                        PidCrs.Reset();
                     }
                     else
                     {
@@ -3024,14 +2944,14 @@ internal class ControlOverridePatch
                                 // float actualTurnRate = localAngVel.y * Mathf.Rad2Deg;
                                 float crsILimit = Plugin.Conf_Crs_ILimit.Value;
 
-                                float desiredTurnRate = pidCrs.Evaluate(cErr, curCrs, dt,
+                                float desiredTurnRate = PidCrs.Evaluate(cErr, curCrs, dt,
                                     Plugin.Conf_Crs_P.Value, Plugin.Conf_Crs_I.Value, Plugin.Conf_Crs_D.Value,
                                     crsILimit, true, null,
-                                    lastBankReq, crsILimit * 0.95f, true);
+                                    s_lastBankReq, crsILimit * 0.95f, true);
 
-                                lastBankReq = desiredTurnRate;
+                                s_lastBankReq = desiredTurnRate;
 
-                                float gravity = 9.81f;
+                                const float gravity = 9.81f;
                                 float velocity = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
                                 float turnRateRad = desiredTurnRate * Mathf.Deg2Rad;
                                 float bankReq = Mathf.Atan(velocity * turnRateRad / gravity) * Mathf.Rad2Deg;
@@ -3062,36 +2982,36 @@ internal class ControlOverridePatch
                         {
                             float rollErrAbs = Mathf.Abs(rollError);
                             float rollRateAbs = Mathf.Abs(rollRate);
-                            if (!isRollSleeping)
+                            if (!s_isRollSleeping)
                             {
                                 if (rollErrAbs < Plugin.Rand_Roll_Inner.Value &&
                                     rollRateAbs < Plugin.Rand_RollRate_Inner.Value)
                                 {
-                                    rollSleepUntil = Time.time + Random.Range(Plugin.Rand_RollSleepMin.Value,
+                                    s_rollSleepUntil = Time.time + Random.Range(Plugin.Rand_RollSleepMin.Value,
                                         Plugin.Rand_RollSleepMax.Value);
-                                    isRollSleeping = true;
+                                    s_isRollSleeping = true;
                                 }
                             }
                             else if (rollErrAbs > Plugin.Rand_Roll_Outer.Value ||
-                                     rollRateAbs > Plugin.Rand_RollRate_Outer.Value || Time.time > rollSleepUntil)
+                                     rollRateAbs > Plugin.Rand_RollRate_Outer.Value || Time.time > s_rollSleepUntil)
                             {
-                                isRollSleeping = false;
+                                s_isRollSleeping = false;
                             }
                         }
 
                         float rollOut = 0f;
-                        if (useRandom && isRollSleeping)
+                        if (useRandom && s_isRollSleeping)
                         {
-                            pidRoll.Integral = Mathf.MoveTowards(pidRoll.Integral, 0f, dt * 5f);
+                            PidRoll.Integral = Mathf.MoveTowards(PidRoll.Integral, 0f, dt * 5f);
                         }
                         else
                         {
-                            rollOut = pidRoll.Evaluate(rollError, APData.CurrentRoll, dt,
+                            rollOut = PidRoll.Evaluate(rollError, APData.CurrentRoll, dt,
                                 Plugin.RollP.Value, Plugin.RollI.Value, Plugin.RollD.Value,
                                 Plugin.RollILimit.Value, false, -rollRate,
-                                lastRollOut, 0.95f, true);
+                                s_lastRollOut, 0.95f, true);
 
-                            lastRollOut = rollOut;
+                            s_lastRollOut = rollOut;
 
                             if (Plugin.InvertRoll.Value)
                             {
@@ -3118,9 +3038,9 @@ internal class ControlOverridePatch
 
                 if ((pilotPitch || isWaitingToReengage) && !APData.GCASActive)
                 {
-                    pidAlt.Reset();
-                    pidVS.Reset();
-                    pidAngle.Reset();
+                    PidAlt.Reset();
+                    PidVS.Reset();
+                    PidAngle.Reset();
                     if (!Plugin.KeepSetAltStick.Value)
                     {
                         APData.TargetAlt = APData.CurrentAlt;
@@ -3134,19 +3054,9 @@ internal class ControlOverridePatch
                     if (APData.GCASActive)
                     {
                         float rollAngle = Mathf.Abs(APData.CurrentRoll);
-                        float targetG;
-
-                        if (rollAngle >= 90f)
-                        {
-                            targetG = 0f;
-                        }
-                        else
-                        {
-                            targetG = Plugin.GCAS_MaxG.Value * overGFactor;
-                        }
-
+                        float targetG = rollAngle >= 90f ? 0f : Plugin.GCAS_MaxG.Value * s_overGFactor;
                         float gError = targetG - currentG;
-                        pitchOut = pidGCAS.Evaluate(gError, currentG, dt,
+                        pitchOut = PidGCAS.Evaluate(gError, currentG, dt,
                             Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,
                             Plugin.GCAS_ILimit.Value);
                     }
@@ -3162,41 +3072,41 @@ internal class ControlOverridePatch
                             float altErrAbs = Mathf.Abs(altError);
                             float vsAbs = Mathf.Abs(currentVS);
 
-                            if (!isPitchSleeping)
+                            if (!s_isPitchSleeping)
                             {
                                 // start sleep check
                                 if (altErrAbs < Plugin.Rand_Alt_Inner.Value && vsAbs < Plugin.Rand_VS_Inner.Value)
                                 {
-                                    pitchSleepUntil = Time.time + Random.Range(Plugin.Rand_PitchSleepMin.Value,
+                                    s_pitchSleepUntil = Time.time + Random.Range(Plugin.Rand_PitchSleepMin.Value,
                                         Plugin.Rand_PitchSleepMax.Value);
-                                    isPitchSleeping = true;
+                                    s_isPitchSleeping = true;
                                 }
                             }
                             else
                             {
                                 // wake up check
                                 if (altErrAbs > Plugin.Rand_Alt_Outer.Value || vsAbs > Plugin.Rand_VS_Outer.Value ||
-                                    Time.time > pitchSleepUntil)
+                                    Time.time > s_pitchSleepUntil)
                                 {
-                                    isPitchSleeping = false;
+                                    s_isPitchSleeping = false;
                                 }
                             }
                         }
 
-                        if (useRandom && isPitchSleeping)
+                        if (useRandom && s_isPitchSleeping)
                         {
-                            pidAlt.Integral = Mathf.MoveTowards(pidAlt.Integral, 0f, dt * 2f);
-                            pidVS.Integral = Mathf.MoveTowards(pidVS.Integral, 0f, dt * 10f);
-                            pidAngle.Integral = Mathf.MoveTowards(pidAngle.Integral, 0f, dt * 5f);
+                            PidAlt.Integral = Mathf.MoveTowards(PidAlt.Integral, 0f, dt * 2f);
+                            PidVS.Integral = Mathf.MoveTowards(PidVS.Integral, 0f, dt * 10f);
+                            PidAngle.Integral = Mathf.MoveTowards(PidAngle.Integral, 0f, dt * 5f);
                         }
                         else
                         {
-                            float targetVS = pidAlt.Evaluate(altError, APData.CurrentAlt, dt,
+                            float targetVS = PidAlt.Evaluate(altError, APData.CurrentAlt, dt,
                                 Plugin.Conf_Alt_P.Value, Plugin.Conf_Alt_I.Value, Plugin.Conf_Alt_D.Value,
                                 Plugin.Conf_Alt_ILimit.Value, false, -currentVS,
-                                lastVSReq, APData.CurrentMaxClimbRate * 0.95f);
+                                s_lastVSReq, APData.CurrentMaxClimbRate * 0.95f);
 
-                            lastVSReq = targetVS;
+                            s_lastVSReq = targetVS;
 
                             float possibleAccel = Plugin.GCAS_MaxG.Value * 9.81f;
                             float maxSafeVS = Mathf.Sqrt(2f * possibleAccel * Mathf.Abs(altError));
@@ -3207,23 +3117,23 @@ internal class ControlOverridePatch
                             float vsError = targetVS - currentVS;
 
                             float vsAccel = (currentG - 1.0f) * 9.81f;
-                            float targetPitchDeg = pidVS.Evaluate(vsError, currentVS, dt,
+                            float targetPitchDeg = PidVS.Evaluate(vsError, currentVS, dt,
                                 Plugin.Conf_VS_P.Value, Plugin.Conf_VS_I.Value, Plugin.Conf_VS_D.Value,
                                 Plugin.Conf_VS_ILimit.Value, false, -vsAccel,
-                                lastAngleReq, Plugin.Conf_VS_MaxAngle.Value * 0.95f);
+                                s_lastAngleReq, Plugin.Conf_VS_MaxAngle.Value * 0.95f);
 
-                            lastAngleReq = targetPitchDeg;
+                            s_lastAngleReq = targetPitchDeg;
 
                             float currentPitch = Mathf.Asin(pForward.y) * Mathf.Rad2Deg;
                             float angleError = targetPitchDeg - currentPitch;
                             float pitchRate = localAngVel.x * Mathf.Rad2Deg;
 
-                            pitchOut = pidAngle.Evaluate(angleError, currentPitch, dt,
+                            pitchOut = PidAngle.Evaluate(angleError, currentPitch, dt,
                                 Plugin.Conf_Angle_P.Value, Plugin.Conf_Angle_I.Value, Plugin.Conf_Angle_D.Value,
                                 Plugin.Conf_Angle_ILimit.Value, false, pitchRate,
-                                lastPitchOut, 0.95f, true);
+                                s_lastPitchOut, 0.95f, true);
 
-                            lastPitchOut = pitchOut;
+                            s_lastPitchOut = pitchOut;
 
                             if (useRandom)
                             {
@@ -3252,8 +3162,9 @@ internal class ControlOverridePatch
 }
 
 [HarmonyPatch(typeof(PilotPlayerState), "LeaveState")]
-internal class PreventLeaveStateCleanup
+internal static class PreventLeaveStateCleanup
 {
+    [UsedImplicitly]
     private static bool Prefix(PilotPlayerState __instance)
     {
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
@@ -3280,8 +3191,9 @@ internal class PreventLeaveStateCleanup
 }
 
 [HarmonyPatch(typeof(PilotPlayerState), "EnterState")]
-internal class FixGLOCLeakPatch
+internal static class FixGLOCLeakPatch
 {
+    [UsedImplicitly]
     private static void Prefix(Pilot pilot)
     {
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
@@ -3306,7 +3218,7 @@ internal class FixGLOCLeakPatch
 }
 
 [HarmonyPatch]
-internal class UpdateHUDAutolandPatch
+internal static class UpdateHUDAutolandPatch
 {
     [HarmonyPatch(typeof(AIPilotLandingState), nameof(AIPilotLandingState.FixedUpdateState))]
     [HarmonyPatch(typeof(AIPilotShortLandingState), nameof(AIPilotShortLandingState.FixedUpdateState))]
@@ -3432,8 +3344,9 @@ internal class UpdateHUDAutolandPatch
 }
 
 [HarmonyPatch(typeof(Airbase), "RpcRegisterUsage")]
-internal class SuppressAirbaseRpcPatch
+internal static class SuppressAirbaseRpcPatch
 {
+    [UsedImplicitly]
     private static bool Prefix(Airbase __instance, Aircraft aircraft, bool isUsing, byte? landingRunway)
     {
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
@@ -3466,7 +3379,7 @@ internal class SuppressAirbaseRpcPatch
 }
 
 [HarmonyPatch]
-internal class ALSLandingPatch
+internal static class ALSLandingPatch
 {
     [HarmonyPatch(typeof(AIPilotLandingState), nameof(AIPilotLandingState.CheckApproachParameters))]
     [HarmonyPatch(typeof(AIPilotShortLandingState), nameof(AIPilotShortLandingState.CheckApproachParameters))]
@@ -3510,8 +3423,9 @@ internal class ALSLandingPatch
 }
 
 [HarmonyPatch(typeof(FlightHud), "EnableCanvas")]
-internal class KeepFlightHudAlivePatch
+internal static class KeepFlightHudAlivePatch
 {
+    [UsedImplicitly]
     private static bool Prefix(bool enable)
     {
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
@@ -3541,70 +3455,71 @@ internal class KeepFlightHudAlivePatch
 }
 
 [HarmonyPatch(typeof(FlightHud), "Update")]
-internal class HUDVisualsPatch
+internal static class HUDVisualsPatch
 {
-    private static GameObject infoOverlayObj;
-    private static Text overlayText;
+    private static GameObject s_infoOverlayObj;
+    private static Text s_overlayText;
 
-    private static GameObject gcasLeftObj;
-    private static GameObject gcasRightObj;
-    private static GameObject gcasTopObj;
-    private static Text gcasLeftText;
-    private static Text gcasRightText;
-    private static Text gcasTopText;
-    private static float smoothedConverge;
+    private static GameObject s_gcasLeftObj;
+    private static GameObject s_gcasRightObj;
+    private static GameObject s_gcasTopObj;
+    private static Text s_gcasLeftText;
+    private static Text s_gcasRightText;
+    private static Text s_gcasTopText;
+    private static float s_smoothedConverge;
 
-    private static float lastFuelMass;
-    private static float fuelFlowEma;
-    private static float lastUpdateTime;
+    private static float s_lastFuelMass;
+    private static float s_fuelFlowEma;
+    private static float s_lastUpdateTime;
 
-    private static float _lastStringUpdate;
-    private static FuelGauge _cachedFuelGauge;
-    private static Text _cachedRefLabel;
-    private static Vector3 _fuelLabelPosOffset;
-    private static readonly StringBuilder _sbHud = new(1024);
-    private static GameObject _lastVehicleChecked;
+    private static float s_lastStringUpdate;
+    private static FuelGauge s_cachedFuelGauge;
+    private static Text s_cachedRefLabel;
+    private static Vector3 s_fuelLabelPosOffset;
+    private static readonly StringBuilder SbHud = new(1024);
+    private static GameObject s_lastVehicleChecked;
 
     public static void Reset()
     {
-        if (infoOverlayObj != null)
+        if (s_infoOverlayObj != null)
         {
-            Object.Destroy(infoOverlayObj);
+            Object.Destroy(s_infoOverlayObj);
         }
 
-        infoOverlayObj = null;
-        overlayText = null;
+        s_infoOverlayObj = null;
+        s_overlayText = null;
 
-        if (gcasLeftObj)
+        if (s_gcasLeftObj)
         {
-            Object.Destroy(gcasLeftObj);
+            Object.Destroy(s_gcasLeftObj);
         }
 
-        if (gcasRightObj)
+        if (s_gcasRightObj)
         {
-            Object.Destroy(gcasRightObj);
+            Object.Destroy(s_gcasRightObj);
         }
 
-        if (gcasTopObj)
+        if (s_gcasTopObj)
         {
-            Object.Destroy(gcasTopObj);
+            Object.Destroy(s_gcasTopObj);
         }
 
-        gcasLeftObj = null;
-        gcasRightObj = null;
-        gcasTopObj = null;
-        smoothedConverge = 0f;
+        s_gcasLeftObj = null;
+        s_gcasRightObj = null;
+        s_gcasTopObj = null;
+        s_smoothedConverge = 0f;
 
-        lastFuelMass = 0f;
-        fuelFlowEma = 0f;
-        lastUpdateTime = 0f;
-        _lastStringUpdate = 0f;
-        _cachedFuelGauge = null;
-        _cachedRefLabel = null;
-        _lastVehicleChecked = null;
-        _sbHud.Clear();
+        s_lastFuelMass = 0f;
+        s_fuelFlowEma = 0f;
+        s_lastUpdateTime = 0f;
+        s_lastStringUpdate = 0f;
+        s_cachedFuelGauge = null;
+        s_cachedRefLabel = null;
+        s_lastVehicleChecked = null;
+        SbHud.Clear();
     }
 
+    [UsedImplicitly]
     private static void Postfix(FlightHud __instance)
     {
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
@@ -3643,80 +3558,80 @@ internal class HUDVisualsPatch
                 return;
             }
 
-            if (_lastVehicleChecked != currentVehicleObj || _cachedFuelGauge == null)
+            if (s_lastVehicleChecked != currentVehicleObj || s_cachedFuelGauge == null)
             {
-                _lastVehicleChecked = currentVehicleObj;
-                _cachedFuelGauge = __instance.GetComponentInChildren<FuelGauge>(true);
+                s_lastVehicleChecked = currentVehicleObj;
+                s_cachedFuelGauge = __instance.GetComponentInChildren<FuelGauge>(true);
 
-                if (_cachedFuelGauge != null)
+                if (s_cachedFuelGauge != null)
                 {
-                    _cachedRefLabel = _cachedFuelGauge.fuelLabel;
-                    _fuelLabelPosOffset = __instance.GetHUDCenter()
-                        .InverseTransformPoint(_cachedRefLabel.transform.position);
+                    s_cachedRefLabel = s_cachedFuelGauge.fuelLabel;
+                    s_fuelLabelPosOffset = __instance.GetHUDCenter()
+                        .InverseTransformPoint(s_cachedRefLabel.transform.position);
                 }
             }
 
-            if (_cachedFuelGauge == null || _cachedRefLabel == null)
+            if (s_cachedFuelGauge == null || s_cachedRefLabel == null)
             {
                 return;
             }
 
-            if (!infoOverlayObj)
+            if (!s_infoOverlayObj)
             {
-                infoOverlayObj = Object.Instantiate(_cachedRefLabel.gameObject, __instance.GetHUDCenter());
-                infoOverlayObj.name = "AP_CombinedOverlay";
-                infoOverlayObj.transform.localPosition = _fuelLabelPosOffset;
-                overlayText = infoOverlayObj.GetComponent<Text>();
-                overlayText.resizeTextForBestFit = false;
-                overlayText.supportRichText = true;
-                overlayText.alignment = TextAnchor.UpperLeft;
-                overlayText.horizontalOverflow = HorizontalWrapMode.Overflow;
-                overlayText.verticalOverflow = VerticalWrapMode.Overflow;
-                RectTransform rect = infoOverlayObj.GetComponent<RectTransform>();
+                s_infoOverlayObj = Object.Instantiate(s_cachedRefLabel.gameObject, __instance.GetHUDCenter());
+                s_infoOverlayObj.name = "AP_CombinedOverlay";
+                s_infoOverlayObj.transform.localPosition = s_fuelLabelPosOffset;
+                s_overlayText = s_infoOverlayObj.GetComponent<Text>();
+                s_overlayText.resizeTextForBestFit = false;
+                s_overlayText.supportRichText = true;
+                s_overlayText.alignment = TextAnchor.UpperLeft;
+                s_overlayText.horizontalOverflow = HorizontalWrapMode.Overflow;
+                s_overlayText.verticalOverflow = VerticalWrapMode.Overflow;
+                RectTransform rect = s_infoOverlayObj.GetComponent<RectTransform>();
                 rect.pivot = new Vector2(0, 1);
                 rect.anchorMin = new Vector2(0, 1);
                 rect.anchorMax = new Vector2(0, 1);
-                rect.localScale = _cachedRefLabel.transform.localScale;
+                rect.localScale = s_cachedRefLabel.transform.localScale;
                 rect.localRotation = Quaternion.identity;
-                infoOverlayObj.SetActive(true);
+                s_infoOverlayObj.SetActive(true);
             }
 
             float currentSize = PlayerSettings.hudTextSize;
             float scaleRatio = currentSize / 40f;
-            overlayText.fontSize = (int)currentSize;
+            s_overlayText.fontSize = (int)currentSize;
 
             // Vector3 refLocalPos = _cachedRefLabel.transform.localPosition;
             float finalX = Plugin.OverlayOffsetX.Value * scaleRatio;
             float finalY = Plugin.OverlayOffsetY.Value * scaleRatio;
-            infoOverlayObj.transform.localPosition = _fuelLabelPosOffset + new Vector3(finalX, finalY, 0);
+            s_infoOverlayObj.transform.localPosition = s_fuelLabelPosOffset + new Vector3(finalX, finalY, 0);
 
             Aircraft aircraft = APData.LocalAircraft;
             if (aircraft != null)
             {
                 float currentFuel = aircraft.fuelCapacity * aircraft.GetFuelLevel();
                 float time = Time.time;
-                if (lastUpdateTime != 0f && lastFuelMass > 0f)
+                if (s_lastUpdateTime != 0f && s_lastFuelMass > 0f)
                 {
-                    float dt = time - lastUpdateTime;
+                    float dt = time - s_lastUpdateTime;
                     if (dt >= Plugin.FuelUpdateInterval.Value)
                     {
-                        float burned = lastFuelMass - currentFuel;
+                        float burned = s_lastFuelMass - currentFuel;
                         float flow = Mathf.Max(0f, burned / dt);
-                        fuelFlowEma = Mathf.Lerp(fuelFlowEma, flow, Plugin.FuelSmoothing.Value);
-                        lastUpdateTime = time;
-                        lastFuelMass = currentFuel;
+                        s_fuelFlowEma = Mathf.Lerp(s_fuelFlowEma, flow, Plugin.FuelSmoothing.Value);
+                        s_lastUpdateTime = time;
+                        s_lastFuelMass = currentFuel;
                     }
                 }
                 else
                 {
-                    lastUpdateTime = time;
-                    lastFuelMass = currentFuel;
+                    s_lastUpdateTime = time;
+                    s_lastFuelMass = currentFuel;
                 }
 
-                if (Time.time - _lastStringUpdate >= Plugin.DisplayUpdateInterval.Value)
+                if (Time.time - s_lastStringUpdate >= Plugin.DisplayUpdateInterval.Value)
                 {
-                    _lastStringUpdate = Time.time;
-                    _sbHud.Clear();
+                    s_lastStringUpdate = Time.time;
+                    SbHud.Clear();
 
                     if (Plugin.ShowFuelOverlay.Value)
                     {
@@ -3729,12 +3644,12 @@ internal class HUDVisualsPatch
                             }
                             catch (FormatException) { }
 
-                            _sbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">").Append(sTime)
+                            SbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">").Append(sTime)
                                 .Append("\n----</color>\n");
                         }
                         else
                         {
-                            float calcFlow = Mathf.Max(fuelFlowEma, 0.0001f);
+                            float calcFlow = Mathf.Max(s_fuelFlowEma, 0.0001f);
                             float secs = currentFuel / calcFlow;
                             string sTime = "";
                             try
@@ -3756,7 +3671,7 @@ internal class HUDVisualsPatch
                                 fuelCol = Plugin.ColorWarn.Value;
                             }
 
-                            _sbHud.Append("<color=").Append(fuelCol).Append(">").Append(sTime).Append("</color>\n");
+                            SbHud.Append("<color=").Append(fuelCol).Append(">").Append(sTime).Append("</color>\n");
 
                             // float spd = aircraft.rb != null ? aircraft.rb.velocity.magnitude : 0f;
                             float distMeters = secs * APData.SpeedEma;
@@ -3767,13 +3682,13 @@ internal class HUDVisualsPatch
 
                             string sRange = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters),
                                 Plugin.DistShowUnit.Value);
-                            _sbHud.Append("<color=").Append(Plugin.ColorRange.Value).Append(">").Append(sRange)
+                            SbHud.Append("<color=").Append(Plugin.ColorRange.Value).Append(">").Append(sRange)
                                 .Append("</color>\n\n");
                         }
                     }
 
                     // (AP was on before GCAS) or (AP is on and no GCAS)
-                    bool apActive = (ControlOverridePatch.apStateBeforeGCAS && APData.GCASActive) ||
+                    bool apActive = (ControlOverridePatch.ApStateBeforeGCAS && APData.GCASActive) ||
                                     (APData.Enabled && !APData.GCASActive);
                     bool speedActive = APData.TargetSpeed >= 0f;
 
@@ -3783,7 +3698,7 @@ internal class HUDVisualsPatch
 
                         if (apActive || speedActive)
                         {
-                            _sbHud.Append("<color=").Append(Plugin.ColorAPOn.Value).Append(">");
+                            SbHud.Append("<color=").Append(Plugin.ColorAPOn.Value).Append(">");
                         }
 
                         bool hasLine1 = false;
@@ -3791,11 +3706,11 @@ internal class HUDVisualsPatch
                         {
                             if (APData.SpeedHoldIsMach)
                             {
-                                _sbHud.Append("M").Append(APData.TargetSpeed.ToString("F2"));
+                                SbHud.Append("M").Append(APData.TargetSpeed.ToString("F2"));
                             }
                             else
                             {
-                                _sbHud.Append("S").Append(ModUtils.ProcessGameString(
+                                SbHud.Append("S").Append(ModUtils.ProcessGameString(
                                     UnitConverter.SpeedReading(APData.TargetSpeed), Plugin.SpeedShowUnit.Value));
                             }
 
@@ -3803,7 +3718,7 @@ internal class HUDVisualsPatch
                         }
                         else if (placeholders)
                         {
-                            _sbHud.Append("S");
+                            SbHud.Append("S");
                             hasLine1 = true;
                         }
 
@@ -3814,27 +3729,27 @@ internal class HUDVisualsPatch
                             {
                                 if (hasLine1)
                                 {
-                                    _sbHud.Append(" ");
+                                    SbHud.Append(" ");
                                 }
 
-                                _sbHud.Append("R").Append(APData.TargetRoll.ToString("F0")).Append(degUnit);
+                                SbHud.Append("R").Append(APData.TargetRoll.ToString("F0")).Append(degUnit);
                                 hasLine1 = true;
                             }
                             else if (placeholders)
                             {
                                 if (hasLine1)
                                 {
-                                    _sbHud.Append(" ");
+                                    SbHud.Append(" ");
                                 }
 
-                                _sbHud.Append("R");
+                                SbHud.Append("R");
                                 hasLine1 = true;
                             }
                         }
 
                         if (hasLine1)
                         {
-                            _sbHud.Append("\n");
+                            SbHud.Append("\n");
                         }
 
                         bool hasLine2 = false;
@@ -3842,13 +3757,13 @@ internal class HUDVisualsPatch
                         {
                             if (APData.TargetAlt > 0)
                             {
-                                _sbHud.Append("A").Append(ModUtils.ProcessGameString(
+                                SbHud.Append("A").Append(ModUtils.ProcessGameString(
                                     UnitConverter.AltitudeReading(APData.TargetAlt), Plugin.AltShowUnit.Value));
                                 hasLine2 = true;
                             }
                             else if (placeholders)
                             {
-                                _sbHud.Append("A");
+                                SbHud.Append("A");
                                 hasLine2 = true;
                             }
 
@@ -3857,10 +3772,10 @@ internal class HUDVisualsPatch
                             {
                                 if (hasLine2)
                                 {
-                                    _sbHud.Append(" ");
+                                    SbHud.Append(" ");
                                 }
 
-                                _sbHud.Append("V").Append(ModUtils.ProcessGameString(
+                                SbHud.Append("V").Append(ModUtils.ProcessGameString(
                                     UnitConverter.ClimbRateReading(APData.CurrentMaxClimbRate),
                                     Plugin.VertSpeedShowUnit.Value));
                                 hasLine2 = true;
@@ -3869,17 +3784,17 @@ internal class HUDVisualsPatch
                             {
                                 if (hasLine2)
                                 {
-                                    _sbHud.Append(" ");
+                                    SbHud.Append(" ");
                                 }
 
-                                _sbHud.Append("V");
+                                SbHud.Append("V");
                                 hasLine2 = true;
                             }
                         }
 
                         if (hasLine2)
                         {
-                            _sbHud.Append("\n");
+                            SbHud.Append("\n");
                         }
 
                         bool hasLine3 = false;
@@ -3888,12 +3803,12 @@ internal class HUDVisualsPatch
                             string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
                             if (APData.TargetCourse >= 0)
                             {
-                                _sbHud.Append("C").Append(APData.TargetCourse.ToString("F0")).Append(degUnit);
+                                SbHud.Append("C").Append(APData.TargetCourse.ToString("F0")).Append(degUnit);
                                 hasLine3 = true;
                             }
                             else if (placeholders)
                             {
-                                _sbHud.Append("C");
+                                SbHud.Append("C");
                                 hasLine3 = true;
                             }
 
@@ -3901,12 +3816,12 @@ internal class HUDVisualsPatch
                             {
                                 if (hasLine3)
                                 {
-                                    _sbHud.Append(" ");
+                                    SbHud.Append(" ");
                                 }
 
                                 float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(),
                                     APData.NavQueue[0]);
-                                _sbHud.Append("W>").Append(ModUtils.ProcessGameString(UnitConverter.DistanceReading(d),
+                                SbHud.Append("W>").Append(ModUtils.ProcessGameString(UnitConverter.DistanceReading(d),
                                     Plugin.DistShowUnit.Value));
                                 hasLine3 = true;
                             }
@@ -3914,28 +3829,28 @@ internal class HUDVisualsPatch
                             {
                                 if (hasLine3)
                                 {
-                                    _sbHud.Append(" ");
+                                    SbHud.Append(" ");
                                 }
 
-                                _sbHud.Append("W");
+                                SbHud.Append("W");
                                 hasLine3 = true;
                             }
                         }
 
                         if (hasLine3)
                         {
-                            _sbHud.Append("\n");
+                            SbHud.Append("\n");
                         }
 
                         if (apActive || speedActive)
                         {
-                            _sbHud.Append("</color>");
+                            SbHud.Append("</color>");
                         }
                     }
 
                     if (!APData.GCASEnabled && Plugin.ShowGCASOff.Value)
                     {
-                        _sbHud.Append("<color=").Append(Plugin.ColorInfo.Value).Append(">GCAS-</color>\n");
+                        SbHud.Append("<color=").Append(Plugin.ColorInfo.Value).Append(">GCAS-</color>\n");
                     }
 
                     if (Plugin.ShowOverride.Value && APData.Enabled && !APData.GCASActive)
@@ -3944,40 +3859,40 @@ internal class HUDVisualsPatch
                             Plugin.ReengageDelay.Value - (Time.time - APData.LastOverrideInputTime);
                         if (overrideRemaining > 0)
                         {
-                            _sbHud.Append("<color=").Append(Plugin.ColorInfo.Value).Append(">")
+                            SbHud.Append("<color=").Append(Plugin.ColorInfo.Value).Append(">")
                                 .Append(overrideRemaining.ToString("F1")).Append("s</color>\n");
                         }
                     }
 
                     if (APData.AutoJammerActive)
                     {
-                        _sbHud.Append("<color=").Append(Plugin.ColorAPOn.Value).Append(">AJ\n</color>");
+                        SbHud.Append("<color=").Append(Plugin.ColorAPOn.Value).Append(">AJ\n</color>");
                     }
 
                     if (APData.FBWDisabled)
                     {
-                        _sbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">FBW OFF</color>");
+                        SbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">FBW OFF</color>");
                     }
 
                     if (APData.ALSActive || !string.IsNullOrEmpty(APData.ALSStatusText))
                     {
                         string hexColor = ColorUtility.ToHtmlStringRGBA(APData.ALSStatusColor);
-                        _sbHud.Append($"\n<color=#{hexColor}>{APData.ALSStatusText}</color>");
+                        SbHud.Append($"\n<color=#{hexColor}>{APData.ALSStatusText}</color>");
                     }
 
-                    overlayText.text = _sbHud.ToString();
+                    s_overlayText.text = SbHud.ToString();
                 }
             }
 
             if (!APData.ALSActive && (APData.GCASActive || (APData.GCASWarning && !APData.IsOnGround)))
             {
-                if (gcasLeftObj == null)
+                if (s_gcasLeftObj == null)
                 {
                     Transform hudCenter = __instance.GetHUDCenter();
 
                     GameObject CreateObj(string name, string txt)
                     {
-                        GameObject obj = Object.Instantiate(_cachedRefLabel.gameObject, hudCenter);
+                        GameObject obj = Object.Instantiate(s_cachedRefLabel.gameObject, hudCenter);
                         obj.name = name;
                         Text t = obj.GetComponent<Text>();
                         t.fontStyle = FontStyle.Normal;
@@ -3999,69 +3914,69 @@ internal class HUDVisualsPatch
                         return obj;
                     }
 
-                    gcasLeftObj = CreateObj("GCAS_Left", ">");
-                    gcasLeftText = gcasLeftObj.GetComponent<Text>();
+                    s_gcasLeftObj = CreateObj("GCAS_Left", ">");
+                    s_gcasLeftText = s_gcasLeftObj.GetComponent<Text>();
 
-                    gcasRightObj = CreateObj("GCAS_Right", "<");
-                    gcasRightText = gcasRightObj.GetComponent<Text>();
+                    s_gcasRightObj = CreateObj("GCAS_Right", "<");
+                    s_gcasRightText = s_gcasRightObj.GetComponent<Text>();
 
-                    gcasTopObj = CreateObj("GCAS_Top", "FLYUP");
-                    gcasTopText = gcasTopObj.GetComponent<Text>();
+                    s_gcasTopObj = CreateObj("GCAS_Top", "FLYUP");
+                    s_gcasTopText = s_gcasTopObj.GetComponent<Text>();
                 }
 
                 float target = APData.GCASConverge;
-                smoothedConverge = Mathf.Lerp(smoothedConverge, target, Time.deltaTime * 10f);
+                s_smoothedConverge = Mathf.Lerp(s_smoothedConverge, target, Time.deltaTime * 10f);
 
-                gcasLeftObj.SetActive(true);
-                gcasRightObj.SetActive(true);
-                gcasTopObj.SetActive(target >= 1);
+                s_gcasLeftObj.SetActive(true);
+                s_gcasRightObj.SetActive(true);
+                s_gcasTopObj.SetActive(target >= 1);
 
                 Color gcasColor = ModUtils.GetColor(Plugin.ColorCrit.Value, Color.red);
 
                 int arrowSize = (int)currentSize;
                 int textSize = (int)(currentSize * 0.7);
 
-                gcasLeftText.fontSize = arrowSize;
-                gcasLeftText.color = gcasColor;
-                gcasRightText.fontSize = arrowSize;
-                gcasRightText.color = gcasColor;
-                gcasTopText.fontSize = textSize;
-                gcasTopText.color = gcasColor;
+                s_gcasLeftText.fontSize = arrowSize;
+                s_gcasLeftText.color = gcasColor;
+                s_gcasRightText.fontSize = arrowSize;
+                s_gcasRightText.color = gcasColor;
+                s_gcasTopText.fontSize = textSize;
+                s_gcasTopText.color = gcasColor;
 
-                float alpha = smoothedConverge;
-                Color c = gcasLeftText.color;
+                float alpha = s_smoothedConverge;
+                Color c = s_gcasLeftText.color;
                 c.a = alpha;
-                gcasLeftText.color = c;
-                c = gcasRightText.color;
+                s_gcasLeftText.color = c;
+                c = s_gcasRightText.color;
                 c.a = alpha;
-                gcasRightText.color = c;
-                c = gcasTopText.color;
+                s_gcasRightText.color = c;
+                c = s_gcasTopText.color;
                 c.a = alpha;
-                gcasTopText.color = c;
+                s_gcasTopText.color = c;
 
-                float offsetX = Mathf.Lerp(200f, 5f, smoothedConverge);
+                float offsetX = Mathf.Lerp(200f, 5f, s_smoothedConverge);
 
                 float yOffset = -(arrowSize * 0.25f);
 
-                gcasLeftObj.transform.localPosition = new Vector3(-offsetX, yOffset, 0);
-                gcasRightObj.transform.localPosition = new Vector3(offsetX, yOffset, 0);
-                gcasTopObj.transform.localPosition = new Vector3(0, 40, 0);
+                s_gcasLeftObj.transform.localPosition = new Vector3(-offsetX, yOffset, 0);
+                s_gcasRightObj.transform.localPosition = new Vector3(offsetX, yOffset, 0);
+                s_gcasTopObj.transform.localPosition = new Vector3(0, 40, 0);
             }
             else
             {
-                if (gcasLeftObj && gcasLeftObj.activeSelf)
+                if (s_gcasLeftObj && s_gcasLeftObj.activeSelf)
                 {
-                    gcasLeftObj.SetActive(false);
+                    s_gcasLeftObj.SetActive(false);
                 }
 
-                if (gcasRightObj && gcasRightObj.activeSelf)
+                if (s_gcasRightObj && s_gcasRightObj.activeSelf)
                 {
-                    gcasRightObj.SetActive(false);
+                    s_gcasRightObj.SetActive(false);
                 }
 
-                if (gcasTopObj && gcasTopObj.activeSelf)
+                if (s_gcasTopObj && s_gcasTopObj.activeSelf)
                 {
-                    gcasTopObj.SetActive(false);
+                    s_gcasTopObj.SetActive(false);
                 }
             }
         }
@@ -4074,10 +3989,11 @@ internal class HUDVisualsPatch
 }
 
 [HarmonyPatch(typeof(DynamicMap), "MapControls")]
-internal class MapInteractionPatch
+internal static class MapInteractionPatch
 {
     public static void Reset() { }
 
+    [UsedImplicitly]
     private static void Postfix(DynamicMap __instance)
     {
         try
@@ -4146,10 +4062,11 @@ internal class MapInteractionPatch
 }
 
 [HarmonyPatch(typeof(DynamicMap), "UpdateMap")]
-internal class MapWaypointPatch
+internal static class MapWaypointPatch
 {
     public static void Reset() { }
 
+    [UsedImplicitly]
     private static void Postfix()
     {
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
@@ -4197,7 +4114,7 @@ internal class MapWaypointPatch
                 }
             }
 
-            if (playerLine == null || APData.NavQueue.Count <= 0)
+            if (playerLine == null || APData.NavQueue.Count == 0)
             {
                 return;
             }
@@ -4224,7 +4141,7 @@ internal class MapWaypointPatch
 }
 
 [HarmonyPatch(typeof(DynamicMap), "MapControls")]
-internal class UnlockMapPatch
+internal static class UnlockMapPatch
 {
     private static readonly MethodInfo ClampMethod =
         AccessTools.Method(typeof(Mathf), "Clamp", [typeof(float), typeof(float), typeof(float)]);
@@ -4278,8 +4195,9 @@ internal class UnlockMapPatch
 }
 
 [HarmonyPatch(typeof(DynamicMap), "Minimize")]
-internal class MapSaveStatePatch
+internal static class MapSaveStatePatch
 {
+    [UsedImplicitly]
     private static void Prefix(DynamicMap __instance)
     {
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
@@ -4308,8 +4226,9 @@ internal class MapSaveStatePatch
 }
 
 [HarmonyPatch(typeof(DynamicMap), "Maximize")]
-internal class MapLoadStatePatch
+internal static class MapLoadStatePatch
 {
+    [UsedImplicitly]
     private static void Postfix(DynamicMap __instance)
     {
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
@@ -4378,21 +4297,13 @@ public class PIDController
 
         Integral = Mathf.Clamp(Integral, -iLimit, iLimit);
 
-        float derivative;
-        if (manualDerivative.HasValue)
-        {
-            derivative = manualDerivative.Value;
-        }
-        else if (useErrorDerivative)
-        {
-            derivative = isAngle ? Mathf.DeltaAngle(_lastError, error) / dt : (error - _lastError) / dt;
-        }
-        else
-        {
-            derivative = isAngle
+        float derivative = manualDerivative ?? (useErrorDerivative
+            ? isAngle
+                ? Mathf.DeltaAngle(_lastError, error) / dt
+                : (error - _lastError) / dt
+            : isAngle
                 ? -Mathf.DeltaAngle(_lastMeasurement, measurement) / dt
-                : -(measurement - _lastMeasurement) / dt;
-        }
+                : -(measurement - _lastMeasurement) / dt);
 
         _lastError = error;
         _lastMeasurement = measurement;
@@ -4415,8 +4326,8 @@ internal sealed class ConfigurationManagerAttributes
 
 internal static class RewiredConfigManager
 {
-    private static bool _isListening;
-    private static ConfigEntryBase _targetEntry, _targetController, _targetIndex;
+    private static bool s_isListening;
+    private static ConfigEntryBase s_targetEntry, s_targetController, s_targetIndex;
 
     public static ConfigEntry<string> BindRW(ConfigFile config, string category, string keyName, string description)
     {
@@ -4436,7 +4347,7 @@ internal static class RewiredConfigManager
 
     public static void Update()
     {
-        if (!_isListening || ReInput.controllers == null)
+        if (!s_isListening || ReInput.controllers == null)
         {
             return;
         }
@@ -4485,27 +4396,27 @@ internal static class RewiredConfigManager
     private static void SaveBind(Controller c, string elemName, int id, string typeTag)
     {
         string cName = c.name.Trim();
-        _targetEntry.BoxedValue = $"{cName} | {elemName} | {id} | {typeTag}";
-        if (_targetController != null)
+        s_targetEntry.BoxedValue = $"{cName} | {elemName} | {id} | {typeTag}";
+        if (s_targetController != null)
         {
-            _targetController.BoxedValue = cName;
+            s_targetController.BoxedValue = cName;
         }
 
-        if (_targetIndex != null)
+        if (s_targetIndex != null)
         {
-            _targetIndex.BoxedValue = id;
+            s_targetIndex.BoxedValue = id;
         }
 
-        _isListening = false;
+        s_isListening = false;
     }
 
     public static void RewiredButtonDrawer(ConfigEntryBase entry)
     {
-        if (_isListening && _targetEntry == entry)
+        if (s_isListening && s_targetEntry == entry)
         {
             if (GUILayout.Button("Listening... (Click to cancel)", GUILayout.ExpandWidth(true)))
             {
-                _isListening = false;
+                s_isListening = false;
             }
         }
         else
@@ -4517,21 +4428,21 @@ internal static class RewiredConfigManager
                 return;
             }
 
-            _isListening = true;
-            _targetEntry = entry;
+            s_isListening = true;
+            s_targetEntry = entry;
             ConfigurationManagerAttributes attr = entry.Description.Tags?.OfType<ConfigurationManagerAttributes>()
                 .FirstOrDefault();
-            _targetController = attr?.ControllerName as ConfigEntryBase;
-            _targetIndex = attr?.ButtonIndex as ConfigEntryBase;
+            s_targetController = attr?.ControllerName as ConfigEntryBase;
+            s_targetIndex = attr?.ButtonIndex as ConfigEntryBase;
         }
     }
 
     public static void Reset()
     {
-        _isListening = false;
-        _targetEntry = null;
-        _targetController = null;
-        _targetIndex = null;
+        s_isListening = false;
+        s_targetEntry = null;
+        s_targetController = null;
+        s_targetIndex = null;
     }
 }
 
@@ -4595,11 +4506,8 @@ public static class InputHelper
         }
 
         int idx = target.GetButtonIndexById(id);
-        if (idx < 0)
-        {
-            return false;
-        }
-
-        return checkDown ? target.GetButtonDown(idx) : target.GetButton(idx);
+        return idx >= 0 && (checkDown
+            ? target.GetButtonDown(idx)
+            : target.GetButton(idx));
     }
 }

@@ -389,25 +389,25 @@ public class Plugin : BaseUnityPlugin
 
         // Loops
         Conf_Alt_P = Config.Bind("Tuning - 1. Altitude>VS", "1. Alt P", 0.5f, "Alt Error -> Target VS");
-        Conf_Alt_I = Config.Bind("Tuning - 1. Altitude>VS", "2. Alt I", 0.0f, "Accumulates Error");
-        Conf_Alt_D = Config.Bind("Tuning - 1. Altitude>VS", "3. Alt D", 1.5f, "Dampens Approach");
+        Conf_Alt_I = Config.Bind("Tuning - 1. Altitude>VS", "2. Alt I", 0.0f, "Integral");
+        Conf_Alt_D = Config.Bind("Tuning - 1. Altitude>VS", "3. Alt D", 1.5f, "Derivative");
         Conf_Alt_ILimit = Config.Bind("Tuning - 1. Altitude>VS", "4. Alt I Limit", 10.0f, "Max Integral (m/s)");
         Conf_VS_P = Config.Bind("Tuning - 2. VS>Angle", "1. VS P", 2.0f, "VS Error -> Target Angle");
-        Conf_VS_I = Config.Bind("Tuning - 2. VS>Angle", "2. VS I", 1.0f, "Trim Angle");
-        Conf_VS_D = Config.Bind("Tuning - 2. VS>Angle", "3. VS D", 2.0f, "Dampens VS Change");
+        Conf_VS_I = Config.Bind("Tuning - 2. VS>Angle", "2. VS I", 1.0f, "Integral");
+        Conf_VS_D = Config.Bind("Tuning - 2. VS>Angle", "3. VS D", 2.0f, "Derivative");
         Conf_VS_ILimit = Config.Bind("Tuning - 2. VS>Angle", "4. VS I Limit", 90.0f, "Max Trim (Deg)");
         Conf_Angle_P = Config.Bind("Tuning - 3. Angle>Stick", "1. Angle P", 0.03f, "Angle Error -> Stick");
-        Conf_Angle_I = Config.Bind("Tuning - 3. Angle>Stick", "2. Angle I", 0.01f, "Holds Angle");
-        Conf_Angle_D = Config.Bind("Tuning - 3. Angle>Stick", "3. Angle D", 0.02f, "Dampens Rotation");
+        Conf_Angle_I = Config.Bind("Tuning - 3. Angle>Stick", "2. Angle I", 0.01f, "Integral");
+        Conf_Angle_D = Config.Bind("Tuning - 3. Angle>Stick", "3. Angle D", 0.02f, "Derivative");
         Conf_Angle_ILimit = Config.Bind("Tuning - 3. Angle>Stick", "4. Angle I Limit", 90.0f, "Max Integral (Stick)");
-        RollP = Config.Bind("Tuning - 4. Roll", "1. Roll P", 0.01f, "P");
-        RollI = Config.Bind("Tuning - 4. Roll", "2. Roll I", 0.002f, "I");
-        RollD = Config.Bind("Tuning - 4. Roll", "3. Roll D", 0.001f, "D");
+        RollP = Config.Bind("Tuning - 4. Roll", "1. Roll P", 0.01f, "Proportional");
+        RollI = Config.Bind("Tuning - 4. Roll", "2. Roll I", 0.002f, "Integral");
+        RollD = Config.Bind("Tuning - 4. Roll", "3. Roll D", 0.001f, "Derivative");
         RollILimit = Config.Bind("Tuning - 4. Roll", "5. Roll I Limit", 1.0f, "Limit");
 
         Conf_Spd_P = Config.Bind("Tuning - 5. Speed>Throttle", "1. Speed P", 0.3f, "Speed Error -> Throttle");
-        Conf_Spd_I = Config.Bind("Tuning - 5. Speed>Throttle", "2. Speed I", 0.05f, "Hold speed");
-        Conf_Spd_D = Config.Bind("Tuning - 5. Speed>Throttle", "3. Speed D", 0.25f, "Dampen");
+        Conf_Spd_I = Config.Bind("Tuning - 5. Speed>Throttle", "2. Speed I", 0.05f, "Integral");
+        Conf_Spd_D = Config.Bind("Tuning - 5. Speed>Throttle", "3. Speed D", 0.25f, "Derivative");
         Conf_Spd_ILimit = Config.Bind("Tuning - 5. Speed>Throttle", "4. Speed I Limit", 1.0f, "Max integral");
         ThrottleMinLimit = Config.Bind("Tuning - 6. Speed - Misc", "1. Safe Min Throttle", 0.01f,
             "Minimum throttle when limiter is active (prevents Airbrake)");
@@ -417,8 +417,8 @@ public class Plugin : BaseUnityPlugin
             "in unit of throttle gauges per second (0 to disable)");
 
         Conf_Crs_P = Config.Bind("Tuning - 5. Course", "1. Course P", 1.0f, "Course Error -> Bank Angle");
-        Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 0.05f, "Correction");
-        Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.8f, "Dampen");
+        Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 0.03f, "Integral");
+        Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.0f, "Derivative");
         Conf_Crs_ILimit = Config.Bind("Tuning - 5. Course", "4. Course I Limit", 30.0f, "Max Integral Bank");
 
         // Auto GCAS
@@ -432,11 +432,11 @@ public class Plugin : BaseUnityPlugin
         GCAS_WarnBuffer =
             Config.Bind("Auto GCAS", "5. Warning Buffer", 20.0f, "GCAS warning indicator first appearance");
         GCAS_AutoBuffer = Config.Bind("Auto GCAS", "6. Auto-Pull Buffer", 0.5f, "Safety margin seconds");
-        GCAS_Deadzone = Config.Bind("Auto GCAS", "7. GCAS Deadzone", 0.5f, "GCAS override deadzone");
+        GCAS_Deadzone = Config.Bind("Auto GCAS", "7. GCAS Deadzone", 0.5f, "GCAS override deadzone (default 0.5 = 50%)");
         GCAS_ScanRadius = Config.Bind("Auto GCAS", "8. Scan Radius", 2.0f, "Width of the spherecast (m)");
         GCAS_P = Config.Bind("GCAS PID", "1. GCAS P", 0.1f, "G Error -> Stick");
-        GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 0.5f, "Builds pull over time");
-        GCAS_D = Config.Bind("GCAS PID", "3. GCAS D", 0.0f, "Dampens G overshoot");
+        GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 0.5f, "Integral");
+        GCAS_D = Config.Bind("GCAS PID", "3. GCAS D", 0.0f, "Derivative");
         GCAS_ILimit = Config.Bind("GCAS PID", "4. GCAS I Limit", 1.0f, "Max stick influence");
 
         // Random

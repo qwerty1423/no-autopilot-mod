@@ -28,7 +28,13 @@ internal static class HudPatch
 
         try
         {
-            Postfix(SceneSingleton<FlightHud>.i.aircraft);
+            FlightHud hud = SceneSingleton<FlightHud>.i;
+            if (hud == null || hud.aircraft == null)
+            {
+                return;
+            }
+
+            Postfix(hud.aircraft);
         }
         catch (Exception ex)
         {

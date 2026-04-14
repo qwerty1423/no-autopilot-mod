@@ -1021,6 +1021,12 @@ public class Plugin : BaseUnityPlugin
     {
         GUI.DragWindow(new Rect(0, 0, 10000, 25));
 
+        if (!APData.PlayerRB || !APData.LocalAircraft || !APData.LocalPilot)
+        {
+            GUILayout.Label("No player aircraft.");
+            return;
+        }
+
         _scrollPos = GUILayout.BeginScrollView(_scrollPos, false, false, GUIStyle.none, GUIStyle.none,
             GUILayout.Height(_windowRect.height - 30));
 

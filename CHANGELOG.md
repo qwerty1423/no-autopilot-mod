@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-04-14
+
+### Fixed
+
+- issues with 0.33
+- guiclip thing
+
 ### Changed
 
 - the code is hopefully nicer to look at now
@@ -283,7 +290,8 @@
 
 ## [4.8.4] - 2025-12-29
 
-[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.4...HEAD
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.0.0...HEAD
+[5.0.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.4...v5.0.0
 [4.17.4]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.3...v4.17.4
 [4.17.3]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.2...v4.17.3
 [4.17.2]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.1...v4.17.2

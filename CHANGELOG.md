@@ -11,7 +11,10 @@
 
 ### Changed
 
-- the code is hopefully nicer to look at now
+- the code is hopefully nicer to look at now (but probably no better tbh)
+- vspeed > angle loop terms changed to P: 2, I: 1, D: 2
+- angle > stick loop terms changed to P: 0.03, I: 0.01, D: 0.02
+- course > roll loop terms changed to P: 1, I: 0.03, D: 0
 
 ## [4.17.4] - 2026-03-03
 

@@ -101,7 +101,7 @@ internal static class HUDVisualsPatch
                 return;
             }
 
-            Aircraft vehicleRaw = __instance.playerVehicle;
+            Aircraft vehicleRaw = __instance.aircraft;
             Object unityObj = vehicleRaw;
 
             if (unityObj == null)

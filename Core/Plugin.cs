@@ -474,6 +474,7 @@ public class Plugin : BaseUnityPlugin
         {
             _harmony.PatchAll();
             SceneManager.sceneUnloaded += OnSceneUnloaded;
+            HudPatch.Initialize();
             Logger.LogInfo($"v{Version} loaded.");
         }
         catch (Exception ex)

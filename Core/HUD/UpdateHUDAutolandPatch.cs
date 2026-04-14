@@ -96,27 +96,8 @@ internal static class UpdateHUDAutolandPatch
             }
 
             Aircraft ac = __instance.pilot.aircraft;
-            Rigidbody rb = __instance.pilot.GetRB();
 
-            float airspeed = rb.velocity.magnitude;
-            float altitude = Mathf.Max(__instance.pilot.transform.position.GlobalY() - ac.definition.spawnOffset.y, 0f);
-            float currentG = __instance.pilot.gForce;
-            float climbRate = Vector3.Dot(rb.velocity, Vector3.up);
-            float angleOnAxis = TargetCalc.GetAngleOnAxis(rb.transform.forward, rb.velocity, rb.transform.right);
-            float radarAlt = Mathf.Min(ac.radarAlt, altitude);
-
-            SceneSingleton<FlightHud>.i.SetHUDInfo(
-                ac,
-                airspeed,
-                altitude,
-                radarAlt,
-                __instance.pilot.GetAccel(),
-                currentG,
-                climbRate,
-                angleOnAxis,
-                rb.velocity,
-                ac.GetInputs()
-            );
+            SceneSingleton<FlightHud>.i.SetAircraft(ac);
 
             if (SceneSingleton<CombatHUD>.i.aircraft == ac)
             {

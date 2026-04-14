@@ -12,18 +12,14 @@ using UnityEngine;
 
 namespace NOAutopilot.Core.HUD;
 
-[HarmonyPatch(typeof(FlightHud), "SetHUDInfo")]
+[HarmonyPatch(typeof(FlightHud), "SetAircraft")]
 internal static class HudPatch
 {
-    private static GameObject s_lastVehicleObj;
+    private static Aircraft s_lastAircraft;
 
-    public static void Reset()
-    {
-        s_lastVehicleObj = null;
-    }
+    public static void Reset() => s_lastAircraft = null;
 
-    [UsedImplicitly]
-    private static void Postfix(object playerVehicle, float altitude)
+    public static void Initialize()
     {
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
         {
@@ -32,32 +28,42 @@ internal static class HudPatch
 
         try
         {
-            APData.CurrentAlt = altitude;
-            if (playerVehicle is not Component v)
-            {
-                s_lastVehicleObj = null;
-                APData.LocalAircraft = null;
-                APData.PlayerRB = null;
-                return;
-            }
+            Postfix(SceneSingleton<FlightHud>.i.aircraft);
+        }
+        catch (Exception ex)
+        {
+            Plugin.Logger.LogError($"[HudPatch] Error: {ex}");
+            Plugin.IsBroken = true;
+        }
+    }
 
-            Aircraft foundAircraft = v.GetComponent<Aircraft>();
+    [UsedImplicitly]
+    private static void Postfix(Aircraft aircraft)
+    {
+        if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
+        {
+            return;
+        }
 
-            if (foundAircraft == null || (v.gameObject == s_lastVehicleObj && APData.LocalAircraft != null))
-            {
-                return;
-            }
+        if (aircraft == s_lastAircraft || !aircraft)
+        {
+            return;
+        }
 
-            s_lastVehicleObj = v.gameObject;
+        try
+        {
+            s_lastAircraft = aircraft;
             APData.Reset();
             ControlOverridePatch.Reset();
             HUDVisualsPatch.Reset();
 
-            APData.LocalAircraft = foundAircraft;
-            APData.PlayerTransform = v.transform;
-            APData.PlayerRB = v.GetComponent<Rigidbody>();
+            APData.LocalAircraft = aircraft;
+            APData.PlayerTransform = aircraft.transform;
+            APData.PlayerRB = aircraft.cockpit?.rb ?? aircraft.GetComponent<Rigidbody>();
+            APData.LocalWeaponManager = aircraft.weaponManager;
 
-            APData.TargetAlt = altitude;
+            APData.TargetAlt = aircraft.transform.position.GlobalY();
+
             APData.TargetRoll = 0f;
             APData.LocalWeaponManager = APData.LocalAircraft.weaponManager;
             APData.SaveMapState = Plugin.SaveMapState.Value;
@@ -80,6 +86,29 @@ internal static class HudPatch
         catch (Exception ex)
         {
             Plugin.Logger.LogError($"[HudPatch] Error: {ex}");
+            Plugin.IsBroken = true;
+        }
+    }
+}
+
+[HarmonyPatch(typeof(FlightHud), "Update")]
+internal static class HudUpdatePatch
+{
+    [UsedImplicitly]
+    private static void Postfix()
+    {
+        if (!APData.LocalAircraft || Plugin.IsBroken)
+        {
+            return;
+        }
+
+        try
+        {
+            APData.CurrentAlt = APData.LocalAircraft.transform.position.GlobalY();
+        }
+        catch (Exception ex)
+        {
+            Plugin.Logger.LogError($"[HudUpdatePatch] Error: {ex}");
             Plugin.IsBroken = true;
         }
     }

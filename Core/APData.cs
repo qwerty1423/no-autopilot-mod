@@ -50,8 +50,6 @@ public static class APData
     // public static List<Component> LocalLandingGears = [];
     public static bool IsOnGround;
 
-    public static SwingWingController LocalSwingController;
-
     // ALS
     public static bool ALSActive;
     public static string ALSStatusText = "";
@@ -94,7 +92,6 @@ public static class APData
         IsConscious = true;
         // LocalLandingGears.Clear();
         IsOnGround = false;
-        LocalSwingController = null;
         ALSActive = false;
         ALSStatusText = "";
         ALSStatusColor = Color.white;

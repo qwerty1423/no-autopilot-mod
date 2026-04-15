@@ -644,16 +644,9 @@ internal static class ControlOverridePatch
                     Plugin.Conf_Spd_B.Value, Plugin.Conf_Spd_C.Value,
                     Plugin.Conf_Spd_IntegralDeadband.Value);
 
-                float pidOutput;
-                if (s_isSpdSleeping)
-                {
-                    pidOutput = (float)PidSpd.ITerm;
-                }
-                else
-                {
-                    pidOutput = (float)PidSpd.Update(targetSpeedMS, currentSpeed);
-                }
-
+                float pidOutput = s_isSpdSleeping
+                    ? (float)PidSpd.ITerm
+                    : (float)PidSpd.Update(targetSpeedMS, currentSpeed);
                 s_lastThrottleOut = pidOutput;
 
                 float desiredThrottle = Mathf.Clamp(pidOutput, minT, maxT);

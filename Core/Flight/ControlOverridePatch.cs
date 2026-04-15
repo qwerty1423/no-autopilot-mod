@@ -19,20 +19,25 @@ namespace NOAutopilot.Core.Flight;
 [HarmonyPatch(typeof(PilotPlayerState), "PlayerAxisControls")]
 internal static class ControlOverridePatch
 {
-    private static readonly PIDController PidAlt = new();
-    private static readonly PIDController PidVS = new();
-    private static readonly PIDController PidAngle = new();
-    private static readonly PIDController PidRoll = new();
-    private static readonly PIDController PidGCAS = new();
-    private static readonly PIDController PidSpd = new();
-    private static readonly PIDController PidCrs = new();
+    private static readonly PIDLoop2 PidAlt = new();
+    private static readonly PIDLoop2 PidVS = new();
+    private static readonly PIDLoop2 PidAngle = new();
+    private static readonly PIDLoop2 PidRoll = new();
+    private static readonly PIDLoop2 PidGCAS = new();
+    private static readonly PIDLoop2 PidSpd = new();
+    private static readonly PIDLoop2 PidCrs = new();
 
-    private static float s_lastVSReq;
-    private static float s_lastAngleReq;
+    private static PIDConfig _cfgAlt;
+    private static PIDConfig _cfgVS;
+    private static PIDConfig _cfgAngle;
+    private static PIDConfig _cfgRoll;
+    private static PIDConfig _cfgGCAS;
+    private static PIDConfig _cfgSpd;
+    private static PIDConfig _cfgCrs;
+
     private static float s_lastPitchOut;
     private static float s_lastRollOut;
     private static float s_lastThrottleOut;
-    private static float s_lastBankReq;
 
     private static bool s_wasEnabled;
     private static float s_pitchSleepUntil;
@@ -54,6 +59,24 @@ internal static class ControlOverridePatch
 
     private static float s_disengageTimer;
 
+    private static void ConfigurePID(
+    PIDLoop2 pid, ref PIDConfig cfg,
+    float kp, float ki, float kd,
+    float dt,
+    float minOutput, float maxOutput,
+    float b = 1f, float c = 0f,
+    float integralDeadband = 0f)
+    {
+        PIDConfig.Apply(ref cfg, pid,
+            kp, ki, kd,
+            Plugin.PID_DerivativeFilter.Value,
+            minOutput, maxOutput,
+            b, c,
+            Plugin.PID_SmoothIn.Value, Plugin.PID_SmoothOut.Value,
+            integralDeadband,
+            Mathf.Max(dt, 0.0001f));
+    }
+
     public static void Reset()
     {
         PidAlt.Reset();
@@ -64,12 +87,17 @@ internal static class ControlOverridePatch
         PidSpd.Reset();
         PidCrs.Reset();
 
-        s_lastVSReq = 0f;
-        s_lastAngleReq = 0f;
+        _cfgAlt = default;
+        _cfgVS = default;
+        _cfgAngle = default;
+        _cfgRoll = default;
+        _cfgGCAS = default;
+        _cfgSpd = default;
+        _cfgCrs = default;
+
         s_lastPitchOut = 0f;
         s_lastRollOut = 0f;
         s_lastThrottleOut = 0f;
-        s_lastBankReq = 0f;
 
         s_wasEnabled = false;
         s_pitchSleepUntil = 0f;
@@ -102,16 +130,15 @@ internal static class ControlOverridePatch
         PidCrs.Reset();
         if (APData.TargetSpeed < 0)
         {
-            PidSpd.Reset(Mathf.Clamp01(inputThrottle));
+            PidSpd.Reset();
+            // Seed the integrator so throttle starts from current position
+            PidSpd.SeedIntegral(Mathf.Clamp01(inputThrottle));
             s_currentAppliedThrottle = inputThrottle;
             s_lastThrottleOut = inputThrottle;
         }
 
-        s_lastVSReq = 0f;
-        s_lastAngleReq = 0f;
         s_lastPitchOut = 0f;
         s_lastRollOut = 0f;
-        s_lastBankReq = 0f;
 
         s_isPitchSleeping = s_isRollSleeping = s_isSpdSleeping = false;
         s_pitchSleepUntil = s_rollSleepUntil = s_spdSleepUntil = 0f;
@@ -135,11 +162,6 @@ internal static class ControlOverridePatch
 
         try
         {
-            // if (Input.GetKeyDown(KeyCode.F9))
-            // {
-            //     Plugin.Logger.LogWarning("simulating error");
-            //     throw new Exception("simulated error???");
-            // }
             if (APData.CurrentMaxClimbRate < 0f)
             {
                 APData.CurrentMaxClimbRate = Plugin.DefaultMaxClimbRate.Value;
@@ -157,18 +179,14 @@ internal static class ControlOverridePatch
                 return;
             }
 
-            float stickPitch;
-            float stickRoll;
-            float currentThrottle;
-            stickPitch = inputObj.pitch;
-            stickRoll = inputObj.roll;
-            currentThrottle = inputObj.throttle;
+            float stickPitch = inputObj.pitch;
+            float stickRoll = inputObj.roll;
+            float currentThrottle = inputObj.throttle;
             bool pilotPitch = Mathf.Abs(stickPitch) > Plugin.StickTempThreshold.Value;
             bool pilotRoll = Mathf.Abs(stickRoll) > Plugin.StickTempThreshold.Value;
 
             Vector3 pForward = APData.PlayerTransform.forward;
             Vector3 pUp = APData.PlayerTransform.up;
-            // Vector3 pEuler = APData.PlayerTransform.eulerAngles;
             Vector3 localAngVel = APData.PlayerTransform.InverseTransformDirection(APData.PlayerRB.angularVelocity);
 
             float dt = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
@@ -230,7 +248,7 @@ internal static class ControlOverridePatch
                 }
             }
 
-            // can a plane have no pilot?
+            // can a plane have no pilot? need to measure g
             Vector3 pAccel = default;
             if (APData.LocalPilot != null)
             {
@@ -294,8 +312,6 @@ internal static class ControlOverridePatch
 
                     s_overGFactor = 1.0f;
 
-                    // bool isWallThreat = false;
-
                     if (Time.time >= s_gcasNextScan)
                     {
                         s_gcasNextScan = Time.time + 0.02f;
@@ -320,7 +336,8 @@ internal static class ControlOverridePatch
                                 {
                                     s_dangerImminent = true;
 
-                                    float availableArcDist = hit.distance - reactionDist - (speed * timeToRollUpright);
+                                    float availableArcDist =
+                                        hit.distance - reactionDist - (speed * timeToRollUpright);
 
                                     if (availableArcDist < reqArc)
                                     {
@@ -328,7 +345,8 @@ internal static class ControlOverridePatch
                                         neededRadius = Mathf.Max(neededRadius, 1f);
                                         float gRequired = speed * speed / (neededRadius * 9.81f);
 
-                                        s_overGFactor = Mathf.Max(s_overGFactor, gRequired / Plugin.GCAS_MaxG.Value);
+                                        s_overGFactor =
+                                            Mathf.Max(s_overGFactor, gRequired / Plugin.GCAS_MaxG.Value);
                                     }
                                 }
                                 else if (hit.distance < reqArc + reactionDist + warnDist)
@@ -354,7 +372,8 @@ internal static class ControlOverridePatch
                         {
                             s_dangerImminent = true;
 
-                            float availableRadius = availablePullAlt / (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
+                            float availableRadius =
+                                availablePullAlt / (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
                             availableRadius = Mathf.Max(availableRadius, 1f);
 
                             float gReqFloor = speed * speed / (availableRadius * 9.81f);
@@ -388,7 +407,6 @@ internal static class ControlOverridePatch
                         if (safeToRelease)
                         {
                             APData.GCASActive = false;
-                            // APData.Enabled = apStateBeforeGCAS;
                             APData.Enabled = false;
                             PidGCAS.Reset();
                             PidAlt.Reset();
@@ -455,7 +473,7 @@ internal static class ControlOverridePatch
 
                     if (fire)
                     {
-                        fire = wm.targetList is IList { Count: > 0 }; // false if no targets
+                        fire = wm.targetList is IList { Count: > 0 };
                     }
 
                     if (fire)
@@ -523,6 +541,7 @@ internal static class ControlOverridePatch
                 }
             }
 
+            // stick disengage
             if (pilotPitch || pilotRoll)
             {
                 APData.LastOverrideInputTime = Time.time;
@@ -618,17 +637,26 @@ internal static class ControlOverridePatch
                 float minT = APData.AllowExtremeThrottle ? 0f : Plugin.ThrottleMinLimit.Value;
                 float maxT = APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value;
 
-                float pidOutput = PidSpd.Evaluate(sErr, currentSpeed, dt,
+                // Configure speed PID: setpoint = targetSpeed, measurement = currentSpeed
+                ConfigurePID(PidSpd, ref _cfgSpd,
                     Plugin.Conf_Spd_P.Value, Plugin.Conf_Spd_I.Value, Plugin.Conf_Spd_D.Value,
-                    Plugin.Conf_Spd_ILimit.Value, false, -forwardAccel,
-                    s_lastThrottleOut);
+                    dt, minT, maxT,
+                    Plugin.Conf_Spd_B.Value, Plugin.Conf_Spd_C.Value,
+                    Plugin.Conf_Spd_IntegralDeadband.Value);
+
+                float pidOutput;
+                if (s_isSpdSleeping)
+                {
+                    pidOutput = (float)PidSpd.ITerm;
+                }
+                else
+                {
+                    pidOutput = (float)PidSpd.Update(targetSpeedMS, currentSpeed);
+                }
 
                 s_lastThrottleOut = pidOutput;
 
-                // float currentPitch = Mathf.Asin(pForward.y);
-                // float pitchWorkload = Mathf.Sin(currentPitch) * Plugin.Conf_Spd_C.Value;
-
-                float desiredThrottle = Mathf.Clamp(s_isSpdSleeping ? PidSpd.Integral : pidOutput, minT, maxT);
+                float desiredThrottle = Mathf.Clamp(pidOutput, minT, maxT);
 
                 float slewLimit = Plugin.ThrottleSlewRate.Value;
                 s_currentAppliedThrottle = slewLimit > 0
@@ -806,15 +834,17 @@ internal static class ControlOverridePatch
                             {
                                 float curCrs = Quaternion.LookRotation(flatVel).eulerAngles.y;
                                 float cErr = Mathf.DeltaAngle(curCrs, APData.TargetCourse);
-                                // float actualTurnRate = localAngVel.y * Mathf.Rad2Deg;
-                                float crsILimit = Plugin.Conf_Crs_ILimit.Value;
 
-                                float desiredTurnRate = PidCrs.Evaluate(cErr, curCrs, dt,
+                                // Course PID: we pre-compute the angular error to handle wrapping,
+                                // then feed it as setpoint with measurement=0 so internal error = cErr.
+                                // The derivative will track how cErr changes over time.
+                                ConfigurePID(PidCrs, ref _cfgCrs,
                                     Plugin.Conf_Crs_P.Value, Plugin.Conf_Crs_I.Value, Plugin.Conf_Crs_D.Value,
-                                    crsILimit, true, null,
-                                    s_lastBankReq, crsILimit * 0.95f, true);
+                                    dt, -90f, 90f,
+                                    Plugin.Conf_Crs_B.Value, Plugin.Conf_Crs_C.Value,
+                                    Plugin.Conf_Crs_IntegralDeadband.Value);
 
-                                s_lastBankReq = desiredTurnRate;
+                                float desiredTurnRate = (float)PidCrs.Update(cErr, 0);
 
                                 const float gravity = 9.81f;
                                 float velocity = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
@@ -858,7 +888,8 @@ internal static class ControlOverridePatch
                                 }
                             }
                             else if (rollErrAbs > Plugin.Rand_Roll_Outer.Value ||
-                                     rollRateAbs > Plugin.Rand_RollRate_Outer.Value || Time.time > s_rollSleepUntil)
+                                     rollRateAbs > Plugin.Rand_RollRate_Outer.Value ||
+                                     Time.time > s_rollSleepUntil)
                             {
                                 s_isRollSleeping = false;
                             }
@@ -867,14 +898,18 @@ internal static class ControlOverridePatch
                         float rollOut = 0f;
                         if (useRandom && s_isRollSleeping)
                         {
-                            PidRoll.Integral = Mathf.MoveTowards(PidRoll.Integral, 0f, dt * 5f);
+                            PidRoll.SeedIntegral(Mathf.MoveTowards((float)PidRoll.ITerm, 0f, dt * 5f));
                         }
                         else
                         {
-                            rollOut = PidRoll.Evaluate(rollError, APData.CurrentRoll, dt,
+                            // Roll PID: pre-computed angular error as setpoint, 0 as measurement
+                            ConfigurePID(PidRoll, ref _cfgRoll,
                                 Plugin.RollP.Value, Plugin.RollI.Value, Plugin.RollD.Value,
-                                Plugin.RollILimit.Value, false, -rollRate,
-                                s_lastRollOut, 0.95f, true);
+                                dt, -1f, 1f,
+                                Plugin.Roll_B.Value, Plugin.Roll_C.Value,
+                                Plugin.Roll_IntegralDeadband.Value);
+
+                            rollOut = (float)PidRoll.Update(rollError, 0);
 
                             s_lastRollOut = rollOut;
 
@@ -885,7 +920,8 @@ internal static class ControlOverridePatch
 
                             if (useRandom)
                             {
-                                rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f * Plugin.RandomStrength.Value;
+                                rollOut += (Mathf.PerlinNoise(0f, noiseT) - 0.5f) * 2f *
+                                           Plugin.RandomStrength.Value;
                             }
                         }
 
@@ -893,7 +929,7 @@ internal static class ControlOverridePatch
                     }
                 }
 
-                // pitch control
+                // ===== Pitch Control =====
                 bool pitchAxisActive = APData.GCASActive || APData.TargetAlt > 0f;
 
                 if (!pitchAxisActive)
@@ -920,37 +956,43 @@ internal static class ControlOverridePatch
                     {
                         float rollAngle = Mathf.Abs(APData.CurrentRoll);
                         float targetG = rollAngle >= 90f ? 0f : Plugin.GCAS_MaxG.Value * s_overGFactor;
-                        float gError = targetG - currentG;
-                        pitchOut = PidGCAS.Evaluate(gError, currentG, dt,
+
+                        // GCAS PID: setpoint = targetG, measurement = currentG
+                        ConfigurePID(PidGCAS, ref _cfgGCAS,
                             Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,
-                            Plugin.GCAS_ILimit.Value);
+                            dt, -1f, 1f,
+                            Plugin.GCAS_B.Value, Plugin.GCAS_C.Value,
+                            Plugin.GCAS_IntegralDeadband.Value);
+
+                        pitchOut = (float)PidGCAS.Update(targetG, currentG);
                     }
-                    // alt hold
+                    // Altitude hold (cascaded: Alt -> VS -> Angle -> Stick)
                     else if (APData.TargetAlt > 0f)
                     {
-                        float altError = APData.TargetAlt - APData.CurrentAlt;
                         float currentVS = APData.PlayerRB.velocity.y;
 
                         // pitch sleep
                         if (useRandom)
                         {
+                            float altError = APData.TargetAlt - APData.CurrentAlt;
                             float altErrAbs = Mathf.Abs(altError);
                             float vsAbs = Mathf.Abs(currentVS);
 
                             if (!s_isPitchSleeping)
                             {
-                                // start sleep check
-                                if (altErrAbs < Plugin.Rand_Alt_Inner.Value && vsAbs < Plugin.Rand_VS_Inner.Value)
+                                if (altErrAbs < Plugin.Rand_Alt_Inner.Value &&
+                                    vsAbs < Plugin.Rand_VS_Inner.Value)
                                 {
-                                    s_pitchSleepUntil = Time.time + Random.Range(Plugin.Rand_PitchSleepMin.Value,
+                                    s_pitchSleepUntil = Time.time + Random.Range(
+                                        Plugin.Rand_PitchSleepMin.Value,
                                         Plugin.Rand_PitchSleepMax.Value);
                                     s_isPitchSleeping = true;
                                 }
                             }
                             else
                             {
-                                // wake up check
-                                if (altErrAbs > Plugin.Rand_Alt_Outer.Value || vsAbs > Plugin.Rand_VS_Outer.Value ||
+                                if (altErrAbs > Plugin.Rand_Alt_Outer.Value ||
+                                    vsAbs > Plugin.Rand_VS_Outer.Value ||
                                     Time.time > s_pitchSleepUntil)
                                 {
                                     s_isPitchSleeping = false;
@@ -960,43 +1002,50 @@ internal static class ControlOverridePatch
 
                         if (useRandom && s_isPitchSleeping)
                         {
-                            PidAlt.Integral = Mathf.MoveTowards(PidAlt.Integral, 0f, dt * 2f);
-                            PidVS.Integral = Mathf.MoveTowards(PidVS.Integral, 0f, dt * 10f);
-                            PidAngle.Integral = Mathf.MoveTowards(PidAngle.Integral, 0f, dt * 5f);
+                            PidAlt.SeedIntegral(Mathf.MoveTowards((float)PidAlt.ITerm, 0f, dt * 2f));
+                            PidVS.SeedIntegral(Mathf.MoveTowards((float)PidVS.ITerm, 0f, dt * 10f));
+                            PidAngle.SeedIntegral(Mathf.MoveTowards((float)PidAngle.ITerm, 0f, dt * 5f));
                         }
                         else
                         {
-                            float targetVS = PidAlt.Evaluate(altError, APData.CurrentAlt, dt,
+                            // Altitude > vertical speed
+                            ConfigurePID(PidAlt, ref _cfgAlt,
                                 Plugin.Conf_Alt_P.Value, Plugin.Conf_Alt_I.Value, Plugin.Conf_Alt_D.Value,
-                                Plugin.Conf_Alt_ILimit.Value, false, -currentVS,
-                                s_lastVSReq, APData.CurrentMaxClimbRate * 0.95f);
+                                dt,
+                                -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate,
+                                Plugin.Conf_Alt_B.Value, Plugin.Conf_Alt_C.Value,
+                                Plugin.Conf_Alt_IntegralDeadband.Value);
 
-                            s_lastVSReq = targetVS;
+                            float targetVS = (float)PidAlt.Update(APData.TargetAlt, APData.CurrentAlt);
 
                             float possibleAccel = Plugin.GCAS_MaxG.Value * 9.81f;
-                            float maxSafeVS = Mathf.Sqrt(2f * possibleAccel * Mathf.Abs(altError));
+                            float altErr2 = Mathf.Abs(APData.TargetAlt - APData.CurrentAlt);
+                            float maxSafeVS = Mathf.Sqrt(2f * possibleAccel * altErr2);
                             targetVS = Mathf.Clamp(targetVS, -maxSafeVS, maxSafeVS);
+                            targetVS = Mathf.Clamp(targetVS,
+                                -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
 
-                            targetVS = Mathf.Clamp(targetVS, -APData.CurrentMaxClimbRate,
-                                APData.CurrentMaxClimbRate);
-                            float vsError = targetVS - currentVS;
-
-                            float vsAccel = (currentG - 1.0f) * 9.81f;
-                            float targetPitchDeg = PidVS.Evaluate(vsError, currentVS, dt,
+                            // VS -> desired pitch angle
+                            ConfigurePID(PidVS, ref _cfgVS,
                                 Plugin.Conf_VS_P.Value, Plugin.Conf_VS_I.Value, Plugin.Conf_VS_D.Value,
-                                Plugin.Conf_VS_ILimit.Value, false, -vsAccel,
-                                s_lastAngleReq, Plugin.Conf_VS_MaxAngle.Value * 0.95f);
+                                dt,
+                                -Plugin.Conf_VS_MaxAngle.Value, Plugin.Conf_VS_MaxAngle.Value,
+                                Plugin.Conf_VS_B.Value, Plugin.Conf_VS_C.Value,
+                                Plugin.Conf_VS_IntegralDeadband.Value);
 
-                            s_lastAngleReq = targetPitchDeg;
+                            float targetPitchDeg = (float)PidVS.Update(targetVS, currentVS);
 
+                            // Pitch angle -> stick
                             float currentPitch = Mathf.Asin(pForward.y) * Mathf.Rad2Deg;
-                            float angleError = targetPitchDeg - currentPitch;
-                            float pitchRate = localAngVel.x * Mathf.Rad2Deg;
 
-                            pitchOut = PidAngle.Evaluate(angleError, currentPitch, dt,
-                                Plugin.Conf_Angle_P.Value, Plugin.Conf_Angle_I.Value, Plugin.Conf_Angle_D.Value,
-                                Plugin.Conf_Angle_ILimit.Value, false, pitchRate,
-                                s_lastPitchOut, 0.95f, true);
+                            ConfigurePID(PidAngle, ref _cfgAngle,
+                                Plugin.Conf_Angle_P.Value, Plugin.Conf_Angle_I.Value,
+                                Plugin.Conf_Angle_D.Value,
+                                dt, -1f, 1f,
+                                Plugin.Conf_Angle_B.Value, Plugin.Conf_Angle_C.Value,
+                                Plugin.Conf_Angle_IntegralDeadband.Value);
+
+                            pitchOut = (float)PidAngle.Update(targetPitchDeg, currentPitch);
 
                             s_lastPitchOut = pitchOut;
 

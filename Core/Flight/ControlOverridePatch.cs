@@ -27,13 +27,13 @@ internal static class ControlOverridePatch
     private static readonly PIDLoop2 PidSpd = new();
     private static readonly PIDLoop2 PidCrs = new();
 
-    private static PIDConfig _cfgAlt;
-    private static PIDConfig _cfgVS;
-    private static PIDConfig _cfgAngle;
-    private static PIDConfig _cfgRoll;
-    private static PIDConfig _cfgGCAS;
-    private static PIDConfig _cfgSpd;
-    private static PIDConfig _cfgCrs;
+    private static PIDConfig s_cfgAlt;
+    private static PIDConfig s_cfgVS;
+    private static PIDConfig s_cfgAngle;
+    private static PIDConfig s_cfgRoll;
+    private static PIDConfig s_cfgGCAS;
+    private static PIDConfig s_cfgSpd;
+    private static PIDConfig s_cfgCrs;
 
     private static float s_lastPitchOut;
     private static float s_lastRollOut;
@@ -87,13 +87,13 @@ internal static class ControlOverridePatch
         PidSpd.Reset();
         PidCrs.Reset();
 
-        _cfgAlt = default;
-        _cfgVS = default;
-        _cfgAngle = default;
-        _cfgRoll = default;
-        _cfgGCAS = default;
-        _cfgSpd = default;
-        _cfgCrs = default;
+        s_cfgAlt = default;
+        s_cfgVS = default;
+        s_cfgAngle = default;
+        s_cfgRoll = default;
+        s_cfgGCAS = default;
+        s_cfgSpd = default;
+        s_cfgCrs = default;
 
         s_lastPitchOut = 0f;
         s_lastRollOut = 0f;
@@ -638,7 +638,7 @@ internal static class ControlOverridePatch
                 float maxT = APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value;
 
                 // Configure speed PID: setpoint = targetSpeed, measurement = currentSpeed
-                ConfigurePID(PidSpd, ref _cfgSpd,
+                ConfigurePID(PidSpd, ref s_cfgSpd,
                     Plugin.Conf_Spd_P.Value, Plugin.Conf_Spd_I.Value, Plugin.Conf_Spd_D.Value,
                     dt, minT, maxT,
                     Plugin.Conf_Spd_B.Value, Plugin.Conf_Spd_C.Value,
@@ -838,7 +838,7 @@ internal static class ControlOverridePatch
                                 // Course PID: we pre-compute the angular error to handle wrapping,
                                 // then feed it as setpoint with measurement=0 so internal error = cErr.
                                 // The derivative will track how cErr changes over time.
-                                ConfigurePID(PidCrs, ref _cfgCrs,
+                                ConfigurePID(PidCrs, ref s_cfgCrs,
                                     Plugin.Conf_Crs_P.Value, Plugin.Conf_Crs_I.Value, Plugin.Conf_Crs_D.Value,
                                     dt, -90f, 90f,
                                     Plugin.Conf_Crs_B.Value, Plugin.Conf_Crs_C.Value,
@@ -903,7 +903,7 @@ internal static class ControlOverridePatch
                         else
                         {
                             // Roll PID: pre-computed angular error as setpoint, 0 as measurement
-                            ConfigurePID(PidRoll, ref _cfgRoll,
+                            ConfigurePID(PidRoll, ref s_cfgRoll,
                                 Plugin.RollP.Value, Plugin.RollI.Value, Plugin.RollD.Value,
                                 dt, -1f, 1f,
                                 Plugin.Roll_B.Value, Plugin.Roll_C.Value,
@@ -958,7 +958,7 @@ internal static class ControlOverridePatch
                         float targetG = rollAngle >= 90f ? 0f : Plugin.GCAS_MaxG.Value * s_overGFactor;
 
                         // GCAS PID: setpoint = targetG, measurement = currentG
-                        ConfigurePID(PidGCAS, ref _cfgGCAS,
+                        ConfigurePID(PidGCAS, ref s_cfgGCAS,
                             Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,
                             dt, -1f, 1f,
                             Plugin.GCAS_B.Value, Plugin.GCAS_C.Value,
@@ -1009,7 +1009,7 @@ internal static class ControlOverridePatch
                         else
                         {
                             // Altitude > vertical speed
-                            ConfigurePID(PidAlt, ref _cfgAlt,
+                            ConfigurePID(PidAlt, ref s_cfgAlt,
                                 Plugin.Conf_Alt_P.Value, Plugin.Conf_Alt_I.Value, Plugin.Conf_Alt_D.Value,
                                 dt,
                                 -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate,
@@ -1026,7 +1026,7 @@ internal static class ControlOverridePatch
                                 -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
 
                             // VS -> desired pitch angle
-                            ConfigurePID(PidVS, ref _cfgVS,
+                            ConfigurePID(PidVS, ref s_cfgVS,
                                 Plugin.Conf_VS_P.Value, Plugin.Conf_VS_I.Value, Plugin.Conf_VS_D.Value,
                                 dt,
                                 -Plugin.Conf_VS_MaxAngle.Value, Plugin.Conf_VS_MaxAngle.Value,
@@ -1038,7 +1038,7 @@ internal static class ControlOverridePatch
                             // Pitch angle -> stick
                             float currentPitch = Mathf.Asin(pForward.y) * Mathf.Rad2Deg;
 
-                            ConfigurePID(PidAngle, ref _cfgAngle,
+                            ConfigurePID(PidAngle, ref s_cfgAngle,
                                 Plugin.Conf_Angle_P.Value, Plugin.Conf_Angle_I.Value,
                                 Plugin.Conf_Angle_D.Value,
                                 dt, -1f, 1f,

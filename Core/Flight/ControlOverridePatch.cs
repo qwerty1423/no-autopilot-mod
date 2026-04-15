@@ -157,6 +157,20 @@ internal static class ControlOverridePatch
                 return;
             }
 
+            if (APData.LocalSwingController != null)
+            {
+                if (Plugin.LockWingsSwept.Value)
+                {
+                    APData.LocalSwingController.forwardMach = float.MaxValue;
+                    APData.LocalSwingController.sweptMach = 0f;
+                }
+                else
+                {
+                    APData.LocalSwingController.forwardMach = 0.5f;
+                    APData.LocalSwingController.sweptMach = 0.9f;
+                }
+            }
+
             float stickPitch;
             float stickRoll;
             float currentThrottle;

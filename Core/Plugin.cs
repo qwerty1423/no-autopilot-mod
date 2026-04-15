@@ -79,6 +79,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> DisableNavAPKey, DisableNavAPStick, EnableNavonWP;
     public static ConfigEntry<bool> KeepSetAltKey, KeepSetAltStick;
     public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom, SaveMapState, UnpatchIfBroken;
+    public static ConfigEntry<bool> LockWingsSwept;
 
     // Auto Jammer
     public static ConfigEntry<bool> EnableAutoJammer;
@@ -275,6 +276,8 @@ public class Plugin : BaseUnityPlugin
             "Prevent map from resetting position/zoom when reopened.");
         UnpatchIfBroken = Config.Bind("Settings - Misc", "Unpatch on error", true,
             "Unload this mod when it throws an error");
+
+        LockWingsSwept = Config.Bind("Settings - Misc²", "Lock swing wings in swept position", false, "For when you want your AB-4 to always look like a triangle. Will move all swing wings to the swept position.");
 
         // nav
         NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f,

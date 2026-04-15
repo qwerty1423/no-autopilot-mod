@@ -86,6 +86,12 @@ internal static class HudPatch
                 };
             }
 
+            SwingWingController swing = APData.LocalAircraft.GetComponent<SwingWingController>();
+            if (swing != null)
+            {
+                APData.LocalSwingController = swing;
+            }
+
             Plugin.SyncMenuValues();
             Plugin.CleanUpFBW();
         }

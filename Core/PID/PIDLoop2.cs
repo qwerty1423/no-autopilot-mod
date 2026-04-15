@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: LicenseRef-PD-hp OR Unlicense OR CC0-1.0 OR 0BSD OR MIT-0 OR MIT OR LGPL-2.1+
  */
 
+// using static MechJebLib.Utils.Statics;
 using static System.Math;
 
+// namespace MechJebLib.Control;
 namespace NOAutopilot.Core.PID;
 
 //
@@ -119,7 +121,7 @@ public class PIDLoop2 : IPIDLoop
         _y1 = _u1 = double.NaN;
     }
 
-    // added functions to make it work
+    // functions from MechJebLib.Utils.Statics to make it work
     private static bool IsFinite(double x) =>
     !double.IsNaN(x) && !double.IsInfinity(x);
 

@@ -17,7 +17,7 @@ public static class PIDTuningDrawer
         nameof(PIDTuning.Ti)),
         ("Td", "Derivative time",
         nameof(PIDTuning.Td)),
-        ("N", "First-order derivative filter divisor",
+        ("N", "Derivative filter divisor",
         nameof(PIDTuning.N)),
         ("B", "Setpoint weighting on P term",
         nameof(PIDTuning.B)),

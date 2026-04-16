@@ -11,29 +11,29 @@ public static class PIDTuningDrawer
 
     private static readonly (string Label, string Tooltip, string Field)[] Cells =
     [
-        ("Kp",    "Proportional gain - parallel form",
+        ("Kp", "Gain (standard form)",
         nameof(PIDTuning.Kp)),
-        ("Ki",    "Integral gain",
-        nameof(PIDTuning.Ki)),
-        ("Kd",    "Derivative gain",
-        nameof(PIDTuning.Kd)),
-        ("N",     "Derivative filter — higher = less filtering",
+        ("Ti", "Integral time constant (seconds)",
+        nameof(PIDTuning.Ti)),
+        ("Td", "Derivative time constant (seconds)",
+        nameof(PIDTuning.Td)),
+        ("N", "Derivative filter",
         nameof(PIDTuning.N)),
-        ("B",     "Setpoint weight on P term (0-1) — reduces overshoot on step changes",
+        ("B", "Setpoint weight on P term",
         nameof(PIDTuning.B)),
-        ("C",     "Setpoint weight on D term (0-1) — reduces derivative kick",
+        ("C", "Setpoint weight on D term",
         nameof(PIDTuning.C)),
-        ("smI",  "Input smoothing (0-1) — exponential filter on measurement",
+        ("smI",  "Input smoothing (0-1)",
         nameof(PIDTuning.SmoothIn)),
-        ("smO", "Output smoothing (0-1) — exponential filter on controller output",
+        ("smO", "Output smoothing (0-1)",
         nameof(PIDTuning.SmoothOut)),
-        ("pDb",   "Proportional deadband — P zeroed when |error| < this",
+        ("pDb", "Proportional deadband",
         nameof(PIDTuning.ProportionalDeadband)),
-        ("iDb",   "Integral deadband — integration paused when |error| < this",
+        ("iDb", "Integral deadband",
         nameof(PIDTuning.IntegralDeadband)),
-        ("dDb",   "Derivative deadband — D zeroed when |Δerror| < this",
+        ("dDb", "Derivative deadband",
         nameof(PIDTuning.DerivativeDeadband)),
-        ("oDb",   "Output deadband — output snapped to zero when |out| < this",
+        ("oDb", "Output deadband",
         nameof(PIDTuning.OutputDeadband)),
     ];
 
@@ -133,8 +133,8 @@ public static class PIDTuningDrawer
     private static float GetField(ref PIDTuning t, string name) => name switch
     {
         nameof(PIDTuning.Kp) => t.Kp,
-        nameof(PIDTuning.Ki) => t.Ki,
-        nameof(PIDTuning.Kd) => t.Kd,
+        nameof(PIDTuning.Ti) => t.Ti,
+        nameof(PIDTuning.Td) => t.Td,
         nameof(PIDTuning.N) => t.N,
         nameof(PIDTuning.B) => t.B,
         nameof(PIDTuning.C) => t.C,
@@ -152,8 +152,8 @@ public static class PIDTuningDrawer
         switch (name)
         {
             case nameof(PIDTuning.Kp): t.Kp = v; break;
-            case nameof(PIDTuning.Ki): t.Ki = v; break;
-            case nameof(PIDTuning.Kd): t.Kd = v; break;
+            case nameof(PIDTuning.Ti): t.Ti = v; break;
+            case nameof(PIDTuning.Td): t.Td = v; break;
             case nameof(PIDTuning.N): t.N = v; break;
             case nameof(PIDTuning.B): t.B = v; break;
             case nameof(PIDTuning.C): t.C = v; break;

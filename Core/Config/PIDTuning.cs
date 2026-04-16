@@ -1,11 +1,9 @@
 using System.Globalization;
 
-using JetBrains.Annotations;
-
 namespace NOAutopilot.Core.Config;
 
 public struct PIDTuning(
-    float kp, float ki, float kd,
+    float kp, float ti, float td,
     float n = 50f,
     float b = 1f,
     float c = 0f,
@@ -17,8 +15,8 @@ public struct PIDTuning(
     float outputDeadband = 0f,
     bool clegg = false)
 {
-    // parallel form
-    public float Kp = kp, Ki = ki, Kd = kd;
+    // standard form
+    public float Kp = kp, Ti = ti, Td = td;
     // filter
     public float N = n;
     // 2DOF
@@ -35,8 +33,8 @@ public struct PIDTuning(
         var ci = CultureInfo.InvariantCulture;
         return string.Join("|",
             Kp.ToString(ci),
-            Ki.ToString(ci),
-            Kd.ToString(ci),
+            Ti.ToString(ci),
+            Td.ToString(ci),
             N.ToString(ci),
             B.ToString(ci),
             C.ToString(ci),
@@ -59,8 +57,8 @@ public struct PIDTuning(
             p.Length > i && float.TryParse(p[i], NumberStyles.Float, ci, out float v) ? v : def;
 
         t.Kp = Get(0, 1f);
-        t.Ki = Get(1, 0f);
-        t.Kd = Get(2, 0f);
+        t.Ti = Get(1, 0f);
+        t.Td = Get(2, 0f);
         t.N = Get(3, 50f);
         t.B = Get(4, 1f);
         t.C = Get(5, 0f);

@@ -4,7 +4,7 @@
 
 ### Added
 
-- better pid controller from mechjeb, and a bunch of config to go with it
+- better pid controller from [mechjeb](https://github.com/MuMech/MechJeb2/blob/dev/MechJebLib/Control/PIDLoop2.cs), and a bunch of config to go with it
 - way to make autosweep always swing the wings to swept position
 
 ### Changed

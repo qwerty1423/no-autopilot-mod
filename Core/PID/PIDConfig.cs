@@ -4,32 +4,32 @@ namespace NOAutopilot.Core.PID;
 
 internal struct PIDConfig
 {
-    private float _kp, _ti, _td;
-    private float _n;
-    private float _b, _c;
-    private float _smoothIn, _smoothOut;
-    private float _proportionalDeadband, _integralDeadband, _derivativeDeadband, _outputDeadband;
+    private double _kp, _ti, _td;
+    private double _n;
+    private double _b, _c;
+    private double _smoothIn, _smoothOut;
+    private double _proportionalDeadband, _integralDeadband, _derivativeDeadband, _outputDeadband;
     private bool _clegg;
-    private float _minOutput, _maxOutput;
-    private float _ts;
+    private double _minOutput, _maxOutput;
+    private double _ts;
 
     public static void Apply(ref PIDConfig cfg, PIDLoop2 pid,
         PIDTuning t,
-        float ts,
-        float minOutput, float maxOutput)
+        double ts,
+        double minOutput, double maxOutput)
     {
-        float kp = t.Kp, ti = t.Ti, td = t.Td;
-        float n = t.N;
-        float b = t.B, c = t.C;
-        float smoothIn = t.SmoothIn;
-        float smoothOut = t.SmoothOut;
-        float pDb = t.ProportionalDeadband;
-        float iDb = t.IntegralDeadband;
-        float dDb = t.DerivativeDeadband;
-        float oDb = t.OutputDeadband;
+        double kp = t.Kp, ti = t.Ti, td = t.Td;
+        double n = t.N;
+        double b = t.B, c = t.C;
+        double smoothIn = t.SmoothIn;
+        double smoothOut = t.SmoothOut;
+        double pDb = t.ProportionalDeadband;
+        double iDb = t.IntegralDeadband;
+        double dDb = t.DerivativeDeadband;
+        double oDb = t.OutputDeadband;
         bool clegg = t.Clegg;
 
-        bool tsChanged = System.Math.Abs(ts - cfg._ts) > 1e-6f;
+        bool tsChanged = System.Math.Abs(ts - cfg._ts) > 1e-6;
 
         if (!tsChanged &&
             kp == cfg._kp && ti == cfg._ti && td == cfg._td &&

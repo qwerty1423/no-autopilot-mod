@@ -3,28 +3,28 @@ using System.Globalization;
 namespace NOAutopilot.Core.Config;
 
 public struct PIDTuning(
-    float kp, float ti, float td,
-    float n = 50f,
-    float b = 1f,
-    float c = 0f,
-    float smoothIn = 1f,
-    float smoothOut = 1f,
-    float proportionalDeadband = 0f,
-    float integralDeadband = 0f,
-    float derivativeDeadband = 0f,
-    float outputDeadband = 0f,
+    double kp, double ti, double td,
+    double n = 50,
+    double b = 1,
+    double c = 0,
+    double smoothIn = 1,
+    double smoothOut = 1,
+    double proportionalDeadband = 0,
+    double integralDeadband = 0,
+    double derivativeDeadband = 0,
+    double outputDeadband = 0,
     bool clegg = false)
 {
     // standard form
-    public float Kp = kp, Ti = ti, Td = td;
+    public double Kp = kp, Ti = ti, Td = td;
     // filter
-    public float N = n;
+    public double N = n;
     // 2DOF
-    public float B = b, C = c;
+    public double B = b, C = c;
     // smoothing
-    public float SmoothIn = smoothIn, SmoothOut = smoothOut;
+    public double SmoothIn = smoothIn, SmoothOut = smoothOut;
     // deadbands
-    public float ProportionalDeadband = proportionalDeadband, IntegralDeadband = integralDeadband, DerivativeDeadband = derivativeDeadband, OutputDeadband = outputDeadband;
+    public double ProportionalDeadband = proportionalDeadband, IntegralDeadband = integralDeadband, DerivativeDeadband = derivativeDeadband, OutputDeadband = outputDeadband;
     // optional
     public bool Clegg = clegg;
 
@@ -53,21 +53,21 @@ public struct PIDTuning(
         var p = s.Split('|');
         var t = new PIDTuning();
 
-        float Get(int i, float def) =>
-            p.Length > i && float.TryParse(p[i], NumberStyles.Float, ci, out float v) ? v : def;
+        double Get(int i, double def) =>
+            p.Length > i && double.TryParse(p[i], NumberStyles.Float, ci, out double v) ? v : def;
 
-        t.Kp = Get(0, 1f);
-        t.Ti = Get(1, 0f);
-        t.Td = Get(2, 0f);
-        t.N = Get(3, 50f);
-        t.B = Get(4, 1f);
-        t.C = Get(5, 0f);
-        t.SmoothIn = Get(6, 1f);
-        t.SmoothOut = Get(7, 1f);
-        t.ProportionalDeadband = Get(8, 0f);
-        t.IntegralDeadband = Get(9, 0f);
-        t.DerivativeDeadband = Get(10, 0f);
-        t.OutputDeadband = Get(11, 0f);
+        t.Kp = Get(0, 1);
+        t.Ti = Get(1, 0);
+        t.Td = Get(2, 0);
+        t.N = Get(3, 50);
+        t.B = Get(4, 1);
+        t.C = Get(5, 0);
+        t.SmoothIn = Get(6, 1);
+        t.SmoothOut = Get(7, 1);
+        t.ProportionalDeadband = Get(8, 0);
+        t.IntegralDeadband = Get(9, 0);
+        t.DerivativeDeadband = Get(10, 0);
+        t.OutputDeadband = Get(11, 0);
         t.Clegg = p.Length > 12 && p[12] == "1";
 
         return t;

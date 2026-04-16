@@ -84,7 +84,7 @@ public static class PIDTuningDrawer
             for (int col = 0; col < Cols && i < Cells.Length; col++, i++)
             {
                 var (label, tooltip, fieldName) = Cells[i];
-                float val = GetField(ref t, fieldName);
+                double val = GetField(ref t, fieldName);
                 if (Field(label, tooltip, ColWidths[col], ref val))
                 {
                     SetField(ref t, fieldName, val);
@@ -111,7 +111,7 @@ public static class PIDTuningDrawer
         }
     }
 
-    private static bool Field(string label, string tooltip, float labelWidth, ref float value)
+    private static bool Field(string label, string tooltip, float labelWidth, ref double value)
     {
         GUILayout.Label(new GUIContent(label, tooltip), GUILayout.Width(labelWidth));
 
@@ -119,10 +119,10 @@ public static class PIDTuningDrawer
         string next = GUILayout.TextField(prev, GUILayout.Width(F));
 
         if (next != prev &&
-            float.TryParse(next,
+            double.TryParse(next,
                 System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture,
-                out float v))
+                out double v))
         {
             value = v;
             return true;
@@ -130,7 +130,7 @@ public static class PIDTuningDrawer
         return false;
     }
 
-    private static float GetField(ref PIDTuning t, string name) => name switch
+    private static double GetField(ref PIDTuning t, string name) => name switch
     {
         nameof(PIDTuning.Kp) => t.Kp,
         nameof(PIDTuning.Ti) => t.Ti,
@@ -144,10 +144,10 @@ public static class PIDTuningDrawer
         nameof(PIDTuning.IntegralDeadband) => t.IntegralDeadband,
         nameof(PIDTuning.DerivativeDeadband) => t.DerivativeDeadband,
         nameof(PIDTuning.OutputDeadband) => t.OutputDeadband,
-        _ => 0f,
+        _ => 0,
     };
 
-    private static void SetField(ref PIDTuning t, string name, float v)
+    private static void SetField(ref PIDTuning t, string name, double v)
     {
         switch (name)
         {

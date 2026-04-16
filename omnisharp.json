@@ -4,5 +4,8 @@
   },
   "FormattingOptions": {
     "enableEditorConfigSupport": true
+  },
+  "fileOptions": {
+    "excludeSearchPatterns": ["**/Core/PID/PIDLoop2.cs"]
   }
 }

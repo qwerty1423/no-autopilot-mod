@@ -145,6 +145,8 @@ internal static class ControlOverridePatch
 
         try
         {
+            APData.CurrentAlt = APData.LocalAircraft.transform.position.GlobalY();
+
             if (APData.CurrentMaxClimbRate < 0f)
             {
                 APData.CurrentMaxClimbRate = Plugin.DefaultMaxClimbRate.Value;

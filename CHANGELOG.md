@@ -12,11 +12,11 @@
 - pid config is more compact
 - pid terms now in standard form, to convert from the old parameters:
 
-  $$K_p = K_p$$
+  $`K_p = K_p`$
 
-  $$T_i = \frac{K_{p}}{K_{i}}$$
+  $`T_i = \frac{K_{p}}{K_{i}}`$
 
-  $$T_d = \frac{K_{d}}{K_{p}}$$
+  $`T_d = \frac{K_{d}}{K_{p}}`$
 
   you can zero $T_i$ for infinity, for cases where $K_i$ was 0.
 

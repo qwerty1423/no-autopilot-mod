@@ -110,8 +110,9 @@ public class Plugin : BaseUnityPlugin
     // Flight Values
     public static ConfigEntry<float> AltStep, BigAltStep, ClimbRateStep, BankStep, SpeedStep, MinAltitude;
 
-    // Tuning
+    // Limits
     public static ConfigEntry<float> DefaultMaxClimbRate, Conf_VS_MaxAngle, DefaultCRLimit;
+    public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, ThrottleSlewRate;
 
     // pid
     public static ConfigEntry<PIDTuning> PID_Alt;
@@ -121,7 +122,6 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<PIDTuning> PID_Spd;
     public static ConfigEntry<PIDTuning> PID_Crs;
     public static ConfigEntry<PIDTuning> PID_GCAS;
-    public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, ThrottleSlewRate;
 
     // Auto GCAS
     public static ConfigEntry<bool> EnableGCAS, EnableGCASHelo, EnableGCASTiltwing;
@@ -413,25 +413,25 @@ public class Plugin : BaseUnityPlugin
             "in unit of throttle gauges per second (0 to disable)");
 
         // PID Loops
-        PID_Alt = PIDTuningBinder.Bind(Config, "PID", "Altitude > VS",
+        PID_Alt = PIDTuningBinder.Bind(Config, "PID", "1. Altitude > VS",
             new PIDTuning(0.5f, 0f, 1.5f, b: 1f, c: 0f), "Altitude > Vertical Speed");
 
-        PID_VS = PIDTuningBinder.Bind(Config, "PID", "VS > Angle",
+        PID_VS = PIDTuningBinder.Bind(Config, "PID", "2. VS > Angle",
             new PIDTuning(2f, 1f, 2f, b: 1f, c: 0f), "Vertical Speed > Pitch Angle");
 
-        PID_Angle = PIDTuningBinder.Bind(Config, "PID", "Angle > Stick",
+        PID_Angle = PIDTuningBinder.Bind(Config, "PID", "3. Angle > Stick",
             new PIDTuning(0.03f, 0.01f, 0.02f, b: 1f, c: 0f), "Pitch Angle > Stick");
 
-        PID_Roll = PIDTuningBinder.Bind(Config, "PID", "Roll > Stick",
+        PID_Roll = PIDTuningBinder.Bind(Config, "PID", "4. Roll > Stick",
             new PIDTuning(0.01f, 0.002f, 0.001f, b: 1f, c: 0f), "Roll Error > Stick");
 
-        PID_Crs = PIDTuningBinder.Bind(Config, "PID", "Course > Roll",
+        PID_Crs = PIDTuningBinder.Bind(Config, "PID", "5. Course > Roll",
             new PIDTuning(1f, 0.03f, 0f, b: 1f, c: 0f), "Course Error > Bank Angle");
 
-        PID_Spd = PIDTuningBinder.Bind(Config, "PID", "Speed > Throttle",
+        PID_Spd = PIDTuningBinder.Bind(Config, "PID", "6. Speed > Throttle",
             new PIDTuning(0.3f, 0.05f, 0.25f, b: 1f, c: 0f), "Speed Error > Throttle");
 
-        PID_GCAS = PIDTuningBinder.Bind(Config, "PID", "G-Force > Stick",
+        PID_GCAS = PIDTuningBinder.Bind(Config, "PID", "7. G-Force > Stick",
             new PIDTuning(0.1f, 0.5f, 0f, b: 1f, c: 0f), "GCAS G Error > Stick");
 
         // Random

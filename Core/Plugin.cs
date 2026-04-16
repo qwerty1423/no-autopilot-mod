@@ -146,7 +146,7 @@ public class Plugin : BaseUnityPlugin
     private readonly string _table =
         "<b>Toggle AP GUI:</b> F8\n" +
         "<b>Toggle Autopilot:</b> = (Equals)\n" +
-        "<b>Toggle FBW:</b> Del (Delete) | Singleplayer only\n" +
+        "<b>Toggle FBW:</b> Delete key | Singleplayer only\n" +
         "<b>Toggle AJ:</b> / (Slash)\n" +
         "<b>Toggle GCAS:</b> \\ (Backslash)\n" +
         "<b>Toggle ALS:</b> LCtrl + = (Equals) | Autoland\n" +

@@ -8,7 +8,7 @@
     </AssemblyCopyright>
     <Product>NOAutopilot</Product>
     <Description>no autopilot?</Description>
-    <Version>5.1.0</Version>
+    <Version>5.1.1</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
@@ -118,9 +118,13 @@
     <PropertyGroup>
       <StagingDir>$(OutputPath)Staging</StagingDir>
       <RootModFolder>$(StagingDir)/no-autopilot-mod</RootModFolder>
+      <GpgKeyId>515C633449FCE7DA8BCB4F31E3CE2BE2DFAB3E73</GpgKeyId>
     </PropertyGroup>
 
+    <Exec Command="gpg --batch --yes --detach-sign --armor --local-user &quot;$(GpgKeyId)&quot; --output &quot;$(OutputPath)$(AssemblyName).dll.asc&quot; &quot;$(OutputPath)$(AssemblyName).dll&quot;" />
+
     <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(RootModFolder)/&quot;" />
+    <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll.asc&quot; &quot;$(RootModFolder)/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;LICENSE&quot; &quot;$(RootModFolder)/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;CHANGELOG.md&quot; &quot;$(RootModFolder)/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;README.md&quot; &quot;$(RootModFolder)/&quot;" />

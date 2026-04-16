@@ -36,11 +36,6 @@ internal static class ControlOverridePatch
     private static PIDConfig s_cfgGCAS;
     private static PIDConfig s_cfgSpd;
     private static PIDConfig s_cfgCrs;
-
-    private static float s_lastPitchOut;
-    private static float s_lastRollOut;
-    private static float s_lastThrottleOut;
-
     private static bool s_wasEnabled;
     private static float s_pitchSleepUntil;
     private static float s_rollSleepUntil;
@@ -91,10 +86,6 @@ internal static class ControlOverridePatch
         s_cfgSpd = default;
         s_cfgCrs = default;
 
-        s_lastPitchOut = 0f;
-        s_lastRollOut = 0f;
-        s_lastThrottleOut = 0f;
-
         s_wasEnabled = false;
         s_pitchSleepUntil = 0f;
         s_rollSleepUntil = 0f;
@@ -130,11 +121,7 @@ internal static class ControlOverridePatch
             // Seed the integrator so throttle starts from current position
             PidSpd.SeedIntegral(Mathf.Clamp01(inputThrottle));
             s_currentAppliedThrottle = inputThrottle;
-            s_lastThrottleOut = inputThrottle;
         }
-
-        s_lastPitchOut = 0f;
-        s_lastRollOut = 0f;
 
         s_isPitchSleeping = s_isRollSleeping = s_isSpdSleeping = false;
         s_pitchSleepUntil = s_rollSleepUntil = s_spdSleepUntil = 0f;
@@ -639,7 +626,6 @@ internal static class ControlOverridePatch
                 float pidOutput = s_isSpdSleeping
                     ? (float)PidSpd.ITerm
                     : (float)PidSpd.Update(targetSpeedMS, currentSpeed);
-                s_lastThrottleOut = pidOutput;
 
                 float desiredThrottle = Mathf.Clamp(pidOutput, minT, maxT);
 
@@ -888,8 +874,6 @@ internal static class ControlOverridePatch
 
                             rollOut = (float)PidRoll.Update(rollError, 0);
 
-                            s_lastRollOut = rollOut;
-
                             if (Plugin.InvertRoll.Value)
                             {
                                 rollOut = -rollOut;
@@ -1006,8 +990,6 @@ internal static class ControlOverridePatch
                             ConfigurePID(PidAngle, ref s_cfgAngle, Plugin.PID_Angle, dt, -1f, 1f);
 
                             pitchOut = (float)PidAngle.Update(targetPitchDeg, currentPitch);
-
-                            s_lastPitchOut = pitchOut;
 
                             if (useRandom)
                             {

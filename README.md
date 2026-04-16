@@ -26,12 +26,12 @@ Another list can be found in [this mod's post](https://discord.com/channels/9090
 [Yellowcake](https://github.com/NaghDiefallah/Yellowcake)
 
 If you are on linux, add override in steam launch options: `WINEDLLOVERRIDES="winhttp=n,b" %command%`
-~~Wondering whether or not you're using linux? Then just ignore this because you're not.~~
 
 ### Manual installation
 
-1. Install BepInEx 5.
+1. Install latest BepInEx 5.
    - [their github has install instructions](https://github.com/BepInEx/BepInEx/)
+   - always download the win_x64 version (even on linux, since NO runs on wine)
    - if you are on linux, add override in steam launch options: `WINEDLLOVERRIDES="winhttp=n,b" %command%`
    - run the game, then quit
    - edit BepInEx.cfg in BepInEx/config
@@ -88,6 +88,8 @@ Large altitude adjustment key has minimum limit to reduce crashes when sea skimm
 
 Keys and UI colours are configurable in the BepInEx config file.
 The [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager) is recommended for changing PID values and other settings in game.
+
+After installation of the config manager, you can press F1 to bring up the config.
 
 ## screenshot of an old version?
 

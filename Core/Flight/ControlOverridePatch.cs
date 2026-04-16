@@ -3,6 +3,8 @@ extern alias JetBrains;
 using System;
 using System.Collections;
 
+using BepInEx.Configuration;
+
 using HarmonyLib;
 
 using JetBrains.Annotations;
@@ -61,19 +63,13 @@ internal static class ControlOverridePatch
 
     private static void ConfigurePID(
     PIDLoop2 pid, ref PIDConfig cfg,
-    float kp, float ki, float kd,
+    ConfigEntry<PIDTuning> tuning,
     float dt,
-    float minOutput, float maxOutput,
-    float b = 1f, float c = 0f,
-    float integralDeadband = 0f)
+    float minOutput, float maxOutput)
     {
         PIDConfig.Apply(ref cfg, pid,
-            kp, ki, kd,
-            Plugin.PID_DerivativeFilter.Value,
+            tuning.Value,
             minOutput, maxOutput,
-            b, c,
-            Plugin.PID_SmoothIn.Value, Plugin.PID_SmoothOut.Value,
-            integralDeadband,
             Mathf.Max(dt, 0.0001f));
     }
 
@@ -638,11 +634,7 @@ internal static class ControlOverridePatch
                 float maxT = APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value;
 
                 // Configure speed PID: setpoint = targetSpeed, measurement = currentSpeed
-                ConfigurePID(PidSpd, ref s_cfgSpd,
-                    Plugin.Conf_Spd_P.Value, Plugin.Conf_Spd_I.Value, Plugin.Conf_Spd_D.Value,
-                    dt, minT, maxT,
-                    Plugin.Conf_Spd_B.Value, Plugin.Conf_Spd_C.Value,
-                    Plugin.Conf_Spd_IntegralDeadband.Value);
+                ConfigurePID(PidSpd, ref s_cfgSpd, Plugin.PID_Spd, dt, minT, maxT);
 
                 float pidOutput = s_isSpdSleeping
                     ? (float)PidSpd.ITerm
@@ -831,11 +823,7 @@ internal static class ControlOverridePatch
                                 // Course PID: we pre-compute the angular error to handle wrapping,
                                 // then feed it as setpoint with measurement=0 so internal error = cErr.
                                 // The derivative will track how cErr changes over time.
-                                ConfigurePID(PidCrs, ref s_cfgCrs,
-                                    Plugin.Conf_Crs_P.Value, Plugin.Conf_Crs_I.Value, Plugin.Conf_Crs_D.Value,
-                                    dt, -90f, 90f,
-                                    Plugin.Conf_Crs_B.Value, Plugin.Conf_Crs_C.Value,
-                                    Plugin.Conf_Crs_IntegralDeadband.Value);
+                                ConfigurePID(PidCrs, ref s_cfgCrs, Plugin.PID_Crs, dt, -90f, 90f);
 
                                 float desiredTurnRate = (float)PidCrs.Update(cErr, 0);
 
@@ -896,11 +884,7 @@ internal static class ControlOverridePatch
                         else
                         {
                             // Roll PID: pre-computed angular error as setpoint, 0 as measurement
-                            ConfigurePID(PidRoll, ref s_cfgRoll,
-                                Plugin.RollP.Value, Plugin.RollI.Value, Plugin.RollD.Value,
-                                dt, -1f, 1f,
-                                Plugin.Roll_B.Value, Plugin.Roll_C.Value,
-                                Plugin.Roll_IntegralDeadband.Value);
+                            ConfigurePID(PidRoll, ref s_cfgRoll, Plugin.PID_Roll, dt, -1f, 1f);
 
                             rollOut = (float)PidRoll.Update(rollError, 0);
 
@@ -951,11 +935,7 @@ internal static class ControlOverridePatch
                         float targetG = rollAngle >= 90f ? 0f : Plugin.GCAS_MaxG.Value * s_overGFactor;
 
                         // GCAS PID: setpoint = targetG, measurement = currentG
-                        ConfigurePID(PidGCAS, ref s_cfgGCAS,
-                            Plugin.GCAS_P.Value, Plugin.GCAS_I.Value, Plugin.GCAS_D.Value,
-                            dt, -1f, 1f,
-                            Plugin.GCAS_B.Value, Plugin.GCAS_C.Value,
-                            Plugin.GCAS_IntegralDeadband.Value);
+                        ConfigurePID(PidGCAS, ref s_cfgGCAS, Plugin.PID_GCAS, dt, -1f, 1f);
 
                         pitchOut = (float)PidGCAS.Update(targetG, currentG);
                     }
@@ -1002,12 +982,8 @@ internal static class ControlOverridePatch
                         else
                         {
                             // Altitude > vertical speed
-                            ConfigurePID(PidAlt, ref s_cfgAlt,
-                                Plugin.Conf_Alt_P.Value, Plugin.Conf_Alt_I.Value, Plugin.Conf_Alt_D.Value,
-                                dt,
-                                -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate,
-                                Plugin.Conf_Alt_B.Value, Plugin.Conf_Alt_C.Value,
-                                Plugin.Conf_Alt_IntegralDeadband.Value);
+                            ConfigurePID(PidAlt, ref s_cfgAlt, Plugin.PID_Alt, dt,
+                                -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
 
                             float targetVS = (float)PidAlt.Update(APData.TargetAlt, APData.CurrentAlt);
 
@@ -1019,24 +995,15 @@ internal static class ControlOverridePatch
                                 -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
 
                             // VS -> desired pitch angle
-                            ConfigurePID(PidVS, ref s_cfgVS,
-                                Plugin.Conf_VS_P.Value, Plugin.Conf_VS_I.Value, Plugin.Conf_VS_D.Value,
-                                dt,
-                                -Plugin.Conf_VS_MaxAngle.Value, Plugin.Conf_VS_MaxAngle.Value,
-                                Plugin.Conf_VS_B.Value, Plugin.Conf_VS_C.Value,
-                                Plugin.Conf_VS_IntegralDeadband.Value);
+                            ConfigurePID(PidVS, ref s_cfgVS, Plugin.PID_VS, dt,
+                                -Plugin.Conf_VS_MaxAngle.Value, Plugin.Conf_VS_MaxAngle.Value);
 
                             float targetPitchDeg = (float)PidVS.Update(targetVS, currentVS);
 
                             // Pitch angle -> stick
                             float currentPitch = Mathf.Asin(pForward.y) * Mathf.Rad2Deg;
 
-                            ConfigurePID(PidAngle, ref s_cfgAngle,
-                                Plugin.Conf_Angle_P.Value, Plugin.Conf_Angle_I.Value,
-                                Plugin.Conf_Angle_D.Value,
-                                dt, -1f, 1f,
-                                Plugin.Conf_Angle_B.Value, Plugin.Conf_Angle_C.Value,
-                                Plugin.Conf_Angle_IntegralDeadband.Value);
+                            ConfigurePID(PidAngle, ref s_cfgAngle, Plugin.PID_Angle, dt, -1f, 1f);
 
                             pitchOut = (float)PidAngle.Update(targetPitchDeg, currentPitch);
 

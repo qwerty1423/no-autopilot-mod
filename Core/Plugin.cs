@@ -114,43 +114,18 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> DefaultMaxClimbRate, Conf_VS_MaxAngle, DefaultCRLimit;
 
     // pid
-    public static ConfigEntry<float> Conf_Alt_P, Conf_Alt_I, Conf_Alt_D, Conf_Alt_ILimit;
-    public static ConfigEntry<float> Conf_VS_P, Conf_VS_I, Conf_VS_D, Conf_VS_ILimit;
-    public static ConfigEntry<float> Conf_Angle_P, Conf_Angle_I, Conf_Angle_D, Conf_Angle_ILimit;
-
-    public static ConfigEntry<float> RollP, RollI, RollD, RollILimit;
-
-    public static ConfigEntry<float> Conf_Spd_P, Conf_Spd_I, Conf_Spd_D, Conf_Spd_ILimit;
+    public static ConfigEntry<PIDTuning> PID_Alt;
+    public static ConfigEntry<PIDTuning> PID_VS;
+    public static ConfigEntry<PIDTuning> PID_Angle;
+    public static ConfigEntry<PIDTuning> PID_Roll;
+    public static ConfigEntry<PIDTuning> PID_Spd;
+    public static ConfigEntry<PIDTuning> PID_Crs;
+    public static ConfigEntry<PIDTuning> PID_GCAS;
     public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, ThrottleSlewRate;
-
-    public static ConfigEntry<float> Conf_Crs_P, Conf_Crs_I, Conf_Crs_D, Conf_Crs_ILimit;
-
-    // PIDLoop2 global settings
-    public static ConfigEntry<float> PID_DerivativeFilter;
-    public static ConfigEntry<float> PID_SmoothIn, PID_SmoothOut;
-
-    // PIDLoop2 2DOF weights (B = proportional setpoint weight, C = derivative setpoint weight)
-    public static ConfigEntry<float> Conf_Alt_B, Conf_Alt_C;
-    public static ConfigEntry<float> Conf_VS_B, Conf_VS_C;
-    public static ConfigEntry<float> Conf_Angle_B, Conf_Angle_C;
-    public static ConfigEntry<float> Roll_B, Roll_C;
-    public static ConfigEntry<float> Conf_Spd_B, Conf_Spd_C;
-    public static ConfigEntry<float> Conf_Crs_B, Conf_Crs_C;
-    public static ConfigEntry<float> GCAS_B, GCAS_C;
-
-    // PIDLoop2 deadbands
-    public static ConfigEntry<float> Conf_Alt_IntegralDeadband;
-    public static ConfigEntry<float> Conf_VS_IntegralDeadband;
-    public static ConfigEntry<float> Conf_Angle_IntegralDeadband;
-    public static ConfigEntry<float> Roll_IntegralDeadband;
-    public static ConfigEntry<float> Conf_Spd_IntegralDeadband;
-    public static ConfigEntry<float> Conf_Crs_IntegralDeadband;
-    public static ConfigEntry<float> GCAS_IntegralDeadband;
 
     // Auto GCAS
     public static ConfigEntry<bool> EnableGCAS, EnableGCASHelo, EnableGCASTiltwing;
     public static ConfigEntry<float> GCAS_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
-    public static ConfigEntry<float> GCAS_P, GCAS_I, GCAS_D, GCAS_ILimit;
 
     // Random
     public static ConfigEntry<bool> RandomEnabled;
@@ -215,6 +190,12 @@ public class Plugin : BaseUnityPlugin
     private void Awake()
     {
         Logger = base.Logger;
+
+        TomlTypeConverter.AddConverter(typeof(PIDTuning), new TypeConverter
+        {
+            ConvertToString = (obj, _) => ((PIDTuning)obj).ToString(),
+            ConvertToObject = (str, _) => PIDTuning.Parse(str)
+        });
 
         // Visuals
         ColorAPOn = Config.Bind("Visuals - Colors", "1. Color AP On", "#00FF00", "Green");
@@ -406,82 +387,6 @@ public class Plugin : BaseUnityPlugin
         SpeedStep = Config.Bind("Controls - Values", "21. Speed Step", 1.0f, "m/s per frame (60fps)");
         MinAltitude = Config.Bind("Controls - Values", "22. Minimum Target Altitude", 20f, "Safety floor");
 
-        // Tuning
-        DefaultMaxClimbRate = Config.Bind("Tuning - 0. Limits", "1. Default Max Climb Rate", 10f, "Startup value");
-        Conf_VS_MaxAngle = Config.Bind("Tuning - 0. Limits", "2. Max Pitch Angle", 30.0f, "anti stall limit?");
-        DefaultCRLimit = Config.Bind("Tuning - 0. Limits", "3. Default course roll limit", 10.0f,
-            "default roll limit when turning in course/nav mode");
-        PID_DerivativeFilter = Config.Bind("Tuning - 0. PIDLoop2 global", "1. Derivative Filter (N)", 50.0f,
-            "Higher = less filtering");
-        PID_SmoothIn = Config.Bind("Tuning - 0. PIDLoop2 global", "2. Input Smoothing", 1.0f,
-            "Low-pass filter on measurement input. 1.0 = no filtering, 0.01 = heavy smoothing.");
-        PID_SmoothOut = Config.Bind("Tuning - 0. PIDLoop2 global", "3. Output Smoothing", 1.0f,
-            "Low-pass filter on controller output. 1.0 = no filtering, 0.01 = heavy smoothing.");
-
-        // Loops
-        Conf_Alt_P = Config.Bind("Tuning - 1. Altitude>VS", "1. Alt P", 0.5f, "Alt Error -> Target VS");
-        Conf_Alt_I = Config.Bind("Tuning - 1. Altitude>VS", "2. Alt I", 0.0f, "Integral");
-        Conf_Alt_D = Config.Bind("Tuning - 1. Altitude>VS", "3. Alt D", 1.5f, "Derivative");
-        Conf_Alt_ILimit = Config.Bind("Tuning - 1. Altitude>VS", "4. Alt I Limit", 10.0f, "Max Integral (m/s)");
-        Conf_Alt_B = Config.Bind("Tuning - 1. Altitude>VS", "5. Alt B (P setpoint weight)", 1.0f,
-            "2DOF P Weight: 1.0 = P acts on full error, 0.0 = P acts on measurement only");
-        Conf_Alt_C = Config.Bind("Tuning - 1. Altitude>VS", "6. Alt C (D setpoint weight)", 0.0f,
-            "2DOF D Weight: 0.0 = derivative on measurement only (recommended), 1.0 = derivative on error");
-        Conf_Alt_IntegralDeadband = Config.Bind("Tuning - 1. Altitude>VS", "7. Alt Integral Deadband", 0.0f,
-        "Ignore error below this for integration (meters)");
-
-        Conf_VS_P = Config.Bind("Tuning - 2. VS>Angle", "1. VS P", 2.0f, "VS Error -> Target Angle");
-        Conf_VS_I = Config.Bind("Tuning - 2. VS>Angle", "2. VS I", 1.0f, "Integral");
-        Conf_VS_D = Config.Bind("Tuning - 2. VS>Angle", "3. VS D", 2.0f, "Derivative");
-        Conf_VS_ILimit = Config.Bind("Tuning - 2. VS>Angle", "4. VS I Limit", 90.0f, "Max Trim (Deg)");
-        Conf_VS_B = Config.Bind("Tuning - 2. VS>Angle", "5. VS B (P setpoint weight)", 1.0f, "2DOF P weight");
-        Conf_VS_C = Config.Bind("Tuning - 2. VS>Angle", "6. VS C (D setpoint weight)", 0.0f, "2DOF D weight");
-        Conf_VS_IntegralDeadband = Config.Bind("Tuning - 2. VS>Angle", "7. VS Integral Deadband", 0.0f,
-        "Ignore error below this for integration (m/s)");
-
-        Conf_Angle_P = Config.Bind("Tuning - 3. Angle>Stick", "1. Angle P", 0.03f, "Angle Error -> Stick");
-        Conf_Angle_I = Config.Bind("Tuning - 3. Angle>Stick", "2. Angle I", 0.01f, "Integral");
-        Conf_Angle_D = Config.Bind("Tuning - 3. Angle>Stick", "3. Angle D", 0.02f, "Derivative");
-        Conf_Angle_ILimit = Config.Bind("Tuning - 3. Angle>Stick", "4. Angle I Limit", 90.0f, "Max Integral (Stick)");
-        Conf_Angle_B = Config.Bind("Tuning - 3. Angle>Stick", "5. Angle B (P setpoint weight)", 1.0f, "2DOF P weight");
-        Conf_Angle_C = Config.Bind("Tuning - 3. Angle>Stick", "6. Angle C (D setpoint weight)", 0.0f, "2DOF D weight");
-        Conf_Angle_IntegralDeadband = Config.Bind("Tuning - 3. Angle>Stick", "7. Angle Integral Deadband", 0.0f,
-        "Ignore error below this for integration (degrees)");
-
-        RollP = Config.Bind("Tuning - 4. Roll", "1. Roll P", 0.01f, "Proportional");
-        RollI = Config.Bind("Tuning - 4. Roll", "2. Roll I", 0.002f, "Integral");
-        RollD = Config.Bind("Tuning - 4. Roll", "3. Roll D", 0.001f, "Derivative");
-        RollILimit = Config.Bind("Tuning - 4. Roll", "5. Roll I Limit", 1.0f, "Limit");
-        Roll_B = Config.Bind("Tuning - 4. Roll", "6. Roll B (P setpoint weight)", 1.0f, "2DOF P weight");
-        Roll_C = Config.Bind("Tuning - 4. Roll", "7. Roll C (D setpoint weight)", 0.0f, "2DOF D weight");
-        Roll_IntegralDeadband = Config.Bind("Tuning - 4. Roll", "8. Roll Integral Deadband", 0.0f,
-        "Ignore error below this for integration (degrees)");
-
-        Conf_Crs_P = Config.Bind("Tuning - 5. Course", "1. Course P", 1.0f, "Course Error -> Bank Angle");
-        Conf_Crs_I = Config.Bind("Tuning - 5. Course", "2. Course I", 0.03f, "Integral");
-        Conf_Crs_D = Config.Bind("Tuning - 5. Course", "3. Course D", 0.0f, "Derivative");
-        Conf_Crs_ILimit = Config.Bind("Tuning - 5. Course", "4. Course I Limit", 30.0f, "Max Integral Bank");
-        Conf_Crs_B = Config.Bind("Tuning - 5. Course", "5. Course B (P setpoint weight)", 1.0f, "2DOF P weight");
-        Conf_Crs_C = Config.Bind("Tuning - 5. Course", "6. Course C (D setpoint weight)", 0.0f, "2DOF D weight");
-        Conf_Crs_IntegralDeadband = Config.Bind("Tuning - 5. Course", "7. Course Integral Deadband", 0.0f,
-        "Ignore error below this for integration (degrees)");
-
-        Conf_Spd_P = Config.Bind("Tuning - 5. Speed>Throttle", "1. Speed P", 0.3f, "Speed Error -> Throttle");
-        Conf_Spd_I = Config.Bind("Tuning - 5. Speed>Throttle", "2. Speed I", 0.05f, "Integral");
-        Conf_Spd_D = Config.Bind("Tuning - 5. Speed>Throttle", "3. Speed D", 0.25f, "Derivative");
-        Conf_Spd_ILimit = Config.Bind("Tuning - 5. Speed>Throttle", "4. Speed I Limit", 1.0f, "Max integral");
-        Conf_Spd_B = Config.Bind("Tuning - 5. Speed>Throttle", "5. Speed B (P setpoint weight)", 1.0f, "2DOF P weight");
-        Conf_Spd_C = Config.Bind("Tuning - 5. Speed>Throttle", "6. Speed C (D setpoint weight)", 0.0f, "2DOF D weight");
-        Conf_Spd_IntegralDeadband = Config.Bind("Tuning - 5. Speed>Throttle", "7. Speed Integral Deadband", 0.0f,
-    "Ignore error below this for integration (m/s)");
-
-        ThrottleMinLimit = Config.Bind("Tuning - 6. Speed - Misc", "1. Safe Min Throttle", 0.01f,
-            "Minimum throttle when limiter is active (prevents Airbrake)");
-        ThrottleMaxLimit = Config.Bind("Tuning - 6. Speed - Misc", "2. Safe Max Throttle", 0.89f,
-            "Maximum throttle when limiter is active (prevents Afterburner)");
-        ThrottleSlewRate = Config.Bind("Tuning - 6. Speed - Misc", "3. Throttle Slew Rate Limit", 0.0f,
-            "in unit of throttle gauges per second (0 to disable)");
-
         // Auto GCAS
         EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS on start", true,
             "GCAS off at start if disabled (anything that isn't a helo)");
@@ -495,14 +400,39 @@ public class Plugin : BaseUnityPlugin
         GCAS_AutoBuffer = Config.Bind("Auto GCAS", "6. Auto-Pull Buffer", 0.5f, "Safety margin seconds");
         GCAS_Deadzone = Config.Bind("Auto GCAS", "7. GCAS Deadzone", 0.5f, "GCAS override deadzone (default 0.5 = 50%)");
         GCAS_ScanRadius = Config.Bind("Auto GCAS", "8. Scan Radius", 2.0f, "Width of the spherecast (m)");
-        GCAS_P = Config.Bind("GCAS PID", "1. GCAS P", 0.1f, "G Error -> Stick");
-        GCAS_I = Config.Bind("GCAS PID", "2. GCAS I", 0.5f, "Integral");
-        GCAS_D = Config.Bind("GCAS PID", "3. GCAS D", 0.0f, "Derivative");
-        GCAS_ILimit = Config.Bind("GCAS PID", "4. GCAS I Limit", 1.0f, "Max stick influence");
-        GCAS_B = Config.Bind("GCAS PID", "5. GCAS B (P setpoint weight)", 1.0f, "2DOF P weight");
-        GCAS_C = Config.Bind("GCAS PID", "6. GCAS C (D setpoint weight)", 0.0f, "2DOF D weight");
-        GCAS_IntegralDeadband = Config.Bind("GCAS PID", "7. GCAS Integral Deadband", 0.0f,
-        "Ignore error below this for integration (G)");
+
+        DefaultMaxClimbRate = Config.Bind("Limits", "1. Default Max Climb Rate", 10f, "Startup value");
+        Conf_VS_MaxAngle = Config.Bind("Limits", "2. Max Pitch Angle", 30.0f, "anti stall limit?");
+        DefaultCRLimit = Config.Bind("Limits", "3. Default course roll limit", 10.0f,
+            "default roll limit when turning in course/nav mode");
+        ThrottleMinLimit = Config.Bind("Limits", "4. Safe Min Throttle", 0.01f,
+        "Minimum throttle when limiter is active (prevents Airbrake)");
+        ThrottleMaxLimit = Config.Bind("Limits", "5. Safe Max Throttle", 0.89f,
+            "Maximum throttle when limiter is active (prevents Afterburner)");
+        ThrottleSlewRate = Config.Bind("Limits", "6. Throttle Slew Rate Limit", 0.0f,
+            "in unit of throttle gauges per second (0 to disable)");
+
+        // PID Loops
+        PID_Alt = PIDTuningBinder.Bind(Config, "PID - 1. Altitude>VS", "PID",
+            new PIDTuning(0.5f, 0f, 1.5f, b: 1f, c: 0f), "Altitude > Vertical Speed");
+
+        PID_VS = PIDTuningBinder.Bind(Config, "PID - 2. VS>Angle", "PID",
+            new PIDTuning(2f, 1f, 2f, b: 1f, c: 0f), "Vertical Speed > Pitch Angle");
+
+        PID_Angle = PIDTuningBinder.Bind(Config, "PID - 3. Angle>Stick", "PID",
+            new PIDTuning(0.03f, 0.01f, 0.02f, b: 1f, c: 0f), "Pitch Angle > Stick");
+
+        PID_Roll = PIDTuningBinder.Bind(Config, "PID - 4. Roll", "PID",
+            new PIDTuning(0.01f, 0.002f, 0.001f, b: 1f, c: 0f), "Roll Error > Stick");
+
+        PID_Crs = PIDTuningBinder.Bind(Config, "PID - 5. Course", "PID",
+            new PIDTuning(1f, 0.03f, 0f, b: 1f, c: 0f), "Course Error > Bank Angle");
+
+        PID_Spd = PIDTuningBinder.Bind(Config, "PID - 6. Speed>Throttle", "PID",
+            new PIDTuning(0.3f, 0.05f, 0.25f, b: 1f, c: 0f), "Speed Error > Throttle");
+
+        PID_GCAS = PIDTuningBinder.Bind(Config, "PID - 7. G-Force>Stick", "PID",
+            new PIDTuning(0.1f, 0.5f, 0f, b: 1f, c: 0f), "GCAS G Error > Stick");
 
         // Random
         RandomEnabled = Config.Bind("Settings - Random", "01. Random Enabled", false,

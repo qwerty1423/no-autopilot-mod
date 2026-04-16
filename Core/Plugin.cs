@@ -404,7 +404,7 @@ public class Plugin : BaseUnityPlugin
         GCAS_ScanRadius = Config.Bind("Auto GCAS", "8. Scan Radius", 2.0f, "Width of the spherecast (m)");
 
         DefaultMaxClimbRate = Config.Bind("Limits", "1. Default Max Climb Rate", 10f, "Startup value");
-        Conf_VS_MaxAngle = Config.Bind("Limits", "2. Max Pitch Angle", 30.0f, "anti stall limit?");
+        Conf_VS_MaxAngle = Config.Bind("Limits", "2. Max Pitch Angle", 90.0f, "once again a useless angle from horizon limit");
         DefaultCRLimit = Config.Bind("Limits", "3. Default course roll limit", 10.0f,
             "default roll limit when turning in course/nav mode");
         ThrottleMinLimit = Config.Bind("Limits", "4. Safe Min Throttle", 0.01f,

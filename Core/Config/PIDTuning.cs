@@ -30,7 +30,7 @@ public struct PIDTuning(
     // optional
     public bool Clegg = clegg;
 
-    public override string ToString()
+    public override readonly string ToString()
     {
         var ci = CultureInfo.InvariantCulture;
         return string.Join("|",

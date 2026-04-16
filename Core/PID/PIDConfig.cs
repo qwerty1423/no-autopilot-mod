@@ -15,8 +15,8 @@ internal struct PIDConfig
 
     public static void Apply(ref PIDConfig cfg, PIDLoop2 pid,
         PIDTuning t,
-        float minOutput, float maxOutput,
-        float ts)
+        float ts,
+        float minOutput, float maxOutput)
     {
         float kp = t.Kp, ti = t.Ti, td = t.Td;
         float n = t.N;

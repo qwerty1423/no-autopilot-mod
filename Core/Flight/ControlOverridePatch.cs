@@ -64,8 +64,8 @@ internal static class ControlOverridePatch
     {
         PIDConfig.Apply(ref cfg, pid,
             tuning.Value,
-            minOutput, maxOutput,
-            Mathf.Max(dt, 0.0001f));
+            Mathf.Max(dt, 0.0001f),
+            minOutput, maxOutput);
     }
 
     public static void Reset()

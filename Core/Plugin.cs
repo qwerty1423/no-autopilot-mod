@@ -146,17 +146,19 @@ public class Plugin : BaseUnityPlugin
     private readonly string _table =
         "<b>Toggle AP GUI:</b> F8\n" +
         "<b>Toggle Autopilot:</b> = (Equals)\n" +
+        "<b>Toggle FBW:</b> Del (Delete) | Singleplayer only\n" +
         "<b>Toggle AJ:</b> / (Slash)\n" +
         "<b>Toggle GCAS:</b> \\ (Backslash)\n" +
-        "<b>Clear/Reset:</b> ' (Quote) | Roll>Nav>Crs>Roll>Alt>Roll><Roll\n\n" +
+        "<b>Toggle ALS:</b> LCtrl + = (Equals) | Autoland\n" +
+        "<b>Clear/Reset:</b> ' (Quote) | Roll>Nav>Crs>Roll>Alt>Roll\n\n" +
         "<b>Target Alt Small:</b> Up / Down Arrow | Small adjustment\n" +
         "<b>Target Alt Large:</b> Left / Right Arrow | Large adjustment\n" +
         "<b>Max Climb Rate:</b> PgUp / PgDn | Limit vertical speed\n" +
         "<b>Bank/Course L/R:</b> [ and ] | Adjust roll or heading\n\n" +
         "<b>Toggle Speed Hold:</b> ; (Semicolon) | Matches current speed\n" +
         "<b>Speed Up / Down:</b> LShift / LCtrl | Adjust target speed\n" +
-        "<b>Mach/TAS hold:</b> Home | Switch between Mach/TAS\n" +
-        "<b>Toggle AB:</b> End | Toggle Afterburner/Airbrake\n";
+        "<b>Mach/TAS Hold:</b> Home | Switch between Mach/TAS\n" +
+        "<b>Toggle AB/Airbrake:</b> End | Toggle Afterburner/Airbrake\n";
 
     private RectEdge _activeEdge = RectEdge.None;
     private GUIContent _cachedExtraInfoContent;

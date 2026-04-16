@@ -29,7 +29,7 @@ public static class PIDTuningDrawer
         nameof(PIDTuning.SmoothOut)),
         ("pDb", "Proportional deadband",
         nameof(PIDTuning.ProportionalDeadband)),
-        ("iDb", "Integral deadband (they say this is the most useful?)",
+        ("iDb", "Integral deadband (they say this is the most useful deadband?)",
         nameof(PIDTuning.IntegralDeadband)),
         ("dDb", "Derivative deadband",
         nameof(PIDTuning.DerivativeDeadband)),
@@ -97,7 +97,7 @@ public static class PIDTuningDrawer
 
         GUILayout.BeginHorizontal();
         var cleggContent = new GUIContent("Clegg",
-            "Clegg integrator — resets integral on every zero-crossing of error");
+            "Clegg integrator - resets integral on every zero-crossing of error");
         bool newClegg = GUILayout.Toggle(t.Clegg, cleggContent);
         if (newClegg != t.Clegg) { t.Clegg = newClegg; changed = true; }
         GUILayout.FlexibleSpace();

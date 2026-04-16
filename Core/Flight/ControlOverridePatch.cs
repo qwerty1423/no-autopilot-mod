@@ -890,7 +890,7 @@ internal static class ControlOverridePatch
                     }
                 }
 
-                // ===== Pitch Control =====
+                // pitch control
                 bool pitchAxisActive = APData.GCASActive || APData.TargetAlt > 0f;
 
                 if (!pitchAxisActive)

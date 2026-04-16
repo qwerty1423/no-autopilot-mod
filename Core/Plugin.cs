@@ -413,25 +413,25 @@ public class Plugin : BaseUnityPlugin
             "in unit of throttle gauges per second (0 to disable)");
 
         // PID Loops
-        PID_Alt = PIDTuningBinder.Bind(Config, "PID - 1. Altitude>VS", "PID",
+        PID_Alt = PIDTuningBinder.Bind(Config, "PID", "Altitude > VS",
             new PIDTuning(0.5f, 0f, 1.5f, b: 1f, c: 0f), "Altitude > Vertical Speed");
 
-        PID_VS = PIDTuningBinder.Bind(Config, "PID - 2. VS>Angle", "PID",
+        PID_VS = PIDTuningBinder.Bind(Config, "PID", "VS > Angle",
             new PIDTuning(2f, 1f, 2f, b: 1f, c: 0f), "Vertical Speed > Pitch Angle");
 
-        PID_Angle = PIDTuningBinder.Bind(Config, "PID - 3. Angle>Stick", "PID",
+        PID_Angle = PIDTuningBinder.Bind(Config, "PID", "Angle > Stick",
             new PIDTuning(0.03f, 0.01f, 0.02f, b: 1f, c: 0f), "Pitch Angle > Stick");
 
-        PID_Roll = PIDTuningBinder.Bind(Config, "PID - 4. Roll", "PID",
+        PID_Roll = PIDTuningBinder.Bind(Config, "PID", "Roll > Stick",
             new PIDTuning(0.01f, 0.002f, 0.001f, b: 1f, c: 0f), "Roll Error > Stick");
 
-        PID_Crs = PIDTuningBinder.Bind(Config, "PID - 5. Course", "PID",
+        PID_Crs = PIDTuningBinder.Bind(Config, "PID", "Course > Roll",
             new PIDTuning(1f, 0.03f, 0f, b: 1f, c: 0f), "Course Error > Bank Angle");
 
-        PID_Spd = PIDTuningBinder.Bind(Config, "PID - 6. Speed>Throttle", "PID",
+        PID_Spd = PIDTuningBinder.Bind(Config, "PID", "Speed > Throttle",
             new PIDTuning(0.3f, 0.05f, 0.25f, b: 1f, c: 0f), "Speed Error > Throttle");
 
-        PID_GCAS = PIDTuningBinder.Bind(Config, "PID - 7. G-Force>Stick", "PID",
+        PID_GCAS = PIDTuningBinder.Bind(Config, "PID", "G-Force > Stick",
             new PIDTuning(0.1f, 0.5f, 0f, b: 1f, c: 0f), "GCAS G Error > Stick");
 
         // Random

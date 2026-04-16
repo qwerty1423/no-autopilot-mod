@@ -4,7 +4,7 @@ namespace NOAutopilot.Core.PID;
 
 internal struct PIDConfig
 {
-    private float _k, _ti, _td;
+    private float _kp, _ti, _td;
     private float _n;
     private float _b, _c;
     private float _smoothIn, _smoothOut;
@@ -18,7 +18,7 @@ internal struct PIDConfig
         float ts,
         float minOutput, float maxOutput)
     {
-        float k = t.K, ti = t.Ti, td = t.Td;
+        float kp = t.Kp, ti = t.Ti, td = t.Td;
         float n = t.N;
         float b = t.B, c = t.C;
         float smoothIn = t.SmoothIn;
@@ -32,7 +32,7 @@ internal struct PIDConfig
         bool tsChanged = System.Math.Abs(ts - cfg._ts) > 1e-6f;
 
         if (!tsChanged &&
-            k == cfg._k && ti == cfg._ti && td == cfg._td &&
+            kp == cfg._kp && ti == cfg._ti && td == cfg._td &&
             n == cfg._n &&
             minOutput == cfg._minOutput && maxOutput == cfg._maxOutput &&
             b == cfg._b && c == cfg._c &&
@@ -46,7 +46,7 @@ internal struct PIDConfig
             return;
         }
 
-        cfg._k = k; cfg._ti = ti; cfg._td = td;
+        cfg._kp = kp; cfg._ti = ti; cfg._td = td;
         cfg._n = n;
         cfg._minOutput = minOutput; cfg._maxOutput = maxOutput;
         cfg._b = b; cfg._c = c;
@@ -59,7 +59,7 @@ internal struct PIDConfig
         cfg._ts = ts;
 
         // standard form
-        pid.K = k;
+        pid.K = kp;
         pid.Ti = ti;
         pid.Td = td;
         pid.N = n;

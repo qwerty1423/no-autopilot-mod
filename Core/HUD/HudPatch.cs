@@ -96,26 +96,3 @@ internal static class HudPatch
         }
     }
 }
-
-[HarmonyPatch(typeof(FlightHud), "Update")]
-internal static class HudUpdatePatch
-{
-    [UsedImplicitly]
-    private static void Postfix()
-    {
-        if (!APData.LocalAircraft || Plugin.IsBroken)
-        {
-            return;
-        }
-
-        try
-        {
-            APData.CurrentAlt = APData.LocalAircraft.transform.position.GlobalY();
-        }
-        catch (Exception ex)
-        {
-            Plugin.Logger.LogError($"[HudUpdatePatch] Error: {ex}");
-            Plugin.IsBroken = true;
-        }
-    }
-}

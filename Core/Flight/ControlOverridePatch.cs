@@ -135,11 +135,8 @@ internal static class ControlOverridePatch
 
         try
         {
-            // if (Input.GetKeyDown(KeyCode.F9))
-            // {
-            //     Plugin.Logger.LogWarning("simulating error");
-            //     throw new Exception("simulated error???");
-            // }
+            APData.CurrentAlt = APData.LocalAircraft.transform.position.GlobalY();
+
             if (APData.CurrentMaxClimbRate < 0f)
             {
                 APData.CurrentMaxClimbRate = Plugin.DefaultMaxClimbRate.Value;

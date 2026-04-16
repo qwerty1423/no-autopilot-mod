@@ -2,7 +2,23 @@
 
 ## [Unreleased]
 
-- todo: double double double and fix the terms
+### Added
+
+- better pid controller from mechjeb, and a bunch of config to go with it
+- way to make autosweep always swing the wings to swept position
+
+### Changed
+
+- pid config is more compact
+- pid terms now in standard form, to convert from the old parameters:
+
+  **$K_p = K_p$**
+
+  **$T_i = \frac{K_{p}}{K_{i}}$**
+
+  **$T_d = \frac{K_{d}}{K_{p}}$**
+
+  you can zero $T_i$ for infinity, for cases where $K_i$ was 0.
 
 ## [5.0.0] - 2026-04-14
 

@@ -3,7 +3,7 @@ using System.Globalization;
 namespace NOAutopilot.Core.Config;
 
 public struct PIDTuning(
-    float kp, float ti, float td,
+    float k, float ti, float td,
     float n = 50f,
     float b = 1f,
     float c = 0f,
@@ -16,7 +16,7 @@ public struct PIDTuning(
     bool clegg = false)
 {
     // standard form
-    public float Kp = kp, Ti = ti, Td = td;
+    public float K = k, Ti = ti, Td = td;
     // filter
     public float N = n;
     // 2DOF
@@ -32,7 +32,7 @@ public struct PIDTuning(
     {
         var ci = CultureInfo.InvariantCulture;
         return string.Join("|",
-            Kp.ToString(ci),
+            K.ToString(ci),
             Ti.ToString(ci),
             Td.ToString(ci),
             N.ToString(ci),
@@ -56,7 +56,7 @@ public struct PIDTuning(
         float Get(int i, float def) =>
             p.Length > i && float.TryParse(p[i], NumberStyles.Float, ci, out float v) ? v : def;
 
-        t.Kp = Get(0, 1f);
+        t.K = Get(0, 1f);
         t.Ti = Get(1, 0f);
         t.Td = Get(2, 0f);
         t.N = Get(3, 50f);

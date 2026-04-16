@@ -11,8 +11,8 @@ public static class PIDTuningDrawer
 
     private static readonly (string Label, string Tooltip, string Field)[] Cells =
     [
-        ("Kp", "Gain (standard form)",
-        nameof(PIDTuning.Kp)),
+        ("K", "Gain (standard form)",
+        nameof(PIDTuning.K)),
         ("Ti", "Integral time constant (seconds)",
         nameof(PIDTuning.Ti)),
         ("Td", "Derivative time constant (seconds)",
@@ -132,7 +132,7 @@ public static class PIDTuningDrawer
 
     private static float GetField(ref PIDTuning t, string name) => name switch
     {
-        nameof(PIDTuning.Kp) => t.Kp,
+        nameof(PIDTuning.K) => t.K,
         nameof(PIDTuning.Ti) => t.Ti,
         nameof(PIDTuning.Td) => t.Td,
         nameof(PIDTuning.N) => t.N,
@@ -151,7 +151,7 @@ public static class PIDTuningDrawer
     {
         switch (name)
         {
-            case nameof(PIDTuning.Kp): t.Kp = v; break;
+            case nameof(PIDTuning.K): t.K = v; break;
             case nameof(PIDTuning.Ti): t.Ti = v; break;
             case nameof(PIDTuning.Td): t.Td = v; break;
             case nameof(PIDTuning.N): t.N = v; break;

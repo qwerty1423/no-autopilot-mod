@@ -96,6 +96,21 @@ internal static class HudPatch
                 }
             }
 
+            if (Plugin.DisableRadarOnSpawn.Value && aircraft.radar != null)
+            {
+                try
+                {
+                    if (aircraft.radar.enabled)
+                    {
+                        aircraft.CmdToggleRadar();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Logger.LogWarning($"[HudPatch] Radar disable failed: {ex.Message}");
+                }
+            }
+
             Plugin.SyncMenuValues();
             Plugin.CleanUpFBW();
         }

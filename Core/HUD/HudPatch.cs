@@ -1,6 +1,7 @@
 extern alias JetBrains;
 
 using System;
+using System.Collections;
 
 using HarmonyLib;
 
@@ -96,19 +97,9 @@ internal static class HudPatch
                 }
             }
 
-            if (Plugin.DisableRadarOnSpawn.Value && aircraft.radar != null)
+            if (Plugin.DisableRadarOnSpawn.Value)
             {
-                try
-                {
-                    if (aircraft.radar.enabled)
-                    {
-                        aircraft.CmdToggleRadar();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Plugin.Logger.LogWarning($"[HudPatch] Radar disable failed: {ex.Message}");
-                }
+                SceneSingleton<FlightHud>.i.StartCoroutine(DisableRadarDeferred(aircraft));
             }
 
             Plugin.SyncMenuValues();
@@ -118,6 +109,20 @@ internal static class HudPatch
         {
             Plugin.Logger.LogError($"[HudPatch] Error: {ex}");
             Plugin.IsBroken = true;
+        }
+    }
+    private static IEnumerator DisableRadarDeferred(Aircraft aircraft)
+    {
+        float timeout = Time.time + 10f;
+
+        while (aircraft != null && aircraft.radar == null && Time.time < timeout)
+        {
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        if (aircraft?.radar != null && aircraft.radar.enabled)
+        {
+            aircraft.CmdToggleRadar();
         }
     }
 }

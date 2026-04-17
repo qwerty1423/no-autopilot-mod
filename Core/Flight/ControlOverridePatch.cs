@@ -176,7 +176,20 @@ internal static class ControlOverridePatch
 
             float dt = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
             float noiseT = Time.time * Plugin.RandomSpeed.Value;
-            bool useRandom = Plugin.RandomEnabled.Value && !APData.GCASActive;
+
+            if (Plugin.StepTestKey.Value.IsDown())
+            {
+                PIDLogger.RequestTest(Plugin.StepTestLoop.Value);
+            }
+
+            if (!APData.Enabled && !APData.GCASActive && PIDLogger.IsTestActive)
+            {
+                PIDLogger.StopTest();
+            }
+
+            bool useRandom = Plugin.RandomEnabled.Value &&
+            !APData.GCASActive && !PIDLogger.IsTestActive;
+
             APData.GCASWarning = false;
             float currentG = 1f;
 
@@ -579,7 +592,7 @@ internal static class ControlOverridePatch
             bool isWaitingToReengage = Time.time - APData.LastOverrideInputTime < Plugin.ReengageDelay.Value;
 
             // throttle control
-            if (APData.TargetSpeed >= 0)
+            if (APData.TargetSpeed >= 0 || PIDLogger.IsTesting(PIDLogger.StepTarget.Spd))
             {
                 float currentSpeed = APData.LocalAircraft != null
                     ? APData.LocalAircraft.speed
@@ -597,6 +610,7 @@ internal static class ControlOverridePatch
                     targetSpeedMS = APData.TargetSpeed;
                 }
 
+                targetSpeedMS = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Spd, targetSpeedMS, currentSpeed);
                 float sErr = targetSpeedMS - currentSpeed;
                 float forwardAccel = Vector3.Dot(pAccel, pForward);
 
@@ -630,6 +644,7 @@ internal static class ControlOverridePatch
                     : (float)PidSpd.Update(targetSpeedMS, currentSpeed);
 
                 float desiredThrottle = Mathf.Clamp(pidOutput, minT, maxT);
+                PIDLogger.Log(PIDLogger.StepTarget.Spd, desiredThrottle, currentSpeed, targetSpeedMS);
 
                 float slewLimit = Plugin.ThrottleSlewRate.Value;
                 s_currentAppliedThrottle = slewLimit > 0
@@ -786,7 +801,12 @@ internal static class ControlOverridePatch
                 }
 
                 // roll/course control
-                bool rollAxisActive = APData.GCASActive || APData.TargetCourse >= 0f || APData.TargetRoll != -999f;
+                bool rollTest = PIDLogger.IsTesting(PIDLogger.StepTarget.Roll) ||
+                    PIDLogger.IsTesting(PIDLogger.StepTarget.Crs);
+                bool rollAxisActive = APData.GCASActive ||
+                    APData.TargetCourse >= 0f ||
+                    APData.TargetRoll != -999f ||
+                    rollTest;
 
                 if (rollAxisActive)
                 {
@@ -799,21 +819,24 @@ internal static class ControlOverridePatch
                     {
                         float activeTargetRoll = APData.TargetRoll;
 
-                        if (APData.TargetCourse >= 0f && APData.PlayerRB.velocity.sqrMagnitude > 1f &&
+                        if ((APData.TargetCourse >= 0f ||
+                            PIDLogger.IsTesting(PIDLogger.StepTarget.Crs)) &&
+                            APData.PlayerRB.velocity.sqrMagnitude > 1f &&
                             !APData.GCASActive)
                         {
                             Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
                             if (flatVel.sqrMagnitude > 1f)
                             {
                                 float curCrs = Quaternion.LookRotation(flatVel).eulerAngles.y;
-                                float cErr = Mathf.DeltaAngle(curCrs, APData.TargetCourse);
+                                float baseTargetCrs = APData.TargetCourse >= 0f ? APData.TargetCourse : curCrs;
 
-                                // Course PID: we pre-compute the angular error to handle wrapping,
-                                // then feed it as setpoint with measurement=0 so internal error = cErr.
-                                // The derivative will track how cErr changes over time.
+                                float targetCrs = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Crs, baseTargetCrs, curCrs);
+                                float cErr = Mathf.DeltaAngle(curCrs, targetCrs);
+
                                 ConfigurePID(PidCrs, ref s_cfgCrs, Plugin.PID_Crs, dt, -90f, 90f);
 
                                 float desiredTurnRate = (float)PidCrs.Update(cErr, 0);
+                                PIDLogger.Log(PIDLogger.StepTarget.Crs, desiredTurnRate, curCrs, targetCrs);
 
                                 const float gravity = 9.81f;
                                 float velocity = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
@@ -838,6 +861,7 @@ internal static class ControlOverridePatch
                             }
                         }
 
+                        activeTargetRoll = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Roll, activeTargetRoll, APData.CurrentRoll);
                         float rollError = Mathf.DeltaAngle(APData.CurrentRoll, activeTargetRoll);
                         float rollRate = localAngVel.z * Mathf.Rad2Deg;
 
@@ -871,10 +895,10 @@ internal static class ControlOverridePatch
                         }
                         else
                         {
-                            // Roll PID: pre-computed angular error as setpoint, 0 as measurement
                             ConfigurePID(PidRoll, ref s_cfgRoll, Plugin.PID_Roll, dt, -1f, 1f);
 
                             rollOut = (float)PidRoll.Update(rollError, 0);
+                            PIDLogger.Log(PIDLogger.StepTarget.Roll, rollOut, APData.CurrentRoll, activeTargetRoll);
 
                             if (Plugin.InvertRoll.Value)
                             {
@@ -893,7 +917,12 @@ internal static class ControlOverridePatch
                 }
 
                 // pitch control
-                bool pitchAxisActive = APData.GCASActive || APData.TargetAlt > 0f;
+                bool pitchTest = PIDLogger.IsTesting(PIDLogger.StepTarget.Alt) ||
+                                 PIDLogger.IsTesting(PIDLogger.StepTarget.VS) ||
+                                 PIDLogger.IsTesting(PIDLogger.StepTarget.Angle) ||
+                                 PIDLogger.IsTesting(PIDLogger.StepTarget.GCAS);
+
+                bool pitchAxisActive = APData.GCASActive || APData.TargetAlt > 0f || pitchTest;
 
                 if (!pitchAxisActive)
                 {
@@ -915,7 +944,7 @@ internal static class ControlOverridePatch
                     float pitchOut = 0f;
 
                     // gcas
-                    if (APData.GCASActive)
+                    if (APData.GCASActive || PIDLogger.IsTesting(PIDLogger.StepTarget.GCAS))
                     {
                         float rollAngle = Mathf.Abs(APData.CurrentRoll);
                         float targetG = rollAngle >= 90f ? 0f : Plugin.GCAS_MaxG.Value * s_overGFactor;
@@ -923,10 +952,12 @@ internal static class ControlOverridePatch
                         // GCAS PID: setpoint = targetG, measurement = currentG
                         ConfigurePID(PidGCAS, ref s_cfgGCAS, Plugin.PID_GCAS, dt, -1f, 1f);
 
-                        pitchOut = (float)PidGCAS.Update(targetG, currentG);
+                        float activeTargetG = PIDLogger.GetSetpoint(PIDLogger.StepTarget.GCAS, targetG, currentG);
+                        pitchOut = (float)PidGCAS.Update(activeTargetG, currentG);
+                        PIDLogger.Log(PIDLogger.StepTarget.GCAS, pitchOut, currentG, activeTargetG);
                     }
                     // Altitude hold (cascaded: Alt -> VS -> Angle -> Stick)
-                    else if (APData.TargetAlt > 0f)
+                    else if (APData.TargetAlt > 0f || pitchTest)
                     {
                         float currentVS = APData.PlayerRB.velocity.y;
 
@@ -971,7 +1002,10 @@ internal static class ControlOverridePatch
                             ConfigurePID(PidAlt, ref s_cfgAlt, Plugin.PID_Alt, dt,
                                 -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
 
-                            float targetVS = (float)PidAlt.Update(APData.TargetAlt, APData.CurrentAlt);
+                            float baseTargetAlt = APData.TargetAlt > 0f ? APData.TargetAlt : APData.CurrentAlt;
+                            float altTarget = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Alt, baseTargetAlt, APData.CurrentAlt);
+                            float targetVS = (float)PidAlt.Update(altTarget, APData.CurrentAlt);
+                            PIDLogger.Log(PIDLogger.StepTarget.Alt, targetVS, APData.CurrentAlt, altTarget);
 
                             float possibleAccel = Plugin.GCAS_MaxG.Value * 9.81f;
                             float altErr2 = Mathf.Abs(APData.TargetAlt - APData.CurrentAlt);
@@ -984,14 +1018,18 @@ internal static class ControlOverridePatch
                             ConfigurePID(PidVS, ref s_cfgVS, Plugin.PID_VS, dt,
                                 -Plugin.Conf_VS_MaxAngle.Value, Plugin.Conf_VS_MaxAngle.Value);
 
+                            targetVS = PIDLogger.GetSetpoint(PIDLogger.StepTarget.VS, targetVS, currentVS);
                             float targetPitchDeg = (float)PidVS.Update(targetVS, currentVS);
+                            PIDLogger.Log(PIDLogger.StepTarget.VS, targetPitchDeg, currentVS, targetVS);
 
                             // Pitch angle -> stick
                             float currentPitch = Mathf.Asin(pForward.y) * Mathf.Rad2Deg;
 
                             ConfigurePID(PidAngle, ref s_cfgAngle, Plugin.PID_Angle, dt, -1f, 1f);
 
+                            targetPitchDeg = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Angle, targetPitchDeg, currentPitch);
                             pitchOut = (float)PidAngle.Update(targetPitchDeg, currentPitch);
+                            PIDLogger.Log(PIDLogger.StepTarget.Angle, pitchOut, currentPitch, targetPitchDeg);
 
                             if (useRandom)
                             {

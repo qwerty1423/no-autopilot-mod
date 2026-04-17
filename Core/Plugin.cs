@@ -125,7 +125,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<PIDTuning> PID_GCAS;
 
     // pid logger
-    public static ConfigEntry<PIDTunerLogger.StepTarget> StepTestLoop;
+    public static ConfigEntry<PIDLogger.StepTarget> StepTestLoop;
     public static ConfigEntry<float> StepTestMagnitude;
     public static ConfigEntry<float> StepTestDuration;
     public static ConfigEntry<KeyboardShortcut> StepTestKey;
@@ -444,7 +444,7 @@ public class Plugin : BaseUnityPlugin
             new PIDTuning(0.1, 0.2, 0, b: 1, c: 0), "GCAS G Error > Stick");
 
         // PID logging
-        StepTestLoop = Config.Bind("PID logging", "1. Target Loop", PIDTunerLogger.StepTarget.None, "Which loop to run step response on");
+        StepTestLoop = Config.Bind("PID logging", "1. Target Loop", PIDLogger.StepTarget.None, "Which loop to run step response on");
         StepTestMagnitude = Config.Bind("PID logging", "2. Step Magnitude", 10.0f, "Amount to step the setpoint by (deg, m/s, etc)");
         StepTestDuration = Config.Bind("PID logging", "3. Record Duration", 5.0f, "How long to record data (seconds)");
         StepTestKey = Config.Bind("PID logging", "4. Start/Stop Key", new KeyboardShortcut(KeyCode.F9), "Press to start/stop step test and record CSV");

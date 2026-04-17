@@ -89,12 +89,7 @@ internal static class HudPatch
 
             if (Plugin.LockWingsSwept.Value)
             {
-                SwingWingController swing = APData.LocalAircraft.GetComponent<SwingWingController>();
-                if (swing != null)
-                {
-                    swing.forwardMach = float.MaxValue;
-                    swing.sweptMach = 0f;
-                }
+                // todo?
             }
 
             Plugin.SyncMenuValues();

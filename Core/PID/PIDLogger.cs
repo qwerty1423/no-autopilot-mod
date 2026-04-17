@@ -22,6 +22,9 @@ public static class PIDLogger
     private static float _startTime;
     private static readonly List<string> _data = new();
 
+    private static float _preStepDuration = 2.0f;
+    private static bool _stepFired;
+
     public static void RequestTest(StepTarget target)
     {
         if (_testActive || _testPending)
@@ -49,18 +52,36 @@ public static class PIDLogger
         {
             _testPending = false;
             _testActive = true;
+            _stepFired = false;
             _startTime = Time.time;
+
             _testSetpoint = currentMeasurement + Plugin.StepTestMagnitude.Value;
 
             _data.Clear();
             _data.Add("Time,Input_u,Output_y,Setpoint_r");
-            Plugin.Logger.LogInfo($"Started PID Step Test for {target}. Base: {currentMeasurement:F2}, Target: {_testSetpoint:F2}");
+            Plugin.Logger.LogInfo($"Starting recording for {target}. Step input in {_preStepDuration}s...");
         }
 
-        return _testActive ? _testSetpoint : normalSetpoint;
+        if (_testActive)
+        {
+            float elapsed = Time.time - _startTime;
+
+            if (elapsed < _preStepDuration)
+            {
+                return currentMeasurement;
+            }
+
+            if (!_stepFired)
+            {
+                _stepFired = true;
+                Plugin.Logger.LogInfo("applying step input...");
+            }
+            return _testSetpoint;
+        }
+
+        return normalSetpoint;
     }
 
-    // Logs the PID transaction
     public static void Log(StepTarget target, double u, double y, double r)
     {
         if (_testActive && _targetLoop == target)
@@ -70,7 +91,8 @@ public static class PIDLogger
 
             _data.Add($"{t.ToString("F4", ci)},{u.ToString("F4", ci)},{y.ToString("F4", ci)},{r.ToString("F4", ci)}");
 
-            if (t >= Plugin.StepTestDuration.Value)
+            // Adjust total duration to include the pre-step
+            if (t >= Plugin.StepTestDuration.Value + _preStepDuration)
             {
                 StopTest();
             }

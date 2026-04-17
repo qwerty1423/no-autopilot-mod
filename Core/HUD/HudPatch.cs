@@ -97,11 +97,6 @@ internal static class HudPatch
                 }
             }
 
-            if (Plugin.DisableRadarOnSpawn.Value)
-            {
-                SceneSingleton<FlightHud>.i.StartCoroutine(DisableRadarDeferred(aircraft));
-            }
-
             Plugin.SyncMenuValues();
             Plugin.CleanUpFBW();
         }
@@ -109,20 +104,6 @@ internal static class HudPatch
         {
             Plugin.Logger.LogError($"[HudPatch] Error: {ex}");
             Plugin.IsBroken = true;
-        }
-    }
-    private static IEnumerator DisableRadarDeferred(Aircraft aircraft)
-    {
-        float timeout = Time.time + 10f;
-
-        while (aircraft != null && aircraft.radar == null && Time.time < timeout)
-        {
-            yield return new WaitForSeconds(0.1f);
-        }
-
-        if (aircraft?.radar != null && aircraft.radar.enabled)
-        {
-            aircraft.CmdToggleRadar();
         }
     }
 }

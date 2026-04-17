@@ -56,6 +56,8 @@ internal static class ControlOverridePatch
 
     private static float s_disengageTimer;
 
+    public static float ThrottleOutput;
+
     private static void ConfigurePID(
     PIDLoop2 pid, ref PIDConfig cfg,
     ConfigEntry<PIDTuning> tuning,
@@ -655,7 +657,7 @@ internal static class ControlOverridePatch
                     )
                     : desiredThrottle;
 
-                inputObj.throttle = s_currentAppliedThrottle;
+                ThrottleOutput = s_currentAppliedThrottle;
             }
 
             // autopilot
@@ -1052,6 +1054,48 @@ internal static class ControlOverridePatch
         catch (Exception ex)
         {
             Plugin.Logger.LogError($"[ControlOverridePatch] Error: {ex}");
+            Plugin.IsBroken = true;
+        }
+    }
+}
+
+[HarmonyPatch(typeof(PilotPlayerState), "PlayerThrottleAxis1Controls")]
+internal static class ThrottleOverridePatch
+{
+    [UsedImplicitly]
+    private static void Postfix(PilotPlayerState __instance)
+    {
+        if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
+        {
+            return;
+        }
+
+        if (__instance == null || APData.LocalAircraft == null || APData.PlayerRB == null)
+        {
+            return;
+        }
+
+        if (APData.TargetSpeed < 0 && !PIDLogger.IsTesting(PIDLogger.StepTarget.Spd))
+        {
+            return;
+        }
+
+        try
+        {
+            ControlInputs inputObj = __instance.controlInputs;
+            if (inputObj == null)
+            {
+                return;
+            }
+
+            if (APData.TargetSpeed >= 0 || PIDLogger.IsTesting(PIDLogger.StepTarget.Spd))
+            {
+                inputObj.throttle = ControlOverridePatch.ThrottleOutput;
+            }
+        }
+        catch (Exception ex)
+        {
+            Plugin.Logger.LogError($"[ThrottleOverridePatch] Error: {ex}");
             Plugin.IsBroken = true;
         }
     }

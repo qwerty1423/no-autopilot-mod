@@ -447,7 +447,7 @@ public class Plugin : BaseUnityPlugin
         StepTestLoop = Config.Bind("PID logging", "1. Target Loop", PIDLogger.StepTarget.None, "Which loop to run step response on");
         StepTestMagnitude = Config.Bind("PID logging", "2. Step Magnitude", 10.0f, "Amount to step the setpoint by (deg, m/s, etc)");
         StepTestDuration = Config.Bind("PID logging", "3. Record Duration", 5.0f, "How long to record data (seconds)");
-        StepTestKey = Config.Bind("PID logging", "4. Start/Stop Key", new KeyboardShortcut(KeyCode.F9), "Press to start/stop step test and record CSV");
+        StepTestKey = Config.Bind("PID logging", "4. Start/Stop Key", new KeyboardShortcut(KeyCode.None), "Press to start/stop step test and record CSV");
 
         // Random
         RandomEnabled = Config.Bind("Settings - Random", "01. Random Enabled", false,

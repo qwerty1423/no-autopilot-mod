@@ -2,10 +2,15 @@
 
 ## [Unreleased]
 
+## [5.1.2] 2026-04-18
+
+### Fixed
+
+- autothrottle for 0.33.2
+
 ### Added
 
-- better pid controller from [mechjeb](https://github.com/MuMech/MechJeb2/blob/dev/MechJebLib/Control/PIDLoop2.cs), and a bunch of config to go with it
-- way to make autosweep always swing the wings to swept position
+- better pid controller from [mechjeb](https://github.com/MuMech/MechJeb2/blob/dev/MechJebLib/Control/PIDLoop2.cs), and a bunch of config to go with it.
 
 ### Changed
 

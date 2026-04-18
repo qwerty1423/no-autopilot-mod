@@ -11,6 +11,7 @@
 ### Added
 
 - better pid controller from [mechjeb](https://github.com/MuMech/MechJeb2/blob/dev/MechJebLib/Control/PIDLoop2.cs), and a bunch of config to go with it.
+- readme, changelog, and signature in the 7z.
 
 ### Changed
 

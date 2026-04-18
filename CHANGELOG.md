@@ -25,6 +25,12 @@
 
   you can zero $T_i$ for infinity, for cases where $K_i$ was 0.
 
+## [5.0.1] 2026-04-16
+
+### Fixed
+
+- altitude for autopilot not updating in third person
+
 ## [5.0.0] - 2026-04-14
 
 ### Fixed
@@ -316,7 +322,9 @@
 
 ## [4.8.4] - 2025-12-29
 
-[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.0.0...HEAD
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.1.2...HEAD
+[5.1.2]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.0.1...v5.1.2
+[5.0.1]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.0.0...v5.0.1
 [5.0.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.4...v5.0.0
 [4.17.4]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.3...v4.17.4
 [4.17.3]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.2...v4.17.3

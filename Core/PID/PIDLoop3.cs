@@ -33,7 +33,7 @@ public class PIDLoop3 : IPIDLoop
     private double _p1 = double.NaN;
 
     // internal state for previous reference and measurement
-    private double _r1 = double.NaN;
+    // private double _r1 = double.NaN;
     private double _y1 = double.NaN;
 
     // internal state for last error
@@ -124,7 +124,7 @@ public class PIDLoop3 : IPIDLoop
             ITerm = 0;
             DTerm = 0;
             _y1 = y;
-            _r1 = r;
+            // _r1 = r;
             _ei1 = ApplyDeadband(r - y, IntegralDeadband);
             _ed1 = ApplyDeadband((C * r) - y, DerivativeDeadband);
             _uff1 = Feedforward;
@@ -239,7 +239,7 @@ public class PIDLoop3 : IPIDLoop
         // state update 
         _p1 = pNew;
         _y1 = y;
-        _r1 = r;
+        // _r1 = r;
         _ei1 = ei;
         _ed1 = ed;
         _uff1 = Feedforward;
@@ -257,7 +257,7 @@ public class PIDLoop3 : IPIDLoop
         PTerm = ITerm = DTerm = 0;
         _ei1 = _ed1 = _d1 = 0;
         _p1 = double.NaN;
-        _y1 = _u1 = _r1 = _xu = _uff1 = double.NaN; // = _xus
+        _y1 = _u1 = _xu = _uff1 = double.NaN; // _r1 = _xus =
         TrackingMode = false;
         ManualMode = false;
     }

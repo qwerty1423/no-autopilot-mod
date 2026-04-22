@@ -656,7 +656,7 @@ internal static class ControlOverridePatch
                 float desiredThrottle = Mathf.Clamp(pidOutput, minT, maxT);
                 PIDLogger.Log(PIDLogger.StepTarget.Spd, desiredThrottle, currentSpeed, targetSpeedMS);
 
-                ThrottleOutput = s_currentAppliedThrottle;
+                ThrottleOutput = desiredThrottle;
             }
 
             // autopilot

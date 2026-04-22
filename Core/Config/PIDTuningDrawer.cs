@@ -35,6 +35,12 @@ public static class PIDTuningDrawer
         nameof(PIDTuning.DerivativeDeadband)),
         ("oDb", "Output deadband",
         nameof(PIDTuning.OutputDeadband)),
+        ("miR", "Output decrease rate limit (in unit of whole output range/s)",
+        nameof(PIDTuning.MinRate)),
+        ("maR", "Output increase rate limit (in unit of whole output range/s)",
+        nameof(PIDTuning.MaxRate)),
+        ("Tt", "anti-windup tracking time constant, probably leave default",
+        nameof(PIDTuning.Tt)),
     ];
 
     // Per-column label widths
@@ -144,6 +150,9 @@ public static class PIDTuningDrawer
         nameof(PIDTuning.IntegralDeadband) => t.IntegralDeadband,
         nameof(PIDTuning.DerivativeDeadband) => t.DerivativeDeadband,
         nameof(PIDTuning.OutputDeadband) => t.OutputDeadband,
+        nameof(PIDTuning.MinRate) => t.MinRate,
+        nameof(PIDTuning.MaxRate) => t.MaxRate,
+        nameof(PIDTuning.Tt) => t.Tt,
         _ => 0,
     };
 
@@ -163,6 +172,9 @@ public static class PIDTuningDrawer
             case nameof(PIDTuning.IntegralDeadband): t.IntegralDeadband = v; break;
             case nameof(PIDTuning.DerivativeDeadband): t.DerivativeDeadband = v; break;
             case nameof(PIDTuning.OutputDeadband): t.OutputDeadband = v; break;
+            case nameof(PIDTuning.MinRate): t.MinRate = v; break;
+            case nameof(PIDTuning.MaxRate): t.MaxRate = v; break;
+            case nameof(PIDTuning.Tt): t.Tt = v; break;
         }
     }
 }

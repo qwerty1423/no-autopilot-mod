@@ -21,13 +21,13 @@ namespace NOAutopilot.Core.Flight;
 [HarmonyPatch(typeof(PilotPlayerState), "PlayerAxisControls")]
 internal static class ControlOverridePatch
 {
-    private static readonly PIDLoop2 PidAlt = new();
-    private static readonly PIDLoop2 PidVS = new();
-    private static readonly PIDLoop2 PidAngle = new();
-    private static readonly PIDLoop2 PidRoll = new();
-    private static readonly PIDLoop2 PidGCAS = new();
-    private static readonly PIDLoop2 PidSpd = new();
-    private static readonly PIDLoop2 PidCrs = new();
+    private static readonly PIDLoop3 PidAlt = new();
+    private static readonly PIDLoop3 PidVS = new();
+    private static readonly PIDLoop3 PidAngle = new();
+    private static readonly PIDLoop3 PidRoll = new();
+    private static readonly PIDLoop3 PidGCAS = new();
+    private static readonly PIDLoop3 PidSpd = new();
+    private static readonly PIDLoop3 PidCrs = new();
 
     private static PIDConfig s_cfgAlt;
     private static PIDConfig s_cfgVS;
@@ -59,7 +59,7 @@ internal static class ControlOverridePatch
     public static float ThrottleOutput;
 
     private static void ConfigurePID(
-    PIDLoop2 pid, ref PIDConfig cfg,
+    PIDLoop3 pid, ref PIDConfig cfg,
     ConfigEntry<PIDTuning> tuning,
     float dt,
     float minOutput, float maxOutput)
@@ -120,8 +120,8 @@ internal static class ControlOverridePatch
         if (APData.TargetSpeed < 0)
         {
             PidSpd.Reset();
-            // Seed the integrator so throttle starts from current position
-            PidSpd.SeedIntegral(Mathf.Clamp01(inputThrottle));
+            // start throttle from current position
+            PidSpd.SeedOutput(Mathf.Clamp01(inputThrottle));
             s_currentAppliedThrottle = inputThrottle;
         }
 
@@ -647,15 +647,6 @@ internal static class ControlOverridePatch
 
                 float desiredThrottle = Mathf.Clamp(pidOutput, minT, maxT);
                 PIDLogger.Log(PIDLogger.StepTarget.Spd, desiredThrottle, currentSpeed, targetSpeedMS);
-
-                float slewLimit = Plugin.ThrottleSlewRate.Value;
-                s_currentAppliedThrottle = slewLimit > 0
-                    ? Mathf.MoveTowards(
-                        s_currentAppliedThrottle,
-                        desiredThrottle,
-                        slewLimit * dt
-                    )
-                    : desiredThrottle;
 
                 ThrottleOutput = s_currentAppliedThrottle;
             }

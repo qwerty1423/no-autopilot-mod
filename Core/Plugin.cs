@@ -113,7 +113,7 @@ public class Plugin : BaseUnityPlugin
 
     // Limits
     public static ConfigEntry<float> DefaultMaxClimbRate, Conf_VS_MaxAngle, DefaultCRLimit;
-    public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, ThrottleSlewRate;
+    public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit;
 
     // pid
     public static ConfigEntry<PIDTuning> PID_Alt;
@@ -418,8 +418,6 @@ public class Plugin : BaseUnityPlugin
         "Minimum throttle when limiter is active (prevents Airbrake)");
         ThrottleMaxLimit = Config.Bind("Limits", "5. Safe Max Throttle", 0.89f,
             "Maximum throttle when limiter is active (prevents Afterburner)");
-        ThrottleSlewRate = Config.Bind("Limits", "6. Throttle Slew Rate Limit", 0.0f,
-            "in unit of throttle gauges per second (0 to disable)");
 
         // PID Loops
         PID_Alt = PIDTuningBinder.Bind(Config, "PID", "1. Altitude > VS",

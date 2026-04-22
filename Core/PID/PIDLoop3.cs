@@ -86,8 +86,8 @@ public class PIDLoop3 : IPIDLoop
     public double MaxOutput { get; set; } = double.MaxValue;
 
     // output rate limits
-    public double MinRate { get; set; } = double.MinValue;
-    public double MaxRate { get; set; } = double.MaxValue;
+    // public double MinRate { get; set; } = double.MinValue;
+    // public double MaxRate { get; set; } = double.MaxValue;
 
     // anti-windup tracking time constant
     public double Tt { get; set; }
@@ -143,10 +143,10 @@ public class PIDLoop3 : IPIDLoop
         double usMax = MaxOutput;
         double xus = IsFinite(_xus) ? _xus : 0;
 
-        if (MinRate > double.MinValue / 2)
-            usMin = Max(usMin, xus + Ts * MinRate);
-        if (MaxRate < double.MaxValue / 2)
-            usMax = Min(usMax, xus + Ts * MaxRate);
+        // if (MinRate > double.MinValue / 2)
+        //     usMin = Max(usMin, xus + Ts * MinRate);
+        // if (MaxRate < double.MaxValue / 2)
+        //     usMax = Min(usMax, xus + Ts * MaxRate);
 
         // error signals with deadbands
         double ep = ApplyDeadband(B * r - y, ProportionalDeadband);

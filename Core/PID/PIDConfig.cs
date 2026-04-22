@@ -9,7 +9,7 @@ internal struct PIDConfig
     private double _b, _c;
     private double _smoothIn, _smoothOut;
     private double _proportionalDeadband, _integralDeadband, _derivativeDeadband, _outputDeadband;
-    private double _minRate, _maxRate;
+    // private double _minRate, _maxRate;
     private double _tt;
     private bool _clegg;
     private double _minOutput, _maxOutput;
@@ -29,8 +29,8 @@ internal struct PIDConfig
         double iDb = t.IntegralDeadband;
         double dDb = t.DerivativeDeadband;
         double oDb = t.OutputDeadband;
-        double minR = t.MinRate;
-        double maxR = t.MaxRate;
+        // double minR = t.MinRate;
+        // double maxR = t.MaxRate;
         double tt = t.Tt;
         bool clegg = t.Clegg;
 
@@ -46,8 +46,8 @@ internal struct PIDConfig
             iDb == cfg._integralDeadband &&
             dDb == cfg._derivativeDeadband &&
             oDb == cfg._outputDeadband &&
-            minR == cfg._minRate &&
-            maxR == cfg._maxRate &&
+            // minR == cfg._minRate &&
+            // maxR == cfg._maxRate &&
             tt == cfg._tt &&
             clegg == cfg._clegg)
         {
@@ -63,8 +63,8 @@ internal struct PIDConfig
         cfg._integralDeadband = iDb;
         cfg._derivativeDeadband = dDb;
         cfg._outputDeadband = oDb;
-        cfg._minRate = minR;
-        cfg._maxRate = maxR;
+        // cfg._minRate = minR;
+        // cfg._maxRate = maxR;
         cfg._tt = tt;
         cfg._clegg = clegg;
         cfg._ts = ts;
@@ -86,8 +86,8 @@ internal struct PIDConfig
         pid.IntegralDeadband = iDb;
         pid.DerivativeDeadband = dDb;
         pid.OutputDeadband = oDb;
-        pid.MinRate = minR;
-        pid.MaxRate = maxR;
+        // pid.MinRate = minR;
+        // pid.MaxRate = maxR;
         // optional
         pid.Tt = tt;
         pid.Clegg = clegg;

@@ -417,7 +417,6 @@ internal static class ControlOverridePatch
                         {
                             APData.GCASActive = false;
                             APData.Enabled = false;
-                            PidGCAS.Reset();
                             PidAlt.Reset();
                             PidVS.Reset();
                             PidAngle.Reset();
@@ -448,6 +447,8 @@ internal static class ControlOverridePatch
                                 APData.FBWDisabled = false;
                                 Plugin.UpdateFBWState();
                             }
+                            PidGCAS.Reset();
+                            PidRoll.Reset();
                         }
 
                         APData.GCASWarning = true;
@@ -954,7 +955,6 @@ internal static class ControlOverridePatch
                         float rollAngle = Mathf.Abs(APData.CurrentRoll);
                         float targetG = rollAngle >= 90f ? 0f : Plugin.GCAS_MaxG.Value * s_overGFactor;
 
-                        // GCAS PID: setpoint = targetG, measurement = currentG
                         ConfigurePID(PidGCAS, ref s_cfgGCAS, Plugin.PID_GCAS, dt, -1f, 1f);
 
                         float activeTargetG = PIDLogger.GetSetpoint(PIDLogger.StepTarget.GCAS, targetG, currentG);

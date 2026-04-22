@@ -906,6 +906,8 @@ internal static class ControlOverridePatch
                         {
                             ConfigurePID(PidRoll, ref s_cfgRoll, Plugin.PID_Roll, dt, -1f, 1f);
 
+                            PidRoll.BumplessTransfer = !APData.GCASActive;
+
                             rollOut = (float)PidRoll.Update(unwrappedTargetRoll, APData.CurrentRoll);
                             PIDLogger.Log(PIDLogger.StepTarget.Roll, rollOut, APData.CurrentRoll, activeTargetRoll);
 

@@ -102,6 +102,8 @@ public class PIDLoop3 : IPIDLoop
 
     public double Feedforward { get; set; }
 
+    public bool BumplessTransfer { get; set; } = true;
+
     public double Update(double r, double y)
     {
         // low-pass filter the input
@@ -115,20 +117,24 @@ public class PIDLoop3 : IPIDLoop
         if (ManualMode)
         {
             double um = Clamp(ManualValue, MinOutput, MaxOutput);
-            // keep internal state tracking the manual output for bumpless exit
-            _xu = um;
-            // _xus = um;
-            _p1 = K * ApplyDeadband((B * r) - y, ProportionalDeadband);
-            _d1 = 0;
-            PTerm = _p1;
-            ITerm = 0;
-            DTerm = 0;
-            _y1 = y;
-            // _r1 = r;
-            _ei1 = ApplyDeadband(r - y, IntegralDeadband);
-            _ed1 = ApplyDeadband((C * r) - y, DerivativeDeadband);
-            _uff1 = Feedforward;
-            _u1 = IsFinite(_u1) ? _u1 + (SmoothOut * (um - _u1)) : um;
+
+            if (BumplessTransfer)
+            {
+                // keep internal state tracking the manual output for bumpless exit
+                _xu = um;
+                // _xus = um;
+                _p1 = K * ApplyDeadband((B * r) - y, ProportionalDeadband);
+                _d1 = 0;
+                PTerm = _p1;
+                ITerm = 0;
+                DTerm = 0;
+                _y1 = y;
+                // _r1 = r;
+                _ei1 = ApplyDeadband(r - y, IntegralDeadband);
+                _ed1 = ApplyDeadband((C * r) - y, DerivativeDeadband);
+                _uff1 = Feedforward;
+                _u1 = IsFinite(_u1) ? _u1 + (SmoothOut * (um - _u1)) : um;
+            }
             return _u1;
         }
 

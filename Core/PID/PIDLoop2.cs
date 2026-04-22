@@ -126,6 +126,11 @@ public class PIDLoop2 : IPIDLoop
         ITerm = value;
     }
 
+    public void SeedOutput(double value)
+    {
+        SeedIntegral(value);
+    }
+
     // functions from MechJebLib.Utils.Statics to make it work
     private static bool IsFinite(double x) =>
     !double.IsNaN(x) && !double.IsInfinity(x);

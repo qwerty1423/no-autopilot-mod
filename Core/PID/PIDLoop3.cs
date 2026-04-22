@@ -139,8 +139,8 @@ public class PIDLoop3 : IPIDLoop
         }
 
         // rate-limited saturation window
-        double usMin = MinOutput;
-        double usMax = MaxOutput;
+        double usMin = double.MinValue;
+        double usMax = double.MaxValue;
         double xus = IsFinite(_xus) ? _xus : 0;
 
         // if (MinRate > double.MinValue / 2)
@@ -193,7 +193,7 @@ public class PIDLoop3 : IPIDLoop
         // nominal control signal 
         double u = _xu + dup + dui + dud + duff;
 
-        // conditional integration anti-windup (paper Listing 5) 
+        // conditional integration anti-windup
         double us = Clamp(u, usMin, usMax);
         if (Ti != 0 && dui * (u - us) > 0)
         {

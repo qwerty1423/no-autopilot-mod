@@ -444,6 +444,10 @@ internal static class ControlOverridePatch
                             APData.ALSActive = false;
                             APData.TargetRoll = 0f;
 
+                            PidRoll.Reset();
+                            PidCrs.Reset();
+                            PidGCAS.Reset();
+
                             if (APData.FBWDisabled)
                             {
                                 APData.FBWDisabled = false;

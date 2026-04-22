@@ -805,11 +805,13 @@ internal static class ControlOverridePatch
                 {
                     if ((pilotRoll || isWaitingToReengage) && !APData.GCASActive)
                     {
-                        PidRoll.Reset();
                         PidCrs.Reset();
+                        PidRoll.ManualMode = true;
+                        PidAngle.ManualValue = stickRoll;
                     }
                     else
                     {
+                        PidRoll.ManualMode = false;
                         float activeTargetRoll = APData.TargetRoll;
 
                         if ((APData.TargetCourse >= 0f ||
@@ -926,7 +928,8 @@ internal static class ControlOverridePatch
                 {
                     PidAlt.Reset();
                     PidVS.Reset();
-                    PidAngle.Reset();
+                    PidAngle.ManualMode = true;
+                    PidAngle.ManualValue = stickPitch;
                     if (!Plugin.KeepSetAltStick.Value)
                     {
                         APData.TargetAlt = APData.CurrentAlt;
@@ -934,6 +937,7 @@ internal static class ControlOverridePatch
                 }
                 else
                 {
+                    PidAngle.ManualMode = false;
                     float pitchOut = 0f;
 
                     // gcas

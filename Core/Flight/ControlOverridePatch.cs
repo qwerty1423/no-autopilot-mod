@@ -117,6 +117,15 @@ internal static class ControlOverridePatch
         PidRoll.Reset();
         PidGCAS.Reset();
         PidCrs.Reset();
+
+        PidAlt.Feedforward = 0;
+        PidVS.Feedforward = 0;
+        PidAngle.Feedforward = 0;
+        PidRoll.Feedforward = 0;
+        PidGCAS.Feedforward = 0;
+        PidSpd.Feedforward = 0;
+        PidCrs.Feedforward = 0;
+
         if (APData.TargetSpeed < 0)
         {
             PidSpd.Reset();
@@ -1016,6 +1025,11 @@ internal static class ControlOverridePatch
                                 -Plugin.Conf_VS_MaxAngle.Value, Plugin.Conf_VS_MaxAngle.Value);
 
                             targetVS = PIDLogger.GetSetpoint(PIDLogger.StepTarget.VS, targetVS, currentVS);
+
+                            float airspeed = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
+                            float vsRatio = Mathf.Clamp(targetVS / airspeed, -1f, 1f);
+                            PidVS.Feedforward = Mathf.Asin(vsRatio) * Mathf.Rad2Deg;
+
                             float targetPitchDeg = (float)PidVS.Update(targetVS, currentVS);
                             PIDLogger.Log(PIDLogger.StepTarget.VS, targetPitchDeg, currentVS, targetVS);
 

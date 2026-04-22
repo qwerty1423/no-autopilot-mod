@@ -417,6 +417,7 @@ internal static class ControlOverridePatch
                         {
                             APData.GCASActive = false;
                             APData.Enabled = false;
+                            PidGCAS.Reset();
                             PidAlt.Reset();
                             PidVS.Reset();
                             PidAngle.Reset();
@@ -442,13 +443,12 @@ internal static class ControlOverridePatch
                             APData.GCASActive = true;
                             APData.ALSActive = false;
                             APData.TargetRoll = 0f;
+
                             if (APData.FBWDisabled)
                             {
                                 APData.FBWDisabled = false;
                                 Plugin.UpdateFBWState();
                             }
-                            PidGCAS.Reset();
-                            PidRoll.Reset();
                         }
 
                         APData.GCASWarning = true;
@@ -816,7 +816,7 @@ internal static class ControlOverridePatch
                     {
                         PidCrs.Reset();
                         PidRoll.ManualMode = true;
-                        PidAngle.ManualValue = stickRoll;
+                        PidRoll.ManualValue = stickRoll;
                     }
                     else
                     {
@@ -836,10 +836,10 @@ internal static class ControlOverridePatch
 
                                 float targetCrs = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Crs, baseTargetCrs, curCrs);
                                 float cErr = Mathf.DeltaAngle(curCrs, targetCrs);
-
+                                float unwrappedTargetCrs = curCrs + cErr;
                                 ConfigurePID(PidCrs, ref s_cfgCrs, Plugin.PID_Crs, dt, -90f, 90f);
+                                float desiredTurnRate = (float)PidCrs.Update(unwrappedTargetCrs, curCrs);
 
-                                float desiredTurnRate = (float)PidCrs.Update(cErr, 0);
                                 PIDLogger.Log(PIDLogger.StepTarget.Crs, desiredTurnRate, curCrs, targetCrs);
 
                                 const float gravity = 9.81f;
@@ -868,6 +868,7 @@ internal static class ControlOverridePatch
                         activeTargetRoll = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Roll, activeTargetRoll, APData.CurrentRoll);
                         float rollError = Mathf.DeltaAngle(APData.CurrentRoll, activeTargetRoll);
                         float rollRate = localAngVel.z * Mathf.Rad2Deg;
+                        float unwrappedTargetRoll = APData.CurrentRoll + rollError;
 
                         // Roll sleep
                         if (useRandom)
@@ -901,7 +902,7 @@ internal static class ControlOverridePatch
                         {
                             ConfigurePID(PidRoll, ref s_cfgRoll, Plugin.PID_Roll, dt, -1f, 1f);
 
-                            rollOut = (float)PidRoll.Update(rollError, 0);
+                            rollOut = (float)PidRoll.Update(unwrappedTargetRoll, APData.CurrentRoll);
                             PIDLogger.Log(PIDLogger.StepTarget.Roll, rollOut, APData.CurrentRoll, activeTargetRoll);
 
                             if (Plugin.InvertRoll.Value)

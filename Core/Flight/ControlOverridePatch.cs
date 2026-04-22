@@ -294,7 +294,7 @@ internal static class ControlOverridePatch
                 }
 
                 bool pilotOverride = Mathf.Abs(stickPitch) > Plugin.GCAS_Deadzone.Value ||
-                                     Mathf.Abs(stickRoll) > Plugin.GCAS_Deadzone.Value || gearDown;
+                    Mathf.Abs(stickRoll) > Plugin.GCAS_Deadzone.Value || gearDown;
 
                 if (pilotOverride && APData.GCASActive)
                 {
@@ -647,7 +647,6 @@ internal static class ControlOverridePatch
                 float minT = APData.AllowExtremeThrottle ? 0f : Plugin.ThrottleMinLimit.Value;
                 float maxT = APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value;
 
-                // Configure speed PID: setpoint = targetSpeed, measurement = currentSpeed
                 ConfigurePID(PidSpd, ref s_cfgSpd, Plugin.PID_Spd, dt, minT, maxT);
 
                 float pidOutput = s_isSpdSleeping
@@ -1045,7 +1044,7 @@ internal static class ControlOverridePatch
                             if (useRandom)
                             {
                                 pitchOut += (Mathf.PerlinNoise(noiseT, 0f) - 0.5f) * 2f *
-                                            Plugin.RandomStrength.Value;
+                                    Plugin.RandomStrength.Value;
                             }
                         }
                     }

@@ -239,6 +239,7 @@ public class PIDLoop3 : IPIDLoop
 
     private double ApplyDeadband(double v, double deadband)
     {
+        if (!IsFinite(v)) return 0;
         if (Abs(v) < deadband)
             return 0;
         return v - Sign(v) * deadband;
@@ -254,7 +255,7 @@ public class PIDLoop3 : IPIDLoop
         ManualMode = false;
     }
 
-    // seeds the controller's nominal output state (not just the integrator)
+    // seeds the controller's nominal output state
     // use this for bumpless enable from a known output value
     public void SeedOutput(double value)
     {

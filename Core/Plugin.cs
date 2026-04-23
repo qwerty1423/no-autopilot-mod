@@ -133,7 +133,7 @@ public class Plugin : BaseUnityPlugin
 
     // Auto GCAS
     public static ConfigEntry<bool> EnableGCAS, EnableGCASHelo, EnableGCASTiltwing;
-    public static ConfigEntry<float> GcasMaxG, GcasWarnBuffer, GcasAutoBuffer, GcasDeadzone, GcasScanRadius;
+    public static ConfigEntry<float> GcasMaxG, GcasWarnBuffer, GcasAutoBuffer, GcasDeadzone, GcasScanRadius, GcasMinAlt;
 
     // Random
     public static ConfigEntry<bool> RandomEnabled;
@@ -407,9 +407,10 @@ public class Plugin : BaseUnityPlugin
         GcasMaxG = Config.Bind("Auto GCAS", "4. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
         GcasWarnBuffer =
             Config.Bind("Auto GCAS", "5. Warning Buffer", 20.0f, "GCAS warning indicator first appearance");
-        GcasAutoBuffer = Config.Bind("Auto GCAS", "6. Auto-Pull Buffer", 2.0f, "Safety margin seconds");
+        GcasAutoBuffer = Config.Bind("Auto GCAS", "6. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
         GcasDeadzone = Config.Bind("Auto GCAS", "7. GCAS Deadzone", 0.5f, "GCAS override deadzone (default 0.5 = 50%)");
         GcasScanRadius = Config.Bind("Auto GCAS", "8. Scan Radius", 2.0f, "Width of the spherecast (m)");
+        GcasMinAlt = Config.Bind("Auto GCAS", "9. Minimum altitude", 0.0f, "Minimum altitude (m)");
 
         DefaultMaxClimbRate = Config.Bind("Limits", "1. Default Max Climb Rate", 10f, "Startup value");
         Conf_VS_MaxAngle = Config.Bind("Limits", "2. Max Pitch Angle", 85.0f, "angle from horizon limit");

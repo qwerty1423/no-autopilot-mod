@@ -1,5 +1,5 @@
 /*
- * Combined form 2DOF PIDF controller
+ * Combined-form 2DOF PIDF controller
  */
 
 using static System.Math;
@@ -12,6 +12,7 @@ public class PIDController : IPIDLoop
     public double PTerm { get; private set; }
     public double ITerm { get; private set; }
     public double DTerm { get; private set; }
+
     // standard form parameters 
     /// <summary>Proportional gain.</summary>
     public double K { get; set; } = 1.0;
@@ -28,12 +29,6 @@ public class PIDController : IPIDLoop
     /// <summary>Sample time.</summary>
     public double Ts { get; set; } = 0.02;
 
-    // parallel form parameters
-    public double Kp { get => K; set => K = value; }
-    public double Ki { get => Ti == 0 ? 0 : K / Ti; set => Ti = value == 0 ? 0 : K / value; }
-    public double Kd { get => Td * K; set => Td = K == 0 ? 0 : value / K; }
-    public double Tf { get => N == 0 ? 0 : Td / N; set => N = value == 0 ? 0 : Td / value; }
-
     // 2DOF parameters
     /// <summary>Setpoint weight on proportional term.</summary>
     public double B { get; set; } = 1.0;
@@ -49,8 +44,8 @@ public class PIDController : IPIDLoop
     public double Tt { get; set; }
 
     //  Saturation and rate limits 
-    public double MinOutput { get; set; } = double.MinValue;
-    public double MaxOutput { get; set; } = double.MaxValue;
+    public double MinOutput { get; set; } = double.NegativeInfinity;
+    public double MaxOutput { get; set; } = double.PositiveInfinity;
 
     /// <summary>Minimum rate of change of output per second.</summary>
     public double DuMin { get; set; } = double.NegativeInfinity;
@@ -81,12 +76,12 @@ public class PIDController : IPIDLoop
 
     // Previous signals
     private double _r1, _y1Ctrl;
-    private double _dr1, _dy1;
     private double _uff1;
 
     // Incremental-form accumulated output (xu) and last saturated output (xus)
     private double _xu;
     private double _xus;
+    private double _ixu;
 
     // previous errors
     private double _ei1;
@@ -119,18 +114,17 @@ public class PIDController : IPIDLoop
 
         _r1 = r0;
         _y1Ctrl = y0;
-        _dr1 = 0;
-        _dy1 = 0;
         _uff1 = uff0;
 
         _xu = uInit;
         _xus = uInit;
+        _ixu = 0;
 
         PTerm = 0;
         ITerm = 0;
         DTerm = 0;
         _ed1 = (C * r0) - y0;
-        _ei1 = 0;
+        _ei1 = r0 - y0;
         _dterm1 = 0;
 
         _yIn1 = y0;
@@ -148,8 +142,8 @@ public class PIDController : IPIDLoop
     public void Reset()
     {
         PTerm = ITerm = DTerm = 0;
-        _r1 = _y1Ctrl = _dr1 = _dy1 = _uff1 = 0;
-        _xu = _xus = 0;
+        _r1 = _y1Ctrl = _uff1 = 0;
+        _xu = _xus = _ixu = 0;
         _ed1 = _dterm1 = 0;
         _yIn1 = _uOut1 = double.NaN;
         _sf1 = _sf2 = double.NaN;
@@ -162,9 +156,9 @@ public class PIDController : IPIDLoop
     /// </summary>
     public void ResetIntegratorLikeStates()
     {
-        _dr1 = 0;
-        _dy1 = 0;
         _uff1 = 0;
+        _dterm1 = 0;
+        DTerm = 0;
     }
 
     //  Main control update
@@ -201,17 +195,15 @@ public class PIDController : IPIDLoop
         double umin = Max(MinOutput, _xus + (Ts * DuMin));
         double umax = Min(MaxOutput, _xus + (Ts * DuMax));
 
-        // Compute derivative approximations 
-        double dr = (r - _r1) / Ts;
-        double dy = (y - _y1Ctrl) / Ts;
-
         double u;
 
         if (mode == Mode.Track)
         {
             // Tracking mode
-            _xu = utrack;
             u = utrack;
+            _xu = utrack;
+            _ixu = utrack;
+            ITerm = utrack;
             _ei1 = ApplyDeadband(r - y, IntegralDeadband);
             _ed1 = ApplyDeadband((C * r) - y, DerivativeDeadband);
             _dterm1 = 0;
@@ -222,6 +214,8 @@ public class PIDController : IPIDLoop
             // Manual mode 
             u = uman;
             _xu = uman;
+            _ixu = uman;
+            ITerm = uman;
             _ei1 = ApplyDeadband(r - y, IntegralDeadband);
             _ed1 = ApplyDeadband((C * r) - y, DerivativeDeadband);
             _dterm1 = 0;
@@ -232,6 +226,7 @@ public class PIDController : IPIDLoop
             // Positional form 
             double ep = ApplyDeadband((B * r) - y, ProportionalDeadband);
             double ed = ApplyDeadband((C * r) - y, DerivativeDeadband);
+            _ei1 = ApplyDeadband(r - y, IntegralDeadband);
 
             PTerm = K * ep;
 
@@ -250,19 +245,16 @@ public class PIDController : IPIDLoop
 
             u = U0 + PTerm + DTerm + uff;
             _xu = u;
+            ITerm = 0;
         }
         else
         {
-            // Incremental form 
-            double d_r = r - _r1;
-            double d_y = y - _y1Ctrl;
-            double d_dr = dr - _dr1;
-            double d_dy = dy - _dy1;
-
-            // ── Error signals with deadbands
+            // Error signals with deadbands
             double ep = ApplyDeadband((B * r) - y, ProportionalDeadband);
             double ei = ApplyDeadband(r - y, IntegralDeadband);
             double ed = ApplyDeadband((C * r) - y, DerivativeDeadband);
+
+            PTerm = K * ep;
 
             // Proportional increment
             double ep1 = ApplyDeadband((B * _r1) - _y1Ctrl, ProportionalDeadband);
@@ -271,19 +263,26 @@ public class PIDController : IPIDLoop
             // Integral increment
             if (Clegg && ei * _ei1 < 0)
             {
+                _xu -= _ixu;
+                _ixu = 0;
                 _ei1 = 0;
+                _dterm1 = 0;
+                DTerm = 0;
             }
 
             double du_i = 0.5 * K / Ti * Ts * (ei + _ei1);
+            _ixu += du_i;
 
             // Derivative increment
             double den = (2 * Td) + (N * Ts);
-            double dDTerm = den == 0
+            DTerm = den == 0
                 ? 0
                 : (((2 * Td) - (N * Ts)) / den * DTerm) + (2 * N * K * Td / den * (ed - _ed1));
 
-            if (!IsFinite(dDTerm)) dDTerm = 0;
-            DTerm = dDTerm;
+            if (!IsFinite(DTerm))
+            {
+                DTerm = 0;
+            }
 
             // Feedforward increment
             double du_ff = uff - _uff1;
@@ -294,24 +293,27 @@ public class PIDController : IPIDLoop
             // Anti-windup (back-calculation)
             double us = Clamp(u, umin, umax);
             double tr = GetTrackingTimeConstant();
-            u -= Ts / tr * (u - us);
 
-            _xu = u;
+            // limit gain to 1 to prevent discrete-time overshoot
+            double awG = Min(1.0, Ts / tr);
+
+            double w = awG * (us - u);
+            _xu = u + w;
+            _ixu += w;
+
+            ITerm = _ixu;
+            u = us;
             _ei1 = ei;
             _ed1 = ed;
             _dterm1 = DTerm;
         }
 
-        // Store pre-saturation signal
-        // For TRACK and MAN modes, also align _xu so switching back to AUTO is bumpless.
-        _xu = u;
-
-        // Apply output deadband
-        u = ApplyDeadband(u, OutputDeadband);
-
         // Saturate and rate-limit
         u = Clamp(u, umin, umax);
         _xus = u;
+
+        // Apply output deadband
+        u = ApplyDeadband(u, OutputDeadband);
 
         // Low-pass filter the output
         _uOut1 = IsFinite(_uOut1) ? _uOut1 + (SmoothOut * (u - _uOut1)) : u;
@@ -319,8 +321,6 @@ public class PIDController : IPIDLoop
         // Update stored states
         _r1 = r;
         _y1Ctrl = y;
-        _dr1 = dr;
-        _dy1 = dy;
         _uff1 = uff;
 
         return _uOut1;

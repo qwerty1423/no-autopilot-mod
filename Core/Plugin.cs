@@ -116,14 +116,14 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, MaxRollRate;
 
     // pid
-    public static ConfigEntry<PIDTuning> PID_Alt;
-    public static ConfigEntry<PIDTuning> PID_VS;
-    public static ConfigEntry<PIDTuning> PID_Angle;
-    public static ConfigEntry<PIDTuning> PID_Roll;
-    public static ConfigEntry<PIDTuning> PID_RollRate;
-    public static ConfigEntry<PIDTuning> PID_Spd;
-    public static ConfigEntry<PIDTuning> PID_Crs;
-    public static ConfigEntry<PIDTuning> PID_GCAS;
+    public static ConfigEntry<PIDTuning> ConfPidAlt;
+    public static ConfigEntry<PIDTuning> ConfPidVs;
+    public static ConfigEntry<PIDTuning> ConfPidAngle;
+    public static ConfigEntry<PIDTuning> ConfPidRoll;
+    public static ConfigEntry<PIDTuning> ConfPidRollRate;
+    public static ConfigEntry<PIDTuning> ConfPidSpd;
+    public static ConfigEntry<PIDTuning> ConfPidCrs;
+    public static ConfigEntry<PIDTuning> ConfPidGcas;
 
     // pid logger
     public static ConfigEntry<PIDLogger.StepTarget> StepTestLoop;
@@ -423,25 +423,28 @@ public class Plugin : BaseUnityPlugin
             "Maximum commanded roll rate in deg/s");
 
         // PID Loops
-        PID_Alt = PIDTuningBinder.Bind(Config, "PID", "1. Altitude > VS",
+        ConfPidAlt = PIDTuningBinder.Bind(Config, "PID", "1. Altitude > VS",
             new PIDTuning(0.5, 0, 3), "Altitude > Vertical Speed");
 
-        PID_VS = PIDTuningBinder.Bind(Config, "PID", "2. VS > Angle",
+        ConfPidVs = PIDTuningBinder.Bind(Config, "PID", "2. VS > Angle",
             new PIDTuning(2.44967771875362, 2.31068044043631, 0.549968619394224), "Vertical Speed > Pitch Angle");
 
-        PID_Angle = PIDTuningBinder.Bind(Config, "PID", "3. Angle > Stick",
+        ConfPidAngle = PIDTuningBinder.Bind(Config, "PID", "3. Angle > Stick",
             new PIDTuning(0.0329026146189137, 5.7512084040881, 0.12329376291698), "Pitch Angle > Stick");
 
-        PID_Roll = PIDTuningBinder.Bind(Config, "PID", "4. Roll > Stick",
+        ConfPidRoll = PIDTuningBinder.Bind(Config, "PID", "4. Roll > Stick",
             new PIDTuning(0.0088094983263587, 4.46531703889275, 0), "Roll Error > Stick");
 
-        PID_Crs = PIDTuningBinder.Bind(Config, "PID", "5. Course > Roll",
+        ConfPidRollRate = PIDTuningBinder.Bind(Config, "PID", "4. Roll > Stick",
+            new PIDTuning(0.0088094983263587, 4.46531703889275, 0), "Roll Error > Stick");
+
+        ConfPidCrs = PIDTuningBinder.Bind(Config, "PID", "5. Course > Roll",
             new PIDTuning(1, 30, 0, clegg: true), "Course Error > Bank Angle");
 
-        PID_Spd = PIDTuningBinder.Bind(Config, "PID", "6. Speed > Throttle",
+        ConfPidSpd = PIDTuningBinder.Bind(Config, "PID", "6. Speed > Throttle",
             new PIDTuning(0.276635855846017, 4.55835278395057, 0.486418840935585, 5), "Speed Error > Throttle");
 
-        PID_GCAS = PIDTuningBinder.Bind(Config, "PID", "7. G-Force > Stick",
+        ConfPidGcas = PIDTuningBinder.Bind(Config, "PID", "7. G-Force > Stick",
             new PIDTuning(0.448050807726941, 0.947761066338411, 0), "GCAS G Error > Stick");
 
         // PID logging

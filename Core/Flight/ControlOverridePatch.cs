@@ -263,8 +263,8 @@ internal static class ControlOverridePatch
                     APData.IsOnGround = true;
                 }
 
-                bool pilotOverride = Mathf.Abs(stickPitch) > Plugin.GCAS_Deadzone.Value ||
-                    Mathf.Abs(stickRoll) > Plugin.GCAS_Deadzone.Value || gearDown;
+                bool pilotOverride = Mathf.Abs(stickPitch) > Plugin.GcasDeadzone.Value ||
+                    Mathf.Abs(stickRoll) > Plugin.GcasDeadzone.Value || gearDown;
 
                 if (pilotOverride && APData.GCASActive)
                 {
@@ -282,12 +282,12 @@ internal static class ControlOverridePatch
                     const float estimatedRollRate = 60f;
                     float timeToRollUpright = currentRollAbs / estimatedRollRate;
 
-                    float gAccel = Plugin.GCAS_MaxG.Value * 9.81f;
+                    float gAccel = Plugin.GcasMaxG.Value * 9.81f;
                     float turnRadius = speed * speed / gAccel;
 
-                    float reactionTime = Plugin.GCAS_AutoBuffer.Value + (Time.deltaTime * 2.0f) + timeToRollUpright;
+                    float reactionTime = Plugin.GcasAutoBuffer.Value + (Time.deltaTime * 2.0f) + timeToRollUpright;
                     float reactionDist = speed * reactionTime;
-                    float warnDist = speed * Plugin.GCAS_WarnBuffer.Value;
+                    float warnDist = speed * Plugin.GcasWarnBuffer.Value;
 
                     s_overGFactor = 1.0f;
 
@@ -303,39 +303,36 @@ internal static class ControlOverridePatch
                         Vector3 castStart = APData.PlayerRB.position + (velocity.normalized * 5f);
                         float scanRange = (turnRadius * 1.5f) + warnDist + 500f;
 
-                        if (Physics.SphereCast(castStart, Plugin.GCAS_ScanRadius.Value, velocity.normalized,
-                                out RaycastHit hit, scanRange, 8256))
+                        if (Physics.SphereCast(castStart, Plugin.GcasScanRadius.Value, velocity.normalized,
+                                out RaycastHit hit, scanRange, 8256) && hit.transform.root != APData.PlayerTransform.root)
                         {
-                            if (hit.transform.root != APData.PlayerTransform.root)
+                            float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
+                            float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
+
+                            if (hit.distance < reqArc + reactionDist + 20f)
                             {
-                                float turnAngle = Mathf.Abs(Vector3.Angle(velocity, hit.normal) - 90f);
-                                float reqArc = turnRadius * (turnAngle * Mathf.Deg2Rad);
+                                s_dangerImminent = true;
 
-                                if (hit.distance < reqArc + reactionDist + 20f)
+                                float availableArcDist =
+                                    hit.distance - reactionDist - (speed * timeToRollUpright);
+
+                                if (availableArcDist < reqArc)
                                 {
-                                    s_dangerImminent = true;
+                                    float neededRadius = availableArcDist / (turnAngle * Mathf.Deg2Rad);
+                                    neededRadius = Mathf.Max(neededRadius, 1f);
+                                    float gRequired = speed * speed / (neededRadius * 9.81f);
 
-                                    float availableArcDist =
-                                        hit.distance - reactionDist - (speed * timeToRollUpright);
-
-                                    if (availableArcDist < reqArc)
-                                    {
-                                        float neededRadius = availableArcDist / (turnAngle * Mathf.Deg2Rad);
-                                        neededRadius = Mathf.Max(neededRadius, 1f);
-                                        float gRequired = speed * speed / (neededRadius * 9.81f);
-
-                                        s_overGFactor =
-                                            Mathf.Max(s_overGFactor, gRequired / Plugin.GCAS_MaxG.Value);
-                                    }
+                                    s_overGFactor =
+                                        Mathf.Max(s_overGFactor, gRequired / Plugin.GcasMaxG.Value);
                                 }
-                                else if (hit.distance < reqArc + reactionDist + warnDist)
-                                {
-                                    s_warningZone = true;
-                                    float distToTrigger = hit.distance - (reqArc + reactionDist + 20f);
-                                    float totalWarnRange = warnDist - 20f;
-                                    float fraction = 1f - (distToTrigger / Mathf.Max(totalWarnRange, 1f));
-                                    APData.GCASConverge = Mathf.Clamp01(fraction);
-                                }
+                            }
+                            else if (hit.distance < reqArc + reactionDist + warnDist)
+                            {
+                                s_warningZone = true;
+                                float distToTrigger = hit.distance - (reqArc + reactionDist + 20f);
+                                float totalWarnRange = warnDist - 20f;
+                                float fraction = 1f - (distToTrigger / Mathf.Max(totalWarnRange, 1f));
+                                APData.GCASConverge = Mathf.Clamp01(fraction);
                             }
                         }
                     }
@@ -344,7 +341,7 @@ internal static class ControlOverridePatch
                     {
                         float diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
                         float vertBuffer = descentRate * reactionTime;
-                        float availablePullAlt = APData.CurrentAlt - vertBuffer;
+                        float availablePullAlt = APData.CurrentAlt - vertBuffer - Plugin.GcasMinAlt.Value;
                         float pullUpLoss = turnRadius * (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
 
                         if (availablePullAlt < pullUpLoss)
@@ -357,14 +354,14 @@ internal static class ControlOverridePatch
 
                             float gReqFloor = speed * speed / (availableRadius * 9.81f);
 
-                            s_overGFactor = Mathf.Max(s_overGFactor, gReqFloor / Plugin.GCAS_MaxG.Value);
+                            s_overGFactor = Mathf.Max(s_overGFactor, gReqFloor / Plugin.GcasMaxG.Value);
                         }
                         else if (APData.CurrentAlt <
-                                 pullUpLoss + vertBuffer + (descentRate * Plugin.GCAS_WarnBuffer.Value))
+                                 pullUpLoss + vertBuffer + (descentRate * Plugin.GcasWarnBuffer.Value))
                         {
                             s_warningZone = true;
                             float triggerAlt = pullUpLoss + vertBuffer;
-                            float warnRange = descentRate * Plugin.GCAS_WarnBuffer.Value;
+                            float warnRange = descentRate * Plugin.GcasWarnBuffer.Value;
                             float distToTrigger = APData.CurrentAlt - triggerAlt;
                             float fraction = 1f - (distToTrigger / Mathf.Max(warnRange, 1f));
                             APData.GCASConverge = Mathf.Max(APData.GCASConverge, Mathf.Clamp01(fraction));
@@ -387,7 +384,6 @@ internal static class ControlOverridePatch
                         {
                             APData.GCASActive = false;
                             APData.Enabled = false;
-                            PidGCAS.Reset();
                             PidAlt.Reset();
                             PidVS.Reset();
                             PidAngle.Reset();
@@ -413,11 +409,6 @@ internal static class ControlOverridePatch
                             APData.GCASActive = true;
                             APData.ALSActive = false;
                             APData.TargetRoll = 0f;
-
-                            PidRoll.Init(0f, APData.CurrentRoll);
-                            PidRollRate.Init(0f, rollRate);
-                            PidCrs.Reset();
-                            PidGCAS.Reset();
 
                             if (APData.FBWDisabled)
                             {
@@ -830,7 +821,7 @@ internal static class ControlOverridePatch
                                     bankReq = -bankReq;
                                 }
 
-                                float safeMaxG = Mathf.Max(Plugin.GCAS_MaxG.Value, 1.01f);
+                                float safeMaxG = Mathf.Max(Plugin.GcasMaxG.Value, 1.01f);
                                 float gLimitBank = Mathf.Acos(1f / safeMaxG) * Mathf.Rad2Deg;
 
                                 float userLimit = APData.TargetRoll != -999f && APData.TargetRoll != 0
@@ -947,7 +938,7 @@ internal static class ControlOverridePatch
                     if (APData.GCASActive || PIDLogger.IsTesting(PIDLogger.StepTarget.GCAS))
                     {
                         float rollAngle = Mathf.Abs(APData.CurrentRoll);
-                        float targetG = rollAngle >= 90f ? 0f : Plugin.GCAS_MaxG.Value * s_overGFactor;
+                        float targetG = rollAngle >= 90f ? 0f : Plugin.GcasMaxG.Value * s_overGFactor;
 
                         ConfigurePID(PidGCAS, Plugin.ConfPidGcas, dt, -1f, 1f);
 
@@ -1006,7 +997,7 @@ internal static class ControlOverridePatch
                             float targetVS = (float)PidAlt.Update(altTarget, APData.CurrentAlt);
                             PIDLogger.Log(PIDLogger.StepTarget.Alt, targetVS, APData.CurrentAlt, altTarget);
 
-                            float possibleAccel = Plugin.GCAS_MaxG.Value * 9.81f;
+                            float possibleAccel = Plugin.GcasMaxG.Value * 9.81f;
                             float altErr2 = Mathf.Abs(APData.TargetAlt - APData.CurrentAlt);
                             float maxSafeVS = Mathf.Sqrt(2f * possibleAccel * altErr2);
                             targetVS = Mathf.Clamp(targetVS, -maxSafeVS, maxSafeVS);

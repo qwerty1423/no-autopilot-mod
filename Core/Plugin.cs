@@ -133,7 +133,7 @@ public class Plugin : BaseUnityPlugin
 
     // Auto GCAS
     public static ConfigEntry<bool> EnableGCAS, EnableGCASHelo, EnableGCASTiltwing;
-    public static ConfigEntry<float> GCAS_MaxG, GCAS_WarnBuffer, GCAS_AutoBuffer, GCAS_Deadzone, GCAS_ScanRadius;
+    public static ConfigEntry<float> GcasMaxG, GcasWarnBuffer, GcasAutoBuffer, GcasDeadzone, GcasScanRadius, GcasMinAlt;
 
     // Random
     public static ConfigEntry<bool> RandomEnabled;
@@ -404,12 +404,13 @@ public class Plugin : BaseUnityPlugin
             "If disabled, GCAS starts off for helicopters.");
         EnableGCASTiltwing = Config.Bind("Auto GCAS", "3. Enable GCAS on start (Tiltwing)", true,
             "If disabled, gcas starts off for tiltwings.");
-        GCAS_MaxG = Config.Bind("Auto GCAS", "4. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
-        GCAS_WarnBuffer =
+        GcasMaxG = Config.Bind("Auto GCAS", "4. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
+        GcasWarnBuffer =
             Config.Bind("Auto GCAS", "5. Warning Buffer", 20.0f, "GCAS warning indicator first appearance");
-        GCAS_AutoBuffer = Config.Bind("Auto GCAS", "6. Auto-Pull Buffer", 0.5f, "Safety margin seconds");
-        GCAS_Deadzone = Config.Bind("Auto GCAS", "7. GCAS Deadzone", 0.5f, "GCAS override deadzone (default 0.5 = 50%)");
-        GCAS_ScanRadius = Config.Bind("Auto GCAS", "8. Scan Radius", 2.0f, "Width of the spherecast (m)");
+        GcasAutoBuffer = Config.Bind("Auto GCAS", "6. Auto-Pull Buffer", 0.5f, "Safety margin seconds");
+        GcasDeadzone = Config.Bind("Auto GCAS", "7. GCAS Deadzone", 0.5f, "GCAS override deadzone (default 0.5 = 50%)");
+        GcasScanRadius = Config.Bind("Auto GCAS", "8. Scan Radius", 2.0f, "Width of the spherecast (m)");
+        GcasMinAlt = Config.Bind("Auto GCAS", "9. Minimum altitude", 2.0f, "Minimum altitude (m)");
 
         DefaultMaxClimbRate = Config.Bind("Limits", "1. Default Max Climb Rate", 10f, "Startup value");
         Conf_VS_MaxAngle = Config.Bind("Limits", "2. Max Pitch Angle", 85.0f, "angle from horizon limit");

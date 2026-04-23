@@ -11,6 +11,4 @@ public interface IPIDLoop
     double DTerm { get; }
     double Update(double r, double y);
     void Reset();
-    void SeedIntegral(double value);
-    void SeedOutput(double value);
 }

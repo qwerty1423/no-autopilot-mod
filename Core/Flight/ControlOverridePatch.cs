@@ -341,7 +341,7 @@ internal static class ControlOverridePatch
                     {
                         float diveAngle = Vector3.Angle(velocity, Vector3.ProjectOnPlane(velocity, Vector3.up));
                         float vertBuffer = descentRate * reactionTime;
-                        float availablePullAlt = APData.CurrentAlt - vertBuffer - Plugin.GcasMinAlt.Value;
+                        float availablePullAlt = APData.CurrentAlt - vertBuffer;
                         float pullUpLoss = turnRadius * (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
 
                         if (availablePullAlt < pullUpLoss)

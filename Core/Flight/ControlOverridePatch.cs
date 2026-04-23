@@ -25,6 +25,7 @@ internal static class ControlOverridePatch
     private static readonly PIDController PidVS = new();
     private static readonly PIDController PidAngle = new();
     private static readonly PIDController PidRoll = new();
+    private static readonly PIDController PidRollRate = new();
     private static readonly PIDController PidGCAS = new();
     private static readonly PIDController PidSpd = new();
     private static readonly PIDController PidCrs = new();
@@ -33,6 +34,7 @@ internal static class ControlOverridePatch
     private static PIDConfig s_cfgVS;
     private static PIDConfig s_cfgAngle;
     private static PIDConfig s_cfgRoll;
+    private static PIDConfig s_cfgRollRate;
     private static PIDConfig s_cfgGCAS;
     private static PIDConfig s_cfgSpd;
     private static PIDConfig s_cfgCrs;
@@ -74,6 +76,7 @@ internal static class ControlOverridePatch
         PidVS.Reset();
         PidAngle.Reset();
         PidRoll.Reset();
+        PidRollRate.Reset();
         PidGCAS.Reset();
         PidSpd.Reset();
         PidCrs.Reset();
@@ -82,6 +85,7 @@ internal static class ControlOverridePatch
         s_cfgVS = default;
         s_cfgAngle = default;
         s_cfgRoll = default;
+        s_cfgRollRate = default;
         s_cfgGCAS = default;
         s_cfgSpd = default;
         s_cfgCrs = default;
@@ -112,6 +116,7 @@ internal static class ControlOverridePatch
         PidVS.Reset();
         PidAngle.Reset();
         PidRoll.Reset();
+        PidRollRate.Reset();
         PidGCAS.Reset();
         PidCrs.Reset();
 
@@ -170,6 +175,7 @@ internal static class ControlOverridePatch
             Vector3 pForward = APData.PlayerTransform.forward;
             Vector3 pUp = APData.PlayerTransform.up;
             Vector3 localAngVel = APData.PlayerTransform.InverseTransformDirection(APData.PlayerRB.angularVelocity);
+            float rollRate = localAngVel.z * Mathf.Rad2Deg;
 
             float dt = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
             float noiseT = Time.time * Plugin.RandomSpeed.Value;
@@ -430,7 +436,8 @@ internal static class ControlOverridePatch
                             APData.ALSActive = false;
                             APData.TargetRoll = 0f;
 
-                            PidRoll.Reset();
+                            PidRoll.Init(0f, APData.CurrentRoll);
+                            PidRollRate.Init(0f, rollRate);
                             PidCrs.Reset();
                             PidGCAS.Reset();
 
@@ -805,12 +812,15 @@ internal static class ControlOverridePatch
                     if ((pilotRoll || isWaitingToReengage) && !APData.GCASActive)
                     {
                         PidCrs.Reset();
-                        // PidRoll.ManualMode = true;
-                        // PidRoll.ManualValue = stickRoll;
+                        // Outer loop: track current angle as target
+                        PidRoll.Update(APData.CurrentRoll, APData.CurrentRoll,
+                            0, 0, 0, Mode.Track);
+                        // Inner loop: track pilot's stick input  
+                        PidRollRate.Update(rollRate, rollRate,
+                            0, stickRoll, stickRoll, Mode.Track);
                     }
                     else
                     {
-                        // PidRoll.ManualMode = false;
                         float activeTargetRoll = APData.TargetRoll;
 
                         if ((APData.TargetCourse >= 0f ||
@@ -857,7 +867,6 @@ internal static class ControlOverridePatch
 
                         activeTargetRoll = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Roll, activeTargetRoll, APData.CurrentRoll);
                         float rollError = Mathf.DeltaAngle(APData.CurrentRoll, activeTargetRoll);
-                        float rollRate = localAngVel.z * Mathf.Rad2Deg;
                         float unwrappedTargetRoll = APData.CurrentRoll + rollError;
 
                         // Roll sleep
@@ -890,10 +899,21 @@ internal static class ControlOverridePatch
                         }
                         else
                         {
-                            ConfigurePID(PidRoll, ref s_cfgRoll, Plugin.PID_Roll, dt, -1f, 1f);
+                            // Roll > Roll rate
+                            ConfigurePID(PidRoll, ref s_cfgRoll, Plugin.PID_Roll, dt,
+                                -Plugin.MaxRollRate.Value, Plugin.MaxRollRate.Value);
 
-                            rollOut = (float)PidRoll.Update(unwrappedTargetRoll, APData.CurrentRoll);
-                            PIDLogger.Log(PIDLogger.StepTarget.Roll, rollOut, APData.CurrentRoll, activeTargetRoll);
+                            float rollRateOut = (float)PidRoll.Update(unwrappedTargetRoll, APData.CurrentRoll);
+                            PIDLogger.Log(PIDLogger.StepTarget.Roll, rollRateOut,
+                                APData.CurrentRoll, activeTargetRoll);
+
+                            rollRateOut = PIDLogger.GetSetpoint(PIDLogger.StepTarget.RollRate,
+                                rollRateOut, rollRate);
+                            ConfigurePID(PidRollRate, ref s_cfgRollRate, Plugin.PID_RollRate, dt, -1f, 1f);
+
+                            rollOut = (float)PidRollRate.Update(rollRateOut, rollRate);
+                            PIDLogger.Log(PIDLogger.StepTarget.RollRate, rollOut,
+                                rollRate, rollRateOut);
 
                             if (Plugin.InvertRoll.Value)
                             {
@@ -926,10 +946,16 @@ internal static class ControlOverridePatch
 
                 if ((pilotPitch || isWaitingToReengage) && !APData.GCASActive)
                 {
-                    PidAlt.Reset();
-                    PidVS.Reset();
-                    // PidAngle.ManualMode = true;
-                    // PidAngle.ManualValue = stickPitch;
+                    float currentVS = APData.PlayerRB.velocity.y;
+                    float currentPitch = Mathf.Asin(pForward.y) * Mathf.Rad2Deg;
+
+                    PidAlt.Update(APData.CurrentAlt, APData.CurrentAlt,
+                        0, 0, 0, Mode.Track);
+                    PidVS.Update(currentVS, currentVS,
+                        0, 0, 0, Mode.Track);
+                    PidAngle.Update(currentPitch, currentPitch,
+                        0, stickPitch, stickPitch, Mode.Track);
+
                     if (!Plugin.KeepSetAltStick.Value)
                     {
                         APData.TargetAlt = APData.CurrentAlt;
@@ -937,7 +963,6 @@ internal static class ControlOverridePatch
                 }
                 else
                 {
-                    // PidAngle.ManualMode = false;
                     float pitchOut = 0f;
 
                     // gcas

@@ -113,13 +113,14 @@ public class Plugin : BaseUnityPlugin
 
     // Limits
     public static ConfigEntry<float> DefaultMaxClimbRate, Conf_VS_MaxAngle, DefaultCRLimit;
-    public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit;
+    public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, MaxRollRate;
 
     // pid
     public static ConfigEntry<PIDTuning> PID_Alt;
     public static ConfigEntry<PIDTuning> PID_VS;
     public static ConfigEntry<PIDTuning> PID_Angle;
     public static ConfigEntry<PIDTuning> PID_Roll;
+    public static ConfigEntry<PIDTuning> PID_RollRate;
     public static ConfigEntry<PIDTuning> PID_Spd;
     public static ConfigEntry<PIDTuning> PID_Crs;
     public static ConfigEntry<PIDTuning> PID_GCAS;
@@ -415,9 +416,11 @@ public class Plugin : BaseUnityPlugin
         DefaultCRLimit = Config.Bind("Limits", "3. Default course roll limit", 10.0f,
             "default roll limit when turning in course/nav mode");
         ThrottleMinLimit = Config.Bind("Limits", "4. Safe Min Throttle", 0.01f,
-        "Minimum throttle when limiter is active (prevents Airbrake)");
+            "Minimum throttle when limiter is active (prevents Airbrake)");
         ThrottleMaxLimit = Config.Bind("Limits", "5. Safe Max Throttle", 0.89f,
             "Maximum throttle when limiter is active (prevents Afterburner)");
+        MaxRollRate = Config.Bind("Limits", "6. Max Roll Rate", 360f,
+            "Maximum commanded roll rate in deg/s");
 
         // PID Loops
         PID_Alt = PIDTuningBinder.Bind(Config, "PID", "1. Altitude > VS",

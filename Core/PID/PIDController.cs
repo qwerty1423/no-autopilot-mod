@@ -88,8 +88,10 @@ public class PIDController : IPIDLoop
     private double _xu;
     private double _xus;
 
-    // Derivative filter state
+    // previous errors
+    private double _ei1;
     private double _ed1;
+    private double _dterm1;
 
     // Low-pass filter states
     private double _yIn1 = double.NaN;
@@ -128,6 +130,8 @@ public class PIDController : IPIDLoop
         ITerm = 0;
         DTerm = 0;
         _ed1 = (C * r0) - y0;
+        _ei1 = 0;
+        _dterm1 = 0;
 
         _yIn1 = y0;
         _uOut1 = uInit;
@@ -146,7 +150,7 @@ public class PIDController : IPIDLoop
         PTerm = ITerm = DTerm = 0;
         _r1 = _y1Ctrl = _dr1 = _dy1 = _uff1 = 0;
         _xu = _xus = 0;
-        _ed1 = 0;
+        _ed1 = _dterm1 = 0;
         _yIn1 = _uOut1 = double.NaN;
         _sf1 = _sf2 = double.NaN;
         _initialized = false;
@@ -208,11 +212,20 @@ public class PIDController : IPIDLoop
             // Tracking mode
             _xu = utrack;
             u = utrack;
+            _ei1 = ApplyDeadband(r - y, IntegralDeadband);
+            _ed1 = ApplyDeadband((C * r) - y, DerivativeDeadband);
+            _dterm1 = 0;
+            DTerm = 0;
         }
         else if (mode == Mode.Man)
         {
             // Manual mode 
             u = uman;
+            _xu = uman;
+            _ei1 = ApplyDeadband(r - y, IntegralDeadband);
+            _ed1 = ApplyDeadband((C * r) - y, DerivativeDeadband);
+            _dterm1 = 0;
+            DTerm = 0;
         }
         else if (Ti == 0)
         {
@@ -236,6 +249,7 @@ public class PIDController : IPIDLoop
             _ed1 = ed;
 
             u = U0 + PTerm + DTerm + uff;
+            _xu = u;
         }
         else
         {
@@ -245,38 +259,47 @@ public class PIDController : IPIDLoop
             double d_dr = dr - _dr1;
             double d_dy = dy - _dy1;
 
+            // ── Error signals with deadbands
+            double ep = ApplyDeadband((B * r) - y, ProportionalDeadband);
+            double ei = ApplyDeadband(r - y, IntegralDeadband);
+            double ed = ApplyDeadband((C * r) - y, DerivativeDeadband);
+
             // Proportional increment
-            double du_p = K * ((B * d_r) - d_y);
+            double ep1 = ApplyDeadband((B * _r1) - _y1Ctrl, ProportionalDeadband);
+            double du_p = K * (ep - ep1);
 
             // Integral increment
-            double ei = ApplyDeadband(r - y, IntegralDeadband);
-            double du_i = K / Ti * Ts * ei;
+            if (Clegg && ei * _ei1 < 0)
+            {
+                _ei1 = 0;
+            }
+
+            double du_i = 0.5 * K / Ti * Ts * (ei + _ei1);
 
             // Derivative increment
-            double du_d = K * ((C * d_dr) - d_dy);
+            double den = (2 * Td) + (N * Ts);
+            double dDTerm = den == 0
+                ? 0
+                : (((2 * Td) - (N * Ts)) / den * DTerm) + (2 * N * K * Td / den * (ed - _ed1));
+
+            if (!IsFinite(dDTerm)) dDTerm = 0;
+            DTerm = dDTerm;
 
             // Feedforward increment
             double du_ff = uff - _uff1;
 
-            // Clegg integrator
-            if (Clegg && ei * (r - y) < 0)
-            {
-                // A more thorough approach stores ITerm separately, here we
-                // approximate by zeroing the increment.
-                du_i = 0;
-            }
-
-            // Apply proportional and derivative deadbands to increments
-            du_p = ApplyDeadband(du_p, ProportionalDeadband * Abs(K));
-            du_d = ApplyDeadband(du_d, DerivativeDeadband * Abs(K));
-
             // Nominal control signal
-            u = _xu + du_p + du_i + du_d + du_ff;
+            u = _xu + du_p + du_i + du_ff + (DTerm - _dterm1);
 
             // Anti-windup (back-calculation)
             double us = Clamp(u, umin, umax);
             double tr = GetTrackingTimeConstant();
             u -= Ts / tr * (u - us);
+
+            _xu = u;
+            _ei1 = ei;
+            _ed1 = ed;
+            _dterm1 = DTerm;
         }
 
         // Store pre-saturation signal
@@ -299,18 +322,6 @@ public class PIDController : IPIDLoop
         _dr1 = dr;
         _dy1 = dy;
         _uff1 = uff;
-
-        // Update exposed P/I/D terms for diagnostics 
-        // Only meaningful in AUTO with Ti != 0; position form sets them above.
-        // In incremental form the terms are accumulated inside _xu, so we
-        // recompute them in a positional sense for monitoring only.
-        if (mode != Mode.Man && mode != Mode.Track && Ti != 0)
-        {
-            PTerm = K * ApplyDeadband((B * r) - y, ProportionalDeadband);
-            ITerm = _xu - PTerm - DTerm - uff; // residual is integrator
-            // DTerm is not directly available in incremental form; leave as 0
-            // unless we track it separately (future enhancement).
-        }
 
         return _uOut1;
     }

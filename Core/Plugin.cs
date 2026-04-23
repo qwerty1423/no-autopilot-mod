@@ -437,7 +437,7 @@ public class Plugin : BaseUnityPlugin
             new PIDTuning(2, 0, 0), "Roll > Roll rate");
 
         ConfPidRollRate = PIDTuningBinder.Bind(Config, "PID", "5. Roll Rate > Stick",
-            new PIDTuning(0.00455294214079626, 0.402907365979166, 0.026685335805323), "Roll rate > Stick");
+            new PIDTuning(0.014223561078275377, 0.40290736597916593, 0.02668533580532301), "Roll rate > Stick");
 
         ConfPidCrs = PIDTuningBinder.Bind(Config, "PID", "6. Course > Roll",
             new PIDTuning(1, 30, 0, clegg: true), "Course Error > Bank Angle");

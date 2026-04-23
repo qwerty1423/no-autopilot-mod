@@ -21,13 +21,13 @@ namespace NOAutopilot.Core.Flight;
 [HarmonyPatch(typeof(PilotPlayerState), "PlayerAxisControls")]
 internal static class ControlOverridePatch
 {
-    private static readonly PIDLoop3 PidAlt = new();
-    private static readonly PIDLoop3 PidVS = new();
-    private static readonly PIDLoop3 PidAngle = new();
-    private static readonly PIDLoop3 PidRoll = new();
-    private static readonly PIDLoop3 PidGCAS = new();
-    private static readonly PIDLoop3 PidSpd = new();
-    private static readonly PIDLoop3 PidCrs = new();
+    private static readonly PIDController PidAlt = new();
+    private static readonly PIDController PidVS = new();
+    private static readonly PIDController PidAngle = new();
+    private static readonly PIDController PidRoll = new();
+    private static readonly PIDController PidGCAS = new();
+    private static readonly PIDController PidSpd = new();
+    private static readonly PIDController PidCrs = new();
 
     private static PIDConfig s_cfgAlt;
     private static PIDConfig s_cfgVS;
@@ -48,8 +48,6 @@ internal static class ControlOverridePatch
     private static bool s_dangerImminent;
     private static bool s_warningZone;
     public static bool ApStateBeforeGCAS;
-    private static float s_currentAppliedThrottle;
-
     private static float s_jammerNextFireTime;
     private static float s_jammerNextReleaseTime;
     private static bool s_isJammerHoldingTrigger;
@@ -59,7 +57,7 @@ internal static class ControlOverridePatch
     public static float ThrottleOutput;
 
     private static void ConfigurePID(
-    PIDLoop3 pid, ref PIDConfig cfg,
+    PIDController pid, ref PIDConfig cfg,
     ConfigEntry<PIDTuning> tuning,
     float dt,
     float minOutput, float maxOutput)
@@ -100,7 +98,6 @@ internal static class ControlOverridePatch
         s_dangerImminent = false;
         s_warningZone = false;
         ApStateBeforeGCAS = false;
-        s_currentAppliedThrottle = 0f;
 
         s_jammerNextFireTime = 0f;
         s_jammerNextReleaseTime = 0f;
@@ -109,7 +106,7 @@ internal static class ControlOverridePatch
         s_disengageTimer = 0f;
     }
 
-    private static void ResetIntegrators(float inputThrottle)
+    private static void ResetIntegrators()
     {
         PidAlt.Reset();
         PidVS.Reset();
@@ -118,20 +115,9 @@ internal static class ControlOverridePatch
         PidGCAS.Reset();
         PidCrs.Reset();
 
-        PidAlt.Feedforward = 0;
-        PidVS.Feedforward = 0;
-        PidAngle.Feedforward = 0;
-        PidRoll.Feedforward = 0;
-        PidGCAS.Feedforward = 0;
-        PidSpd.Feedforward = 0;
-        PidCrs.Feedforward = 0;
-
         if (APData.TargetSpeed < 0)
         {
             PidSpd.Reset();
-            // start throttle from current position
-            PidSpd.SeedOutput(Mathf.Clamp01(inputThrottle));
-            s_currentAppliedThrottle = inputThrottle;
         }
 
         s_isPitchSleeping = s_isRollSleeping = s_isSpdSleeping = false;
@@ -208,7 +194,7 @@ internal static class ControlOverridePatch
             {
                 if (APData.Enabled)
                 {
-                    ResetIntegrators(currentThrottle);
+                    ResetIntegrators();
                     if (APData.FBWDisabled)
                     {
                         APData.FBWDisabled = false;
@@ -819,12 +805,12 @@ internal static class ControlOverridePatch
                     if ((pilotRoll || isWaitingToReengage) && !APData.GCASActive)
                     {
                         PidCrs.Reset();
-                        PidRoll.ManualMode = true;
-                        PidRoll.ManualValue = stickRoll;
+                        // PidRoll.ManualMode = true;
+                        // PidRoll.ManualValue = stickRoll;
                     }
                     else
                     {
-                        PidRoll.ManualMode = false;
+                        // PidRoll.ManualMode = false;
                         float activeTargetRoll = APData.TargetRoll;
 
                         if ((APData.TargetCourse >= 0f ||
@@ -900,7 +886,7 @@ internal static class ControlOverridePatch
                         float rollOut = 0f;
                         if (useRandom && s_isRollSleeping)
                         {
-                            PidRoll.SeedIntegral(Mathf.MoveTowards((float)PidRoll.ITerm, 0f, dt * 5f));
+                            // PidRoll.SeedIntegral(Mathf.MoveTowards((float)PidRoll.ITerm, 0f, dt * 5f));
                         }
                         else
                         {
@@ -942,8 +928,8 @@ internal static class ControlOverridePatch
                 {
                     PidAlt.Reset();
                     PidVS.Reset();
-                    PidAngle.ManualMode = true;
-                    PidAngle.ManualValue = stickPitch;
+                    // PidAngle.ManualMode = true;
+                    // PidAngle.ManualValue = stickPitch;
                     if (!Plugin.KeepSetAltStick.Value)
                     {
                         APData.TargetAlt = APData.CurrentAlt;
@@ -951,7 +937,7 @@ internal static class ControlOverridePatch
                 }
                 else
                 {
-                    PidAngle.ManualMode = false;
+                    // PidAngle.ManualMode = false;
                     float pitchOut = 0f;
 
                     // gcas
@@ -1002,9 +988,9 @@ internal static class ControlOverridePatch
 
                         if (useRandom && s_isPitchSleeping)
                         {
-                            PidAlt.SeedIntegral(Mathf.MoveTowards((float)PidAlt.ITerm, 0f, dt * 2f));
-                            PidVS.SeedIntegral(Mathf.MoveTowards((float)PidVS.ITerm, 0f, dt * 10f));
-                            PidAngle.SeedIntegral(Mathf.MoveTowards((float)PidAngle.ITerm, 0f, dt * 5f));
+                            // PidAlt.SeedIntegral(Mathf.MoveTowards((float)PidAlt.ITerm, 0f, dt * 2f));
+                            // PidVS.SeedIntegral(Mathf.MoveTowards((float)PidVS.ITerm, 0f, dt * 10f));
+                            // PidAngle.SeedIntegral(Mathf.MoveTowards((float)PidAngle.ITerm, 0f, dt * 5f));
                         }
                         else
                         {
@@ -1030,9 +1016,9 @@ internal static class ControlOverridePatch
 
                             targetVS = PIDLogger.GetSetpoint(PIDLogger.StepTarget.VS, targetVS, currentVS);
 
-                            float airspeed = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
-                            float vsRatio = Mathf.Clamp(targetVS / airspeed, -1f, 1f);
-                            PidVS.Feedforward = Mathf.Asin(vsRatio) * Mathf.Rad2Deg;
+                            // float airspeed = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
+                            // float vsRatio = Mathf.Clamp(targetVS / airspeed, -1f, 1f);
+                            // PidVS.Feedforward = Mathf.Asin(vsRatio) * Mathf.Rad2Deg;
 
                             float targetPitchDeg = (float)PidVS.Update(targetVS, currentVS);
                             PIDLogger.Log(PIDLogger.StepTarget.VS, targetPitchDeg, currentVS, targetVS);

@@ -15,7 +15,7 @@ internal struct PIDConfig
     private double _minOutput, _maxOutput;
     private double _ts;
 
-    public static void Apply(ref PIDConfig cfg, PIDLoop3 pid,
+    public static void Apply(ref PIDConfig cfg, PIDController pid,
         PIDTuning t,
         double ts,
         double minOutput, double maxOutput)

@@ -13,9 +13,6 @@ public struct PIDTuning(
     double integralDeadband = 0,
     double derivativeDeadband = 0,
     double outputDeadband = 0,
-    // double minRate = double.MinValue,
-    // double maxRate = double.MaxValue,
-    double tt = 0,
     bool clegg = false)
 {
     // standard form
@@ -28,10 +25,7 @@ public struct PIDTuning(
     public double SmoothIn = smoothIn, SmoothOut = smoothOut;
     // deadbands
     public double ProportionalDeadband = proportionalDeadband, IntegralDeadband = integralDeadband, DerivativeDeadband = derivativeDeadband, OutputDeadband = outputDeadband;
-    // rate limits
-    // public double MinRate = minRate, MaxRate = maxRate;
     // optional
-    public double Tt = tt;
     public bool Clegg = clegg;
 
     public override readonly string ToString()
@@ -50,9 +44,6 @@ public struct PIDTuning(
             IntegralDeadband.ToString(ci),
             DerivativeDeadband.ToString(ci),
             OutputDeadband.ToString(ci),
-            // MinRate.ToString(ci),
-            // MaxRate.ToString(ci),
-            Tt.ToString(ci),
             Clegg ? "1" : "0");
     }
 
@@ -77,10 +68,7 @@ public struct PIDTuning(
         t.IntegralDeadband = Get(9, 0);
         t.DerivativeDeadband = Get(10, 0);
         t.OutputDeadband = Get(11, 0);
-        // t.MinRate = Get(12, double.MinValue);
-        // t.MaxRate = Get(13, double.MaxValue);
-        t.Tt = Get(12, 0);
-        t.Clegg = p.Length > 13 && p[13] == "1";
+        t.Clegg = p.Length > 12 && p[12] == "1";
 
         return t;
     }

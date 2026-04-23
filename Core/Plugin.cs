@@ -432,19 +432,19 @@ public class Plugin : BaseUnityPlugin
         ConfPidAngle = PIDTuningBinder.Bind(Config, "PID", "3. Angle > Stick",
             new PIDTuning(0.0329026146189137, 5.7512084040881, 0.12329376291698), "Pitch Angle > Stick");
 
-        ConfPidRoll = PIDTuningBinder.Bind(Config, "PID", "4. Roll > Stick",
-            new PIDTuning(0.0088094983263587, 4.46531703889275, 0), "Roll Error > Stick");
+        ConfPidRoll = PIDTuningBinder.Bind(Config, "PID", "4. Roll > Roll Rate",
+            new PIDTuning(0.0088094983263587, 4.46531703889275, 0), "Roll > Roll rate");
 
-        ConfPidRollRate = PIDTuningBinder.Bind(Config, "PID", "4. Roll > Stick",
-            new PIDTuning(0.0088094983263587, 4.46531703889275, 0), "Roll Error > Stick");
+        ConfPidRollRate = PIDTuningBinder.Bind(Config, "PID", "5. Roll Rate > Stick",
+            new PIDTuning(0.0088094983263587, 4.46531703889275, 0), "Roll rate > Stick");
 
-        ConfPidCrs = PIDTuningBinder.Bind(Config, "PID", "5. Course > Roll",
+        ConfPidCrs = PIDTuningBinder.Bind(Config, "PID", "6. Course > Roll",
             new PIDTuning(1, 30, 0, clegg: true), "Course Error > Bank Angle");
 
-        ConfPidSpd = PIDTuningBinder.Bind(Config, "PID", "6. Speed > Throttle",
+        ConfPidSpd = PIDTuningBinder.Bind(Config, "PID", "7. Speed > Throttle",
             new PIDTuning(0.276635855846017, 4.55835278395057, 0.486418840935585, 5), "Speed Error > Throttle");
 
-        ConfPidGcas = PIDTuningBinder.Bind(Config, "PID", "7. G-Force > Stick",
+        ConfPidGcas = PIDTuningBinder.Bind(Config, "PID", "8. G-Force > Stick",
             new PIDTuning(0.448050807726941, 0.947761066338411, 0), "GCAS G Error > Stick");
 
         // PID logging

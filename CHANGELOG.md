@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- planning to add some gain scheduling
+
 ## [5.1.2] 2026-04-18
 
 ### Fixed

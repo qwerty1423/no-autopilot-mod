@@ -78,9 +78,19 @@ public class PIDController : IPIDLoop
     private double _r1, _y1Ctrl;
     private double _uff1;
 
-    // Incremental-form accumulated output (xu) and last saturated output (xus)
+    /// <summary>
+    /// Incremental-form accumulated output
+    /// </summary>
     private double _xu;
+
+    /// <summary>
+    /// Incremental-form last saturated output
+    /// </summary>
     private double _xus;
+
+    /// <summary>
+    /// Integral portion of xu
+    /// </summary>
     private double _ixu;
 
     // previous errors

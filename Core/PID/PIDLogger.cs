@@ -11,7 +11,10 @@ namespace NOAutopilot.Core.PID;
 
 public static class PIDLogger
 {
-    public enum StepTarget { None, Alt, VS, Angle, Roll, RollRate, Crs, Spd, GCAS }
+    public enum StepTarget
+    {
+        None, Alt, VS, Pitch, PitchRate, Roll, RollRate, Crs, CrsRate, Spd, GCAS
+    }
 
     public static bool IsTestActive { get; private set; }
 

@@ -23,12 +23,14 @@ internal static class ControlOverridePatch
 {
     private static readonly PIDController PidAlt = new();
     private static readonly PIDController PidVS = new();
-    private static readonly PIDController PidAngle = new();
+    private static readonly PIDController PidPitch = new();
+    private static readonly PIDController PidPitchRate = new();
     private static readonly PIDController PidRoll = new();
     private static readonly PIDController PidRollRate = new();
+    private static readonly PIDController PidCrs = new();
+    private static readonly PIDController PidCrsRate = new();
     private static readonly PIDController PidGCAS = new();
     private static readonly PIDController PidSpd = new();
-    private static readonly PIDController PidCrs = new();
     private static bool s_wasEnabled;
     private static float s_pitchSleepUntil;
     private static float s_rollSleepUntil;
@@ -61,12 +63,14 @@ internal static class ControlOverridePatch
     {
         PidAlt.Reset();
         PidVS.Reset();
-        PidAngle.Reset();
+        PidPitch.Reset();
+        PidPitchRate.Reset();
         PidRoll.Reset();
         PidRollRate.Reset();
+        PidCrs.Reset();
+        PidCrsRate.Reset();
         PidGCAS.Reset();
         PidSpd.Reset();
-        PidCrs.Reset();
 
         s_wasEnabled = false;
         s_pitchSleepUntil = 0f;
@@ -92,11 +96,13 @@ internal static class ControlOverridePatch
     {
         PidAlt.Reset();
         PidVS.Reset();
-        PidAngle.Reset();
+        PidPitch.Reset();
+        PidPitchRate.Reset();
         PidRoll.Reset();
         PidRollRate.Reset();
-        PidGCAS.Reset();
         PidCrs.Reset();
+        PidCrsRate.Reset();
+        PidGCAS.Reset();
 
         if (APData.TargetSpeed < 0)
         {
@@ -386,7 +392,7 @@ internal static class ControlOverridePatch
                             APData.Enabled = false;
                             PidAlt.Reset();
                             PidVS.Reset();
-                            PidAngle.Reset();
+                            PidPitch.Reset();
                             if (Plugin.DisableATAPGCAS.Value)
                             {
                                 APData.TargetSpeed = -1f;
@@ -814,12 +820,7 @@ internal static class ControlOverridePatch
                                 const float gravity = 9.81f;
                                 float velocity = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
                                 float turnRateRad = desiredTurnRate * Mathf.Deg2Rad;
-                                float bankReq = Mathf.Atan(velocity * turnRateRad / gravity) * Mathf.Rad2Deg;
-
-                                if (Plugin.Conf_InvertCourseRoll.Value)
-                                {
-                                    bankReq = -bankReq;
-                                }
+                                float bankReqFf = Mathf.Atan(velocity * turnRateRad / gravity) * Mathf.Rad2Deg;
 
                                 float safeMaxG = Mathf.Max(Plugin.GcasMaxG.Value, 1.01f);
                                 float gLimitBank = Mathf.Acos(1f / safeMaxG) * Mathf.Rad2Deg;
@@ -830,7 +831,18 @@ internal static class ControlOverridePatch
 
                                 float finalBankLimit = Mathf.Min(userLimit, gLimitBank);
 
-                                activeTargetRoll = Mathf.Clamp(bankReq, -finalBankLimit, finalBankLimit);
+                                float curTurnRate = APData.PlayerRB.angularVelocity.y * Mathf.Rad2Deg;
+                                float targetTurnRate = PIDLogger.GetSetpoint(PIDLogger.StepTarget.CrsRate, desiredTurnRate, curTurnRate);
+                                ConfigurePID(PidCrsRate, Plugin.ConfPidCrsRate, dt, -finalBankLimit, finalBankLimit);
+                                float bankReq = (float)PidCrsRate.Update(targetTurnRate, curTurnRate, bankReqFf, 0, 0, Mode.Auto);
+                                PIDLogger.Log(PIDLogger.StepTarget.CrsRate, bankReq, curTurnRate, targetTurnRate);
+
+                                if (Plugin.Conf_InvertCourseRoll.Value)
+                                {
+                                    bankReq = -bankReq;
+                                }
+
+                                activeTargetRoll = bankReq;
                             }
                         }
 
@@ -903,7 +915,7 @@ internal static class ControlOverridePatch
                 // pitch control
                 bool pitchTest = PIDLogger.IsTesting(PIDLogger.StepTarget.Alt) ||
                                  PIDLogger.IsTesting(PIDLogger.StepTarget.VS) ||
-                                 PIDLogger.IsTesting(PIDLogger.StepTarget.Angle) ||
+                                 PIDLogger.IsTesting(PIDLogger.StepTarget.Pitch) ||
                                  PIDLogger.IsTesting(PIDLogger.StepTarget.GCAS);
 
                 bool pitchAxisActive = APData.GCASActive || APData.TargetAlt > 0f || pitchTest;
@@ -922,7 +934,7 @@ internal static class ControlOverridePatch
                         0, 0, 0, Mode.Track);
                     PidVS.Update(currentVS, currentVS,
                         0, 0, 0, Mode.Track);
-                    PidAngle.Update(currentPitch, currentPitch,
+                    PidPitch.Update(currentPitch, currentPitch,
                         0, stickPitch, stickPitch, Mode.Track);
 
                     if (!Plugin.KeepSetAltStick.Value)
@@ -946,7 +958,7 @@ internal static class ControlOverridePatch
                         pitchOut = (float)PidGCAS.Update(activeTargetG, currentG);
                         PIDLogger.Log(PIDLogger.StepTarget.GCAS, pitchOut, currentG, activeTargetG);
                     }
-                    // Altitude hold (cascaded: Alt -> VS -> Angle -> Stick)
+                    // Altitude hold
                     else if (APData.TargetAlt > 0f || pitchTest)
                     {
                         float currentVS = APData.PlayerRB.velocity.y;
@@ -1010,21 +1022,30 @@ internal static class ControlOverridePatch
 
                             targetVS = PIDLogger.GetSetpoint(PIDLogger.StepTarget.VS, targetVS, currentVS);
 
-                            // float airspeed = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
-                            // float vsRatio = Mathf.Clamp(targetVS / airspeed, -1f, 1f);
-                            // PidVS.Feedforward = Mathf.Asin(vsRatio) * Mathf.Rad2Deg;
+                            float airspeed = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
+                            float vsRatio = Mathf.Clamp(targetVS / airspeed, -1f, 1f);
+                            float vsFf = Mathf.Asin(vsRatio) * Mathf.Rad2Deg;
 
-                            float targetPitchDeg = (float)PidVS.Update(targetVS, currentVS);
+                            float targetPitchDeg = (float)PidVS.Update(targetVS, currentVS, vsFf, 0, 0, Mode.Auto);
                             PIDLogger.Log(PIDLogger.StepTarget.VS, targetPitchDeg, currentVS, targetVS);
 
-                            // Pitch angle -> stick
+                            // Pitch angle -> Pitch rate
                             float currentPitch = Mathf.Asin(pForward.y) * Mathf.Rad2Deg;
 
-                            ConfigurePID(PidAngle, Plugin.ConfPidAngle, dt, -1f, 1f);
+                            ConfigurePID(PidPitch, Plugin.ConfPidPitch, dt, -1f, 1f);
 
-                            targetPitchDeg = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Angle, targetPitchDeg, currentPitch);
-                            pitchOut = (float)PidAngle.Update(targetPitchDeg, currentPitch);
-                            PIDLogger.Log(PIDLogger.StepTarget.Angle, pitchOut, currentPitch, targetPitchDeg);
+                            targetPitchDeg = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Pitch, targetPitchDeg, currentPitch);
+                            float targetPitchRate = (float)PidPitch.Update(targetPitchDeg, currentPitch);
+                            PIDLogger.Log(PIDLogger.StepTarget.Pitch, pitchOut, currentPitch, targetPitchDeg);
+
+                            // Pitch rate -> Stick
+                            float pitchRate = localAngVel.x * Mathf.Rad2Deg;
+
+                            ConfigurePID(PidPitchRate, Plugin.ConfPidPitchRate, dt, -1f, 1f);
+
+                            targetPitchRate = PIDLogger.GetSetpoint(PIDLogger.StepTarget.PitchRate, pitchOut, pitchRate);
+                            pitchOut = (float)PidPitchRate.Update(targetPitchRate, pitchRate);
+                            PIDLogger.Log(PIDLogger.StepTarget.PitchRate, pitchOut, pitchRate, targetPitchRate);
 
                             if (useRandom)
                             {

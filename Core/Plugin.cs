@@ -407,7 +407,7 @@ public class Plugin : BaseUnityPlugin
         GcasDeadzone = Config.Bind("Auto GCAS", "07. GCAS Deadzone", 0.5f, "GCAS override deadzone (default 0.5 = 50%)");
         GcasScanRadius = Config.Bind("Auto GCAS", "08. Scan Radius", 2.0f, "Width of the spherecast (m)");
         GcasMinAlt = Config.Bind("Auto GCAS", "09. Minimum altitude", 2.0f, "Minimum altitude (m)");
-        GcasRollRate = Config.Bind("Auto GCAS", "10. Estimated roll rate", 15.0f, "Estimate of roll rate for GCAS (deg/s)");
+        GcasRollRate = Config.Bind("Auto GCAS", "10. Estimated roll rate", 30.0f, "Estimate of roll rate for GCAS (deg/s)");
 
         DefaultMaxClimbRate = Config.Bind("Limits", "1. Default Max Climb Rate", 10f, "Startup value");
         Conf_VS_MaxAngle = Config.Bind("Limits", "2. Max Pitch Angle", 85.0f, "angle from horizon limit");

@@ -160,6 +160,7 @@ internal static class ControlOverridePatch
             Vector3 pUp = APData.PlayerTransform.up;
             Vector3 localAngVel = APData.PlayerTransform.InverseTransformDirection(APData.PlayerRB.angularVelocity);
             float rollRate = localAngVel.z * Mathf.Rad2Deg;
+            Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
 
             float dt = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
             float noiseT = Time.time * Plugin.RandomSpeed.Value;
@@ -801,49 +802,45 @@ internal static class ControlOverridePatch
                         if ((APData.TargetCourse >= 0f ||
                             PIDLogger.IsTesting(PIDLogger.StepTarget.Crs)) &&
                             APData.PlayerRB.velocity.sqrMagnitude > 1f &&
-                            !APData.GCASActive)
+                            !APData.GCASActive && flatVel.sqrMagnitude > 1f)
                         {
-                            Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
-                            if (flatVel.sqrMagnitude > 1f)
+                            float curCrs = Quaternion.LookRotation(flatVel).eulerAngles.y;
+                            float baseTargetCrs = APData.TargetCourse >= 0f ? APData.TargetCourse : curCrs;
+
+                            float targetCrs = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Crs, baseTargetCrs, curCrs);
+                            float cErr = Mathf.DeltaAngle(curCrs, targetCrs);
+                            float unwrappedTargetCrs = curCrs + cErr;
+                            ConfigurePID(PidCrs, Plugin.ConfPidCrs, dt, -90f, 90f);
+                            float desiredTurnRate = (float)PidCrs.Update(unwrappedTargetCrs, curCrs);
+
+                            PIDLogger.Log(PIDLogger.StepTarget.Crs, desiredTurnRate, curCrs, targetCrs);
+
+                            const float gravity = 9.81f;
+                            float velocity = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
+                            float turnRateRad = desiredTurnRate * Mathf.Deg2Rad;
+                            float bankReqFf = Mathf.Atan(velocity * turnRateRad / gravity) * Mathf.Rad2Deg;
+
+                            float safeMaxG = Mathf.Max(Plugin.GcasMaxG.Value, 1.01f);
+                            float gLimitBank = Mathf.Acos(1f / safeMaxG) * Mathf.Rad2Deg;
+
+                            float userLimit = APData.TargetRoll != -999f && APData.TargetRoll != 0
+                                ? Mathf.Abs(APData.TargetRoll)
+                                : Plugin.DefaultCRLimit.Value;
+
+                            float finalBankLimit = Mathf.Min(userLimit, gLimitBank);
+
+                            float curTurnRate = APData.PlayerRB.angularVelocity.y * Mathf.Rad2Deg;
+                            float targetTurnRate = PIDLogger.GetSetpoint(PIDLogger.StepTarget.CrsRate, desiredTurnRate, curTurnRate);
+                            ConfigurePID(PidCrsRate, Plugin.ConfPidCrsRate, dt, -finalBankLimit, finalBankLimit);
+                            float bankReq = (float)PidCrsRate.Update(targetTurnRate, curTurnRate, bankReqFf, 0, 0, Mode.Auto);
+                            PIDLogger.Log(PIDLogger.StepTarget.CrsRate, bankReq, curTurnRate, targetTurnRate);
+
+                            if (Plugin.Conf_InvertCourseRoll.Value)
                             {
-                                float curCrs = Quaternion.LookRotation(flatVel).eulerAngles.y;
-                                float baseTargetCrs = APData.TargetCourse >= 0f ? APData.TargetCourse : curCrs;
-
-                                float targetCrs = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Crs, baseTargetCrs, curCrs);
-                                float cErr = Mathf.DeltaAngle(curCrs, targetCrs);
-                                float unwrappedTargetCrs = curCrs + cErr;
-                                ConfigurePID(PidCrs, Plugin.ConfPidCrs, dt, -90f, 90f);
-                                float desiredTurnRate = (float)PidCrs.Update(unwrappedTargetCrs, curCrs);
-
-                                PIDLogger.Log(PIDLogger.StepTarget.Crs, desiredTurnRate, curCrs, targetCrs);
-
-                                const float gravity = 9.81f;
-                                float velocity = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
-                                float turnRateRad = desiredTurnRate * Mathf.Deg2Rad;
-                                float bankReqFf = Mathf.Atan(velocity * turnRateRad / gravity) * Mathf.Rad2Deg;
-
-                                float safeMaxG = Mathf.Max(Plugin.GcasMaxG.Value, 1.01f);
-                                float gLimitBank = Mathf.Acos(1f / safeMaxG) * Mathf.Rad2Deg;
-
-                                float userLimit = APData.TargetRoll != -999f && APData.TargetRoll != 0
-                                    ? Mathf.Abs(APData.TargetRoll)
-                                    : Plugin.DefaultCRLimit.Value;
-
-                                float finalBankLimit = Mathf.Min(userLimit, gLimitBank);
-
-                                float curTurnRate = APData.PlayerRB.angularVelocity.y * Mathf.Rad2Deg;
-                                float targetTurnRate = PIDLogger.GetSetpoint(PIDLogger.StepTarget.CrsRate, desiredTurnRate, curTurnRate);
-                                ConfigurePID(PidCrsRate, Plugin.ConfPidCrsRate, dt, -finalBankLimit, finalBankLimit);
-                                float bankReq = (float)PidCrsRate.Update(targetTurnRate, curTurnRate, bankReqFf, 0, 0, Mode.Auto);
-                                PIDLogger.Log(PIDLogger.StepTarget.CrsRate, bankReq, curTurnRate, targetTurnRate);
-
-                                if (Plugin.Conf_InvertCourseRoll.Value)
-                                {
-                                    bankReq = -bankReq;
-                                }
-
-                                activeTargetRoll = bankReq;
+                                bankReq = -bankReq;
                             }
+
+                            activeTargetRoll = bankReq;
                         }
 
                         activeTargetRoll = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Roll, activeTargetRoll, APData.CurrentRoll);
@@ -1022,7 +1019,7 @@ internal static class ControlOverridePatch
 
                             targetVS = PIDLogger.GetSetpoint(PIDLogger.StepTarget.VS, targetVS, currentVS);
 
-                            float airspeed = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
+                            float airspeed = Mathf.Max(flatVel.magnitude, 1f);
                             float vsRatio = Mathf.Clamp(targetVS / airspeed, -1f, 1f);
                             float vsFf = Mathf.Asin(vsRatio) * Mathf.Rad2Deg;
 
@@ -1036,14 +1033,14 @@ internal static class ControlOverridePatch
 
                             targetPitchDeg = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Pitch, targetPitchDeg, currentPitch);
                             float targetPitchRate = (float)PidPitch.Update(targetPitchDeg, currentPitch);
-                            PIDLogger.Log(PIDLogger.StepTarget.Pitch, pitchOut, currentPitch, targetPitchDeg);
+                            PIDLogger.Log(PIDLogger.StepTarget.Pitch, targetPitchRate, currentPitch, targetPitchDeg);
 
                             // Pitch rate -> Stick
-                            float pitchRate = localAngVel.x * Mathf.Rad2Deg;
+                            float pitchRate = -localAngVel.x * Mathf.Rad2Deg;
 
                             ConfigurePID(PidPitchRate, Plugin.ConfPidPitchRate, dt, -1f, 1f);
 
-                            targetPitchRate = PIDLogger.GetSetpoint(PIDLogger.StepTarget.PitchRate, pitchOut, pitchRate);
+                            targetPitchRate = PIDLogger.GetSetpoint(PIDLogger.StepTarget.PitchRate, targetPitchRate, pitchRate);
                             pitchOut = (float)PidPitchRate.Update(targetPitchRate, pitchRate);
                             PIDLogger.Log(PIDLogger.StepTarget.PitchRate, pitchOut, pitchRate, targetPitchRate);
 

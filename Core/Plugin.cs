@@ -117,7 +117,7 @@ public class Plugin : BaseUnityPlugin
 
     // pid
     public static ConfigEntry<PIDTuning> ConfPidAlt, ConfPidVs, ConfPidPitch;
-    public static ConfigEntry<PIDTuning> ConfPidRoll, ConfPidRollRate, ConfPidCrs, ConfPidCrsRate;
+    public static ConfigEntry<PIDTuning> ConfPidRoll, ConfPidRollRate, ConfPidCrs;
     public static ConfigEntry<PIDTuning> ConfPidSpd;
     public static ConfigEntry<PIDTuning> ConfPidGcas;
 
@@ -439,9 +439,6 @@ public class Plugin : BaseUnityPlugin
 
         ConfPidCrs = PIDTuningBinder.Bind(Config, pidSect, "07. Course > Course Rate",
             new PIDTuning(1, 30, 0, clegg: true), "Course Error > Course Rate");
-
-        ConfPidCrsRate = PIDTuningBinder.Bind(Config, pidSect, "07. Course Rate > Roll",
-            new PIDTuning(1, 30, 0, clegg: true), "Course Rate > Roll Angle");
 
         ConfPidSpd = PIDTuningBinder.Bind(Config, pidSect, "08. Speed > Throttle",
             new PIDTuning(0.276635855846017, 4.55835278395057, 0.486418840935585, 5), "Speed Error > Throttle");

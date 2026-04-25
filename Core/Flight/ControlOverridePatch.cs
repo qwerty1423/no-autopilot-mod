@@ -27,7 +27,6 @@ internal static class ControlOverridePatch
     private static readonly PIDController PidRoll = new();
     private static readonly PIDController PidRollRate = new();
     private static readonly PIDController PidCrs = new();
-    private static readonly PIDController PidCrsRate = new();
     private static readonly PIDController PidGCAS = new();
     private static readonly PIDController PidSpd = new();
     private static bool s_wasEnabled;
@@ -66,7 +65,6 @@ internal static class ControlOverridePatch
         PidRoll.Reset();
         PidRollRate.Reset();
         PidCrs.Reset();
-        PidCrsRate.Reset();
         PidGCAS.Reset();
         PidSpd.Reset();
 
@@ -98,7 +96,6 @@ internal static class ControlOverridePatch
         PidRoll.Reset();
         PidRollRate.Reset();
         PidCrs.Reset();
-        PidCrsRate.Reset();
         PidGCAS.Reset();
 
         if (APData.TargetSpeed < 0)
@@ -814,7 +811,12 @@ internal static class ControlOverridePatch
                             const float gravity = 9.81f;
                             float velocity = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
                             float turnRateRad = desiredTurnRate * Mathf.Deg2Rad;
-                            float bankReqFf = Mathf.Atan(velocity * turnRateRad / gravity) * Mathf.Rad2Deg;
+                            float bankReq = Mathf.Atan(velocity * turnRateRad / gravity) * Mathf.Rad2Deg;
+
+                            if (Plugin.Conf_InvertCourseRoll.Value)
+                            {
+                                bankReq = -bankReq;
+                            }
 
                             float safeMaxG = Mathf.Max(Plugin.GcasMaxG.Value, 1.01f);
                             float gLimitBank = Mathf.Acos(1f / safeMaxG) * Mathf.Rad2Deg;
@@ -825,18 +827,8 @@ internal static class ControlOverridePatch
 
                             float finalBankLimit = Mathf.Min(userLimit, gLimitBank);
 
-                            float curTurnRate = APData.PlayerRB.angularVelocity.y * Mathf.Rad2Deg;
-                            float targetTurnRate = PIDLogger.GetSetpoint(PIDLogger.StepTarget.CrsRate, desiredTurnRate, curTurnRate);
-                            ConfigurePID(PidCrsRate, Plugin.ConfPidCrsRate, dt, -finalBankLimit, finalBankLimit);
-                            float bankReq = (float)PidCrsRate.Update(targetTurnRate, curTurnRate, bankReqFf, 0, 0, Mode.Auto);
-                            PIDLogger.Log(PIDLogger.StepTarget.CrsRate, bankReq, curTurnRate, targetTurnRate);
+                            activeTargetRoll = Mathf.Clamp(bankReq, -finalBankLimit, finalBankLimit);
 
-                            if (Plugin.Conf_InvertCourseRoll.Value)
-                            {
-                                bankReq = -bankReq;
-                            }
-
-                            activeTargetRoll = bankReq;
                         }
 
                         activeTargetRoll = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Roll, activeTargetRoll, APData.CurrentRoll);

@@ -283,8 +283,7 @@ internal static class ControlOverridePatch
                     float descentRate = velocity.y < 0 ? Mathf.Abs(velocity.y) : 0f;
 
                     float currentRollAbs = Mathf.Abs(APData.CurrentRoll);
-                    const float estimatedRollRate = 60f;
-                    float timeToRollUpright = currentRollAbs / estimatedRollRate;
+                    float timeToRollUpright = currentRollAbs / Plugin.GcasRollRate.Value;
 
                     float gAccel = Plugin.GcasMaxG.Value * 9.81f;
                     float turnRadius = speed * speed / gAccel;

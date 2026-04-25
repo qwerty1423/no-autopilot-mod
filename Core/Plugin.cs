@@ -129,7 +129,7 @@ public class Plugin : BaseUnityPlugin
 
     // Auto GCAS
     public static ConfigEntry<bool> EnableGCAS, EnableGCASHelo, EnableGCASTiltwing;
-    public static ConfigEntry<float> GcasMaxG, GcasWarnBuffer, GcasAutoBuffer, GcasDeadzone, GcasScanRadius, GcasMinAlt;
+    public static ConfigEntry<float> GcasMaxG, GcasWarnBuffer, GcasAutoBuffer, GcasDeadzone, GcasScanRadius, GcasMinAlt, GcasRollRate;
 
     // Random
     public static ConfigEntry<bool> RandomEnabled;
@@ -394,19 +394,20 @@ public class Plugin : BaseUnityPlugin
         MinAltitude = Config.Bind("Controls - Values", "22. Minimum Target Altitude", 20f, "Safety floor");
 
         // Auto GCAS
-        EnableGCAS = Config.Bind("Auto GCAS", "1. Enable GCAS on start", true,
+        EnableGCAS = Config.Bind("Auto GCAS", "01. Enable GCAS on start", true,
             "GCAS off at start if disabled (anything that isn't a helo)");
-        EnableGCASHelo = Config.Bind("Auto GCAS", "2. Enable GCAS on start (Helo)", false,
+        EnableGCASHelo = Config.Bind("Auto GCAS", "02. Enable GCAS on start (Helo)", false,
             "If disabled, GCAS starts off for helicopters.");
-        EnableGCASTiltwing = Config.Bind("Auto GCAS", "3. Enable GCAS on start (Tiltwing)", true,
+        EnableGCASTiltwing = Config.Bind("Auto GCAS", "03. Enable GCAS on start (Tiltwing)", true,
             "If disabled, gcas starts off for tiltwings.");
-        GcasMaxG = Config.Bind("Auto GCAS", "4. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
+        GcasMaxG = Config.Bind("Auto GCAS", "04. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
         GcasWarnBuffer =
-            Config.Bind("Auto GCAS", "5. Warning Buffer", 20.0f, "GCAS warning indicator first appearance");
-        GcasAutoBuffer = Config.Bind("Auto GCAS", "6. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
-        GcasDeadzone = Config.Bind("Auto GCAS", "7. GCAS Deadzone", 0.5f, "GCAS override deadzone (default 0.5 = 50%)");
-        GcasScanRadius = Config.Bind("Auto GCAS", "8. Scan Radius", 2.0f, "Width of the spherecast (m)");
-        GcasMinAlt = Config.Bind("Auto GCAS", "9. Minimum altitude", 0.0f, "Minimum altitude (m)");
+            Config.Bind("Auto GCAS", "05. Warning Buffer", 20.0f, "GCAS warning indicator first appearance");
+        GcasAutoBuffer = Config.Bind("Auto GCAS", "06. Auto-Pull Buffer", 1.0f, "Safety margin seconds");
+        GcasDeadzone = Config.Bind("Auto GCAS", "07. GCAS Deadzone", 0.5f, "GCAS override deadzone (default 0.5 = 50%)");
+        GcasScanRadius = Config.Bind("Auto GCAS", "08. Scan Radius", 2.0f, "Width of the spherecast (m)");
+        GcasMinAlt = Config.Bind("Auto GCAS", "09. Minimum altitude", 2.0f, "Minimum altitude (m)");
+        GcasRollRate = Config.Bind("Auto GCAS", "10. Estimated roll rate", 15.0f, "Estimate of roll rate for GCAS (deg/s)");
 
         DefaultMaxClimbRate = Config.Bind("Limits", "1. Default Max Climb Rate", 10f, "Startup value");
         Conf_VS_MaxAngle = Config.Bind("Limits", "2. Max Pitch Angle", 85.0f, "angle from horizon limit");

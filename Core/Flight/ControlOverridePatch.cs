@@ -24,7 +24,6 @@ internal static class ControlOverridePatch
     private static readonly PIDController PidAlt = new();
     private static readonly PIDController PidVS = new();
     private static readonly PIDController PidPitch = new();
-    private static readonly PIDController PidPitchRate = new();
     private static readonly PIDController PidRoll = new();
     private static readonly PIDController PidRollRate = new();
     private static readonly PIDController PidCrs = new();
@@ -64,7 +63,6 @@ internal static class ControlOverridePatch
         PidAlt.Reset();
         PidVS.Reset();
         PidPitch.Reset();
-        PidPitchRate.Reset();
         PidRoll.Reset();
         PidRollRate.Reset();
         PidCrs.Reset();
@@ -97,7 +95,6 @@ internal static class ControlOverridePatch
         PidAlt.Reset();
         PidVS.Reset();
         PidPitch.Reset();
-        PidPitchRate.Reset();
         PidRoll.Reset();
         PidRollRate.Reset();
         PidCrs.Reset();
@@ -1026,23 +1023,14 @@ internal static class ControlOverridePatch
                             float targetPitchDeg = (float)PidVS.Update(targetVS, currentVS, vsFf, 0, 0, Mode.Auto);
                             PIDLogger.Log(PIDLogger.StepTarget.VS, targetPitchDeg, currentVS, targetVS);
 
-                            // Pitch angle -> Pitch rate
+                            // Pitch angle -> stick
                             float currentPitch = Mathf.Asin(pForward.y) * Mathf.Rad2Deg;
 
                             ConfigurePID(PidPitch, Plugin.ConfPidPitch, dt, -1f, 1f);
 
                             targetPitchDeg = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Pitch, targetPitchDeg, currentPitch);
-                            float targetPitchRate = (float)PidPitch.Update(targetPitchDeg, currentPitch);
-                            PIDLogger.Log(PIDLogger.StepTarget.Pitch, targetPitchRate, currentPitch, targetPitchDeg);
-
-                            // Pitch rate -> Stick
-                            float pitchRate = -localAngVel.x * Mathf.Rad2Deg;
-
-                            ConfigurePID(PidPitchRate, Plugin.ConfPidPitchRate, dt, -1f, 1f);
-
-                            targetPitchRate = PIDLogger.GetSetpoint(PIDLogger.StepTarget.PitchRate, targetPitchRate, pitchRate);
-                            pitchOut = (float)PidPitchRate.Update(targetPitchRate, pitchRate);
-                            PIDLogger.Log(PIDLogger.StepTarget.PitchRate, pitchOut, pitchRate, targetPitchRate);
+                            pitchOut = (float)PidPitch.Update(targetPitchDeg, currentPitch);
+                            PIDLogger.Log(PIDLogger.StepTarget.Pitch, pitchOut, currentPitch, targetPitchDeg);
 
                             if (useRandom)
                             {

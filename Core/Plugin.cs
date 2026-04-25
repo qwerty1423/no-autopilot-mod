@@ -116,7 +116,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, MaxRollRate;
 
     // pid
-    public static ConfigEntry<PIDTuning> ConfPidAlt, ConfPidVs, ConfPidPitch, ConfPidPitchRate;
+    public static ConfigEntry<PIDTuning> ConfPidAlt, ConfPidVs, ConfPidPitch;
     public static ConfigEntry<PIDTuning> ConfPidRoll, ConfPidRollRate, ConfPidCrs, ConfPidCrsRate;
     public static ConfigEntry<PIDTuning> ConfPidSpd;
     public static ConfigEntry<PIDTuning> ConfPidGcas;
@@ -428,9 +428,6 @@ public class Plugin : BaseUnityPlugin
 
         ConfPidPitch = PIDTuningBinder.Bind(Config, "PID", "03. Pitch > Pitch Rate",
             new PIDTuning(0.0329026146189137, 5.7512084040881, 0.12329376291698, smoothIn: 0.5, smoothOut: 0.5), "Pitch Angle > Pitch Rate");
-
-        ConfPidPitchRate = PIDTuningBinder.Bind(Config, "PID", "04. Pitch Rate > Stick",
-            new PIDTuning(0.0329026146189137, 5.7512084040881, 0.12329376291698, smoothIn: 0.5, smoothOut: 0.5), "Pitch Rate > Stick");
 
         ConfPidRoll = PIDTuningBinder.Bind(Config, "PID", "05. Roll > Roll Rate",
             new PIDTuning(1, 0, 0), "Roll > Roll rate");

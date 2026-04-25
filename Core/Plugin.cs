@@ -421,31 +421,32 @@ public class Plugin : BaseUnityPlugin
             "Maximum commanded roll rate in deg/s");
 
         // PID Loops
-        ConfPidAlt = PIDTuningBinder.Bind(Config, "PID", "01. Altitude > VS",
+        const string pidSect = "PID (advanced settings, don't change unless you know what a PID controller is)";
+        ConfPidAlt = PIDTuningBinder.Bind(Config, pidSect, "01. Altitude > VS",
             new PIDTuning(0.5, 0, 3), "Altitude > Vertical Speed");
 
-        ConfPidVs = PIDTuningBinder.Bind(Config, "PID", "02. VS > Pitch",
+        ConfPidVs = PIDTuningBinder.Bind(Config, pidSect, "02. VS > Pitch",
             new PIDTuning(2.44967771875362, 2.31068044043631, 0.549968619394224), "Vertical Speed > Pitch Angle");
 
-        ConfPidPitch = PIDTuningBinder.Bind(Config, "PID", "03. Pitch > Pitch Rate",
+        ConfPidPitch = PIDTuningBinder.Bind(Config, pidSect, "03. Pitch > Pitch Rate",
             new PIDTuning(0.0329026146189137, 5.7512084040881, 0.12329376291698, smoothIn: 0.5, smoothOut: 0.5), "Pitch Angle > Pitch Rate");
 
-        ConfPidRoll = PIDTuningBinder.Bind(Config, "PID", "05. Roll > Roll Rate",
+        ConfPidRoll = PIDTuningBinder.Bind(Config, pidSect, "05. Roll > Roll Rate",
             new PIDTuning(1, 0, 0), "Roll > Roll rate");
 
-        ConfPidRollRate = PIDTuningBinder.Bind(Config, "PID", "06. Roll Rate > Stick",
+        ConfPidRollRate = PIDTuningBinder.Bind(Config, pidSect, "06. Roll Rate > Stick",
             new PIDTuning(0.004, 0.3851634589019024, 0), "Roll rate > Stick");
 
-        ConfPidCrs = PIDTuningBinder.Bind(Config, "PID", "07. Course > Course Rate",
+        ConfPidCrs = PIDTuningBinder.Bind(Config, pidSect, "07. Course > Course Rate",
             new PIDTuning(1, 30, 0, clegg: true), "Course Error > Course Rate");
 
-        ConfPidCrsRate = PIDTuningBinder.Bind(Config, "PID", "07. Course Rate > Roll",
+        ConfPidCrsRate = PIDTuningBinder.Bind(Config, pidSect, "07. Course Rate > Roll",
             new PIDTuning(1, 30, 0, clegg: true), "Course Rate > Roll Angle");
 
-        ConfPidSpd = PIDTuningBinder.Bind(Config, "PID", "08. Speed > Throttle",
+        ConfPidSpd = PIDTuningBinder.Bind(Config, pidSect, "08. Speed > Throttle",
             new PIDTuning(0.276635855846017, 4.55835278395057, 0.486418840935585, 5), "Speed Error > Throttle");
 
-        ConfPidGcas = PIDTuningBinder.Bind(Config, "PID", "09. G-Force > Stick",
+        ConfPidGcas = PIDTuningBinder.Bind(Config, pidSect, "09. G-Force > Stick",
             new PIDTuning(0.448050807726941, 0.947761066338411, 0), "GCAS G Error > Stick");
 
         // PID logging

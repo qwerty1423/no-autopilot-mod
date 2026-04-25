@@ -1,4 +1,5 @@
 extern alias JetBrains;
+
 using System.Collections.Generic;
 
 using UnityEngine;
@@ -38,11 +39,13 @@ public static class APData
     public static float GCASConverge;
     public static bool IsMultiplayerCached;
     public static float NextMultiplayerCheck;
-    public static bool SaveMapState;
+    public static bool SaveMapPosition;
+    public static bool SaveMapZoom;
+    public static bool MapPositionStored;
+    public static bool MapZoomStored;
     public static Vector2 SavedMapPos = Vector2.zero;
     public static float SavedMapZoom = 1f;
     public static bool SavedMapFollow = true;
-    public static bool MapStateStored;
     public static float BloodPressure = 1f;
 
     public static bool IsConscious = true;
@@ -84,7 +87,9 @@ public static class APData
         GCASConverge = 0f;
         IsMultiplayerCached = false;
         NextMultiplayerCheck = 0f;
-        MapStateStored = false;
+        SaveMapPosition = false;
+        MapPositionStored = false;
+        MapZoomStored = false;
         SavedMapPos = Vector2.zero;
         SavedMapZoom = 1f;
         SavedMapFollow = true;

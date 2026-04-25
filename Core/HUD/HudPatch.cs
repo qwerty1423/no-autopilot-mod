@@ -73,7 +73,7 @@ internal static class HudPatch
 
             APData.TargetRoll = 0f;
             APData.LocalWeaponManager = APData.LocalAircraft.weaponManager;
-            APData.SaveMapState = Plugin.SaveMapState.Value;
+            APData.SaveMapZoom = Plugin.SaveMapZoom.Value;
 
             Pilot[] pilots = APData.LocalAircraft.pilots;
             if (pilots?.Length > 0)

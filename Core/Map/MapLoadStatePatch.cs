@@ -19,17 +19,40 @@ internal static class MapLoadStatePatch
             return;
         }
 
-        if (!APData.SaveMapState || !APData.MapStateStored || __instance == null)
+        if (__instance == null)
+        {
+            return;
+        }
+
+        bool shouldRestorePos = APData.SaveMapPosition && APData.MapPositionStored;
+        bool shouldRestoreZoom = APData.SaveMapZoom && APData.MapZoomStored;
+
+        if (!shouldRestorePos && !shouldRestoreZoom)
         {
             return;
         }
 
         try
         {
-            __instance.positionOffset = APData.SavedMapPos;
-            __instance.followingCamera = APData.SavedMapFollow;
-            __instance.SetZoomLevel(APData.SavedMapZoom);
-            __instance.UpdateMap();
+            bool changed = false;
+
+            if (shouldRestorePos)
+            {
+                __instance.positionOffset = APData.SavedMapPos;
+                __instance.followingCamera = APData.SavedMapFollow;
+                changed = true;
+            }
+
+            if (shouldRestoreZoom)
+            {
+                __instance.SetZoomLevel(APData.SavedMapZoom);
+                changed = true;
+            }
+
+            if (changed)
+            {
+                __instance.UpdateMap();
+            }
         }
         catch (Exception ex)
         {

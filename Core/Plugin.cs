@@ -79,7 +79,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> DisableATAPGCAS, DisableATAPGUI, DisableATAPStick;
     public static ConfigEntry<bool> DisableNavAPKey, DisableNavAPStick, EnableNavonWP;
     public static ConfigEntry<bool> KeepSetAltKey, KeepSetAltStick;
-    public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom, SaveMapState, UnpatchIfBroken;
+    public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom, SaveMapZoom, UnpatchIfBroken;
     public static ConfigEntry<bool> LockWingsSwept;
 
     // Auto Jammer
@@ -281,8 +281,8 @@ public class Plugin : BaseUnityPlugin
             "AP will not reset alt to current alt when stick inputs are made");
         UnlockMapPan = Config.Bind("Settings - Misc", "Unlock Map Pan", true, "Requires restart to apply.");
         UnlockMapZoom = Config.Bind("Settings - Misc", "Unlock Map Zoom", true, "Requires restart to apply.");
-        SaveMapState = Config.Bind("Settings - Misc", "Save Map State", false,
-            "Prevent map from resetting position/zoom when reopened.");
+        SaveMapZoom = Config.Bind("Settings - Misc", "Save Map Zoom", false,
+            "Prevent map from resetting zoom when reopened.");
         UnpatchIfBroken = Config.Bind("Settings - Misc", "Unpatch on error", true,
             "Unload this mod when it throws an error");
 
@@ -1408,12 +1408,27 @@ public class Plugin : BaseUnityPlugin
         GUI.backgroundColor = Color.white;
         GUILayout.EndHorizontal();
         GUILayout.BeginHorizontal();
-        bool newSaveState = GUILayout.Toggle(APData.SaveMapState,
-            new GUIContent("Lock", "Keep map zoom/pos when reopening."));
-        if (newSaveState != APData.SaveMapState)
+        bool newSavePos = GUILayout.Toggle(APData.SaveMapPosition,
+    new GUIContent("LP", "Keep map position when reopening."));
+        if (newSavePos != APData.SaveMapPosition)
         {
-            APData.SaveMapState = newSaveState;
-            SaveMapState.Value = newSaveState;
+            APData.SaveMapPosition = newSavePos;
+            if (!newSavePos)
+            {
+                APData.MapPositionStored = false;
+            }
+        }
+
+        bool newSaveZoom = GUILayout.Toggle(APData.SaveMapZoom,
+            new GUIContent("LZ", "Keep map zoom when reopening."));
+        if (newSaveZoom != APData.SaveMapZoom)
+        {
+            APData.SaveMapZoom = newSaveZoom;
+            SaveMapZoom.Value = newSaveZoom;
+            if (!newSaveZoom)
+            {
+                APData.MapZoomStored = false;
+            }
         }
 
         if (GUILayout.Button(new GUIContent("Center", "Pan to the center of the map"), _styleButton))

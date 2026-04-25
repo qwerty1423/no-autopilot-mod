@@ -1,5 +1,3 @@
-extern alias JetBrains;
-
 using System.Collections.Generic;
 
 using UnityEngine;

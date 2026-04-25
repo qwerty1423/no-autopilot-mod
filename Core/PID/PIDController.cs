@@ -6,7 +6,7 @@ using static System.Math;
 
 namespace NOAutopilot.Core.PID;
 
-public class PIDController : IPIDLoop
+public class PIDController
 {
     // internal state for PID filter
     public double PTerm { get; private set; }

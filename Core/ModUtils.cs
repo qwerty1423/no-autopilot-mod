@@ -1,4 +1,3 @@
-extern alias JetBrains;
 using System.Text.RegularExpressions;
 
 using UnityEngine;

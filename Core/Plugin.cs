@@ -1,6 +1,4 @@
-﻿extern alias JetBrains;
-
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;

@@ -946,7 +946,7 @@ internal static class ControlOverridePatch
                         float rollAngle = Mathf.Abs(APData.CurrentRoll);
                         float targetG = rollAngle >= 90f ? currentG : Plugin.GcasMaxG.Value * s_overGFactor;
 
-                        ConfigurePID(PidGCAS, Plugin.ConfPidGcas, dt, -1f, 1f);
+                        ConfigurePID(PidGCAS, Plugin.ConfPidGcas, dt, 0f, 1f);
 
                         float activeTargetG = PIDLogger.GetSetpoint(PIDLogger.StepTarget.GCAS, targetG, currentG);
                         pitchOut = (float)PidGCAS.Update(activeTargetG, currentG);

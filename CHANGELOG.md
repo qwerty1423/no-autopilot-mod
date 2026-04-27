@@ -5,6 +5,7 @@
 ### Fixed
 
 - plane shaking on autopilot engage
+- gcas pushing the plane into water
 
 ### Added
 

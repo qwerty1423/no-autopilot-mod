@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [5.2.0]
+
 ### Fixed
 
 - plane shaking on autopilot engage
@@ -10,7 +12,12 @@
 ### Added
 
 - basic gain scheduling
+  (I think this is supposed to be the job of the fbw, but fbw doesn't do it well enough so the plane would shake in the past with fixed pid gains.)
 - a way to lock map position or map zoom independently of each other
+
+### Changed
+
+- roll controller is now cascaded
 
 ## [5.1.2] 2026-04-18
 
@@ -334,6 +341,7 @@
 ## [4.8.4] - 2025-12-29
 
 [Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.1.2...HEAD
+[5.2.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.1.2...v5.2.0
 [5.1.2]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.0.1...v5.1.2
 [5.0.1]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.0.0...v5.0.1
 [5.0.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v4.17.4...v5.0.0

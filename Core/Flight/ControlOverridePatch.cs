@@ -55,6 +55,22 @@ internal static class ControlOverridePatch
             Mathf.Max(dt, 0.0001f), minOutput, maxOutput);
     }
 
+    /// <summary>
+    /// same as configurepid but with gain scheduling
+    /// </summary>
+    private static void ConfigurePIDScheduled(
+        PIDController pid,
+        ConfigEntry<PIDTuning> tuning,
+        ConfigEntry<GainSchedule> schedule,
+        float currentQ,
+        float dt,
+        float minOutput,
+        float maxOutput)
+    {
+        PIDConfig.ApplyScheduled(pid, tuning.Value, schedule.Value, currentQ,
+            Mathf.Max(dt, 0.0001f), minOutput, maxOutput);
+    }
+
     public static void Reset()
     {
         PidAlt.Reset();
@@ -156,6 +172,9 @@ internal static class ControlOverridePatch
 
             float dt = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
             float noiseT = Time.time * Plugin.RandomSpeed.Value;
+
+            float speed3d = APData.PlayerRB.velocity.magnitude;
+            float currentQ = GainScheduler.DynamicPressure(speed3d, APData.CurrentAlt);
 
             if (Plugin.StepTestKey.Value.IsDown())
             {
@@ -271,8 +290,7 @@ internal static class ControlOverridePatch
                     APData.Enabled = false;
                 }
 
-                float speed = APData.PlayerRB.velocity.magnitude;
-                if (speed > 0f)
+                if (speed3d > 0f)
                 {
                     Vector3 velocity = APData.PlayerRB.velocity;
                     float descentRate = velocity.y < 0 ? Mathf.Abs(velocity.y) : 0f;
@@ -281,11 +299,11 @@ internal static class ControlOverridePatch
                     float timeToRollUpright = currentRollAbs / Plugin.GcasRollRate.Value;
 
                     float gAccel = Plugin.GcasMaxG.Value * 9.81f;
-                    float turnRadius = speed * speed / gAccel;
+                    float turnRadius = speed3d * speed3d / gAccel;
 
                     float reactionTime = Plugin.GcasAutoBuffer.Value + (Time.deltaTime * 2.0f) + timeToRollUpright;
-                    float reactionDist = speed * reactionTime;
-                    float warnDist = speed * Plugin.GcasWarnBuffer.Value;
+                    float reactionDist = speed3d * reactionTime;
+                    float warnDist = speed3d * Plugin.GcasWarnBuffer.Value;
 
                     s_overGFactor = 1.0f;
 
@@ -312,13 +330,13 @@ internal static class ControlOverridePatch
                                 s_dangerImminent = true;
 
                                 float availableArcDist =
-                                    hit.distance - reactionDist - (speed * timeToRollUpright);
+                                    hit.distance - reactionDist - (speed3d * timeToRollUpright);
 
                                 if (availableArcDist < reqArc)
                                 {
                                     float neededRadius = availableArcDist / (turnAngle * Mathf.Deg2Rad);
                                     neededRadius = Mathf.Max(neededRadius, 1f);
-                                    float gRequired = speed * speed / (neededRadius * 9.81f);
+                                    float gRequired = speed3d * speed3d / (neededRadius * 9.81f);
 
                                     s_overGFactor =
                                         Mathf.Max(s_overGFactor, gRequired / Plugin.GcasMaxG.Value);
@@ -350,7 +368,7 @@ internal static class ControlOverridePatch
                                 availablePullAlt / (1f - Mathf.Cos(diveAngle * Mathf.Deg2Rad));
                             availableRadius = Mathf.Max(availableRadius, 1f);
 
-                            float gReqFloor = speed * speed / (availableRadius * 9.81f);
+                            float gReqFloor = speed3d * speed3d / (availableRadius * 9.81f);
 
                             s_overGFactor = Mathf.Max(s_overGFactor, gReqFloor / Plugin.GcasMaxG.Value);
                         }
@@ -570,9 +588,6 @@ internal static class ControlOverridePatch
             // throttle control
             if (APData.TargetSpeed >= 0 || PIDLogger.IsTesting(PIDLogger.StepTarget.Spd))
             {
-                float currentSpeed = APData.LocalAircraft != null
-                    ? APData.LocalAircraft.speed
-                    : APData.PlayerRB.velocity.magnitude;
                 float targetSpeedMS;
 
                 if (APData.SpeedHoldIsMach)
@@ -586,8 +601,8 @@ internal static class ControlOverridePatch
                     targetSpeedMS = APData.TargetSpeed;
                 }
 
-                targetSpeedMS = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Spd, targetSpeedMS, currentSpeed);
-                float sErr = targetSpeedMS - currentSpeed;
+                targetSpeedMS = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Spd, targetSpeedMS, speed3d);
+                float sErr = targetSpeedMS - speed3d;
                 float forwardAccel = Vector3.Dot(pAccel, pForward);
 
                 if (useRandom)
@@ -612,14 +627,15 @@ internal static class ControlOverridePatch
                 float minT = APData.AllowExtremeThrottle ? 0f : Plugin.ThrottleMinLimit.Value;
                 float maxT = APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value;
 
-                ConfigurePID(PidSpd, Plugin.ConfPidSpd, dt, minT, maxT);
+                ConfigurePIDScheduled(PidSpd, Plugin.ConfPidSpd, Plugin.SchedPidSpd,
+                    currentQ, dt, minT, maxT);
 
                 float pidOutput = s_isSpdSleeping
                     ? (float)PidSpd.ITerm
-                    : (float)PidSpd.Update(targetSpeedMS, currentSpeed);
+                    : (float)PidSpd.Update(targetSpeedMS, speed3d);
 
                 float desiredThrottle = Mathf.Clamp(pidOutput, minT, maxT);
-                PIDLogger.Log(PIDLogger.StepTarget.Spd, desiredThrottle, currentSpeed);
+                PIDLogger.Log(PIDLogger.StepTarget.Spd, desiredThrottle, speed3d);
 
                 ThrottleOutput = desiredThrottle;
             }
@@ -807,7 +823,7 @@ internal static class ControlOverridePatch
                             PIDLogger.Log(PIDLogger.StepTarget.Crs, desiredTurnRate, curCrs);
 
                             const float gravity = 9.81f;
-                            float velocity = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
+                            float velocity = Mathf.Max(speed3d, 1f);
                             float turnRateRad = desiredTurnRate * Mathf.Deg2Rad;
                             float bankReq = Mathf.Atan(velocity * turnRateRad / gravity) * Mathf.Rad2Deg;
 
@@ -873,7 +889,8 @@ internal static class ControlOverridePatch
 
                             rollRateOut = PIDLogger.GetSetpoint(PIDLogger.StepTarget.RollRate,
                                 rollRateOut, rollRate);
-                            ConfigurePID(PidRollRate, Plugin.ConfPidRollRate, dt, -1f, 1f);
+                            ConfigurePIDScheduled(PidRollRate, Plugin.ConfPidRollRate, Plugin.
+                                SchedPidRollRate, currentQ, dt, -1f, 1f);
 
                             rollOut = (float)PidRollRate.Update(rollRateOut, rollRate);
                             PIDLogger.Log(PIDLogger.StepTarget.RollRate, rollOut,
@@ -1000,7 +1017,7 @@ internal static class ControlOverridePatch
                                 -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
 
                             // VS -> desired pitch angle
-                            ConfigurePID(PidVS, Plugin.ConfPidVs, dt,
+                            ConfigurePIDScheduled(PidVS, Plugin.ConfPidVs, Plugin.SchedPidVs, currentQ, dt,
                                 -Plugin.Conf_VS_MaxAngle.Value, Plugin.Conf_VS_MaxAngle.Value);
 
                             targetVS = PIDLogger.GetSetpoint(PIDLogger.StepTarget.VS, targetVS, currentVS);
@@ -1015,7 +1032,8 @@ internal static class ControlOverridePatch
                             // Pitch angle -> stick
                             float currentPitch = Mathf.Asin(pForward.y) * Mathf.Rad2Deg;
 
-                            ConfigurePID(PidPitch, Plugin.ConfPidPitch, dt, -1f, 1f);
+                            ConfigurePIDScheduled(PidPitch, Plugin.ConfPidPitch, Plugin.SchedPidPitch,
+                                currentQ, dt, -1f, 1f);
 
                             targetPitchDeg = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Pitch, targetPitchDeg, currentPitch);
                             pitchOut = (float)PidPitch.Update(targetPitchDeg, currentPitch);

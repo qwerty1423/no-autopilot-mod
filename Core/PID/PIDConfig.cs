@@ -28,4 +28,20 @@ internal struct PIDConfig
         pid.MinOutput = minOutput;
         pid.MaxOutput = maxOutput;
     }
+
+    /// <summary>
+    /// Same as Apply but scales the gains by dynamic pressure before writing.
+    /// </summary>
+    public static void ApplyScheduled(
+        PIDController pid,
+        PIDTuning baseTuning,
+        GainSchedule schedule,
+        float currentQ,
+        double ts,
+        double minOutput,
+        double maxOutput)
+    {
+        PIDTuning scheduled = GainScheduler.Schedule(baseTuning, schedule, currentQ);
+        Apply(pid, scheduled, ts, minOutput, maxOutput);
+    }
 }

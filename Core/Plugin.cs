@@ -119,6 +119,11 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<PIDTuning> ConfPidSpd;
     public static ConfigEntry<PIDTuning> ConfPidGcas;
 
+    public static ConfigEntry<GainSchedule> SchedPidPitch;
+    public static ConfigEntry<GainSchedule> SchedPidRollRate;
+    public static ConfigEntry<GainSchedule> SchedPidVs;
+    public static ConfigEntry<GainSchedule> SchedPidSpd;
+
     // pid logger
     public static ConfigEntry<PIDLogger.StepTarget> StepTestLoop;
     public static ConfigEntry<float> StepTestMagnitude;
@@ -199,6 +204,12 @@ public class Plugin : BaseUnityPlugin
         {
             ConvertToString = (obj, _) => ((PIDTuning)obj).ToString(),
             ConvertToObject = (str, _) => PIDTuning.Parse(str)
+        });
+
+        TomlTypeConverter.AddConverter(typeof(GainSchedule), new TypeConverter
+        {
+            ConvertToString = (obj, _) => ((GainSchedule)obj).ToString(),
+            ConvertToObject = (str, _) => GainSchedule.Parse(str)
         });
 
         // Visuals
@@ -443,6 +454,23 @@ public class Plugin : BaseUnityPlugin
 
         ConfPidGcas = PIDTuningBinder.Bind(Config, pidSect, "09. G-Force > Stick",
             new PIDTuning(0.448050807726941, 0.947761066338411, 0), "GCAS G Error > Stick");
+
+        const string schedSect = "PID Gain Scheduling (much basic)";
+        SchedPidVs = GainScheduleBinder.Bind(Config, schedSect, "01. VS > Pitch Schedule",
+            new GainSchedule(refQ: 18750f, kpExp: 0.5f, tiExp: 0f, tdExp: 0f, clampMin: 0.2f, clampMax: 4f),
+            "Scales Pitch > Angle PID");
+
+        SchedPidPitch = GainScheduleBinder.Bind(Config, schedSect, "02. Pitch > Stick Schedule",
+            new GainSchedule(refQ: 18750f, kpExp: 1.0f, tiExp: 0f, tdExp: 0f, clampMin: 0.1f, clampMax: 5f),
+            "Scales VS > Pitch PID");
+
+        SchedPidRollRate = GainScheduleBinder.Bind(Config, schedSect, "03. Roll > Stick Schedule",
+            new GainSchedule(refQ: 18750f, kpExp: 1.0f, tiExp: 0f, tdExp: 0f, clampMin: 0.1f, clampMax: 5f),
+            "Scales Roll > Stick PID");
+
+        SchedPidSpd = GainScheduleBinder.Bind(Config, schedSect, "04. Speed > Throttle Schedule",
+            new GainSchedule(refQ: 18750f, kpExp: 0f, tiExp: 0f, tdExp: 0f, clampMin: 0.2f, clampMax: 3f),
+            "Scales Speed > Throttle PID");
 
         // PID logging
         StepTestLoop = Config.Bind("PID logging", "1. Target Loop", PIDLogger.StepTarget.None, "Which loop to run step response on");

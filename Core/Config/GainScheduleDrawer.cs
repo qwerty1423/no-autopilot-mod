@@ -13,12 +13,12 @@ public static class GainScheduleDrawer
 
     private static readonly (string Label, string Tooltip, string Field)[] Cells =
     [
-        ("RefQ", "Dynamic pressure (Pa) where gains were tuned.\n(See live value below)", nameof(GainSchedule.RefQ)),
-        ("KpExp", "1.0 = exact aerodynamic inverse scaling.\n0 = disabled.", nameof(GainSchedule.KpExp)),
-        ("TiExp", "Integral scaling (usually 0)", nameof(GainSchedule.TiExp)),
-        ("TdExp", "Derivative scaling (usually 0 or same as KpExp)", nameof(GainSchedule.TdExp)),
-        ("MinX", "Safety floor multiplier (e.g. 0.1)", nameof(GainSchedule.ClampMin)),
-        ("MaxX", "Safety ceiling multiplier (e.g. 5.0)", nameof(GainSchedule.ClampMax)),
+        ("RefQ", "Dynamic pressure (Pa) where gains were tuned.", nameof(GainSchedule.RefQ)),
+        ("KpExp", "Proportional scaling", nameof(GainSchedule.KpExp)),
+        ("TiExp", "Integral scaling", nameof(GainSchedule.TiExp)),
+        ("TdExp", "Derivative scaling", nameof(GainSchedule.TdExp)),
+        ("MinX", "Safety floor multiplier", nameof(GainSchedule.ClampMin)),
+        ("MaxX", "Safety ceiling multiplier", nameof(GainSchedule.ClampMax)),
     ];
 
     private static float[] s_colWidths;
@@ -27,14 +27,21 @@ public static class GainScheduleDrawer
     {
         get
         {
-            if (s_colWidths != null) return s_colWidths;
+            if (s_colWidths != null)
+            {
+                return s_colWidths;
+            }
+
             s_colWidths = new float[Cols];
             for (int i = 0; i < Cells.Length; i++)
             {
                 int col = i % Cols;
-                var content = new GUIContent(Cells[i].Label);
+                GUIContent content = new(Cells[i].Label);
                 float w = GUI.skin.label.CalcSize(content).x + 4f;
-                if (w > s_colWidths[col]) s_colWidths[col] = w;
+                if (w > s_colWidths[col])
+                {
+                    s_colWidths[col] = w;
+                }
             }
             return s_colWidths;
         }
@@ -42,9 +49,12 @@ public static class GainScheduleDrawer
 
     public static void Draw(ConfigEntryBase entry)
     {
-        var t = (GainSchedule)entry.BoxedValue;
+        GainSchedule t = (GainSchedule)entry.BoxedValue;
         bool changed = false;
-        if (s_colWidths == null) _ = ColWidths;
+        if (s_colWidths == null)
+        {
+            _ = ColWidths;
+        }
 
         GUILayout.BeginVertical();
 

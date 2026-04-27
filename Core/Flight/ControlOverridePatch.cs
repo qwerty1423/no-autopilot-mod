@@ -928,7 +928,7 @@ internal static class ControlOverridePatch
                 if ((pilotPitch || isWaitingToReengage) && !APData.GCASActive)
                 {
                     float currentVS = APData.PlayerRB.velocity.y;
-                    float currentPitch = Mathf.Asin(pForward.y) * Mathf.Rad2Deg;
+                    float currentPitch = Mathf.Asin(Mathf.Clamp(pForward.y, -1f, 1f)) * Mathf.Rad2Deg;
 
                     PidAlt.Update(APData.CurrentAlt, APData.CurrentAlt,
                         0, 0, 0, Mode.Track);
@@ -1030,7 +1030,7 @@ internal static class ControlOverridePatch
                             PIDLogger.Log(PIDLogger.StepTarget.VS, targetPitchDeg, currentVS);
 
                             // Pitch angle -> stick
-                            float currentPitch = Mathf.Asin(pForward.y) * Mathf.Rad2Deg;
+                            float currentPitch = Mathf.Asin(Mathf.Clamp(pForward.y, -1f, 1f)) * Mathf.Rad2Deg;
 
                             ConfigurePIDScheduled(PidPitch, Plugin.ConfPidPitch, Plugin.SchedPidPitch,
                                 currentQ, dt, -1f, 1f);

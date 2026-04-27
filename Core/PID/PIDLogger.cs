@@ -13,7 +13,15 @@ public static class PIDLogger
 {
     public enum StepTarget
     {
-        None, Alt, VS, Pitch, Roll, RollRate, Crs, Spd, GCAS
+        None = 0,
+        Alt = 1,
+        VS = 2,
+        Pitch = 3,
+        Roll = 4,
+        RollRate = 5,
+        Crs = 6,
+        Spd = 7,
+        GCAS = 8
     }
 
     public static bool IsTestActive { get; private set; }

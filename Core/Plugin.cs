@@ -426,11 +426,11 @@ public class Plugin : BaseUnityPlugin
         ConfPidVs = PIDTuningBinder.Bind(Config, pidSect, "02. VS > Pitch",
             new PIDTuning(2.44967771875362, 2.31068044043631, 0.549968619394224), "Vertical Speed > Pitch Angle");
 
-        ConfPidPitch = PIDTuningBinder.Bind(Config, pidSect, "03. Pitch > Pitch Rate",
+        ConfPidPitch = PIDTuningBinder.Bind(Config, pidSect, "03. Pitch > Stick",
             new PIDTuning(0.0329026146189137, 5.7512084040881, 0.12329376291698, smoothIn: 0.5, smoothOut: 0.5), "Pitch Angle > Pitch Rate");
 
         ConfPidRoll = PIDTuningBinder.Bind(Config, pidSect, "05. Roll > Roll Rate",
-            new PIDTuning(1, 0, 0), "Roll > Roll rate");
+            new PIDTuning(5, 0, 0.2), "Roll > Roll rate");
 
         ConfPidRollRate = PIDTuningBinder.Bind(Config, pidSect, "06. Roll Rate > Stick",
             new PIDTuning(0.004, 0.3851634589019024, 0), "Roll rate > Stick");

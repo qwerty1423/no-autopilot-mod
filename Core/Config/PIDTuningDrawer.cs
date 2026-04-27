@@ -37,7 +37,9 @@ public static class PIDTuningDrawer
         nameof(PIDTuning.OutputDeadband)),
     ];
 
-    // Per-column label widths
+    /// <summary>
+    /// Per-column label widths
+    /// </summary>
     private static float[] s_colWidths;
 
     private static float[] ColWidths
@@ -66,7 +68,7 @@ public static class PIDTuningDrawer
 
     public static void Draw(ConfigEntryBase entry)
     {
-        var t = (PIDTuning)entry.BoxedValue;
+        PIDTuning t = (PIDTuning)entry.BoxedValue;
         bool changed = false;
 
         // Force recalc if skin changes (e.g. first frame)
@@ -83,7 +85,7 @@ public static class PIDTuningDrawer
             GUILayout.BeginHorizontal();
             for (int col = 0; col < Cols && i < Cells.Length; col++, i++)
             {
-                var (label, tooltip, fieldName) = Cells[i];
+                (string label, string tooltip, string fieldName) = Cells[i];
                 double val = GetField(ref t, fieldName);
                 if (Field(label, tooltip, ColWidths[col], ref val))
                 {

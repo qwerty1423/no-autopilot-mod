@@ -79,7 +79,7 @@ public static class GainScheduleDrawer
             GUILayout.BeginHorizontal();
             for (int col = 0; col < Cols && i < Cells.Length; col++, i++)
             {
-                var (label, tooltip, fieldName) = Cells[i];
+                (string label, string tooltip, string fieldName) = Cells[i];
                 float val = GetField(ref t, fieldName);
                 if (Field(label, tooltip, ColWidths[col], ref val))
                 {

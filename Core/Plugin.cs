@@ -457,19 +457,19 @@ public class Plugin : BaseUnityPlugin
 
         const string schedSect = "PID Gain Scheduling (much basic)";
         SchedPidVs = GainScheduleBinder.Bind(Config, schedSect, "01. VS > Pitch Schedule",
-            new GainSchedule(refQ: 18750f, kpExp: 0.5f, tiExp: 0f, tdExp: 0f, clampMin: 0.2f, clampMax: 4f),
+            new GainSchedule(refQ: 18750f, kpExp: 0.1f, tiExp: 0f, tdExp: 0f, clampMin: 0.2f, clampMax: 4f),
             "Scales Pitch > Angle PID");
 
         SchedPidPitch = GainScheduleBinder.Bind(Config, schedSect, "02. Pitch > Stick Schedule",
-            new GainSchedule(refQ: 18750f, kpExp: 1.0f, tiExp: 0f, tdExp: 0f, clampMin: 0.1f, clampMax: 5f),
+            new GainSchedule(refQ: 18750f, kpExp: 0.1f, tiExp: 0f, tdExp: 0f, clampMin: 0.1f, clampMax: 5f),
             "Scales VS > Pitch PID");
 
         SchedPidRollRate = GainScheduleBinder.Bind(Config, schedSect, "03. Roll > Stick Schedule",
-            new GainSchedule(refQ: 18750f, kpExp: 1.0f, tiExp: 0f, tdExp: 0f, clampMin: 0.1f, clampMax: 5f),
+            new GainSchedule(refQ: 18750f, kpExp: 0.3f, tiExp: 0f, tdExp: 0f, clampMin: 0.1f, clampMax: 5f),
             "Scales Roll > Stick PID");
 
         SchedPidSpd = GainScheduleBinder.Bind(Config, schedSect, "04. Speed > Throttle Schedule",
-            new GainSchedule(refQ: 18750f, kpExp: 0f, tiExp: 0f, tdExp: 0f, clampMin: 0.2f, clampMax: 3f),
+            new GainSchedule(refQ: 18750f, kpExp: 0f, tiExp: 0f, tdExp: 0f, clampMin: 1.0f, clampMax: 1.0f),
             "Scales Speed > Throttle PID");
 
         // PID logging

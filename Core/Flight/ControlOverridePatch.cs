@@ -619,7 +619,7 @@ internal static class ControlOverridePatch
                     : (float)PidSpd.Update(targetSpeedMS, currentSpeed);
 
                 float desiredThrottle = Mathf.Clamp(pidOutput, minT, maxT);
-                PIDLogger.Log(PIDLogger.StepTarget.Spd, desiredThrottle, currentSpeed, targetSpeedMS);
+                PIDLogger.Log(PIDLogger.StepTarget.Spd, desiredThrottle, currentSpeed);
 
                 ThrottleOutput = desiredThrottle;
             }
@@ -804,7 +804,7 @@ internal static class ControlOverridePatch
                             ConfigurePID(PidCrs, Plugin.ConfPidCrs, dt, -90f, 90f);
                             float desiredTurnRate = (float)PidCrs.Update(unwrappedTargetCrs, curCrs);
 
-                            PIDLogger.Log(PIDLogger.StepTarget.Crs, desiredTurnRate, curCrs, targetCrs);
+                            PIDLogger.Log(PIDLogger.StepTarget.Crs, desiredTurnRate, curCrs);
 
                             const float gravity = 9.81f;
                             float velocity = Mathf.Max(APData.PlayerRB.velocity.magnitude, 1f);
@@ -869,7 +869,7 @@ internal static class ControlOverridePatch
 
                             float rollRateOut = (float)PidRoll.Update(unwrappedTargetRoll, APData.CurrentRoll);
                             PIDLogger.Log(PIDLogger.StepTarget.Roll, rollRateOut,
-                                APData.CurrentRoll, activeTargetRoll);
+                                APData.CurrentRoll);
 
                             rollRateOut = PIDLogger.GetSetpoint(PIDLogger.StepTarget.RollRate,
                                 rollRateOut, rollRate);
@@ -877,7 +877,7 @@ internal static class ControlOverridePatch
 
                             rollOut = (float)PidRollRate.Update(rollRateOut, rollRate);
                             PIDLogger.Log(PIDLogger.StepTarget.RollRate, rollOut,
-                                rollRate, rollRateOut);
+                                rollRate);
 
                             if (Plugin.InvertRoll.Value)
                             {
@@ -939,7 +939,7 @@ internal static class ControlOverridePatch
 
                         float activeTargetG = PIDLogger.GetSetpoint(PIDLogger.StepTarget.GCAS, targetG, currentG);
                         pitchOut = (float)PidGCAS.Update(activeTargetG, currentG);
-                        PIDLogger.Log(PIDLogger.StepTarget.GCAS, pitchOut, currentG, activeTargetG);
+                        PIDLogger.Log(PIDLogger.StepTarget.GCAS, pitchOut, currentG);
                     }
                     // Altitude hold
                     else if (APData.TargetAlt > 0f || pitchTest)
@@ -990,7 +990,7 @@ internal static class ControlOverridePatch
                             float baseTargetAlt = APData.TargetAlt > 0f ? APData.TargetAlt : APData.CurrentAlt;
                             float altTarget = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Alt, baseTargetAlt, APData.CurrentAlt);
                             float targetVS = (float)PidAlt.Update(altTarget, APData.CurrentAlt);
-                            PIDLogger.Log(PIDLogger.StepTarget.Alt, targetVS, APData.CurrentAlt, altTarget);
+                            PIDLogger.Log(PIDLogger.StepTarget.Alt, targetVS, APData.CurrentAlt);
 
                             float possibleAccel = Plugin.GcasMaxG.Value * 9.81f;
                             float altErr2 = Mathf.Abs(APData.TargetAlt - APData.CurrentAlt);
@@ -1010,7 +1010,7 @@ internal static class ControlOverridePatch
                             float vsFf = Mathf.Asin(vsRatio) * Mathf.Rad2Deg;
 
                             float targetPitchDeg = (float)PidVS.Update(targetVS, currentVS, vsFf, 0, 0, Mode.Auto);
-                            PIDLogger.Log(PIDLogger.StepTarget.VS, targetPitchDeg, currentVS, targetVS);
+                            PIDLogger.Log(PIDLogger.StepTarget.VS, targetPitchDeg, currentVS);
 
                             // Pitch angle -> stick
                             float currentPitch = Mathf.Asin(pForward.y) * Mathf.Rad2Deg;
@@ -1019,7 +1019,7 @@ internal static class ControlOverridePatch
 
                             targetPitchDeg = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Pitch, targetPitchDeg, currentPitch);
                             pitchOut = (float)PidPitch.Update(targetPitchDeg, currentPitch);
-                            PIDLogger.Log(PIDLogger.StepTarget.Pitch, pitchOut, currentPitch, targetPitchDeg);
+                            PIDLogger.Log(PIDLogger.StepTarget.Pitch, pitchOut, currentPitch);
 
                             if (useRandom)
                             {

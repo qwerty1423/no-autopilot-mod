@@ -67,7 +67,7 @@ public static class PIDLogger
             s_testSetpoint = currentMeasurement + Plugin.StepTestMagnitude.Value;
 
             Data.Clear();
-            Data.Add("Time,Input_u,Output_y,Setpoint_r");
+            Data.Add("Time,Input_u,Output_y");
             Plugin.Logger.LogInfo($"Starting recording for {target}. Step input in {PreStepDuration}s...");
         }
 
@@ -91,14 +91,14 @@ public static class PIDLogger
         return normalSetpoint;
     }
 
-    public static void Log(StepTarget target, double u, double y, double r)
+    public static void Log(StepTarget target, double u, double y)
     {
         if (IsTestActive && s_targetLoop == target)
         {
             float t = Time.time - s_startTime;
             var ci = CultureInfo.InvariantCulture;
 
-            Data.Add($"{t.ToString("F4", ci)},{u.ToString("F4", ci)},{y.ToString("F4", ci)},{r.ToString("F4", ci)}");
+            Data.Add($"{t.ToString("F4", ci)},{u.ToString("F4", ci)},{y.ToString("F4", ci)}");
 
             // Adjust total duration to include the pre-step
             if (t >= Plugin.StepTestDuration.Value + PreStepDuration)

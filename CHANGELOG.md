@@ -2,7 +2,14 @@
 
 ## [Unreleased]
 
-- planning to add some gain scheduling
+### Fixed
+
+- plane shaking on autopilot engage
+
+### Added
+
+- basic gain scheduling
+- a way to lock map position or map zoom independently of each other
 
 ## [5.1.2] 2026-04-18
 

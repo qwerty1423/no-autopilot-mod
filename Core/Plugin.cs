@@ -82,6 +82,12 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom, SaveMapZoom;
     // public static ConfigEntry<float> MinimapMinZoom, MinimapMaxZoom;
     public static ConfigEntry<float> MinimapDefaultZoom;
+    public static ConfigEntry<bool> HideMinimapPanel;
+    public static ConfigEntry<bool> DisableMinimapPanelMask;
+    public static ConfigEntry<bool> ClampMinimapToScreen;
+    public static ConfigEntry<float> MinimapSize;
+    public static ConfigEntry<float> MinimapOffsetX;
+    public static ConfigEntry<float> MinimapOffsetY;
 
     // Auto Jammer
     public static ConfigEntry<bool> EnableAutoJammer;
@@ -298,9 +304,22 @@ public class Plugin : BaseUnityPlugin
         UnlockMapZoom = Config.Bind("Settings - Map", "Unlock Map Zoom", true, "Requires restart to apply.");
         SaveMapZoom = Config.Bind("Settings - Map", "Save Map Zoom", false,
             "Prevent map from resetting zoom when reopened.");
-        // MinimapMinZoom = Config.Bind("Settings - Map - Minimap", "Min Zoom", 0.01f, "Minimum zoom level");
-        // MinimapMaxZoom = Config.Bind("Settings - Map - Minimap", "Max Zoom", 100f, "Maximum zoom level");
-        MinimapDefaultZoom = Config.Bind("Settings - Map - Minimap", "Default Zoom", 1f, "Default zoom level");
+        // MinimapMinZoom = Config.Bind("Settings - Map - Minimap", "Minimap Min Zoom", 0.01f, "Minimum zoom level");
+        // MinimapMaxZoom = Config.Bind("Settings - Map - Minimap", "Minimap Max Zoom", 100f, "Maximum zoom level");
+        MinimapDefaultZoom = Config.Bind("Settings - Map - Minimap", "Minimap Default Zoom", 1f, "Default zoom level");
+
+        HideMinimapPanel = Config.Bind("Settings - Map - Minimap", "HidePanel", false, "Hide the LowerLeftPanel image behind the minimap.");
+
+        DisableMinimapPanelMask = Config.Bind("Settings - Map - Minimap", "DisablePanelMask", true, "Disable Mask/RectMask2D on LowerLeftPanel so the minimap is not clipped by the panel.");
+
+        ClampMinimapToScreen = Config.Bind("Settings - Map - Minimap", "ClampToScreen", true, "Keep the minimap fully on screen.");
+
+        MinimapSize = Config.Bind("Settings - Map - Minimap", "Minimap Size", 0f, "Minimap size in UI units. 0 to disable.");
+
+        MinimapOffsetX = Config.Bind("Settings - Map - Minimap", "Offset X", 0f, "Horizontal minimap offset in UI units.");
+
+        MinimapOffsetY = Config.Bind("Settings - Map - Minimap", "Offset Y", 0f, "Vertical minimap offset in UI units.");
+
 
         // nav
         NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f,

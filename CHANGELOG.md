@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- added minimap default zoom config
+
 ## [5.2.0]
 
 ### Fixed

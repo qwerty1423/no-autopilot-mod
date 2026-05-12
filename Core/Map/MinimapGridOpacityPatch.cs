@@ -89,6 +89,16 @@ internal static class MinimapGridOpacityPatch
         }
     }
 
+    [HarmonyPatch(typeof(GridLabels), "SetupGrid")]
+    internal static class InvalidateCacheOnSetup
+    {
+        [UsedImplicitly]
+        private static void Postfix()
+        {
+            Reset();
+        }
+    }
+
     [HarmonyPatch(typeof(GridLabels), "LateUpdate")]
     internal static class ApplyOnLateUpdate
     {
@@ -108,6 +118,7 @@ internal static class MinimapGridOpacityPatch
 
             try
             {
+                // Only apply reduced opacity when minimized
                 if (DynamicMap.mapMaximized)
                 {
                     return;

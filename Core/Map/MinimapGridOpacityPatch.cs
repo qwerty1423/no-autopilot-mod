@@ -13,14 +13,14 @@ namespace NOAutopilot.Core.Map;
 internal static class MinimapGridOpacityPatch
 {
     private static readonly List<Graphic> CachedGraphics = [];
-    private static float s_lastAppliedOpacity = -1f;
     private static GridLabels s_lastInstance;
+    private static bool s_outdated = true;
 
     public static void Reset()
     {
         CachedGraphics.Clear();
-        s_lastAppliedOpacity = -1f;
         s_lastInstance = null;
+        s_outdated = true;
     }
 
     private static void RebuildCache(
@@ -33,14 +33,15 @@ internal static class MinimapGridOpacityPatch
     {
         CachedGraphics.Clear();
         s_lastInstance = instance;
+        s_outdated = false;
 
         majorParent?.GetComponentsInChildren(true, CachedGraphics);
 
         if (minorParent != null)
         {
-            List<Graphic> minorGraphics = [];
-            minorParent.GetComponentsInChildren(true, minorGraphics);
-            CachedGraphics.AddRange(minorGraphics);
+            List<Graphic> minor = [];
+            minorParent.GetComponentsInChildren(true, minor);
+            CachedGraphics.AddRange(minor);
         }
 
         if (gridImages != null)
@@ -69,11 +70,8 @@ internal static class MinimapGridOpacityPatch
         }
     }
 
-    private static void ApplyOpacity(float opacity)
+    private static bool NeedsUpdate(float targetOpacity)
     {
-        opacity = Mathf.Clamp01(opacity);
-        s_lastAppliedOpacity = opacity;
-
         for (int i = CachedGraphics.Count - 1; i >= 0; i--)
         {
             Graphic graphic = CachedGraphics[i];
@@ -83,19 +81,36 @@ internal static class MinimapGridOpacityPatch
                 continue;
             }
 
+            return !Mathf.Approximately(graphic.color.a, targetOpacity);
+        }
+
+        return false;
+    }
+
+    private static void ApplyOpacity(float opacity)
+    {
+        float clamped = Mathf.Clamp01(opacity);
+
+        foreach (Graphic graphic in CachedGraphics)
+        {
+            if (graphic == null)
+            {
+                continue;
+            }
+
             Color c = graphic.color;
-            c.a = opacity;
+            c.a = clamped;
             graphic.color = c;
         }
     }
 
     [HarmonyPatch(typeof(GridLabels), "SetupGrid")]
-    internal static class InvalidateCacheOnSetup
+    internal static class InvalidateOnSetup
     {
         [UsedImplicitly]
         private static void Postfix()
         {
-            Reset();
+            s_outdated = true;
         }
     }
 
@@ -118,13 +133,7 @@ internal static class MinimapGridOpacityPatch
 
             try
             {
-                // Only apply reduced opacity when minimized
-                if (DynamicMap.mapMaximized)
-                {
-                    return;
-                }
-
-                if (__instance != s_lastInstance || CachedGraphics.Count == 0)
+                if (s_outdated || __instance != s_lastInstance || CachedGraphics.Count == 0)
                 {
                     RebuildCache(
                         __instance,
@@ -135,63 +144,18 @@ internal static class MinimapGridOpacityPatch
                         ___gridAircraft);
                 }
 
-                float opacity = Plugin.MinimapGridOpacity?.Value ?? 1f;
+                float target = DynamicMap.mapMaximized
+                    ? 1f
+                    : (Plugin.MinimapGridOpacity?.Value ?? 1f);
 
-                if (!Mathf.Approximately(opacity, s_lastAppliedOpacity))
+                if (NeedsUpdate(target))
                 {
-                    ApplyOpacity(opacity);
+                    ApplyOpacity(target);
                 }
             }
             catch (Exception ex)
             {
                 Plugin.Logger.LogError($"[MinimapGridOpacityPatch] LateUpdate error: {ex}");
-                Plugin.IsBroken = true;
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(DynamicMap), "Maximize")]
-    internal static class RestoreOnMaximize
-    {
-        [UsedImplicitly]
-        private static void Postfix()
-        {
-            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
-            {
-                return;
-            }
-
-            try
-            {
-                ApplyOpacity(1f);
-            }
-            catch (Exception ex)
-            {
-                Plugin.Logger.LogError($"[MinimapGridOpacityPatch] Maximize error: {ex}");
-                Plugin.IsBroken = true;
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(DynamicMap), "Minimize")]
-    internal static class ApplyOnMinimize
-    {
-        [UsedImplicitly]
-        private static void Postfix()
-        {
-            if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
-            {
-                return;
-            }
-
-            try
-            {
-                float opacity = Plugin.MinimapGridOpacity?.Value ?? 1f;
-                ApplyOpacity(opacity);
-            }
-            catch (Exception ex)
-            {
-                Plugin.Logger.LogError($"[MinimapGridOpacityPatch] Minimize error: {ex}");
                 Plugin.IsBroken = true;
             }
         }

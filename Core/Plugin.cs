@@ -310,11 +310,11 @@ public class Plugin : BaseUnityPlugin
 
         EnableMinimapPatches = Config.Bind("Settings - Map - Minimap", "01. Enable Minimap Patches", false, "Enable the minimap patches, allows you to use the values below. Probably needs a restart to disable.");
 
-        MinimapDefaultZoom = Config.Bind("Settings - Map - Minimap", "02. Minimap Zoom", 0.5f, "Minimap zoom level.");
+        MinimapDefaultZoom = Config.Bind("Settings - Map - Minimap", "02. Minimap Zoom", 0.5f, "Minimap zoom level. Requires a minimap reload after a change, so either enter the pause menu or open and close the map.");
 
         HideMinimapPanel = Config.Bind("Settings - Map - Minimap", "03. Hide Panel", true, "Hide the dark background behind the minimap.");
 
-        DisableMinimapPanelMask = Config.Bind("Settings - Map - Minimap", "04. Disable Panel Mask", true, "Disable the panel mask so the minimap is not clipped.");
+        DisableMinimapPanelMask = Config.Bind("Settings - Map - Minimap", "04. Disable Panel Mask", true, "Disable the panel mask so the minimap is not clipped. Probably shouldn't even be an option but whatever.");
 
         ClampMinimapToScreen = Config.Bind("Settings - Map - Minimap", "05. Clamp to window", true, "Keep the minimap on screen.");
 

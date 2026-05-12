@@ -89,6 +89,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> MinimapSize;
     public static ConfigEntry<float> MinimapOffsetX;
     public static ConfigEntry<float> MinimapOffsetY;
+    public static ConfigEntry<float> MinimapTerrainOpacity;
 
     // Auto Jammer
     public static ConfigEntry<bool> EnableAutoJammer;
@@ -322,6 +323,8 @@ public class Plugin : BaseUnityPlugin
         MinimapOffsetX = Config.Bind("Settings - Map - Minimap", "Minimap Offset X", 99999f, "Horizontal minimap offset in UI units.");
 
         MinimapOffsetY = Config.Bind("Settings - Map - Minimap", "Minimap Offset Y", 0f, "Vertical minimap offset in UI units.");
+
+        MinimapTerrainOpacity = Config.Bind("Settings - Map - Minimap", "Minimap Terrain Opacity", 0.1f, "Terrain opacity on the minimap.");
 
         // nav
         NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f,

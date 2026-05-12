@@ -63,7 +63,7 @@ internal static class MinimapTerrainOpacityPatch
 
             try
             {
-                Reset(); // Clear cache to be safe on map reload
+                Reset();
 
                 if (!DynamicMap.mapMaximized)
                 {

@@ -118,7 +118,6 @@ internal static class MinimapGridOpacityPatch
 
             try
             {
-                // Only apply reduced opacity when minimized
                 if (DynamicMap.mapMaximized)
                 {
                     return;

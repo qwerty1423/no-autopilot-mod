@@ -323,9 +323,9 @@ public class Plugin : BaseUnityPlugin
 
         MinimapOffsetY = Config.Bind("Settings - Map - Minimap", "08. Offset Y", 400f, "Vertical minimap offset in UI units.");
 
-        MinimapTerrainOpacity = Config.Bind("Settings - Map - Minimap", "09. Terrain Opacity", 0.2f, "Terrain opacity on the minimap.");
+        MinimapTerrainOpacity = Config.Bind("Settings - Map - Minimap", "09. Terrain Opacity", 0.1f, "Terrain opacity on the minimap.");
 
-        MinimapGridOpacity = Config.Bind("Settings - Map - Minimap", "10. Grid Opacity", 0.2f, "Opacity of grid lines and labels on the minimap");
+        MinimapGridOpacity = Config.Bind("Settings - Map - Minimap", "10. Grid Opacity", 0.1f, "Opacity of grid lines and labels on the minimap");
 
         // nav
         NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f,
@@ -541,6 +541,14 @@ public class Plugin : BaseUnityPlugin
         _harmony = new Harmony(Guid);
         try
         {
+            HudPatch.Reset();
+            APData.Reset();
+            ControlOverridePatch.Reset();
+            HUDVisualsPatch.Reset();
+            MinimapLayoutPatch.Reset();
+            MinimapTerrainOpacityPatch.Reset();
+            MinimapGridOpacityPatch.Reset();
+
             _harmony.PatchAll();
             SceneManager.sceneUnloaded += OnSceneUnloaded;
             HudPatch.Initialize();
@@ -569,9 +577,10 @@ public class Plugin : BaseUnityPlugin
                 ControlOverridePatch.Reset();
                 HUDVisualsPatch.Reset();
                 HudPatch.Reset();
-                MapInteractionPatch.Reset();
-                MapWaypointPatch.Reset();
-                RewiredConfigManager.Reset();
+                MinimapLayoutPatch.Reset();
+                MinimapTerrainOpacityPatch.Reset();
+                MinimapGridOpacityPatch.Reset();
+
                 if (APData.NavVisuals != null)
                 {
                     foreach (GameObject obj in APData.NavVisuals)
@@ -831,6 +840,9 @@ public class Plugin : BaseUnityPlugin
         HudPatch.Reset();
         MapInteractionPatch.Reset();
         MapWaypointPatch.Reset();
+        MinimapLayoutPatch.Reset();
+        MinimapTerrainOpacityPatch.Reset();
+        MinimapGridOpacityPatch.Reset();
         RewiredConfigManager.Reset();
         if (APData.NavVisuals != null)
         {
@@ -1853,8 +1865,12 @@ public class Plugin : BaseUnityPlugin
             }
 
             APData.Reset();
+            HudPatch.Reset();
             ControlOverridePatch.Reset();
             HUDVisualsPatch.Reset();
+            MinimapLayoutPatch.Reset();
+            MinimapTerrainOpacityPatch.Reset();
+            MinimapGridOpacityPatch.Reset();
             CleanUpFBW();
         }
         catch (Exception ex)

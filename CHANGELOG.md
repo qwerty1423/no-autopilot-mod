@@ -2,9 +2,15 @@
 
 ## [Unreleased]
 
-- added minimap default zoom config
+## [5.3.0]
 
-## [5.2.0]
+### Added
+
+- minimap config
+  
+  the minimap can now become a... map, if you want it to.
+
+## [5.2.0] 2026-04-27
 
 ### Fixed
 
@@ -342,7 +348,8 @@
 
 ## [4.8.4] - 2025-12-29
 
-[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.2.0...HEAD
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.3.0...HEAD
+[5.2.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.2.0...v5.3.0
 [5.2.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.1.2...v5.2.0
 [5.1.2]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.0.1...v5.1.2
 [5.0.1]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.0.0...v5.0.1

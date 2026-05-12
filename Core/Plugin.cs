@@ -82,7 +82,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom, SaveMapZoom;
     // public static ConfigEntry<float> MinimapMinZoom, MinimapMaxZoom;
     public static ConfigEntry<float> MinimapDefaultZoom;
-    public static ConfigEntry<bool> EnableMinimapLayoutPatch;
+    public static ConfigEntry<bool> EnableMinimapPatches;
     public static ConfigEntry<bool> HideMinimapPanel;
     public static ConfigEntry<bool> DisableMinimapPanelMask;
     public static ConfigEntry<bool> ClampMinimapToScreen;
@@ -307,9 +307,10 @@ public class Plugin : BaseUnityPlugin
             "Prevent map from resetting zoom when reopened.");
         // MinimapMinZoom = Config.Bind("Settings - Map - Minimap", "Minimap Min Zoom", 0.01f, "Minimum zoom level");
         // MinimapMaxZoom = Config.Bind("Settings - Map - Minimap", "Minimap Max Zoom", 100f, "Maximum zoom level");
-        MinimapDefaultZoom = Config.Bind("Settings - Map - Minimap", "01. Default Zoom", 1f, "Default zoom level, separate from the other minimap settings.");
 
-        EnableMinimapLayoutPatch = Config.Bind("Settings - Map - Minimap", "02. Enable Layout Patch", false, "Enable the minimap layout patch, allows you to use the values below. Probably needs a restart to disable.");
+        EnableMinimapPatches = Config.Bind("Settings - Map - Minimap", "01. Enable Minimap Patches", false, "Enable the minimap patches, allows you to use the values below. Probably needs a restart to disable.");
+
+        MinimapDefaultZoom = Config.Bind("Settings - Map - Minimap", "02. Minimap Zoom", 0.5f, "Minimap zoom level.");
 
         HideMinimapPanel = Config.Bind("Settings - Map - Minimap", "03. Hide Panel", true, "Hide the dark background behind the minimap.");
 

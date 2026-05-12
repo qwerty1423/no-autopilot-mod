@@ -108,6 +108,11 @@ internal static class MinimapGridOpacityPatch
             Text ___gridToolTip,
             Text ___gridAircraft)
         {
+            if (Plugin.EnableMinimapPatches?.Value == false)
+            {
+                return;
+            }
+
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
             {
                 return;
@@ -148,6 +153,11 @@ internal static class MinimapGridOpacityPatch
         [UsedImplicitly]
         private static void Postfix()
         {
+            if (Plugin.EnableMinimapPatches?.Value == false)
+            {
+                return;
+            }
+
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
             {
                 return;
@@ -171,6 +181,11 @@ internal static class MinimapGridOpacityPatch
         [UsedImplicitly]
         private static void Postfix()
         {
+            if (Plugin.EnableMinimapPatches?.Value == false)
+            {
+                return;
+            }
+
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
             {
                 return;
@@ -194,6 +209,11 @@ internal static class MinimapGridOpacityPatch
         [UsedImplicitly]
         private static void Postfix()
         {
+            if (Plugin.EnableMinimapPatches?.Value == false)
+            {
+                return;
+            }
+
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
             {
                 return;

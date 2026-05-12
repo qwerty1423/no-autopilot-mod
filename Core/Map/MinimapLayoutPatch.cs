@@ -41,7 +41,7 @@ internal static class MinimapLayoutPatch
         RectTransform ___mapRectTransform,
         RectTransform ___backgroundRectTransform)
     {
-        if (Plugin.EnableMinimapLayoutPatch?.Value == false)
+        if (Plugin.EnableMinimapPatches?.Value == false)
         {
             return;
         }

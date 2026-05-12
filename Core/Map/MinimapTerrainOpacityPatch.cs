@@ -56,6 +56,11 @@ internal static class MinimapTerrainOpacityPatch
         [UsedImplicitly]
         private static void Postfix()
         {
+            if (Plugin.EnableMinimapPatches?.Value == false)
+            {
+                return;
+            }
+
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
             {
                 return;
@@ -90,6 +95,11 @@ internal static class MinimapTerrainOpacityPatch
         [UsedImplicitly]
         private static void Postfix()
         {
+            if (Plugin.EnableMinimapPatches?.Value == false)
+            {
+                return;
+            }
+
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
             {
                 return;
@@ -122,6 +132,11 @@ internal static class MinimapTerrainOpacityPatch
         [UsedImplicitly]
         private static void Postfix()
         {
+            if (Plugin.EnableMinimapPatches?.Value == false)
+            {
+                return;
+            }
+
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
             {
                 return;
@@ -145,6 +160,11 @@ internal static class MinimapTerrainOpacityPatch
         [UsedImplicitly]
         private static void Postfix()
         {
+            if (Plugin.EnableMinimapPatches?.Value == false)
+            {
+                return;
+            }
+
             if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
             {
                 return;

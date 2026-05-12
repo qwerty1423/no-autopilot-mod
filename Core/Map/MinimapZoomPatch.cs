@@ -16,6 +16,11 @@ internal static class MinimapZoomPatch
     [UsedImplicitly]
     private static void Postfix(GameObject ___mapImage, Transform ___mapScaleCenter)
     {
+        if (Plugin.EnableMinimapPatches?.Value == false)
+        {
+            return;
+        }
+
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
         {
             return;
@@ -50,6 +55,11 @@ internal static class MinimapZoomRestorePatch
     [UsedImplicitly]
     private static void Prefix(GameObject ___mapImage, Transform ___mapScaleCenter)
     {
+        if (Plugin.EnableMinimapPatches?.Value == false)
+        {
+            return;
+        }
+
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
         {
             return;

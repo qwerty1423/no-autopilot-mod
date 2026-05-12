@@ -64,6 +64,7 @@ internal static class HudPatch
             HUDVisualsPatch.Reset();
             MinimapLayoutPatch.Reset();
             MinimapTerrainOpacityPatch.Reset();
+            MinimapGridOpacityPatch.Reset();
 
             APData.LocalAircraft = aircraft;
             APData.PlayerTransform = aircraft.transform;

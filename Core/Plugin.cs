@@ -87,9 +87,8 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> DisableMinimapPanelMask;
     public static ConfigEntry<bool> ClampMinimapToScreen;
     public static ConfigEntry<float> MinimapSize;
-    public static ConfigEntry<float> MinimapOffsetX;
-    public static ConfigEntry<float> MinimapOffsetY;
-    public static ConfigEntry<float> MinimapTerrainOpacity;
+    public static ConfigEntry<float> MinimapOffsetX, MinimapOffsetY;
+    public static ConfigEntry<float> MinimapTerrainOpacity, MinimapGridOpacity;
 
     // Auto Jammer
     public static ConfigEntry<bool> EnableAutoJammer;
@@ -308,23 +307,25 @@ public class Plugin : BaseUnityPlugin
             "Prevent map from resetting zoom when reopened.");
         // MinimapMinZoom = Config.Bind("Settings - Map - Minimap", "Minimap Min Zoom", 0.01f, "Minimum zoom level");
         // MinimapMaxZoom = Config.Bind("Settings - Map - Minimap", "Minimap Max Zoom", 100f, "Maximum zoom level");
-        MinimapDefaultZoom = Config.Bind("Settings - Map - Minimap", "Default Zoom", 1f, "Default zoom level, separate from the other minimap settings.");
+        MinimapDefaultZoom = Config.Bind("Settings - Map - Minimap", "01. Default Zoom", 1f, "Default zoom level, separate from the other minimap settings.");
 
-        EnableMinimapLayoutPatch = Config.Bind("Settings - Map - Minimap", "Enable Layout Patch", false, "Enable the minimap layout patch, allows you to use the values below. Probably needs a restart to disable.");
+        EnableMinimapLayoutPatch = Config.Bind("Settings - Map - Minimap", "02. Enable Layout Patch", false, "Enable the minimap layout patch, allows you to use the values below. Probably needs a restart to disable.");
 
-        HideMinimapPanel = Config.Bind("Settings - Map - Minimap", "Minimap Hide Panel", true, "Hide the dark background behind the minimap.");
+        HideMinimapPanel = Config.Bind("Settings - Map - Minimap", "03. Hide Panel", true, "Hide the dark background behind the minimap.");
 
-        DisableMinimapPanelMask = Config.Bind("Settings - Map - Minimap", "Minimap Disable Panel Mask", true, "Disable Mask/RectMask2D on LowerLeftPanel so the minimap is not clipped by the panel.");
+        DisableMinimapPanelMask = Config.Bind("Settings - Map - Minimap", "04. Disable Panel Mask", true, "Disable the panel mask so the minimap is not clipped.");
 
-        ClampMinimapToScreen = Config.Bind("Settings - Map - Minimap", "Minimap Clamp To Screen", true, "Keep the minimap on screen.");
+        ClampMinimapToScreen = Config.Bind("Settings - Map - Minimap", "05. Clamp to window", true, "Keep the minimap on screen.");
 
-        MinimapSize = Config.Bind("Settings - Map - Minimap", "Minimap Size", 1080f, "Minimap size in UI units. 0 to disable.");
+        MinimapSize = Config.Bind("Settings - Map - Minimap", "06. Size", 1080f, "Minimap size in UI units. 0 to disable.");
 
-        MinimapOffsetX = Config.Bind("Settings - Map - Minimap", "Minimap Offset X", 99999f, "Horizontal minimap offset in UI units.");
+        MinimapOffsetX = Config.Bind("Settings - Map - Minimap", "07. Offset X", 99999f, "Horizontal minimap offset in UI units.");
 
-        MinimapOffsetY = Config.Bind("Settings - Map - Minimap", "Minimap Offset Y", 0f, "Vertical minimap offset in UI units.");
+        MinimapOffsetY = Config.Bind("Settings - Map - Minimap", "08. Offset Y", 0f, "Vertical minimap offset in UI units.");
 
-        MinimapTerrainOpacity = Config.Bind("Settings - Map - Minimap", "Minimap Terrain Opacity", 0.1f, "Terrain opacity on the minimap.");
+        MinimapTerrainOpacity = Config.Bind("Settings - Map - Minimap", "09. Terrain Opacity", 0.1f, "Terrain opacity on the minimap.");
+
+        MinimapGridOpacity = Config.Bind("Settings - Map - Minimap", "10. Grid Opacity", 0.1f, "Opacity of grid lines and labels on the minimap");
 
         // nav
         NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f,

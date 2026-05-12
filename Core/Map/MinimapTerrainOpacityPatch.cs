@@ -73,7 +73,6 @@ internal static class MinimapTerrainOpacityPatch
             return true;
         }
 
-        // mapImage itself may carry the Image component
         s_terrainImage = mapImage.GetComponent<Image>();
 
         if (s_terrainImage == null)
@@ -92,7 +91,7 @@ internal static class MinimapTerrainOpacityPatch
             return;
         }
 
-        float opacity = Plugin.MinimapTerrainOpacity?.Value ?? 1f;
+        float opacity = Plugin.MinimapTerrainOpacity?.Value ?? 0.1f;
         opacity = Mathf.Clamp01(opacity);
 
         Color c = s_terrainImage.color;

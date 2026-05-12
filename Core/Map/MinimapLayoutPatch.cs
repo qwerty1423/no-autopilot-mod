@@ -182,9 +182,9 @@ internal static class MinimapLayoutPatch
     }
 
     private static void ClampMapToCanvas(
-        RectTransform mapRectTransform,
-        RectTransform hudMapAnchorRect,
-        RectTransform canvasRect)
+    RectTransform mapRectTransform,
+    RectTransform hudMapAnchorRect,
+    RectTransform canvasRect)
     {
         if (!(Plugin.ClampMinimapToScreen?.Value ?? true))
         {
@@ -198,30 +198,36 @@ internal static class MinimapLayoutPatch
 
         Canvas.ForceUpdateCanvases();
 
-        Vector3[] mapCorners = new Vector3[4];
-        Vector3[] canvasCorners = new Vector3[4];
+        // Get the center of the minimap in world space
+        Vector3 mapCenter = mapRectTransform.position; // RectTransform.position is the pivot point (center by default)
 
-        mapRectTransform.GetWorldCorners(mapCorners);
+        // Get canvas bounds
+        Vector3[] canvasCorners = new Vector3[4];
         canvasRect.GetWorldCorners(canvasCorners);
+
+        float canvasMinX = canvasCorners[0].x;
+        float canvasMaxX = canvasCorners[2].x;
+        float canvasMinY = canvasCorners[0].y;
+        float canvasMaxY = canvasCorners[2].y;
 
         Vector3 delta = Vector3.zero;
 
-        if (mapCorners[0].x < canvasCorners[0].x)
+        if (mapCenter.x < canvasMinX)
         {
-            delta.x = canvasCorners[0].x - mapCorners[0].x;
+            delta.x = canvasMinX - mapCenter.x;
         }
-        else if (mapCorners[2].x > canvasCorners[2].x)
+        else if (mapCenter.x > canvasMaxX)
         {
-            delta.x = canvasCorners[2].x - mapCorners[2].x;
+            delta.x = canvasMaxX - mapCenter.x;
         }
 
-        if (mapCorners[0].y < canvasCorners[0].y)
+        if (mapCenter.y < canvasMinY)
         {
-            delta.y = canvasCorners[0].y - mapCorners[0].y;
+            delta.y = canvasMinY - mapCenter.y;
         }
-        else if (mapCorners[2].y > canvasCorners[2].y)
+        else if (mapCenter.y > canvasMaxY)
         {
-            delta.y = canvasCorners[2].y - mapCorners[2].y;
+            delta.y = canvasMaxY - mapCenter.y;
         }
 
         if (delta != Vector3.zero)

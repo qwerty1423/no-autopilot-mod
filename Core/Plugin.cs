@@ -257,7 +257,7 @@ public class Plugin : BaseUnityPlugin
         VertSpeedShowUnit = Config.Bind("Visuals - Units", "3. Show unit for vertical speed", false,
             "(example) on: 10m/s, off: 10");
         SpeedShowUnit = Config.Bind("Visuals - Units", "4. Show unit for speed", false,
-            "(example) on: 10km/h, off: 10 (unused right now, no autothrottle yet)");
+            "(example) on: 10km/h, off: 10");
         AngleShowUnit = Config.Bind("Visuals - Units", "5. Show unit for angle", false, "on: 10°, off: 10");
 
         UI_PosX = Config.Bind("Visuals - UI", "1. Window Position X", -1f,
@@ -549,6 +549,8 @@ public class Plugin : BaseUnityPlugin
             "Start Sleeping (m/s² acceleration)");
         Rand_Acc_Outer = Config.Bind("Settings - Random", "22. Accel Tolerance Outer", 0.5f,
             "Wake Up (m/s² acceleration)");
+
+        ConfigBackup.BindBackupSettings(Config);
 
         ConfigBackup.WriteSchemaVersion(Config);
 

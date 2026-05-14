@@ -15,6 +15,7 @@ public static class PidProfileManager
 
     private static PidProfile s_snapshot;
     private static string s_tuningAircraftId;
+    private static readonly Regex Regex = new(@"\(Clone\)$", RegexOptions.IgnoreCase);
     public static bool IsTuning { get; private set; }
 
     public static string GetId(Aircraft a)
@@ -25,7 +26,7 @@ public static class PidProfileManager
         }
 
         string key = ((IHasJsonKey)a.definition).JsonKey;
-        return Regex.Replace(key ?? a.name, @"\(Clone\)$", "", RegexOptions.IgnoreCase).Trim().ToLowerInvariant();
+        return Regex.Replace(key ?? a.name, "").Trim().ToLowerInvariant();
     }
 
     /// <summary>
@@ -166,11 +167,11 @@ public static class PidProfileManager
         {
             if (hasUser)
             {
-                status = " <color=#00FF00>[User Override]</color>";
+                status = " <color=#00FF00>[User Profile]</color>";
             }
             else if (hasShipped)
             {
-                status = " <color=#88CCFF>[Shipped Default]</color>";
+                status = " <color=#88CCFF>[Default Profile]</color>";
             }
         }
         GUILayout.Label($"<b>Current Aircraft:</b> {displayId}{status}", richLabel);

@@ -211,7 +211,7 @@ public class Plugin : BaseUnityPlugin
     {
         Logger = base.Logger;
 
-        bool wasRegenerated = ConfigBackup.EnsureConfigValid(Guid, Logger);
+        bool wasRegenerated = ConfigBackup.EnsureConfigValid(Guid, Logger, Config);
         if (wasRegenerated)
         {
             Logger.LogInfo("[ConfigBackup] Config was regenerated from defaults.");

@@ -58,21 +58,6 @@ public static class GainScheduleDrawer
 
         GUILayout.BeginVertical();
 
-        // Draw live Q if we are in flight
-        if (APData.PlayerRB != null)
-        {
-            float speed = APData.PlayerRB.velocity.magnitude;
-            float currentQ = GainScheduler.DynamicPressure(speed, APData.CurrentAlt);
-            GUILayout.Label($"<color=#00FFFF>Live Q: {currentQ:F0} Pa</color> " +
-                            $"(Alt: {APData.CurrentAlt:F0}m, Spd: {speed:F0}m/s)",
-                            new GUIStyle(GUI.skin.label) { richText = true });
-        }
-        else
-        {
-            GUILayout.Label("<color=#888888>Live Q: (Spawn in to see)</color>",
-                            new GUIStyle(GUI.skin.label) { richText = true });
-        }
-
         int i = 0;
         while (i < Cells.Length)
         {
@@ -137,5 +122,36 @@ public static class GainScheduleDrawer
             case nameof(GainSchedule.ClampMin): t.ClampMin = v; break;
             case nameof(GainSchedule.ClampMax): t.ClampMax = v; break;
         }
+    }
+
+    public static void DrawShowQSetting(ConfigEntryBase entry)
+    {
+        GUILayout.BeginVertical();
+
+        bool val = (bool)entry.BoxedValue;
+        bool newVal = GUILayout.Toggle(val, "Show Current Q", GUILayout.ExpandWidth(false));
+        if (newVal != val)
+        {
+            entry.BoxedValue = newVal;
+        }
+
+        if (newVal)
+        {
+            if (APData.PlayerRB != null)
+            {
+                float speed = APData.PlayerRB.velocity.magnitude;
+                float currentQ = GainScheduler.DynamicPressure(speed, APData.CurrentAlt);
+                GUILayout.Label($"<color=#00FFFF>Current Q: {currentQ:F0} Pa</color> " +
+                                $"(Alt: {APData.CurrentAlt:F0}m, Spd: {speed:F0}m/s)",
+                                new GUIStyle(GUI.skin.label) { richText = true });
+            }
+            else
+            {
+                GUILayout.Label("<color=#888888>No player aircraft.</color>",
+                                new GUIStyle(GUI.skin.label) { richText = true });
+            }
+        }
+
+        GUILayout.EndVertical();
     }
 }

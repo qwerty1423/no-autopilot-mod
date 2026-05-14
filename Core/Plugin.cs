@@ -133,6 +133,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<GainSchedule> SchedPidRollRate;
     public static ConfigEntry<GainSchedule> SchedPidVs;
     public static ConfigEntry<GainSchedule> SchedPidSpd;
+    public static ConfigEntry<bool> ShowQ;
 
     // pid logger
     public static ConfigEntry<PIDLogger.StepTarget> StepTestLoop;
@@ -209,6 +210,12 @@ public class Plugin : BaseUnityPlugin
     private void Awake()
     {
         Logger = base.Logger;
+
+        bool wasRegenerated = ConfigBackup.EnsureConfigValid(Guid, Logger);
+        if (wasRegenerated)
+        {
+            Logger.LogInfo("[ConfigBackup] Config was regenerated from defaults.");
+        }
 
         TomlTypeConverter.AddConverter(typeof(PIDTuning), new TypeConverter
         {
@@ -469,7 +476,7 @@ public class Plugin : BaseUnityPlugin
             new PIDTuning(2.44967771875362, 2.31068044043631, 0.549968619394224), "Vertical Speed > Pitch Angle");
 
         ConfPidPitch = PIDTuningBinder.Bind(Config, pidSect, "03. Pitch > Stick",
-            new PIDTuning(0.0329026146189137, 5.7512084040881, 0.12329376291698, smoothIn: 0.5, smoothOut: 0.5), "Pitch Angle > Pitch Rate");
+            new PIDTuning(0.02, 5.7512084040881, 0.12329376291698, 5, c: 0.1, smoothOut: 0.3), "Pitch Angle > Stick");
 
         ConfPidRoll = PIDTuningBinder.Bind(Config, pidSect, "05. Roll > Roll Rate",
             new PIDTuning(5, 0, 0.2), "Roll > Roll rate");
@@ -481,27 +488,31 @@ public class Plugin : BaseUnityPlugin
             new PIDTuning(1, 30, 0, clegg: true), "Course Error > Course Rate");
 
         ConfPidSpd = PIDTuningBinder.Bind(Config, pidSect, "08. Speed > Throttle",
-            new PIDTuning(0.276635855846017, 4.55835278395057, 0.486418840935585, 5), "Speed Error > Throttle");
+            new PIDTuning(0.276635855846017, 4.55835278395057, 0.486418840935585, 1), "Speed Error > Throttle");
 
         ConfPidGcas = PIDTuningBinder.Bind(Config, pidSect, "09. G-Force > Stick",
-            new PIDTuning(0.448050807726941, 0.947761066338411, 0), "GCAS G Error > Stick");
+            new PIDTuning(0.448050807726941, 0.947761066338411, 0, smoothOut: 0.1), "GCAS G Error > Stick");
 
         const string schedSect = "PID Gain Scheduling (much basic)";
         SchedPidVs = GainScheduleBinder.Bind(Config, schedSect, "01. VS > Pitch Schedule",
-            new GainSchedule(refQ: 18750f, kpExp: 0.3f, tiExp: 0f, tdExp: 0f, clampMin: 0.2f, clampMax: 4f),
+            new GainSchedule(refQ: 18750f, kpExp: 0.3f, tiExp: 0.3f, tdExp: 0f, clampMin: 0.1f, clampMax: 10f),
             "Scales Pitch > Angle PID");
 
         SchedPidPitch = GainScheduleBinder.Bind(Config, schedSect, "02. Pitch > Stick Schedule",
-            new GainSchedule(refQ: 18750f, kpExp: 0.3f, tiExp: 0f, tdExp: 0f, clampMin: 0.1f, clampMax: 5f),
+            new GainSchedule(refQ: 18750f, kpExp: 0.3f, tiExp: 0.3f, tdExp: 0f, clampMin: 0.1f, clampMax: 10f),
             "Scales VS > Pitch PID");
 
         SchedPidRollRate = GainScheduleBinder.Bind(Config, schedSect, "03. Roll > Stick Schedule",
-            new GainSchedule(refQ: 18750f, kpExp: 0.3f, tiExp: 0f, tdExp: 0f, clampMin: 0.1f, clampMax: 5f),
+            new GainSchedule(refQ: 18750f, kpExp: 0.3f, tiExp: 0.3f, tdExp: 0f, clampMin: 0.1f, clampMax: 10f),
             "Scales Roll > Stick PID");
 
         SchedPidSpd = GainScheduleBinder.Bind(Config, schedSect, "04. Speed > Throttle Schedule",
             new GainSchedule(refQ: 18750f, kpExp: 0f, tiExp: 0f, tdExp: 0f, clampMin: 1.0f, clampMax: 1.0f),
             "Scales Speed > Throttle PID");
+
+        ShowQ = Config.Bind(schedSect, "Show Q values", false,
+            new ConfigDescription("For viewing current Q values.", null,
+            new ConfigurationManagerAttributes { CustomDrawer = GainScheduleDrawer.DrawShowQSetting }));
 
         // PID logging
         StepTestLoop = Config.Bind("PID logging", "1. Target Loop", PIDLogger.StepTarget.None, "Which loop to run step response on");
@@ -538,6 +549,8 @@ public class Plugin : BaseUnityPlugin
             "Start Sleeping (m/s² acceleration)");
         Rand_Acc_Outer = Config.Bind("Settings - Random", "22. Accel Tolerance Outer", 0.5f,
             "Wake Up (m/s² acceleration)");
+
+        ConfigBackup.WriteSchemaVersion(Config);
 
         _harmony = new Harmony(Guid);
         try

@@ -19,19 +19,10 @@ public static class DefaultProfiles
         try
         {
             string location = Assembly.GetExecutingAssembly().Location;
-            Plugin.Logger.LogInfo($"[DefaultProfiles] Assembly location: '{location}'");
 
-            if (string.IsNullOrEmpty(location))
-            {
-                // Fallback: use BepInEx plugin path instead
-                Dir = Path.Combine(Paths.PluginPath, "NOAutopilot", "Profiles");
-            }
-            else
-            {
-                Dir = Path.Combine(Path.GetDirectoryName(location), "Profiles");
-            }
-
-            Plugin.Logger.LogInfo($"[DefaultProfiles] Profiles dir: '{Dir}'");
+            Dir = string.IsNullOrEmpty(location)
+                ? Path.Combine(Paths.PluginPath, "NOAutopilot", "Profiles")
+                : Path.Combine(Path.GetDirectoryName(location), "Profiles");
         }
         catch (Exception ex)
         {

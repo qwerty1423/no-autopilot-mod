@@ -74,7 +74,7 @@ internal static class GainScheduler
 
     /// <summary>
     /// Returns air density (kg/m³) for a given geometric altitude (metres)
-    /// using the two-layer ISA model that covers 0–20 km.
+    /// using the two-layer ISA model that covers 0-20 km.
     /// </summary>
     private static float IsaDensity(float altitudeMetres)
     {
@@ -120,18 +120,12 @@ internal static class GainScheduler
     /// pressure.  The base gains in <paramref name="baseTuning"/> are treated
     /// as the calibration point at <see cref="GainSchedule.RefQ"/>.
     /// </para>
-    /// <para>
-    /// Scaling law (power-law, standard in aerospace):
-    ///   Kp_actual = Kp_base * clamp( (RefQ / q)^KpExp, ClampMin, ClampMax )
-    /// </para>
-    /// <para>If scheduling is disabled (KpExp == 0) the function is a cheap copy.</para>
     /// </summary>
     public static PIDTuning Schedule(
         PIDTuning baseTuning,
         GainSchedule schedule,
         float currentQ)
     {
-        // Guard: avoid division by zero or nonsensical q values.
         if (currentQ < 1f || schedule.RefQ < 1f)
         {
             return baseTuning;

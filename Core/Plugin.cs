@@ -203,8 +203,6 @@ public class Plugin : BaseUnityPlugin
 
     private GUIStyle _styleWindow;
     private bool _wasShownForThisTarget;
-
-    // ap menu?
     private Rect _windowRect = new(50, 50, 227, 330);
 
     [UsedImplicitly]

@@ -894,10 +894,10 @@ public class Plugin : BaseUnityPlugin
         {
             float cx = Screen.width / 2f;
             float cy = Screen.height / 3f;
-            GUI.ModalWindow(998, new Rect(cx - 200f, cy - 60f, 400f, 120f), _ =>
+            GUI.ModalWindow(998, new Rect(cx - 200f, cy - 60f, 600f, 140f), _ =>
             {
                 GUILayout.Label(
-                    "Config was outdated and regenerated from defaults.\n" +
+                    "Config was outdated and has been regenerated from defaults.\n" +
                     $"Backup saved to:\n{ConfigBackup.LastBackupPath}");
 
                 if (GUILayout.Button("OK"))

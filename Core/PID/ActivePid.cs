@@ -20,6 +20,7 @@ public static class ActivePid
         Crs = Plugin.ConfPidCrs.Value;
         Spd = Plugin.ConfPidSpd.Value;
         Gcas = Plugin.ConfPidGcas.Value;
+
         SchedPitch = Plugin.SchedPidPitch.Value;
         SchedRollRate = Plugin.SchedPidRollRate.Value;
         SchedVs = Plugin.SchedPidVs.Value;

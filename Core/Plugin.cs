@@ -469,6 +469,14 @@ public class Plugin : BaseUnityPlugin
 
         // PID Loops
         const string pidSect = "PID (Warning: Improper values may cause instability.)";
+
+        Config.Bind(pidSect, "00. Aircraft Overrides", "",
+            new ConfigDescription("Per-aircraft tuning interface", null,
+            new ConfigurationManagerAttributes
+            {
+                CustomDrawer = PidProfileManager.DrawConfigManagerControls
+            }));
+
         ConfPidAlt = PIDTuningBinder.Bind(Config, pidSect, "01. Altitude > VS",
             new PIDTuning(0.5, 0, 3), "Altitude > Vertical Speed");
 

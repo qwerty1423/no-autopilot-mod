@@ -48,10 +48,10 @@ internal static class ControlOverridePatch
     public static float ThrottleOutput;
 
     private static void ConfigurePID(
-    PIDController pid, ConfigEntry<PIDTuning> tuning,
+    PIDController pid, PIDTuning tuning,
         float dt, float minOutput, float maxOutput)
     {
-        PIDConfig.Apply(pid, tuning.Value,
+        PIDConfig.Apply(pid, tuning,
             Mathf.Max(dt, 0.0001f), minOutput, maxOutput);
     }
 
@@ -60,14 +60,14 @@ internal static class ControlOverridePatch
     /// </summary>
     private static void ConfigurePIDScheduled(
         PIDController pid,
-        ConfigEntry<PIDTuning> tuning,
-        ConfigEntry<GainSchedule> schedule,
+        PIDTuning tuning,
+        GainSchedule schedule,
         float currentQ,
         float dt,
         float minOutput,
         float maxOutput)
     {
-        PIDConfig.ApplyScheduled(pid, tuning.Value, schedule.Value, currentQ,
+        PIDConfig.ApplyScheduled(pid, tuning, schedule, currentQ,
             Mathf.Max(dt, 0.0001f), minOutput, maxOutput);
     }
 
@@ -627,7 +627,7 @@ internal static class ControlOverridePatch
                 float minT = APData.AllowExtremeThrottle ? 0f : Plugin.ThrottleMinLimit.Value;
                 float maxT = APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value;
 
-                ConfigurePIDScheduled(PidSpd, Plugin.ConfPidSpd, Plugin.SchedPidSpd,
+                ConfigurePIDScheduled(PidSpd, ActivePid.Spd, ActivePid.SchedSpd,
                     currentQ, dt, minT, maxT);
 
                 float pidOutput = s_isSpdSleeping
@@ -817,7 +817,7 @@ internal static class ControlOverridePatch
                             float targetCrs = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Crs, baseTargetCrs, curCrs);
                             float cErr = Mathf.DeltaAngle(curCrs, targetCrs);
                             float unwrappedTargetCrs = curCrs + cErr;
-                            ConfigurePID(PidCrs, Plugin.ConfPidCrs, dt, -90f, 90f);
+                            ConfigurePID(PidCrs, ActivePid.Crs, dt, -90f, 90f);
                             float desiredTurnRate = (float)PidCrs.Update(unwrappedTargetCrs, curCrs);
 
                             PIDLogger.Log(PIDLogger.StepTarget.Crs, desiredTurnRate, curCrs);
@@ -880,7 +880,7 @@ internal static class ControlOverridePatch
                         else
                         {
                             // Roll > Roll rate
-                            ConfigurePID(PidRoll, Plugin.ConfPidRoll, dt,
+                            ConfigurePID(PidRoll, ActivePid.Roll, dt,
                                 -Plugin.MaxRollRate.Value, Plugin.MaxRollRate.Value);
 
                             float rollRateOut = (float)PidRoll.Update(unwrappedTargetRoll, APData.CurrentRoll);
@@ -889,8 +889,8 @@ internal static class ControlOverridePatch
 
                             rollRateOut = PIDLogger.GetSetpoint(PIDLogger.StepTarget.RollRate,
                                 rollRateOut, rollRate);
-                            ConfigurePIDScheduled(PidRollRate, Plugin.ConfPidRollRate, Plugin.
-                                SchedPidRollRate, currentQ, dt, -1f, 1f);
+                            ConfigurePIDScheduled(PidRollRate, ActivePid.RollRate, ActivePid.
+                                SchedRollRate, currentQ, dt, -1f, 1f);
 
                             rollOut = (float)PidRollRate.Update(rollRateOut, rollRate);
                             PIDLogger.Log(PIDLogger.StepTarget.RollRate, rollOut,
@@ -952,7 +952,7 @@ internal static class ControlOverridePatch
                         float rollAngle = Mathf.Abs(APData.CurrentRoll);
                         float targetG = rollAngle >= 90f ? currentG : Plugin.GcasMaxG.Value * s_overGFactor;
 
-                        ConfigurePID(PidGCAS, Plugin.ConfPidGcas, dt, 0f, 1f);
+                        ConfigurePID(PidGCAS, ActivePid.Gcas, dt, 0f, 1f);
 
                         float activeTargetG = PIDLogger.GetSetpoint(PIDLogger.StepTarget.GCAS, targetG, currentG);
                         pitchOut = (float)PidGCAS.Update(activeTargetG, currentG);
@@ -1001,7 +1001,7 @@ internal static class ControlOverridePatch
                         else
                         {
                             // Altitude > vertical speed
-                            ConfigurePID(PidAlt, Plugin.ConfPidAlt, dt,
+                            ConfigurePID(PidAlt, ActivePid.Alt, dt,
                                 -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
 
                             float baseTargetAlt = APData.TargetAlt > 0f ? APData.TargetAlt : APData.CurrentAlt;
@@ -1017,7 +1017,7 @@ internal static class ControlOverridePatch
                                 -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
 
                             // VS -> desired pitch angle
-                            ConfigurePIDScheduled(PidVS, Plugin.ConfPidVs, Plugin.SchedPidVs, currentQ, dt,
+                            ConfigurePIDScheduled(PidVS, ActivePid.Vs, ActivePid.SchedVs, currentQ, dt,
                                 -Plugin.Conf_VS_MaxAngle.Value, Plugin.Conf_VS_MaxAngle.Value);
 
                             targetVS = PIDLogger.GetSetpoint(PIDLogger.StepTarget.VS, targetVS, currentVS);
@@ -1032,7 +1032,7 @@ internal static class ControlOverridePatch
                             // Pitch angle -> stick
                             float currentPitch = Mathf.Asin(Mathf.Clamp(pForward.y, -1f, 1f)) * Mathf.Rad2Deg;
 
-                            ConfigurePIDScheduled(PidPitch, Plugin.ConfPidPitch, Plugin.SchedPidPitch,
+                            ConfigurePIDScheduled(PidPitch, ActivePid.Pitch, ActivePid.SchedPitch,
                                 currentQ, dt, -1f, 1f);
 
                             targetPitchDeg = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Pitch, targetPitchDeg, currentPitch);

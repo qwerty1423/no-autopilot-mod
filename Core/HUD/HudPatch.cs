@@ -75,7 +75,6 @@ internal static class HudPatch
             APData.TargetAlt = aircraft.transform.position.GlobalY();
 
             APData.TargetRoll = 0f;
-            APData.LocalWeaponManager = APData.LocalAircraft.weaponManager;
             APData.SaveMapZoom = Plugin.SaveMapZoom.Value;
 
             Pilot[] pilots = APData.LocalAircraft.pilots;

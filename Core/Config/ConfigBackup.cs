@@ -13,7 +13,7 @@ internal static class ConfigBackup
     /// <summary>
     /// Bump this if necessary.
     /// </summary>
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
     public const string SchemaSection = "􏿽􏿽􏿽Internal􏿽􏿽􏿽";
     public const string SchemaKey = "ConfigSchemaVersion";
 
@@ -45,10 +45,11 @@ internal static class ConfigBackup
 
     /// <summary>
     /// Reads the cfg file to check the schema version, backs up and deletes if needed.
+    /// Pass base.Config so we can clear its in-memory cache when regenerating.
     /// Returns true if the config was regenerated.
     /// Must be called before Config.Bind calls.
     /// </summary>
-    public static bool EnsureConfigValid(string pluginGuid, ManualLogSource logger)
+    public static bool EnsureConfigValid(string pluginGuid, ManualLogSource logger, ConfigFile liveConfig)
     {
         string cfgPath = GetConfigPath(pluginGuid);
 
@@ -99,12 +100,18 @@ internal static class ConfigBackup
 
         try
         {
-            File.Delete(cfgPath);
-            logger.LogInfo("[ConfigBackup] Old config deleted to regenerate config.");
+            // Write an empty file so Reload() doesn't throw FileNotFoundException
+            File.WriteAllText(cfgPath, string.Empty);
+
+            // Reload() clears OrphanedEntries internally, then reads the empty file.
+            // This gives us a clean slate without reflection.
+            liveConfig.Reload();
+            logger.LogInfo("[ConfigBackup] Config cache cleared.");
         }
         catch (Exception ex)
         {
-            logger.LogError($"[ConfigBackup] Failed to delete old config: {ex.Message}");
+            logger.LogError($"[ConfigBackup] Failed to reset config cache: {ex.Message}");
+            return false;
         }
 
         return true;

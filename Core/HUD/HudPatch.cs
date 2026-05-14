@@ -6,6 +6,7 @@ using JetBrains.Annotations;
 
 using NOAutopilot.Core.Flight;
 using NOAutopilot.Core.Map;
+using NOAutopilot.Core.PID;
 
 using UnityEngine;
 
@@ -66,6 +67,7 @@ internal static class HudPatch
             MinimapGridOpacityPatch.Reset();
 
             APData.LocalAircraft = aircraft;
+            ActivePid.ApplyForAircraft(PidProfileManager.GetId(aircraft));
             APData.PlayerTransform = aircraft.transform;
             APData.PlayerRB = aircraft.cockpit?.rb ?? aircraft.GetComponent<Rigidbody>();
             APData.LocalWeaponManager = aircraft.weaponManager;

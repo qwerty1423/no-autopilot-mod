@@ -554,6 +554,8 @@ public class Plugin : BaseUnityPlugin
 
         ConfigBackup.WriteSchemaVersion(Config);
 
+        ActivePid.LoadDefaults();
+
         _harmony = new Harmony(Guid);
         try
         {

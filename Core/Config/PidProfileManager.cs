@@ -152,6 +152,17 @@ public static class PidProfileManager
 
     public static void DrawConfigManagerControls(ConfigEntryBase _)
     {
+        if (!IsTuning)
+        {
+            // Display active values
+            ActivePid.SyncToConfig();
+        }
+        else
+        {
+            // Apply config immediately
+            ActivePid.SyncFromConfig();
+        }
+
         string currentId = ActivePid.CurrentAircraftId;
         bool hasUser = HasUserProfile(currentId);
         bool hasShipped = DefaultProfiles.Exists(currentId);
@@ -174,7 +185,7 @@ public static class PidProfileManager
                 status = " <color=#88CCFF>[Default Profile]</color>";
             }
         }
-        GUILayout.Label($"<b>Current Aircraft:</b> {displayId}{status}", richLabel);
+        GUILayout.Label($"<b>Current aircraft:</b> {displayId}{status}", richLabel);
 
         GUILayout.BeginHorizontal();
 

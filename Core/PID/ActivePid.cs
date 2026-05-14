@@ -34,12 +34,14 @@ public static class ActivePid
         CurrentAircraftId = id ?? "";
         if (string.IsNullOrEmpty(id))
         {
+            SyncToConfig();
             return;
         }
 
         PidProfile profile = PidProfileManager.LoadProfile(id);
         if (profile == null)
         {
+            SyncToConfig();
             return;
         }
 
@@ -57,5 +59,41 @@ public static class ActivePid
         if (!string.IsNullOrEmpty(profile.SchedRollRate)) { SchedRollRate = GainSchedule.Parse(profile.SchedRollRate); }
         if (!string.IsNullOrEmpty(profile.SchedVs)) { SchedVs = GainSchedule.Parse(profile.SchedVs); }
         if (!string.IsNullOrEmpty(profile.SchedSpd)) { SchedSpd = GainSchedule.Parse(profile.SchedSpd); }
+
+        SyncToConfig();
+    }
+
+    public static void SyncToConfig()
+    {
+        Plugin.ConfPidAlt.Value = Alt;
+        Plugin.ConfPidVs.Value = Vs;
+        Plugin.ConfPidPitch.Value = Pitch;
+        Plugin.ConfPidRoll.Value = Roll;
+        Plugin.ConfPidRollRate.Value = RollRate;
+        Plugin.ConfPidCrs.Value = Crs;
+        Plugin.ConfPidSpd.Value = Spd;
+        Plugin.ConfPidGcas.Value = Gcas;
+
+        Plugin.SchedPidPitch.Value = SchedPitch;
+        Plugin.SchedPidRollRate.Value = SchedRollRate;
+        Plugin.SchedPidVs.Value = SchedVs;
+        Plugin.SchedPidSpd.Value = SchedSpd;
+    }
+
+    public static void SyncFromConfig()
+    {
+        Alt = Plugin.ConfPidAlt.Value;
+        Vs = Plugin.ConfPidVs.Value;
+        Pitch = Plugin.ConfPidPitch.Value;
+        Roll = Plugin.ConfPidRoll.Value;
+        RollRate = Plugin.ConfPidRollRate.Value;
+        Crs = Plugin.ConfPidCrs.Value;
+        Spd = Plugin.ConfPidSpd.Value;
+        Gcas = Plugin.ConfPidGcas.Value;
+
+        SchedPitch = Plugin.SchedPidPitch.Value;
+        SchedRollRate = Plugin.SchedPidRollRate.Value;
+        SchedVs = Plugin.SchedPidVs.Value;
+        SchedSpd = Plugin.SchedPidSpd.Value;
     }
 }

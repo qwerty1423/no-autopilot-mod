@@ -102,9 +102,6 @@ internal static class ConfigBackup
         {
             // Write an empty file so Reload() doesn't throw FileNotFoundException
             File.WriteAllText(cfgPath, string.Empty);
-
-            // Reload() clears OrphanedEntries internally, then reads the empty file.
-            // This gives us a clean slate without reflection.
             liveConfig.Reload();
             logger.LogInfo("[ConfigBackup] Config cache cleared.");
         }

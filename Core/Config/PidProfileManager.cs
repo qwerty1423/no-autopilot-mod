@@ -3,11 +3,11 @@ using System.Text.RegularExpressions;
 
 using BepInEx.Configuration;
 
-using NOAutopilot.Core.Config;
+using NOAutopilot.Core.PID;
 
 using UnityEngine;
 
-namespace NOAutopilot.Core.PID;
+namespace NOAutopilot.Core.Config;
 
 public static class PidProfileManager
 {

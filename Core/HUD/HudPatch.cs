@@ -4,6 +4,7 @@ using HarmonyLib;
 
 using JetBrains.Annotations;
 
+using NOAutopilot.Core.Config;
 using NOAutopilot.Core.Flight;
 using NOAutopilot.Core.Map;
 using NOAutopilot.Core.PID;

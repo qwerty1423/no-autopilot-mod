@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 
@@ -193,6 +194,7 @@ public class Plugin : BaseUnityPlugin
 
     private Vector2 _scrollPos;
     private bool _showMenu;
+    private bool _showRegenNotice;
     private Vector2 _stationaryPos;
     private float _stationaryTimer;
     private GUIStyle _styleButton;
@@ -214,6 +216,7 @@ public class Plugin : BaseUnityPlugin
         bool wasRegenerated = ConfigBackup.EnsureConfigValid(Guid, Logger, Config);
         if (wasRegenerated)
         {
+            _showRegenNotice = true;
             Logger.LogInfo("[ConfigBackup] Config was regenerated from defaults.");
         }
 
@@ -885,6 +888,23 @@ public class Plugin : BaseUnityPlugin
         {
             _cachedTableContent = new GUIContent("(Hover for controls)", _table);
             _cachedExtraInfoContent = new GUIContent("(Hover above for some info)\n(Hover here for controls)", _table);
+        }
+
+        if (_showRegenNotice)
+        {
+            float cx = Screen.width / 2f;
+            float cy = Screen.height / 2f;
+            GUI.ModalWindow(998, new Rect(cx - 200f, cy - 60f, 400f, 120f), _ =>
+            {
+                GUILayout.Label(
+                    "Config was outdated and regenerated from defaults.\n" +
+                    $"Backup saved to:\n{ConfigBackup.LastBackupPath}");
+
+                if (GUILayout.Button("OK"))
+                {
+                    _showRegenNotice = false;
+                }
+            }, $"NOAutopilot {Version} - Config Reset");
         }
 
         if (!_showMenu)

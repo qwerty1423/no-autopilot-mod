@@ -43,6 +43,7 @@ internal static class ConfigBackup
     private static bool s_backupOnSchemaChange = DefaultBackupOnSchemaChange;
     private static int s_maxSchemaBackups = DefaultMaxSchemaBackups;
     private static bool s_autoRegenerate = DefaultAutoRegenerate;
+    public static string LastBackupPath { get; private set; }
 
     /// <summary>
     /// Reads the cfg file to check the schema version, backs up and deletes if needed.
@@ -273,6 +274,7 @@ internal static class ConfigBackup
             string backupPath = Path.Combine(backupDir, $"{fileName}.{tag}.{timestamp}.cfg");
 
             File.Copy(cfgPath, backupPath, overwrite: true);
+            LastBackupPath = backupPath;
             logger.LogInfo($"[ConfigBackup] Backed up to: {backupPath}");
         }
         catch (Exception ex)

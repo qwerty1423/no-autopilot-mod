@@ -1,5 +1,8 @@
+using System;
 using System.IO;
 using System.Reflection;
+
+using BepInEx;
 
 using NOAutopilot.Core.PID;
 
@@ -13,8 +16,28 @@ public static class DefaultProfiles
 
     static DefaultProfiles()
     {
-        string assemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-        Dir = string.IsNullOrEmpty(assemblyDir) ? "" : Path.Combine(assemblyDir, "Profiles");
+        try
+        {
+            string location = Assembly.GetExecutingAssembly().Location;
+            Plugin.Logger.LogInfo($"[DefaultProfiles] Assembly location: '{location}'");
+
+            if (string.IsNullOrEmpty(location))
+            {
+                // Fallback: use BepInEx plugin path instead
+                Dir = Path.Combine(Paths.PluginPath, "NOAutopilot", "Profiles");
+            }
+            else
+            {
+                Dir = Path.Combine(Path.GetDirectoryName(location), "Profiles");
+            }
+
+            Plugin.Logger.LogInfo($"[DefaultProfiles] Profiles dir: '{Dir}'");
+        }
+        catch (Exception ex)
+        {
+            Plugin.Logger.LogError($"[DefaultProfiles] Failed to init: {ex.Message}");
+            Dir = Path.Combine(Paths.PluginPath, "NOAutopilot", "Profiles");
+        }
     }
 
     public static PidProfile Load(string id)
@@ -34,19 +57,15 @@ public static class DefaultProfiles
         {
             return JsonUtility.FromJson<PidProfile>(File.ReadAllText(path));
         }
-        catch
+        catch (Exception ex)
         {
+            Plugin.Logger.LogError($"[DefaultProfiles] Failed to load '{id}': {ex.Message}");
             return null;
         }
     }
 
     public static bool Exists(string id)
     {
-        if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(Dir))
-        {
-            return false;
-        }
-
-        return File.Exists(Path.Combine(Dir, $"{id}.json"));
+        return !string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(Dir) && File.Exists(Path.Combine(Dir, $"{id}.json"));
     }
 }

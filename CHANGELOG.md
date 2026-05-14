@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- individual aircraft pid tuning
+- currently only one default profile for ifrit
+
 ## [5.3.0]
 
 ### Added

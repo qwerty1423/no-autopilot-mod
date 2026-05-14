@@ -471,7 +471,7 @@ public class Plugin : BaseUnityPlugin
         const string pidSect = "PID (Warning: Improper values may cause instability.)";
 
         Config.Bind(pidSect, "00. Aircraft Overrides", "",
-            new ConfigDescription("Per-aircraft tuning interface", null,
+            new ConfigDescription("Individual aircraft tuning", null,
             new ConfigurationManagerAttributes
             {
                 CustomDrawer = PidProfileManager.DrawConfigManagerControls

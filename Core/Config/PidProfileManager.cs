@@ -154,7 +154,7 @@ public static class PidProfileManager
         string currentId = ActivePid.CurrentAircraftId;
         bool hasUser = HasUserProfile(currentId);
         bool hasShipped = DefaultProfiles.Exists(currentId);
-        string displayId = string.IsNullOrEmpty(currentId) ? "None (Global Defaults Active)" : currentId;
+        string displayId = string.IsNullOrEmpty(currentId) ? "None" : currentId;
 
         GUIStyle richLabel = new(GUI.skin.label) { richText = true };
 
@@ -173,7 +173,7 @@ public static class PidProfileManager
                 status = " <color=#88CCFF>[Shipped Default]</color>";
             }
         }
-        GUILayout.Label($"<b>Target Aircraft:</b> {displayId}{status}", richLabel);
+        GUILayout.Label($"<b>Current Aircraft:</b> {displayId}{status}", richLabel);
 
         GUILayout.BeginHorizontal();
 
@@ -181,12 +181,12 @@ public static class PidProfileManager
         {
             if (!string.IsNullOrEmpty(currentId))
             {
-                if (GUILayout.Button("Tune Current Aircraft", GUILayout.ExpandWidth(true)))
+                if (GUILayout.Button("Tune current aircraft", GUILayout.ExpandWidth(true)))
                 {
                     BeginTuning();
                 }
 
-                if (hasUser && GUILayout.Button("Reset to Defaults", GUILayout.ExpandWidth(true)))
+                if (hasUser && GUILayout.Button("Reset to defaults", GUILayout.ExpandWidth(true)))
                 {
                     DeleteUserProfile(currentId);
                     ActivePid.ApplyForAircraft(currentId);
@@ -194,7 +194,7 @@ public static class PidProfileManager
             }
             else
             {
-                GUILayout.Label("<i>Enter an aircraft to tune its profile.</i>", richLabel);
+                GUILayout.Label("Enter an aircraft to tune its profile.", richLabel);
             }
         }
         else
@@ -214,7 +214,7 @@ public static class PidProfileManager
             }
             else
             {
-                GUILayout.Label("<color=#FFFF00><b>Tuning Mode Active</b></color>", richLabel, GUILayout.Width(150));
+                GUILayout.Label("<color=#FFFF00><b>Tuning mode</b></color>", richLabel, GUILayout.ExpandWidth(true));
 
                 if (GUILayout.Button("Save Overrides", GUILayout.ExpandWidth(true)))
                 {

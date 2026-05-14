@@ -255,7 +255,7 @@ internal static class ConfigBackup
 
     private static string GetBackupDir()
     {
-        return Path.Combine(Path.Combine(Paths.ConfigPath, "NOAutopilot"), "Backups");
+        return Path.Combine(Paths.ConfigPath, "NOAutopilot", "Backups");
     }
 
     private static void BackupConfig(string cfgPath, ManualLogSource logger, string tag, string guid)

@@ -107,15 +107,26 @@
     <PluginDeployPath Condition=" '$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' ">C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option\BepInEx\plugins</PluginDeployPath>
   </PropertyGroup>
 
-  <Target Name="DeployPlugin" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' AND '$(PluginDeployPath)' != ''" Inputs="$(OutputPath)$(AssemblyName).dll;$(OutputPath)$(AssemblyName).pdb" Outputs="$(PluginDeployPath)/$(AssemblyName).dll;$(PluginDeployPath)/Assets/acls_config.json">
+  <ItemGroup>
+    <ProfileFiles Include="Profiles\*.json" />
+  </ItemGroup>
+
+  <Target Name="DeployPlugin" AfterTargets="Build"
+          Condition="'$(Configuration)' == 'Debug' AND '$(PluginDeployPath)' != ''"
+          Inputs="$(OutputPath)$(AssemblyName).dll;$(OutputPath)$(AssemblyName).pdb;@(ProfileFiles)"
+          Outputs="$(PluginDeployPath)/$(AssemblyName).dll">
     <PropertyGroup>
       <DeployRoot>$(PluginDeployPath)</DeployRoot>
     </PropertyGroup>
     <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(DeployRoot)/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).pdb&quot; &quot;$(DeployRoot)/&quot;" />
+    <Exec Command="rsync -rcv --mkpath &quot;$(MSBuildProjectDirectory)/Profiles/&quot; &quot;$(DeployRoot)/Profiles/&quot;" />
   </Target>
 
-  <Target Name="CreateZip" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'" Inputs="$(OutputPath)$(AssemblyName).dll;LICENSE;CHANGELOG.md;README.md" Outputs="$(OutputPath)../$(AssemblyName)-$(Version).7z">
+  <Target Name="CreateZip" AfterTargets="Build"
+    Condition="'$(Configuration)' == 'Release'"
+    Inputs="$(OutputPath)$(AssemblyName).dll;LICENSE;CHANGELOG.md;README.md;@(ProfileFiles)"
+    Outputs="$(OutputPath)../$(AssemblyName)-$(Version).7z">
 
     <PropertyGroup>
       <StagingDir>$(OutputPath)Staging</StagingDir>
@@ -127,6 +138,7 @@
 
     <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(RootModFolder)/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll.asc&quot; &quot;$(RootModFolder)/&quot;" />
+    <Exec Command="rsync -rcv --mkpath &quot;$(MSBuildProjectDirectory)/Profiles/&quot; &quot;$(RootModFolder)/Profiles/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;LICENSE&quot; &quot;$(RootModFolder)/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;CHANGELOG.md&quot; &quot;$(RootModFolder)/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;README.md&quot; &quot;$(RootModFolder)/&quot;" />

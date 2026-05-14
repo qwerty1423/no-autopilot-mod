@@ -2,8 +2,6 @@ using System;
 using System.IO;
 using System.Reflection;
 
-using BepInEx;
-
 using NOAutopilot.Core.PID;
 
 using UnityEngine;
@@ -16,19 +14,56 @@ public static class DefaultProfiles
 
     static DefaultProfiles()
     {
+        Dir = FindProfilesDir();
+        Plugin.Logger.LogInfo($"[DefaultProfiles] Using profiles dir: '{Dir}'");
+    }
+
+    private static string FindProfilesDir()
+    {
         try
         {
             string location = Assembly.GetExecutingAssembly().Location;
-
-            Dir = string.IsNullOrEmpty(location)
-                ? Path.Combine(Paths.PluginPath, "NOAutopilot", "Profiles")
-                : Path.Combine(Path.GetDirectoryName(location), "Profiles");
+            if (!string.IsNullOrEmpty(location))
+            {
+                string assemblyDir = Path.GetDirectoryName(location);
+                if (!string.IsNullOrEmpty(assemblyDir))
+                {
+                    string path = Path.Combine(assemblyDir, "Profiles");
+                    if (Directory.Exists(path))
+                    {
+                        return path;
+                    }
+                }
+            }
         }
-        catch (Exception ex)
+        catch
         {
-            Plugin.Logger.LogError($"[DefaultProfiles] Failed to init: {ex.Message}");
-            Dir = Path.Combine(Paths.PluginPath, "NOAutopilot", "Profiles");
+            // Ignore
         }
+
+        // Search known locations
+        string[] candidates =
+        [
+            // scriptengine debug
+            Path.Combine(BepInEx.Paths.BepInExRootPath, "scripts", "Profiles"),
+
+            // manual install
+            Path.Combine(BepInEx.Paths.PluginPath, "no-autopilot-mod", "Profiles"),
+
+            // nomm install
+            Path.Combine(BepInEx.Paths.PluginPath, "no-autopilot-mod", "no-autopilot-mod", "Profiles"),
+        ];
+
+        foreach (string path in candidates)
+        {
+            if (Directory.Exists(path))
+            {
+                return path;
+            }
+        }
+
+        // Default fallback
+        return candidates[0];
     }
 
     public static PidProfile Load(string id)

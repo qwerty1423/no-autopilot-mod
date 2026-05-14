@@ -893,7 +893,7 @@ public class Plugin : BaseUnityPlugin
         if (_showRegenNotice)
         {
             float cx = Screen.width / 2f;
-            float cy = Screen.height / 2f;
+            float cy = Screen.height / 3f;
             GUI.ModalWindow(998, new Rect(cx - 200f, cy - 60f, 400f, 120f), _ =>
             {
                 GUILayout.Label(
@@ -904,7 +904,7 @@ public class Plugin : BaseUnityPlugin
                 {
                     _showRegenNotice = false;
                 }
-            }, $"NOAutopilot {Version} - Config Reset");
+            }, $"NOAutopilot {Version}");
         }
 
         if (!_showMenu)

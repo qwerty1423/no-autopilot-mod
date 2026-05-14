@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 using BepInEx;
 using BepInEx.Configuration;
@@ -299,21 +300,21 @@ internal static class ConfigBackup
             }
 
             string pattern = $"{guid}.{tagPrefix}*.cfg";
-            string[] files = Directory.GetFiles(backupDir, pattern);
 
-            if (files.Length <= maxToKeep)
+            List<FileInfo> sortedFiles = [.. new DirectoryInfo(backupDir)
+                .GetFiles(pattern)
+                .OrderBy(static f => f.LastWriteTimeUtc)];
+
+            if (sortedFiles.Count <= maxToKeep)
             {
                 return;
             }
 
-            // Sort oldest first
-            Array.Sort(files, StringComparer.Ordinal);
-
-            int toDelete = files.Length - maxToKeep;
+            int toDelete = sortedFiles.Count - maxToKeep;
             for (int i = 0; i < toDelete; i++)
             {
-                File.Delete(files[i]);
-                logger.LogInfo($"[ConfigBackup] Pruned old backup: {Path.GetFileName(files[i])}");
+                sortedFiles[i].Delete();
+                logger.LogInfo($"[ConfigBackup] Pruned old backup: {sortedFiles[i].Name}");
             }
         }
         catch (Exception ex)

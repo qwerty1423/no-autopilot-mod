@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 
 using BepInEx;
 using BepInEx.Configuration;
@@ -66,7 +67,7 @@ internal static class ConfigBackup
         // Startup backup
         if (s_enableBackups && s_backupOnStartup)
         {
-            BackupConfig(cfgPath, logger, "startup");
+            BackupConfig(cfgPath, logger, "startup", pluginGuid);
             PruneBackups(pluginGuid, logger, "startup", s_maxStartupBackups);
         }
 
@@ -90,7 +91,7 @@ internal static class ConfigBackup
         // Schema mismatch backup
         if (s_enableBackups && s_backupOnSchemaChange)
         {
-            BackupConfig(cfgPath, logger, $"schema-v{foundVersion}");
+            BackupConfig(cfgPath, logger, $"schema-v{foundVersion}", pluginGuid);
             PruneBackups(pluginGuid, logger, "schema", s_maxSchemaBackups);
         }
 
@@ -125,13 +126,13 @@ internal static class ConfigBackup
             "Toggle for all config backups.");
 
         BackupOnStartup = cfg.Bind(BackupSection, "02. Backup On Startup", DefaultBackupOnStartup,
-            "Create a backup every time the game starts.");
+            "Create a backup on game start, if the current config is different from the previous backup.");
 
         MaxStartupBackups = cfg.Bind(BackupSection, "03. Max Startup Backups", DefaultMaxStartupBackups,
             "How many startup backups to keep. Oldest are pruned first. 0 = keep all.");
 
         BackupOnSchemaChange = cfg.Bind(BackupSection, "04. Backup On Schema Change", DefaultBackupOnSchemaChange,
-            "Create a backup when a config version mismatch is detected.");
+            "Create a backup when a config version mismatch is detected, if the current config is different from the previous backup.");
 
         MaxSchemaBackups = cfg.Bind(BackupSection, "05. Max Schema Backups", DefaultMaxSchemaBackups,
             "How many schema-mismatch backups to keep. 0 = keep all.");
@@ -257,7 +258,7 @@ internal static class ConfigBackup
         return Path.Combine(Paths.ConfigPath, "no-autopilot-backups");
     }
 
-    private static void BackupConfig(string cfgPath, ManualLogSource logger, string tag)
+    private static void BackupConfig(string cfgPath, ManualLogSource logger, string tag, string guid)
     {
         if (!File.Exists(cfgPath))
         {
@@ -268,6 +269,14 @@ internal static class ConfigBackup
         {
             string backupDir = GetBackupDir();
             _ = Directory.CreateDirectory(backupDir);
+
+            string tagPrefix = tag.Split('-')[0];
+
+            if (ConfigMatchesLastBackup(cfgPath, backupDir, tagPrefix, guid))
+            {
+                logger.LogInfo($"[ConfigBackup] Skipping backup ({tag}) as existing backup is identical.");
+                return;
+            }
 
             string fileName = Path.GetFileNameWithoutExtension(cfgPath);
             string timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH-mm-ss");
@@ -346,5 +355,40 @@ internal static class ConfigBackup
         }
 
         return 0;
+    }
+
+    private static bool ConfigMatchesLastBackup(string cfgPath, string backupDir, string tagPrefix, string guid)
+    {
+        if (!File.Exists(cfgPath) || !Directory.Exists(backupDir))
+        {
+            return false;
+        }
+
+        string pattern = $"{guid}.{tagPrefix}*.cfg";
+        FileInfo lastBackup = new DirectoryInfo(backupDir)
+            .GetFiles(pattern)
+            .OrderByDescending(static f => f.LastWriteTimeUtc)
+            .FirstOrDefault();
+
+        return lastBackup is not null && FilesAreIdentical(cfgPath, lastBackup.FullName);
+    }
+
+    private static bool FilesAreIdentical(string pathA, string pathB)
+    {
+        FileInfo infoA = new(pathA);
+        FileInfo infoB = new(pathB);
+        if (infoA.Length != infoB.Length)
+        {
+            return false;
+        }
+
+        using SHA256 sha = SHA256.Create();
+        using FileStream streamA = File.OpenRead(pathA);
+        using FileStream streamB = File.OpenRead(pathB);
+
+        byte[] hashA = sha.ComputeHash(streamA);
+        byte[] hashB = sha.ComputeHash(streamB);
+
+        return ((ReadOnlySpan<byte>)hashA).SequenceEqual(hashB);
     }
 }

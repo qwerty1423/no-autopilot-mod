@@ -34,8 +34,8 @@ public class Plugin : BaseUnityPlugin
 
     internal static new ManualLogSource Logger;
 
+    public static Plugin Instance { get; private set; }
     public static bool IsBroken;
-
     private static string s_bufAlt = "";
     private static string s_bufClimb = "40";
     private static string s_bufRoll = "";
@@ -208,6 +208,7 @@ public class Plugin : BaseUnityPlugin
     [UsedImplicitly]
     private void Awake()
     {
+        Instance = this;
         Logger = base.Logger;
 
         bool wasRegenerated = ConfigBackup.EnsureConfigValid(Guid, Logger, Config);
@@ -217,16 +218,16 @@ public class Plugin : BaseUnityPlugin
             Logger.LogInfo("[ConfigBackup] Config was regenerated from defaults.");
         }
 
-        TomlTypeConverter.AddConverter(typeof(PIDTuning), new TypeConverter
+        _ = TomlTypeConverter.AddConverter(typeof(PIDTuning), new TypeConverter
         {
-            ConvertToString = (obj, _) => ((PIDTuning)obj).ToString(),
-            ConvertToObject = (str, _) => PIDTuning.Parse(str)
+            ConvertToString = static (obj, _) => ((PIDTuning)obj).ToString(),
+            ConvertToObject = static (str, _) => PIDTuning.Parse(str)
         });
 
-        TomlTypeConverter.AddConverter(typeof(GainSchedule), new TypeConverter
+        _ = TomlTypeConverter.AddConverter(typeof(GainSchedule), new TypeConverter
         {
-            ConvertToString = (obj, _) => ((GainSchedule)obj).ToString(),
-            ConvertToObject = (str, _) => GainSchedule.Parse(str)
+            ConvertToString = static (obj, _) => ((GainSchedule)obj).ToString(),
+            ConvertToObject = static (str, _) => GainSchedule.Parse(str)
         });
 
         // Visuals
@@ -469,6 +470,14 @@ public class Plugin : BaseUnityPlugin
 
         // PID Loops
         const string pidSect = "PID (Warning: Improper values may cause instability.)";
+
+        Config.Bind(pidSect, "00. Aircraft Overrides", "",
+            new ConfigDescription("Individual aircraft tuning", null,
+            new ConfigurationManagerAttributes
+            {
+                CustomDrawer = PidProfileManager.DrawConfigManagerControls
+            }));
+
         ConfPidAlt = PIDTuningBinder.Bind(Config, pidSect, "01. Altitude > VS",
             new PIDTuning(0.5, 0, 3), "Altitude > Vertical Speed");
 
@@ -553,6 +562,8 @@ public class Plugin : BaseUnityPlugin
         ConfigBackup.BindBackupSettings(Config);
 
         ConfigBackup.WriteSchemaVersion(Config);
+
+        ActivePid.CacheGlobalDefaults();
 
         _harmony = new Harmony(Guid);
         try
@@ -873,6 +884,7 @@ public class Plugin : BaseUnityPlugin
 
         ClearAllStatics();
 
+        Instance = null;
         _harmony = null;
         Logger = null;
     }
@@ -1774,7 +1786,10 @@ public class Plugin : BaseUnityPlugin
             APData.NavVisuals.Clear();
 
             DynamicMap map = SceneSingleton<DynamicMap>.i;
-            if (APData.NavQueue.Count == 0 || map == null || APData.PlayerRB == null)
+            if (APData.NavQueue.Count == 0 ||
+                map == null ||
+                map.mapImage == null ||
+                APData.PlayerRB == null)
             {
                 return;
             }

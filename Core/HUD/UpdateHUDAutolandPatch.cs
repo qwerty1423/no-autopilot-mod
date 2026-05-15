@@ -29,6 +29,19 @@ internal static class UpdateHUDAutolandPatch
             return;
         }
 
+        FlightHud flightHud = SceneSingleton<FlightHud>.i;
+        CombatHUD combatHud = SceneSingleton<CombatHUD>.i;
+        if (flightHud == null || combatHud == null)
+        {
+            return;
+        }
+
+        Aircraft ac = __instance.pilot.aircraft;
+        if (ac == null)
+        {
+            return;
+        }
+
         try
         {
             string baseName = "UNKNOWN";
@@ -93,16 +106,14 @@ internal static class UpdateHUDAutolandPatch
                 APData.ALSStatusColor = ModUtils.GetColor(Plugin.ColorAPOn.Value, Color.green);
             }
 
-            Aircraft ac = __instance.pilot.aircraft;
+            flightHud.SetAircraft(ac);
 
-            SceneSingleton<FlightHud>.i.SetAircraft(ac);
-
-            if (SceneSingleton<CombatHUD>.i.aircraft == ac)
+            if (combatHud.aircraft == ac)
             {
                 return;
             }
 
-            SceneSingleton<CombatHUD>.i.SetAircraft(ac);
+            combatHud.SetAircraft(ac);
             FlightHud.EnableCanvas(true);
         }
         catch (Exception ex)

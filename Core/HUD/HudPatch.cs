@@ -4,8 +4,10 @@ using HarmonyLib;
 
 using JetBrains.Annotations;
 
+using NOAutopilot.Core.Config;
 using NOAutopilot.Core.Flight;
 using NOAutopilot.Core.Map;
+using NOAutopilot.Core.PID;
 
 using UnityEngine;
 
@@ -58,6 +60,8 @@ internal static class HudPatch
         try
         {
             s_lastAircraft = aircraft;
+
+            // Reset relevant data systems
             APData.Reset();
             ControlOverridePatch.Reset();
             HUDVisualsPatch.Reset();
@@ -69,12 +73,13 @@ internal static class HudPatch
             APData.PlayerTransform = aircraft.transform;
             APData.PlayerRB = aircraft.cockpit?.rb ?? aircraft.GetComponent<Rigidbody>();
             APData.LocalWeaponManager = aircraft.weaponManager;
-
             APData.TargetAlt = aircraft.transform.position.GlobalY();
-
             APData.TargetRoll = 0f;
-            APData.LocalWeaponManager = APData.LocalAircraft.weaponManager;
             APData.SaveMapZoom = Plugin.SaveMapZoom.Value;
+
+            // Load PID settings for this aircraft
+            string id = PidProfileManager.GetId(aircraft);
+            ActivePid.ApplyForAircraft(id);
 
             Pilot[] pilots = APData.LocalAircraft.pilots;
             if (pilots?.Length > 0)

@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added
+
+- individual aircraft pid tuning
+- some default pid profiles for most aircraft
+- automatic config regeneration
+  it will now back up your current config if it is outdated, and then regenerate it
+
 ## [5.3.0]
 
 ### Added

@@ -36,28 +36,6 @@ public static class ActivePid
     }
 
     /// <summary>
-    /// Returns a PidProfile representing the session's global defaults.
-    /// </summary>
-    public static PidProfile GetGlobalDefaults()
-    {
-        return new()
-        {
-            Alt = s_gAlt,
-            Vs = s_gVs,
-            Pitch = s_gPitch,
-            Roll = s_gRoll,
-            RollRate = s_gRollRate,
-            Crs = s_gCrs,
-            Spd = s_gSpd,
-            Gcas = s_gGcas,
-            SchedPitch = s_gSchedPitch,
-            SchedRollRate = s_gSchedRollRate,
-            SchedVs = s_gSchedVs,
-            SchedSpd = s_gSchedSpd
-        };
-    }
-
-    /// <summary>
     /// Reset active values to the cached global defaults.
     /// </summary>
     public static void LoadGlobalDefaults()

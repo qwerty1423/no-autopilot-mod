@@ -226,17 +226,24 @@ public static class PidProfileManager
         GUIStyle richLabel = new(GUI.skin.label) { richText = true };
         GUILayout.BeginVertical();
 
-        string status = "";
-        if (!string.IsNullOrEmpty(currentId))
-        {
-            status = hasUser
-                ? " <color=#00FF00>[User Profile]</color>"
+        // status of active values
+        string appliedStatus = string.IsNullOrEmpty(currentId)
+            ? "<color=#AAAAAA>[No Aircraft]</color>"
+            : hasUser
+                ? "<color=#00FF00>[User Profile]</color>"
                 : hasShipped
-                    ? " <color=#88CCFF>[Default Profile]</color>"
-                    : " <color=#AAAAAA>[Global Defaults]</color>";
-        }
+                    ? "<color=#88CCFF>[Default Profile]</color>"
+                    : "<color=#AAAAAA>[Global Defaults]</color>";
 
-        GUILayout.Label($"<b>Current aircraft:</b> {displayId}{status}", richLabel);
+        // status of config manager values
+        string pidStatus = IsTuning
+            ? "<color=#FFFF00>[Tuning Mode]</color>"
+            : "<color=#AAAAAA>[Global Defaults]</color>";
+
+        GUILayout.Label($"<b>Aircraft:</b> {displayId}", richLabel);
+        GUILayout.Label($"<b>Active Profile:</b> {appliedStatus}", richLabel);
+        GUILayout.Label($"<b>Displayed values:</b> {pidStatus}", richLabel);
+
         GUILayout.BeginHorizontal();
 
         if (!IsTuning)

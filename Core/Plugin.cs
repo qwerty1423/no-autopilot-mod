@@ -35,7 +35,6 @@ public class Plugin : BaseUnityPlugin
     internal static new ManualLogSource Logger;
 
     public static Plugin Instance { get; private set; }
-    private bool _configSaved;
     public static bool IsBroken;
     private static string s_bufAlt = "";
     private static string s_bufClimb = "40";
@@ -856,42 +855,8 @@ public class Plugin : BaseUnityPlugin
     }
 
     [UsedImplicitly]
-    private void OnApplicationQuit()
-    {
-        SaveGlobalConfig();
-    }
-
-    private void SaveGlobalConfig()
-    {
-        if (_configSaved)
-        {
-            return;
-        }
-
-        try
-        {
-            if (ActivePid.ConfigEntriesMatchGlobalDefaults())
-            {
-                _configSaved = true;
-                return;
-            }
-
-            ActivePid.LoadGlobalDefaults();
-            ActivePid.SyncToConfig();
-            Config.Save();
-            _configSaved = true;
-        }
-        catch (Exception ex)
-        {
-            Logger?.LogError($"[RestoreGlobalPidConfigToDisk] Error: {ex}");
-        }
-    }
-
-    [UsedImplicitly]
     private void OnDestroy()
     {
-        SaveGlobalConfig();
-
         _harmony?.UnpatchSelf();
 
         SceneManager.sceneUnloaded -= OnSceneUnloaded;

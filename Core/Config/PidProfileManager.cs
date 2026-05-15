@@ -54,7 +54,7 @@ public static class PidProfileManager
         }
     }
 
-    public static void BackupAndDeleteUserProfile(string id)
+    public static void MoveUserProfile(string id)
     {
         if (string.IsNullOrEmpty(id))
         {
@@ -69,12 +69,15 @@ public static class PidProfileManager
 
         try
         {
-            Directory.CreateDirectory(BackupDir);
+            _ = Directory.CreateDirectory(BackupDir);
             string backupPath = Path.Combine(BackupDir, $"{id}_{DateTime.Now:yyyy-MM-ddTHH-mm-ss}.json");
             File.Move(path, backupPath);
             Plugin.Logger.LogInfo($"[PidProfileManager] Profile '{id}' moved to backup.");
         }
-        catch (Exception) { File.Delete(path); }
+        catch (Exception ex)
+        {
+            Plugin.Logger.LogError($"[PidProfileManager] Failed to back up profile '{id}': {ex}");
+        }
     }
 
     public static void BeginTuning()
@@ -257,7 +260,7 @@ public static class PidProfileManager
 
                 if (hasUser && GUILayout.Button("Reset to defaults"))
                 {
-                    BackupAndDeleteUserProfile(currentId);
+                    MoveUserProfile(currentId);
                     ActivePid.ApplyForAircraft(currentId);
                 }
             }

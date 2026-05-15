@@ -1786,7 +1786,10 @@ public class Plugin : BaseUnityPlugin
             APData.NavVisuals.Clear();
 
             DynamicMap map = SceneSingleton<DynamicMap>.i;
-            if (APData.NavQueue.Count == 0 || map == null || APData.PlayerRB == null)
+            if (APData.NavQueue.Count == 0 ||
+                map == null ||
+                map.mapImage == null ||
+                APData.PlayerRB == null)
             {
                 return;
             }

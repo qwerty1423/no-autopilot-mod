@@ -89,6 +89,10 @@ internal static class HUDVisualsPatch
 
         if (!Plugin.ShowExtraInfo.Value)
         {
+            s_infoOverlayObj?.SetActive(false);
+            s_gcasLeftObj?.SetActive(false);
+            s_gcasRightObj?.SetActive(false);
+            s_gcasTopObj?.SetActive(false);
             return;
         }
 

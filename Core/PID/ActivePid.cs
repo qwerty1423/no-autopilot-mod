@@ -82,12 +82,10 @@ public static class ActivePid
     public static void ApplyForAircraft(string id)
     {
         CurrentAircraftId = id ?? "";
-
         LoadGlobalDefaults();
 
         if (string.IsNullOrEmpty(id))
         {
-            SyncToConfig();
             return;
         }
 
@@ -105,8 +103,6 @@ public static class ActivePid
         }
 
         IsUsingOverride = shipped != null || user != null;
-
-        SyncToConfig();
     }
 
     public static void ApplyProfile(PidProfile profile)
@@ -133,19 +129,34 @@ public static class ActivePid
 
     public static void SyncToConfig()
     {
-        Plugin.ConfPidAlt.Value = Alt;
-        Plugin.ConfPidVs.Value = Vs;
-        Plugin.ConfPidPitch.Value = Pitch;
-        Plugin.ConfPidRoll.Value = Roll;
-        Plugin.ConfPidRollRate.Value = RollRate;
-        Plugin.ConfPidCrs.Value = Crs;
-        Plugin.ConfPidSpd.Value = Spd;
-        Plugin.ConfPidGcas.Value = Gcas;
+        if (Plugin.Instance?.Config == null)
+        {
+            return;
+        }
 
-        Plugin.SchedPidPitch.Value = SchedPitch;
-        Plugin.SchedPidRollRate.Value = SchedRollRate;
-        Plugin.SchedPidVs.Value = SchedVs;
-        Plugin.SchedPidSpd.Value = SchedSpd;
+        bool prev = Plugin.Instance.Config.SaveOnConfigSet;
+        Plugin.Instance.Config.SaveOnConfigSet = false;
+
+        try
+        {
+            Plugin.ConfPidAlt.Value = Alt;
+            Plugin.ConfPidVs.Value = Vs;
+            Plugin.ConfPidPitch.Value = Pitch;
+            Plugin.ConfPidRoll.Value = Roll;
+            Plugin.ConfPidRollRate.Value = RollRate;
+            Plugin.ConfPidCrs.Value = Crs;
+            Plugin.ConfPidSpd.Value = Spd;
+            Plugin.ConfPidGcas.Value = Gcas;
+
+            Plugin.SchedPidPitch.Value = SchedPitch;
+            Plugin.SchedPidRollRate.Value = SchedRollRate;
+            Plugin.SchedPidVs.Value = SchedVs;
+            Plugin.SchedPidSpd.Value = SchedSpd;
+        }
+        finally
+        {
+            Plugin.Instance.Config.SaveOnConfigSet = prev;
+        }
     }
 
     public static void SyncFromConfig()
@@ -163,5 +174,54 @@ public static class ActivePid
         SchedRollRate = Plugin.SchedPidRollRate.Value;
         SchedVs = Plugin.SchedPidVs.Value;
         SchedSpd = Plugin.SchedPidSpd.Value;
+    }
+
+    public static bool ConfigEntriesMatchGlobalDefaults()
+    {
+        return
+            Plugin.ConfPidAlt.Value.ToString() == s_gAlt &&
+            Plugin.ConfPidVs.Value.ToString() == s_gVs &&
+            Plugin.ConfPidPitch.Value.ToString() == s_gPitch &&
+            Plugin.ConfPidRoll.Value.ToString() == s_gRoll &&
+            Plugin.ConfPidRollRate.Value.ToString() == s_gRollRate &&
+            Plugin.ConfPidCrs.Value.ToString() == s_gCrs &&
+            Plugin.ConfPidSpd.Value.ToString() == s_gSpd &&
+            Plugin.ConfPidGcas.Value.ToString() == s_gGcas &&
+            Plugin.SchedPidPitch.Value.ToString() == s_gSchedPitch &&
+            Plugin.SchedPidRollRate.Value.ToString() == s_gSchedRollRate &&
+            Plugin.SchedPidVs.Value.ToString() == s_gSchedVs &&
+            Plugin.SchedPidSpd.Value.ToString() == s_gSchedSpd;
+    }
+
+    public static void WriteGlobalDefaultsToConfig()
+    {
+        if (Plugin.Instance?.Config == null)
+        {
+            return;
+        }
+
+        bool prev = Plugin.Instance.Config.SaveOnConfigSet;
+        Plugin.Instance.Config.SaveOnConfigSet = false;
+
+        try
+        {
+            Plugin.ConfPidAlt.Value = PIDTuning.Parse(s_gAlt);
+            Plugin.ConfPidVs.Value = PIDTuning.Parse(s_gVs);
+            Plugin.ConfPidPitch.Value = PIDTuning.Parse(s_gPitch);
+            Plugin.ConfPidRoll.Value = PIDTuning.Parse(s_gRoll);
+            Plugin.ConfPidRollRate.Value = PIDTuning.Parse(s_gRollRate);
+            Plugin.ConfPidCrs.Value = PIDTuning.Parse(s_gCrs);
+            Plugin.ConfPidSpd.Value = PIDTuning.Parse(s_gSpd);
+            Plugin.ConfPidGcas.Value = PIDTuning.Parse(s_gGcas);
+
+            Plugin.SchedPidPitch.Value = GainSchedule.Parse(s_gSchedPitch);
+            Plugin.SchedPidRollRate.Value = GainSchedule.Parse(s_gSchedRollRate);
+            Plugin.SchedPidVs.Value = GainSchedule.Parse(s_gSchedVs);
+            Plugin.SchedPidSpd.Value = GainSchedule.Parse(s_gSchedSpd);
+        }
+        finally
+        {
+            Plugin.Instance.Config.SaveOnConfigSet = prev;
+        }
     }
 }

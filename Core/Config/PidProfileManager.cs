@@ -17,6 +17,7 @@ public static class PidProfileManager
 
     private static PidProfile s_tuningSnapshot;
     private static string s_tuningAircraftId;
+    private static bool? s_prevSaveOnConfigSet;
     private static readonly Regex Regex = new(@"\(Clone\)$", RegexOptions.IgnoreCase);
 
     public static bool IsTuning { get; private set; }
@@ -86,7 +87,19 @@ public static class PidProfileManager
 
         s_tuningSnapshot = CaptureCurrent();
         s_tuningAircraftId = id;
+        SuppressConfigAutosaveForTuning();
+        ActivePid.SyncToConfig();
         IsTuning = true;
+    }
+    private static void SuppressConfigAutosaveForTuning()
+    {
+        if (Plugin.Instance?.Config == null || s_prevSaveOnConfigSet.HasValue)
+        {
+            return;
+        }
+
+        s_prevSaveOnConfigSet = Plugin.Instance.Config.SaveOnConfigSet;
+        Plugin.Instance.Config.SaveOnConfigSet = false;
     }
 
     public static void SaveAndExitTuning(string id)
@@ -136,6 +149,18 @@ public static class PidProfileManager
         s_tuningSnapshot = null;
 
         ActivePid.ApplyForAircraft(id);
+        ActivePid.WriteGlobalDefaultsToConfig();
+        RestoreConfigAutosaveAfterTuning();
+    }
+    private static void RestoreConfigAutosaveAfterTuning()
+    {
+        if (Plugin.Instance?.Config == null || !s_prevSaveOnConfigSet.HasValue)
+        {
+            return;
+        }
+
+        Plugin.Instance.Config.SaveOnConfigSet = s_prevSaveOnConfigSet.Value;
+        s_prevSaveOnConfigSet = null;
     }
 
     public static void CancelTuning()
@@ -147,7 +172,6 @@ public static class PidProfileManager
 
         IsTuning = false;
 
-        // Restore active values from the snapshot we took at the start
         ActivePid.Alt = PIDTuning.Parse(s_tuningSnapshot.Alt);
         ActivePid.Vs = PIDTuning.Parse(s_tuningSnapshot.Vs);
         ActivePid.Pitch = PIDTuning.Parse(s_tuningSnapshot.Pitch);
@@ -163,7 +187,9 @@ public static class PidProfileManager
 
         s_tuningAircraftId = null;
         s_tuningSnapshot = null;
-        ActivePid.SyncToConfig();
+
+        ActivePid.WriteGlobalDefaultsToConfig();
+        RestoreConfigAutosaveAfterTuning();
     }
 
     private static PidProfile CaptureCurrent()
@@ -187,11 +213,7 @@ public static class PidProfileManager
 
     public static void DrawConfigManagerControls(ConfigEntryBase _)
     {
-        if (!IsTuning)
-        {
-            ActivePid.SyncToConfig();
-        }
-        else
+        if (IsTuning)
         {
             ActivePid.SyncFromConfig();
         }

@@ -237,8 +237,8 @@ public static class PidProfileManager
 
         // status of config manager values
         string pidStatus = IsTuning
-            ? "<color=#FFFF00>[Tuning Mode]</color>"
-            : "<color=#AAAAAA>[Global Defaults]</color>";
+            ? "<color=#FFFF00>[Tuning]</color>"
+            : "<color=#AAAAAA>[Global defaults]</color>";
 
         GUILayout.Label($"<b>Aircraft:</b> {displayId}", richLabel);
         GUILayout.Label($"<b>Active Profile:</b> {appliedStatus}", richLabel);
@@ -276,7 +276,6 @@ public static class PidProfileManager
         }
         else
         {
-            GUILayout.Label("<color=#FFFF00><b>Tuning mode</b></color>", richLabel);
             if (GUILayout.Button("Save Overrides"))
             {
                 SaveAndExitTuning(s_tuningAircraftId);

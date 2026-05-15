@@ -60,6 +60,8 @@ internal static class HudPatch
         try
         {
             s_lastAircraft = aircraft;
+
+            // Reset relevant data systems
             APData.Reset();
             ControlOverridePatch.Reset();
             HUDVisualsPatch.Reset();
@@ -68,15 +70,16 @@ internal static class HudPatch
             MinimapGridOpacityPatch.Reset();
 
             APData.LocalAircraft = aircraft;
-            ActivePid.ApplyForAircraft(PidProfileManager.GetId(aircraft));
             APData.PlayerTransform = aircraft.transform;
             APData.PlayerRB = aircraft.cockpit?.rb ?? aircraft.GetComponent<Rigidbody>();
             APData.LocalWeaponManager = aircraft.weaponManager;
-
             APData.TargetAlt = aircraft.transform.position.GlobalY();
-
             APData.TargetRoll = 0f;
             APData.SaveMapZoom = Plugin.SaveMapZoom.Value;
+
+            // Load PID settings for this aircraft
+            string id = PidProfileManager.GetId(aircraft);
+            ActivePid.ApplyForAircraft(id);
 
             Pilot[] pilots = APData.LocalAircraft.pilots;
             if (pilots?.Length > 0)

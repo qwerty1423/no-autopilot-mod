@@ -120,7 +120,7 @@
     </PropertyGroup>
     <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(DeployRoot)/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).pdb&quot; &quot;$(DeployRoot)/&quot;" />
-    <Exec Command="rsync -rcv --mkpath &quot;$(MSBuildProjectDirectory)/Profiles/&quot; &quot;$(DeployRoot)/Profiles/&quot;" />
+    <Exec Command="rsync -rcv --delete --mkpath &quot;$(MSBuildProjectDirectory)/Profiles/&quot; &quot;$(DeployRoot)/Profiles/&quot;" />
   </Target>
 
   <Target Name="CreateZip" AfterTargets="Build"
@@ -138,7 +138,7 @@
 
     <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(RootModFolder)/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll.asc&quot; &quot;$(RootModFolder)/&quot;" />
-    <Exec Command="rsync -rcv --mkpath &quot;$(MSBuildProjectDirectory)/Profiles/&quot; &quot;$(RootModFolder)/Profiles/&quot;" />
+    <Exec Command="rsync -rcv --delete --mkpath &quot;$(MSBuildProjectDirectory)/Profiles/&quot; &quot;$(RootModFolder)/Profiles/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;LICENSE&quot; &quot;$(RootModFolder)/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;CHANGELOG.md&quot; &quot;$(RootModFolder)/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;README.md&quot; &quot;$(RootModFolder)/&quot;" />

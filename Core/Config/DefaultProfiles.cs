@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 
@@ -11,6 +12,7 @@ namespace NOAutopilot.Core.Config;
 public static class DefaultProfiles
 {
     private static readonly string Dir;
+    private static readonly HashSet<string> ErrorLogged = [];
 
     static DefaultProfiles()
     {
@@ -41,17 +43,13 @@ public static class DefaultProfiles
             // Ignore
         }
 
-        // Search known locations
+        // Fallback for ScriptEngine or nomm installs
         string[] candidates =
         [
-            // scriptengine debug
             Path.Combine(BepInEx.Paths.BepInExRootPath, "scripts", "Profiles"),
-
-            // manual install
             Path.Combine(BepInEx.Paths.PluginPath, "no-autopilot-mod", "Profiles"),
-
-            // nomm install
             Path.Combine(BepInEx.Paths.PluginPath, "no-autopilot-mod", "no-autopilot-mod", "Profiles"),
+            Path.Combine(BepInEx.Paths.PluginPath, "Profiles")
         ];
 
         foreach (string path in candidates)
@@ -62,7 +60,7 @@ public static class DefaultProfiles
             }
         }
 
-        // Default fallback
+        // Return first candidate as a default path to avoid null
         return candidates[0];
     }
 
@@ -81,11 +79,15 @@ public static class DefaultProfiles
 
         try
         {
-            return JsonUtility.FromJson<PidProfile>(File.ReadAllText(path));
+            string json = File.ReadAllText(path);
+            return JsonUtility.FromJson<PidProfile>(json);
         }
         catch (Exception ex)
         {
-            Plugin.Logger.LogError($"[DefaultProfiles] Failed to load '{id}': {ex.Message}");
+            if (ErrorLogged.Add(id))
+            {
+                Plugin.Logger.LogError($"[DefaultProfiles] Failed to load '{id}': {ex.Message}");
+            }
             return null;
         }
     }

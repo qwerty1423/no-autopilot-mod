@@ -4,48 +4,118 @@ namespace NOAutopilot.Core.PID;
 
 public static class ActivePid
 {
+    // active values
     public static PIDTuning Alt, Vs, Pitch, Roll, RollRate, Crs, Spd, Gcas;
     public static GainSchedule SchedPitch, SchedRollRate, SchedVs, SchedSpd;
 
+    // global default
+    private static string s_gAlt, s_gVs, s_gPitch, s_gRoll, s_gRollRate, s_gCrs, s_gSpd, s_gGcas;
+    private static string s_gSchedPitch, s_gSchedRollRate, s_gSchedVs, s_gSchedSpd;
+
     public static string CurrentAircraftId { get; private set; } = "";
-    public static bool HasOverride { get; private set; }
+    public static bool IsUsingOverride { get; private set; }
 
-    public static void LoadDefaults()
+    /// <summary>
+    /// Capture the state of the BepInEx config entries as they were at startup.
+    /// </summary>
+    public static void CacheGlobalDefaults()
     {
-        Alt = Plugin.ConfPidAlt.Value;
-        Vs = Plugin.ConfPidVs.Value;
-        Pitch = Plugin.ConfPidPitch.Value;
-        Roll = Plugin.ConfPidRoll.Value;
-        RollRate = Plugin.ConfPidRollRate.Value;
-        Crs = Plugin.ConfPidCrs.Value;
-        Spd = Plugin.ConfPidSpd.Value;
-        Gcas = Plugin.ConfPidGcas.Value;
+        s_gAlt = Plugin.ConfPidAlt.Value.ToString();
+        s_gVs = Plugin.ConfPidVs.Value.ToString();
+        s_gPitch = Plugin.ConfPidPitch.Value.ToString();
+        s_gRoll = Plugin.ConfPidRoll.Value.ToString();
+        s_gRollRate = Plugin.ConfPidRollRate.Value.ToString();
+        s_gCrs = Plugin.ConfPidCrs.Value.ToString();
+        s_gSpd = Plugin.ConfPidSpd.Value.ToString();
+        s_gGcas = Plugin.ConfPidGcas.Value.ToString();
 
-        SchedPitch = Plugin.SchedPidPitch.Value;
-        SchedRollRate = Plugin.SchedPidRollRate.Value;
-        SchedVs = Plugin.SchedPidVs.Value;
-        SchedSpd = Plugin.SchedPidSpd.Value;
-        HasOverride = false;
+        s_gSchedPitch = Plugin.SchedPidPitch.Value.ToString();
+        s_gSchedRollRate = Plugin.SchedPidRollRate.Value.ToString();
+        s_gSchedVs = Plugin.SchedPidVs.Value.ToString();
+        s_gSchedSpd = Plugin.SchedPidSpd.Value.ToString();
+    }
+
+    /// <summary>
+    /// Returns a PidProfile representing the session's global defaults.
+    /// </summary>
+    public static PidProfile GetGlobalDefaults()
+    {
+        return new()
+        {
+            Alt = s_gAlt,
+            Vs = s_gVs,
+            Pitch = s_gPitch,
+            Roll = s_gRoll,
+            RollRate = s_gRollRate,
+            Crs = s_gCrs,
+            Spd = s_gSpd,
+            Gcas = s_gGcas,
+            SchedPitch = s_gSchedPitch,
+            SchedRollRate = s_gSchedRollRate,
+            SchedVs = s_gSchedVs,
+            SchedSpd = s_gSchedSpd
+        };
+    }
+
+    /// <summary>
+    /// Reset active values to the cached global defaults.
+    /// </summary>
+    public static void LoadGlobalDefaults()
+    {
+        Alt = PIDTuning.Parse(s_gAlt);
+        Vs = PIDTuning.Parse(s_gVs);
+        Pitch = PIDTuning.Parse(s_gPitch);
+        Roll = PIDTuning.Parse(s_gRoll);
+        RollRate = PIDTuning.Parse(s_gRollRate);
+        Crs = PIDTuning.Parse(s_gCrs);
+        Spd = PIDTuning.Parse(s_gSpd);
+        Gcas = PIDTuning.Parse(s_gGcas);
+
+        SchedPitch = GainSchedule.Parse(s_gSchedPitch);
+        SchedRollRate = GainSchedule.Parse(s_gSchedRollRate);
+        SchedVs = GainSchedule.Parse(s_gSchedVs);
+        SchedSpd = GainSchedule.Parse(s_gSchedSpd);
+
+        IsUsingOverride = false;
     }
 
     public static void ApplyForAircraft(string id)
     {
-        LoadDefaults();
         CurrentAircraftId = id ?? "";
+
+        LoadGlobalDefaults();
+
         if (string.IsNullOrEmpty(id))
         {
             SyncToConfig();
             return;
         }
 
-        PidProfile profile = PidProfileManager.LoadProfile(id);
+        PidProfile shipped = DefaultProfiles.Load(id);
+        PidProfile user = PidProfileManager.LoadUserProfile(id);
+
+        if (shipped != null)
+        {
+            ApplyProfile(shipped);
+        }
+
+        if (user != null)
+        {
+            ApplyProfile(user);
+        }
+
+        IsUsingOverride = shipped != null || user != null;
+
+        SyncToConfig();
+    }
+
+    public static void ApplyProfile(PidProfile profile)
+    {
         if (profile == null)
         {
-            SyncToConfig();
             return;
         }
 
-        HasOverride = true;
         if (!string.IsNullOrEmpty(profile.Alt)) { Alt = PIDTuning.Parse(profile.Alt); }
         if (!string.IsNullOrEmpty(profile.Vs)) { Vs = PIDTuning.Parse(profile.Vs); }
         if (!string.IsNullOrEmpty(profile.Pitch)) { Pitch = PIDTuning.Parse(profile.Pitch); }
@@ -59,8 +129,6 @@ public static class ActivePid
         if (!string.IsNullOrEmpty(profile.SchedRollRate)) { SchedRollRate = GainSchedule.Parse(profile.SchedRollRate); }
         if (!string.IsNullOrEmpty(profile.SchedVs)) { SchedVs = GainSchedule.Parse(profile.SchedVs); }
         if (!string.IsNullOrEmpty(profile.SchedSpd)) { SchedSpd = GainSchedule.Parse(profile.SchedSpd); }
-
-        SyncToConfig();
     }
 
     public static void SyncToConfig()

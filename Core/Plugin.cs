@@ -217,16 +217,16 @@ public class Plugin : BaseUnityPlugin
             Logger.LogInfo("[ConfigBackup] Config was regenerated from defaults.");
         }
 
-        TomlTypeConverter.AddConverter(typeof(PIDTuning), new TypeConverter
+        _ = TomlTypeConverter.AddConverter(typeof(PIDTuning), new TypeConverter
         {
-            ConvertToString = (obj, _) => ((PIDTuning)obj).ToString(),
-            ConvertToObject = (str, _) => PIDTuning.Parse(str)
+            ConvertToString = static (obj, _) => ((PIDTuning)obj).ToString(),
+            ConvertToObject = static (str, _) => PIDTuning.Parse(str)
         });
 
-        TomlTypeConverter.AddConverter(typeof(GainSchedule), new TypeConverter
+        _ = TomlTypeConverter.AddConverter(typeof(GainSchedule), new TypeConverter
         {
-            ConvertToString = (obj, _) => ((GainSchedule)obj).ToString(),
-            ConvertToObject = (str, _) => GainSchedule.Parse(str)
+            ConvertToString = static (obj, _) => ((GainSchedule)obj).ToString(),
+            ConvertToObject = static (str, _) => GainSchedule.Parse(str)
         });
 
         // Visuals
@@ -562,7 +562,7 @@ public class Plugin : BaseUnityPlugin
 
         ConfigBackup.WriteSchemaVersion(Config);
 
-        ActivePid.LoadDefaults();
+        ActivePid.CacheGlobalDefaults();
 
         _harmony = new Harmony(Guid);
         try
@@ -856,6 +856,9 @@ public class Plugin : BaseUnityPlugin
     [UsedImplicitly]
     private void OnDestroy()
     {
+        ActivePid.LoadGlobalDefaults();
+        ActivePid.SyncToConfig();
+
         _harmony?.UnpatchSelf();
 
         SceneManager.sceneUnloaded -= OnSceneUnloaded;

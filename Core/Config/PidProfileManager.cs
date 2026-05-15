@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -12,10 +13,12 @@ namespace NOAutopilot.Core.Config;
 public static class PidProfileManager
 {
     private static readonly string UserDir = Path.Combine(BepInEx.Paths.ConfigPath, "NOAutopilot", "Profiles");
+    private static readonly string BackupDir = Path.Combine(UserDir, "Backups");
 
-    private static PidProfile s_snapshot;
+    private static PidProfile s_tuningSnapshot;
     private static string s_tuningAircraftId;
     private static readonly Regex Regex = new(@"\(Clone\)$", RegexOptions.IgnoreCase);
+
     public static bool IsTuning { get; private set; }
 
     public static string GetId(Aircraft a)
@@ -29,44 +32,28 @@ public static class PidProfileManager
         return Regex.Replace(key ?? a.name, "").Trim().ToLowerInvariant();
     }
 
-    /// <summary>
-    /// Loads user profile first, then shipped default, then null.
-    /// </summary>
-    public static PidProfile LoadProfile(string id)
+    public static PidProfile LoadUserProfile(string id)
     {
         if (string.IsNullOrEmpty(id))
         {
             return null;
         }
 
-        // User override takes priority
-        string userPath = Path.Combine(UserDir, $"{id}.json");
-        if (File.Exists(userPath))
+        string path = Path.Combine(UserDir, $"{id}.json");
+        if (!File.Exists(path))
         {
-            return JsonUtility.FromJson<PidProfile>(File.ReadAllText(userPath));
+            return null;
         }
 
-        // Fall back to shipped default
-        return DefaultProfiles.Load(id);
+        try { return JsonUtility.FromJson<PidProfile>(File.ReadAllText(path)); }
+        catch (Exception ex)
+        {
+            Plugin.Logger.LogError($"[PidProfileManager] Error loading user profile '{id}': {ex.Message}");
+            return null;
+        }
     }
 
-    /// <summary>
-    /// Whether the user has a custom saved profile.
-    /// </summary>
-    public static bool HasUserProfile(string id)
-    {
-        return !string.IsNullOrEmpty(id) && File.Exists(Path.Combine(UserDir, $"{id}.json"));
-    }
-
-    /// <summary>
-    /// Whether there is any profile (user or shipped).
-    /// </summary>
-    public static bool HasAnyProfile(string id)
-    {
-        return HasUserProfile(id) || DefaultProfiles.Exists(id);
-    }
-
-    public static void DeleteUserProfile(string id)
+    public static void BackupAndDeleteUserProfile(string id)
     {
         if (string.IsNullOrEmpty(id))
         {
@@ -74,10 +61,19 @@ public static class PidProfileManager
         }
 
         string path = Path.Combine(UserDir, $"{id}.json");
-        if (File.Exists(path))
+        if (!File.Exists(path))
         {
-            File.Delete(path);
+            return;
         }
+
+        try
+        {
+            Directory.CreateDirectory(BackupDir);
+            string backupPath = Path.Combine(BackupDir, $"{id}_{DateTime.Now:yyyy-MM-ddTHH-mm-ss}.json");
+            File.Move(path, backupPath);
+            Plugin.Logger.LogInfo($"[PidProfileManager] Profile '{id}' moved to backup.");
+        }
+        catch (Exception) { File.Delete(path); }
     }
 
     public static void BeginTuning()
@@ -88,156 +84,178 @@ public static class PidProfileManager
             return;
         }
 
-        s_snapshot = CaptureConfig();
+        s_tuningSnapshot = CaptureCurrent();
         s_tuningAircraftId = id;
         IsTuning = true;
     }
 
-    public static void SaveAndRestore(string id)
+    public static void SaveAndExitTuning(string id)
     {
         if (string.IsNullOrEmpty(id))
         {
             return;
         }
 
-        PidProfile profile = CaptureConfig();
+        ActivePid.LoadGlobalDefaults();
+        ActivePid.ApplyProfile(DefaultProfiles.Load(id));
+        PidProfile baseProfile = CaptureCurrent();
 
-        Directory.CreateDirectory(UserDir);
-        File.WriteAllText(Path.Combine(UserDir, $"{id}.json"), JsonUtility.ToJson(profile, true));
+        ActivePid.SyncFromConfig();
+        PidProfile tunedProfile = CaptureCurrent();
 
-        Restore();
+        PidProfile partial = new();
+        if (tunedProfile.Alt != baseProfile.Alt) { partial.Alt = tunedProfile.Alt; }
+        if (tunedProfile.Vs != baseProfile.Vs) { partial.Vs = tunedProfile.Vs; }
+        if (tunedProfile.Pitch != baseProfile.Pitch) { partial.Pitch = tunedProfile.Pitch; }
+        if (tunedProfile.Roll != baseProfile.Roll) { partial.Roll = tunedProfile.Roll; }
+        if (tunedProfile.RollRate != baseProfile.RollRate) { partial.RollRate = tunedProfile.RollRate; }
+        if (tunedProfile.Crs != baseProfile.Crs) { partial.Crs = tunedProfile.Crs; }
+        if (tunedProfile.Spd != baseProfile.Spd) { partial.Spd = tunedProfile.Spd; }
+        if (tunedProfile.Gcas != baseProfile.Gcas) { partial.Gcas = tunedProfile.Gcas; }
+        if (tunedProfile.SchedPitch != baseProfile.SchedPitch) { partial.SchedPitch = tunedProfile.SchedPitch; }
+        if (tunedProfile.SchedRollRate != baseProfile.SchedRollRate) { partial.SchedRollRate = tunedProfile.SchedRollRate; }
+        if (tunedProfile.SchedVs != baseProfile.SchedVs) { partial.SchedVs = tunedProfile.SchedVs; }
+        if (tunedProfile.SchedSpd != baseProfile.SchedSpd) { partial.SchedSpd = tunedProfile.SchedSpd; }
+
+        if (!partial.IsEmpty())
+        {
+            _ = Directory.CreateDirectory(UserDir);
+            File.WriteAllText(Path.Combine(UserDir, $"{id}.json"), JsonUtility.ToJson(partial, true));
+        }
+        else
+        {
+            string path = Path.Combine(UserDir, $"{id}.json");
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+
+        IsTuning = false;
+        s_tuningAircraftId = null;
+        s_tuningSnapshot = null;
+
         ActivePid.ApplyForAircraft(id);
     }
 
-    public static void Restore()
+    public static void CancelTuning()
     {
-        if (s_snapshot == null)
+        if (!IsTuning)
         {
             return;
         }
 
-        Plugin.ConfPidAlt.Value = PIDTuning.Parse(s_snapshot.Alt);
-        Plugin.ConfPidVs.Value = PIDTuning.Parse(s_snapshot.Vs);
-        Plugin.ConfPidPitch.Value = PIDTuning.Parse(s_snapshot.Pitch);
-        Plugin.ConfPidRoll.Value = PIDTuning.Parse(s_snapshot.Roll);
-        Plugin.ConfPidRollRate.Value = PIDTuning.Parse(s_snapshot.RollRate);
-        Plugin.ConfPidCrs.Value = PIDTuning.Parse(s_snapshot.Crs);
-        Plugin.ConfPidSpd.Value = PIDTuning.Parse(s_snapshot.Spd);
-        Plugin.ConfPidGcas.Value = PIDTuning.Parse(s_snapshot.Gcas);
-
-        Plugin.SchedPidPitch.Value = GainSchedule.Parse(s_snapshot.SchedPitch);
-        Plugin.SchedPidRollRate.Value = GainSchedule.Parse(s_snapshot.SchedRollRate);
-        Plugin.SchedPidVs.Value = GainSchedule.Parse(s_snapshot.SchedVs);
-        Plugin.SchedPidSpd.Value = GainSchedule.Parse(s_snapshot.SchedSpd);
-
         IsTuning = false;
+
+        // Restore active values from the snapshot we took at the start
+        ActivePid.Alt = PIDTuning.Parse(s_tuningSnapshot.Alt);
+        ActivePid.Vs = PIDTuning.Parse(s_tuningSnapshot.Vs);
+        ActivePid.Pitch = PIDTuning.Parse(s_tuningSnapshot.Pitch);
+        ActivePid.Roll = PIDTuning.Parse(s_tuningSnapshot.Roll);
+        ActivePid.RollRate = PIDTuning.Parse(s_tuningSnapshot.RollRate);
+        ActivePid.Crs = PIDTuning.Parse(s_tuningSnapshot.Crs);
+        ActivePid.Spd = PIDTuning.Parse(s_tuningSnapshot.Spd);
+        ActivePid.Gcas = PIDTuning.Parse(s_tuningSnapshot.Gcas);
+        ActivePid.SchedPitch = GainSchedule.Parse(s_tuningSnapshot.SchedPitch);
+        ActivePid.SchedRollRate = GainSchedule.Parse(s_tuningSnapshot.SchedRollRate);
+        ActivePid.SchedVs = GainSchedule.Parse(s_tuningSnapshot.SchedVs);
+        ActivePid.SchedSpd = GainSchedule.Parse(s_tuningSnapshot.SchedSpd);
+
         s_tuningAircraftId = null;
+        s_tuningSnapshot = null;
+        ActivePid.SyncToConfig();
     }
 
-    private static PidProfile CaptureConfig() => new()
+    private static PidProfile CaptureCurrent()
     {
-        Alt = Plugin.ConfPidAlt.Value.ToString(),
-        Vs = Plugin.ConfPidVs.Value.ToString(),
-        Pitch = Plugin.ConfPidPitch.Value.ToString(),
-        Roll = Plugin.ConfPidRoll.Value.ToString(),
-        RollRate = Plugin.ConfPidRollRate.Value.ToString(),
-        Crs = Plugin.ConfPidCrs.Value.ToString(),
-        Spd = Plugin.ConfPidSpd.Value.ToString(),
-        Gcas = Plugin.ConfPidGcas.Value.ToString(),
-        SchedPitch = Plugin.SchedPidPitch.Value.ToString(),
-        SchedRollRate = Plugin.SchedPidRollRate.Value.ToString(),
-        SchedVs = Plugin.SchedPidVs.Value.ToString(),
-        SchedSpd = Plugin.SchedPidSpd.Value.ToString()
-    };
+        return new()
+        {
+            Alt = ActivePid.Alt.ToString(),
+            Vs = ActivePid.Vs.ToString(),
+            Pitch = ActivePid.Pitch.ToString(),
+            Roll = ActivePid.Roll.ToString(),
+            RollRate = ActivePid.RollRate.ToString(),
+            Crs = ActivePid.Crs.ToString(),
+            Spd = ActivePid.Spd.ToString(),
+            Gcas = ActivePid.Gcas.ToString(),
+            SchedPitch = ActivePid.SchedPitch.ToString(),
+            SchedRollRate = ActivePid.SchedRollRate.ToString(),
+            SchedVs = ActivePid.SchedVs.ToString(),
+            SchedSpd = ActivePid.SchedSpd.ToString()
+        };
+    }
 
     public static void DrawConfigManagerControls(ConfigEntryBase _)
     {
         if (!IsTuning)
         {
-            // Display active values
             ActivePid.SyncToConfig();
         }
         else
         {
-            // Apply config immediately
             ActivePid.SyncFromConfig();
         }
 
         string currentId = ActivePid.CurrentAircraftId;
-        bool hasUser = HasUserProfile(currentId);
+        bool hasUser = !string.IsNullOrEmpty(currentId) && File.Exists(Path.Combine(UserDir, $"{currentId}.json"));
         bool hasShipped = DefaultProfiles.Exists(currentId);
         string displayId = string.IsNullOrEmpty(currentId) ? "None" : currentId;
 
         GUIStyle richLabel = new(GUI.skin.label) { richText = true };
-
         GUILayout.BeginVertical();
 
-        // Status line
         string status = "";
         if (!string.IsNullOrEmpty(currentId))
         {
-            if (hasUser)
-            {
-                status = " <color=#00FF00>[User Profile]</color>";
-            }
-            else if (hasShipped)
-            {
-                status = " <color=#88CCFF>[Default Profile]</color>";
-            }
+            status = hasUser
+                ? " <color=#00FF00>[User Profile]</color>"
+                : hasShipped
+                    ? " <color=#88CCFF>[Default Profile]</color>"
+                    : " <color=#AAAAAA>[Global Defaults]</color>";
         }
-        GUILayout.Label($"<b>Current aircraft:</b> {displayId}{status}", richLabel);
 
+        GUILayout.Label($"<b>Current aircraft:</b> {displayId}{status}", richLabel);
         GUILayout.BeginHorizontal();
 
         if (!IsTuning)
         {
             if (!string.IsNullOrEmpty(currentId))
             {
-                if (GUILayout.Button("Tune current aircraft", GUILayout.ExpandWidth(true)))
+                if (GUILayout.Button("Tune current aircraft"))
                 {
                     BeginTuning();
                 }
 
-                if (hasUser && GUILayout.Button("Reset to defaults", GUILayout.ExpandWidth(true)))
+                if (hasUser && GUILayout.Button("Reset to defaults"))
                 {
-                    DeleteUserProfile(currentId);
+                    BackupAndDeleteUserProfile(currentId);
                     ActivePid.ApplyForAircraft(currentId);
                 }
             }
             else
             {
-                GUILayout.Label("Enter an aircraft to tune its profile.", richLabel);
+                GUILayout.Label("Enter an aircraft to tune its profile.");
+            }
+        }
+        else if (currentId != s_tuningAircraftId)
+        {
+            GUILayout.Label($"<color=#FFAA00>Aircraft changed. Return to <b>{s_tuningAircraftId}</b> or cancel.</color>", richLabel);
+            if (GUILayout.Button("Cancel"))
+            {
+                CancelTuning();
             }
         }
         else
         {
-            // Aircraft changed during tuning
-            if (currentId != s_tuningAircraftId)
+            GUILayout.Label("<color=#FFFF00><b>Tuning mode</b></color>", richLabel);
+            if (GUILayout.Button("Save Overrides"))
             {
-                GUILayout.Label(
-                    $"<color=#FFAA00>Aircraft changed. Return to <b>{s_tuningAircraftId}</b> or cancel.</color>",
-                    richLabel);
-
-                if (GUILayout.Button("Cancel", GUILayout.ExpandWidth(true)))
-                {
-                    Restore();
-                    ActivePid.ApplyForAircraft(currentId);
-                }
+                SaveAndExitTuning(s_tuningAircraftId);
             }
-            else
+
+            if (GUILayout.Button("Cancel"))
             {
-                GUILayout.Label("<color=#FFFF00><b>Tuning mode</b></color>", richLabel, GUILayout.ExpandWidth(true));
-
-                if (GUILayout.Button("Save Overrides", GUILayout.ExpandWidth(true)))
-                {
-                    SaveAndRestore(s_tuningAircraftId);
-                }
-
-                if (GUILayout.Button("Cancel", GUILayout.ExpandWidth(true)))
-                {
-                    Restore();
-                    ActivePid.ApplyForAircraft(currentId);
-                }
+                CancelTuning();
             }
         }
 

@@ -21,9 +21,11 @@ Another list can be found in [this mod's post](https://discord.com/channels/9090
 
 ### Mod manager
 
-[NOMM](https://github.com/Combat787/NOMM)
+[NOMM](https://github.com/Combat787/NOMM) - probably recommended
 
-[Yellowcake](https://github.com/NaghDiefallah/Yellowcake)
+[Yellowcake](https://github.com/NaghDiefallah/Yellowcake) - currently unmaintained?
+
+install the mod manager, and then look for this mod and the [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager).
 
 If you are on linux, add override in steam launch options: `WINEDLLOVERRIDES="winhttp=n,b" %command%`
 
@@ -136,6 +138,8 @@ Autopilot controls roll and pitch. (helicopters somehow work, but probably requi
 Displays current settings on the HUD. There is also a GUI that opens with F8 key by default.
 
 PID values can be tuned further if you like, but the defaults should be quite effective. They may not work in all situations or in all aircraft, however. There is no limit to the minimum altitude or maximum altitude, but crashes and engine flameouts may result from flying too low or too high.
+
+Some default pid profiles for each aircraft are provided, you can override them in the bepinex config manager or by creating JSON files with the correct name and format.
 
 ## Auto Jammer
 

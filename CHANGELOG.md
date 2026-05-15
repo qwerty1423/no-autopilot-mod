@@ -5,7 +5,9 @@
 ### Added
 
 - individual aircraft pid tuning
-- currently only one default profile for ifrit
+- some default pid profiles for most aircraft
+- automatic config regeneration
+  it will now back up your current config if it is outdated, and then regenerate it
 
 ## [5.3.0]
 

@@ -2,14 +2,19 @@
 
 ## [Unreleased]
 
+## [5.4.0]
+
 ### Added
 
 - individual aircraft pid tuning
-- some default pid profiles for most aircraft
-- automatic config regeneration
+- default pid profiles for most aircraft
+- configurable automatic config regeneration
+  
   it will now back up your current config if it is outdated, and then regenerate it
 
-## [5.3.0]
+  custom profile and backup directory is `.../Nuclear Option/BepInEx/config/NOAutopilot`
+
+## [5.3.0] 2026-05-12
 
 ### Added
 
@@ -355,7 +360,8 @@
 
 ## [4.8.4] - 2025-12-29
 
-[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.3.0...HEAD
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.4.0...HEAD
+[5.4.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.3.0...v5.4.0
 [5.3.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.2.0...v5.3.0
 [5.2.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.1.2...v5.2.0
 [5.1.2]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.0.1...v5.1.2

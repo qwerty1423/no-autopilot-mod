@@ -4,4 +4,4 @@ WORKDIR /build
 
 COPY . .
 
-RUN dotnet build NOAutopilot.csproj -c Release
+RUN dotnet build -c Release

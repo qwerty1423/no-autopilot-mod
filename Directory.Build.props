@@ -2,10 +2,9 @@
   <PropertyGroup>
     <NuclearOptionDir Condition="'$(NuclearOptionDir)' == ''">$(HOME)/.local/share/Steam/steamapps/common/Nuclear Option</NuclearOptionDir>
     <ManagedDir>$(NuclearOptionDir)/NuclearOption_Data/Managed</ManagedDir>
-    <IsCI Condition="'$(IsCI)' == ''">false</IsCI>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(IsCI)' != 'true'">
+  <ItemGroup>
     <Reference Include="Assembly-CSharp">
       <HintPath>$(ManagedDir)/Assembly-CSharp.dll</HintPath>
       <Private>false</Private>

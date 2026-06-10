@@ -36,7 +36,7 @@ public static class ActivePid
     }
 
     /// <summary>
-    /// Reset active values to the cached global defaults.
+    /// Reset active values to the global defaults.
     /// </summary>
     public static void LoadGlobalDefaults()
     {

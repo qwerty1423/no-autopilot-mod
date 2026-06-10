@@ -3,9 +3,6 @@
 
 set -e
 
-# 1. Use the $CONTAINER_HELPER env var if set, 
-# 2. otherwise look for podman, 
-# 3. otherwise look for docker.
 CONTAINER_ENGINE="${CONTAINER_ENGINE:-$(command -v podman || command -v docker)}"
 
 if [ -z "$CONTAINER_ENGINE" ]; then
@@ -24,13 +21,19 @@ fi
 
 echo "Building with game from $GAME_DIR"
 
+mkdir -p build-output
+
 $CONTAINER_ENGINE build -f Dockerfile.build -t noautopilot-build .
 
 $CONTAINER_ENGINE run --rm \
-  -v "$(pwd)":/build \
+  -v "$(pwd)":/src:ro \
+  -v "$(pwd)/build-output":/out \
   -v "$GAME_DIR":/game:ro \
   noautopilot-build \
-  dotnet build NOAutopilot.csproj -c Release \
-    -p:NuclearOptionDir=/game \
-    --output ./container-bin \
-    --intermediate-output ./container-obj/
+  bash -lc '
+    rsync -a --exclude bin --exclude obj /src/ /tmp/build/ &&
+    cd /tmp/build &&
+    dotnet build NOAutopilot.csproj -c Release \
+      -p:NuclearOptionDir=/game \
+      -p:OutputPath=/out/
+    '

@@ -2,6 +2,7 @@ Libs/**/*.dll
 
 bin/
 obj/
+build-output/
 
 .vscode/
 .idea/

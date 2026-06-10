@@ -1,0 +1,53 @@
+name: Build Testing
+
+on:
+  push:
+    branches: [ testing ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-testing:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build stubs
+        run: |
+          for proj in .github/ci/stubs/*/; do
+            name=$(basename "$proj")
+            echo "::group::Building $name stub"
+            dotnet build "$proj$name.csproj" -c Release --configfile .github/ci/NuGet.config
+            echo "::endgroup::"
+          done
+
+      - name: Detect version
+        id: version
+        shell: bash
+        run: |
+          VER=$(grep -oP '(?<=<Version>)[^<]+' .github/ci/NOAutopilot.CI.csproj | head -1)
+          if [ -z "$VER" ]; then
+            echo "::error::Could not detect version from CI csproj"
+            exit 1
+          fi
+          echo "VERSION=$VER" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VER"
+
+      - name: Build mod (Release)
+        run: dotnet build .github/ci/NOAutopilot.CI.csproj -c Release --configfile .github/ci/NuGet.config
+
+      - name: Upload testing artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOAutopilot-testing-v${{ steps.version.outputs.VERSION }}
+          path: bin/Release/com.qwerty1423.NOAutopilot.dll
+          retention-days: 7

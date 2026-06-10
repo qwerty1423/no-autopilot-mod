@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>com.qwerty1423.NOAutopilot</AssemblyName>
+    <RootNamespace>NOAutopilot</RootNamespace>
+    <AssemblyCopyright>
+      Copyright (c) 2026 qwerty1423 and NOAutopilot contributors
+    </AssemblyCopyright>
+    <Product>NOAutopilot</Product>
+    <Description>no autopilot?</Description>
+    <Version>5.4.0</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>CS0649;CS0169;CS0414</NoWarn>
+
+    <IsCI>true</IsCI>
+
+    <OutputPath>..\..\bin\Release\</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\Core\**\*.cs"
+             Link="Core\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\..\Profiles\**\*.json"
+             Link="Profiles\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Core" Version="5.*" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" />
+    <PackageReference Include="UnityEngine.Modules" Version="2022.3.9" />
+    <PackageReference Include="JetBrains.Annotations" Version="2025.2.4" />
+  </ItemGroup>
+
+  <Import Project="stubs\Stubs.props" />
+
+  <ItemGroup>
+    <Reference Include="JetBrains.Annotations">
+      <Aliases>JetBrains</Aliases>
+    </Reference>
+  </ItemGroup>
+
+</Project>

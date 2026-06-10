@@ -1,0 +1,29 @@
+<Project>
+  <!-- Game-specific stubs (minimal signatures, no proprietary code) -->
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Assembly-CSharp\Assembly-CSharp.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Mirage\Mirage.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Rewired_Core\Rewired_Core.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)UnityEngine.IMGUIModule\UnityEngine.IMGUIModule.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)UnityEngine.InputLegacyModule\UnityEngine.InputLegacyModule.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)UnityEngine.PhysicsModule\UnityEngine.PhysicsModule.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)UnityEngine.UIModule\UnityEngine.UIModule.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)UnityEngine.UI\UnityEngine.UI.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

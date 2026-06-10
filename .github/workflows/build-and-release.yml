@@ -1,0 +1,89 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version_override:
+        description: 'Optional version override (e.g. 1.2.3)'
+        required: false
+        default: ''
+      prerelease:
+        description: 'Mark as pre-release?'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build stubs
+        run: |
+          for proj in .github/ci/stubs/*/; do
+            name=$(basename "$proj")
+            echo "::group::Building $name stub"
+            dotnet build "$proj$name.csproj" -c Release --configfile .github/ci/NuGet.config
+            echo "::endgroup::"
+          done
+
+      - name: Detect version
+        id: version
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.inputs.version_override }}" ]; then
+            VER="${{ github.event.inputs.version_override }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VER="${{ github.ref_name }}"
+            VER="${VER#v}"
+          else
+            VER=$(grep -oP '(?<=<Version>)[^<]+' .github/ci/NOAutopilot.CI.csproj | head -1)
+            if [ -z "$VER" ]; then
+              echo "::error::Could not detect version from CI csproj"
+              exit 1
+            fi
+          fi
+          echo "VERSION=$VER" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VER"
+
+      - name: Build mod (Release)
+        run: dotnet build .github/ci/NOAutopilot.CI.csproj -c Release --configfile .github/ci/NuGet.config
+
+      - name: Package artifacts
+        run: |
+          mkdir -p artifact
+          cp bin/Release/com.qwerty1423.NOAutopilot.dll artifact/
+          [ -f bin/Release/com.qwerty1423.NOAutopilot.pdb ] && cp bin/Release/com.qwerty1423.NOAutopilot.pdb artifact/
+          cd artifact && zip -r "../NOAutopilot-v${{ steps.version.outputs.VERSION }}.zip" .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: NOAutopilot v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## NOAutopilot v${{ steps.version.outputs.VERSION }}
+
+            ### Installation
+            1. Download `NOAutopilot-v${{ steps.version.outputs.VERSION }}.zip`
+            2. Extract into `BepInEx/plugins/`
+            3. Launch Nuclear Option
+          prerelease: ${{ github.event.inputs.prerelease }}
+          files: |
+            NOAutopilot-v${{ steps.version.outputs.VERSION }}.zip
+            artifact/com.qwerty1423.NOAutopilot.dll
+          generate_release_notes: true

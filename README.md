@@ -181,6 +181,8 @@ steps
    it should work? I haven't tested.
 3. `dotnet build -c Release`
 
-you can also run the container build script thing in /scripts? With some luck the hashes may match but since the game dlls change a lot this is not guaranteed, so just decompile if you want to feel safe.
+you can also run the container build script thing in /scripts?
+
+With some luck the hashes may match but since the game dlls change a lot this is not guaranteed, so just decompile if you want to feel safe.
 
 PS the code is terrible, it really needs a rewrite.

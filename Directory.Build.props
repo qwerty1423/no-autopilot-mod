@@ -9,14 +9,17 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>$(ManagedDir)/Assembly-CSharp.dll</HintPath>
       <Private>false</Private>
+      <Publicize>true</Publicize>
     </Reference>
     <Reference Include="Mirage">
       <HintPath>$(ManagedDir)/Mirage.dll</HintPath>
       <Private>false</Private>
+      <Publicize>true</Publicize>
     </Reference>
     <Reference Include="Rewired_Core">
       <HintPath>$(ManagedDir)/Rewired_Core.dll</HintPath>
       <Private>false</Private>
+      <Publicize>true</Publicize>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>$(ManagedDir)/UnityEngine.dll</HintPath>

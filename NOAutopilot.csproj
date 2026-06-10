@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="Local.props" Condition="Exists('Local.props')" />
+  <Import Project="Local.props" Condition="Exists('Local.props') AND '$(IsCI)' != 'true'" />
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>

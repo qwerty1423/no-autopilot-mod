@@ -10,7 +10,7 @@
     </AssemblyCopyright>
     <Product>NOAutopilot</Product>
     <Description>no autopilot?</Description>
-    <Version>5.4.0</Version>
+    <Version>5.5.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>

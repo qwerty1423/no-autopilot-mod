@@ -177,7 +177,10 @@ prerequisites
 steps
 
 1. clone the repo, cd no-autopilot-mod, checkout a release version.
-2. maybe change path to nuclear option directory in the `.csproj` (will have to fix this later)
+2. make a Local.props file if you need to change the path to nuclear option, there is an example one.
+   it should work? I haven't tested.
 3. `dotnet build -c Release`
+
+you can also run the container build script thing in /scripts? With some luck the hashes may match but since the game dlls change a lot this is not guaranteed, so just decompile if you want to feel safe.
 
 PS the code is terrible, it really needs a rewrite.

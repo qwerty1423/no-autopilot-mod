@@ -1,0 +1,7 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0
+
+WORKDIR /build
+
+COPY . .
+
+RUN dotnet build NOAutopilot.csproj -c Release

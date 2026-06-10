@@ -1,0 +1,5 @@
+bin/
+obj/
+Local.props
+.git/
+*.7z

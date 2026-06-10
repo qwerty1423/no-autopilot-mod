@@ -1,7 +1,4 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0
-
+RUN apt-get update && apt-get install -y --no-install-recommends p7zip-full rsync \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /build
-
-COPY . .
-
-RUN dotnet build -c Release

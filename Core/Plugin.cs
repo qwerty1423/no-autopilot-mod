@@ -79,7 +79,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> KeepSetAltKey, KeepSetAltStick, UnpatchIfBroken;
 
     // Map
-    public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom, SaveMapZoom;
+    public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom, SaveMapPosition, SaveMapZoom;
     // public static ConfigEntry<float> MinimapMinZoom, MinimapMaxZoom;
     public static ConfigEntry<float> MinimapDefaultZoom;
     public static ConfigEntry<bool> EnableMinimapPatches;
@@ -311,6 +311,7 @@ public class Plugin : BaseUnityPlugin
 
         UnlockMapPan = Config.Bind("Settings - Map", "Unlock Map Pan", true, "Requires restart to apply.");
         UnlockMapZoom = Config.Bind("Settings - Map", "Unlock Map Zoom", true, "Requires restart to apply.");
+        SaveMapPosition = Config.Bind("Settings - Map", "Save Map Position", false, "Prevent map from resetting position when reopened.");
         SaveMapZoom = Config.Bind("Settings - Map", "Save Map Zoom", false,
             "Prevent map from resetting zoom when reopened.");
         // MinimapMinZoom = Config.Bind("Settings - Map - Minimap", "Minimap Min Zoom", 0.01f, "Minimum zoom level");

@@ -31,4 +31,6 @@ $CONTAINER_ENGINE run --rm \
   -v "$GAME_DIR":/game:ro \
   noautopilot-build \
   dotnet build NOAutopilot.csproj -c Release \
-    -p:NuclearOptionDir=/game
+    -p:NuclearOptionDir=/game \
+    --output ./container-bin \
+    --intermediate-output ./container-obj/

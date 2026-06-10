@@ -22,6 +22,7 @@ internal static class ControlOverridePatch
     private static readonly PIDController PidPitch = new();
     private static readonly PIDController PidRoll = new();
     private static readonly PIDController PidRollRate = new();
+    private static readonly PIDController PidYaw = new();
     private static readonly PIDController PidCrs = new();
     private static readonly PIDController PidGCAS = new();
     private static readonly PIDController PidSpd = new();
@@ -915,6 +916,28 @@ internal static class ControlOverridePatch
                         }
 
                         inputObj.roll = Mathf.Clamp(rollOut, -1f, 1f);
+
+                        if (APData.Enabled || APData.GCASActive)
+                        {
+                            Vector3 localVel = APData.PlayerTransform.InverseTransformDirection(APData.PlayerRB.velocity);
+
+                            if (localVel.sqrMagnitude > 1f)
+                            {
+                                float sideslip = Mathf.Atan2(localVel.x, localVel.z) * Mathf.Rad2Deg;
+
+                                float target = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Yaw, 0, sideslip);
+
+                                ConfigurePID(PidYaw, ActivePid.Yaw, dt, -1f, 1f);
+
+                                float rawYawOut = (float)PidYaw.Update(target, sideslip);
+
+                                PIDLogger.Log(PIDLogger.StepTarget.Yaw, rawYawOut, sideslip);
+
+                                float yawOut = -rawYawOut;
+
+                                inputObj.yaw = Mathf.Clamp(yawOut, -1f, 1f);
+                            }
+                        }
                     }
                 }
 

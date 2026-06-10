@@ -125,6 +125,7 @@ public static class PidProfileManager
         if (tunedProfile.Pitch != baseProfile.Pitch) { partial.Pitch = tunedProfile.Pitch; }
         if (tunedProfile.Roll != baseProfile.Roll) { partial.Roll = tunedProfile.Roll; }
         if (tunedProfile.RollRate != baseProfile.RollRate) { partial.RollRate = tunedProfile.RollRate; }
+        if (tunedProfile.Yaw != baseProfile.Yaw) { partial.Yaw = tunedProfile.Yaw; }
         if (tunedProfile.Crs != baseProfile.Crs) { partial.Crs = tunedProfile.Crs; }
         if (tunedProfile.Spd != baseProfile.Spd) { partial.Spd = tunedProfile.Spd; }
         if (tunedProfile.Gcas != baseProfile.Gcas) { partial.Gcas = tunedProfile.Gcas; }
@@ -180,6 +181,7 @@ public static class PidProfileManager
         ActivePid.Pitch = PIDTuning.Parse(s_tuningSnapshot.Pitch);
         ActivePid.Roll = PIDTuning.Parse(s_tuningSnapshot.Roll);
         ActivePid.RollRate = PIDTuning.Parse(s_tuningSnapshot.RollRate);
+        ActivePid.Yaw = PIDTuning.Parse(s_tuningSnapshot.Yaw);
         ActivePid.Crs = PIDTuning.Parse(s_tuningSnapshot.Crs);
         ActivePid.Spd = PIDTuning.Parse(s_tuningSnapshot.Spd);
         ActivePid.Gcas = PIDTuning.Parse(s_tuningSnapshot.Gcas);
@@ -204,6 +206,7 @@ public static class PidProfileManager
             Pitch = ActivePid.Pitch.ToString(),
             Roll = ActivePid.Roll.ToString(),
             RollRate = ActivePid.RollRate.ToString(),
+            Yaw = ActivePid.Yaw.ToString(),
             Crs = ActivePid.Crs.ToString(),
             Spd = ActivePid.Spd.ToString(),
             Gcas = ActivePid.Gcas.ToString(),
@@ -301,6 +304,7 @@ public static class PidProfileManager
                 Pitch = ActivePid.Pitch.ToString(),
                 Roll = ActivePid.Roll.ToString(),
                 RollRate = ActivePid.RollRate.ToString(),
+                Yaw = ActivePid.Yaw.ToString(),
                 Crs = ActivePid.Crs.ToString(),
                 Spd = ActivePid.Spd.ToString(),
                 Gcas = ActivePid.Gcas.ToString(),

@@ -10,6 +10,7 @@ public class PidProfile
     public string Pitch;
     public string Roll;
     public string RollRate;
+    public string Yaw;
     public string Crs;
     public string Spd;
     public string Gcas;
@@ -22,8 +23,8 @@ public class PidProfile
     public bool IsEmpty()
     {
         return string.IsNullOrEmpty(Alt) && string.IsNullOrEmpty(Vs) && string.IsNullOrEmpty(Pitch) &&
-        string.IsNullOrEmpty(Roll) && string.IsNullOrEmpty(RollRate) && string.IsNullOrEmpty(Crs) &&
-        string.IsNullOrEmpty(Spd) && string.IsNullOrEmpty(Gcas) &&
+        string.IsNullOrEmpty(Roll) && string.IsNullOrEmpty(RollRate) && string.IsNullOrEmpty(Yaw) &&
+        string.IsNullOrEmpty(Crs) && string.IsNullOrEmpty(Spd) && string.IsNullOrEmpty(Gcas) &&
         string.IsNullOrEmpty(SchedPitch) && string.IsNullOrEmpty(SchedRollRate) &&
         string.IsNullOrEmpty(SchedVs) && string.IsNullOrEmpty(SchedSpd);
     }

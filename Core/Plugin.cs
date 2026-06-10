@@ -125,9 +125,8 @@ public class Plugin : BaseUnityPlugin
 
     // pid
     public static ConfigEntry<PIDTuning> ConfPidAlt, ConfPidVs, ConfPidPitch;
-    public static ConfigEntry<PIDTuning> ConfPidRoll, ConfPidRollRate, ConfPidCrs;
-    public static ConfigEntry<PIDTuning> ConfPidSpd;
-    public static ConfigEntry<PIDTuning> ConfPidGcas;
+    public static ConfigEntry<PIDTuning> ConfPidRoll, ConfPidRollRate, ConfPidYaw;
+    public static ConfigEntry<PIDTuning> ConfPidCrs, ConfPidSpd, ConfPidGcas;
 
     public static ConfigEntry<GainSchedule> SchedPidPitch;
     public static ConfigEntry<GainSchedule> SchedPidRollRate;
@@ -494,13 +493,16 @@ public class Plugin : BaseUnityPlugin
         ConfPidRollRate = PIDTuningBinder.Bind(Config, pidSect, "06. Roll Rate > Stick",
             new PIDTuning(0.004, 0.3851634589019024, 0), "Roll rate > Stick");
 
-        ConfPidCrs = PIDTuningBinder.Bind(Config, pidSect, "07. Course > Course Rate",
+        ConfPidYaw = PIDTuningBinder.Bind(Config, pidSect, "07. Yaw",
+            new PIDTuning(0.5, 10, 0.1), "Yaw error > Stick");
+
+        ConfPidCrs = PIDTuningBinder.Bind(Config, pidSect, "08. Course > Course Rate",
             new PIDTuning(1, 30, 0, clegg: true), "Course Error > Course Rate");
 
-        ConfPidSpd = PIDTuningBinder.Bind(Config, pidSect, "08. Speed > Throttle",
+        ConfPidSpd = PIDTuningBinder.Bind(Config, pidSect, "09. Speed > Throttle",
             new PIDTuning(0.276635855846017, 4.55835278395057, 0.486418840935585, 1), "Speed Error > Throttle");
 
-        ConfPidGcas = PIDTuningBinder.Bind(Config, pidSect, "09. G-Force > Stick",
+        ConfPidGcas = PIDTuningBinder.Bind(Config, pidSect, "10. G-Force > Stick",
             new PIDTuning(0.448050807726941, 0.947761066338411, 0, smoothOut: 0.1), "GCAS G Error > Stick");
 
         const string schedSect = "PID Gain Scheduling (much basic)";
@@ -565,6 +567,8 @@ public class Plugin : BaseUnityPlugin
         ConfigBackup.WriteSchemaVersion(Config);
 
         ActivePid.CacheGlobalDefaults();
+        ActivePid.LoadGlobalDefaults();
+        ActivePid.WriteGlobalDefaultsToConfig();
 
         _harmony = new Harmony(Guid);
         try

@@ -96,4 +96,22 @@ public static class DefaultProfiles
     {
         return !string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(Dir) && File.Exists(Path.Combine(Dir, $"{id}.json"));
     }
+
+    public static void Save(string id, PidProfile profile)
+    {
+        if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(Dir))
+        {
+            return;
+        }
+
+        try
+        {
+            string path = Path.Combine(Dir, $"{id}.json");
+            File.WriteAllText(path, JsonUtility.ToJson(profile, true));
+        }
+        catch (Exception ex)
+        {
+            Plugin.Logger.LogError($"[DefaultProfiles] Failed to save '{id}': {ex.Message}");
+        }
+    }
 }

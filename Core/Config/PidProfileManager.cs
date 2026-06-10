@@ -291,6 +291,27 @@ public static class PidProfileManager
         }
 
         GUILayout.EndHorizontal();
+
+        if (GUILayout.Button("Export current as global profile"))
+        {
+            PidProfile current = new()
+            {
+                Alt = ActivePid.Alt.ToString(),
+                Vs = ActivePid.Vs.ToString(),
+                Pitch = ActivePid.Pitch.ToString(),
+                Roll = ActivePid.Roll.ToString(),
+                RollRate = ActivePid.RollRate.ToString(),
+                Crs = ActivePid.Crs.ToString(),
+                Spd = ActivePid.Spd.ToString(),
+                Gcas = ActivePid.Gcas.ToString(),
+                SchedPitch = ActivePid.SchedPitch.ToString(),
+                SchedRollRate = ActivePid.SchedRollRate.ToString(),
+                SchedVs = ActivePid.SchedVs.ToString(),
+                SchedSpd = ActivePid.SchedSpd.ToString()
+            };
+            DefaultProfiles.Save("exported_global_defaults", current);
+        }
+
         GUILayout.EndVertical();
     }
 }

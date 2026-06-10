@@ -871,6 +871,7 @@ public class Plugin : BaseUnityPlugin
         MinimapTerrainOpacityPatch.Reset();
         MinimapGridOpacityPatch.Reset();
         RewiredConfigManager.Reset();
+        InputHelper.Reset();
         if (APData.NavVisuals != null)
         {
             foreach (GameObject obj in APData.NavVisuals)

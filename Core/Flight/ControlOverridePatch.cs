@@ -1,8 +1,6 @@
 using System;
 using System.Collections;
 
-using BepInEx.Configuration;
-
 using HarmonyLib;
 
 using JetBrains.Annotations;
@@ -44,6 +42,10 @@ internal static class ControlOverridePatch
     private static bool s_isJammerHoldingTrigger;
 
     private static float s_disengageTimer;
+
+    private static GLOC s_cachedGloc;
+    private static Pilot s_glocPilot;
+    private static float s_glocNextRetry;
 
     public static float ThrottleOutput;
 
@@ -100,6 +102,10 @@ internal static class ControlOverridePatch
         s_isJammerHoldingTrigger = false;
 
         s_disengageTimer = 0f;
+
+        s_cachedGloc = null;
+        s_glocPilot = null;
+        s_glocNextRetry = 0f;
     }
 
     private static void ResetIntegrators()
@@ -255,7 +261,7 @@ internal static class ControlOverridePatch
                 Component pilotComp = APData.LocalPilot;
                 if (pilotComp != null)
                 {
-                    GLOC gloc = pilotComp.GetComponent<GLOC>();
+                    GLOC gloc = GetGloc(APData.LocalPilot);
                     if (gloc != null)
                     {
                         APData.BloodPressure = gloc.bloodPressure;
@@ -1062,6 +1068,30 @@ internal static class ControlOverridePatch
             Plugin.Logger.LogError($"[ControlOverridePatch] Error: {ex}");
             Plugin.IsBroken = true;
         }
+    }
+
+    private static GLOC GetGloc(Pilot pilot)
+    {
+        if (pilot != s_glocPilot)
+        {
+            s_glocPilot = pilot;
+            s_cachedGloc = (pilot?.GetComponent<GLOC>());
+            s_glocNextRetry = Time.time + 0.25f;
+            return s_cachedGloc;
+        }
+
+        if (s_cachedGloc == null)
+        {
+            if (pilot == null || Time.time < s_glocNextRetry)
+            {
+                return null;
+            }
+
+            s_glocNextRetry = Time.time + 0.25f;
+            s_cachedGloc = pilot.GetComponent<GLOC>();
+        }
+
+        return s_cachedGloc;
     }
 }
 

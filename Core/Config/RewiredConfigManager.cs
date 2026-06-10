@@ -1,4 +1,3 @@
-extern alias JetBrains;
 using System.Linq;
 
 using BepInEx.Configuration;

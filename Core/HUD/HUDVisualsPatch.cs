@@ -76,7 +76,7 @@ internal static class HUDVisualsPatch
         s_cachedFuelGauge = null;
         s_cachedRefLabel = null;
         s_lastVehicleChecked = null;
-        SbHud.Clear();
+        _ = SbHud.Clear();
     }
 
     [UsedImplicitly]
@@ -195,7 +195,7 @@ internal static class HUDVisualsPatch
                 if (Time.time - s_lastStringUpdate >= Plugin.DisplayUpdateInterval.Value)
                 {
                     s_lastStringUpdate = Time.time;
-                    SbHud.Clear();
+                    _ = SbHud.Clear();
 
                     if (Plugin.ShowFuelOverlay.Value)
                     {
@@ -444,7 +444,11 @@ internal static class HUDVisualsPatch
                         SbHud.Append($"\n<color=#{hexColor}>{APData.ALSStatusText}</color>");
                     }
 
-                    s_overlayText.text = SbHud.ToString();
+                    string newText = SbHud.ToString();
+                    if (newText != s_overlayText.text)
+                    {
+                        s_overlayText.text = newText;
+                    }
                 }
             }
 

@@ -40,20 +40,27 @@ public static class ActivePid
     /// </summary>
     public static void LoadGlobalDefaults()
     {
-        Alt = PIDTuning.Parse(s_gAlt);
-        Vs = PIDTuning.Parse(s_gVs);
-        Pitch = PIDTuning.Parse(s_gPitch);
-        Roll = PIDTuning.Parse(s_gRoll);
-        RollRate = PIDTuning.Parse(s_gRollRate);
-        Crs = PIDTuning.Parse(s_gCrs);
-        Spd = PIDTuning.Parse(s_gSpd);
-        Gcas = PIDTuning.Parse(s_gGcas);
+        PidProfile defaults = DefaultProfiles.Load("global_defaults");
+        if (defaults != null)
+        {
+            ApplyProfile(defaults);
+        }
+        else
+        {
+            Alt = PIDTuning.Parse(s_gAlt);
+            Vs = PIDTuning.Parse(s_gVs);
+            Pitch = PIDTuning.Parse(s_gPitch);
+            Roll = PIDTuning.Parse(s_gRoll);
+            RollRate = PIDTuning.Parse(s_gRollRate);
+            Crs = PIDTuning.Parse(s_gCrs);
+            Spd = PIDTuning.Parse(s_gSpd);
+            Gcas = PIDTuning.Parse(s_gGcas);
 
-        SchedPitch = GainSchedule.Parse(s_gSchedPitch);
-        SchedRollRate = GainSchedule.Parse(s_gSchedRollRate);
-        SchedVs = GainSchedule.Parse(s_gSchedVs);
-        SchedSpd = GainSchedule.Parse(s_gSchedSpd);
-
+            SchedPitch = GainSchedule.Parse(s_gSchedPitch);
+            SchedRollRate = GainSchedule.Parse(s_gSchedRollRate);
+            SchedVs = GainSchedule.Parse(s_gSchedVs);
+            SchedSpd = GainSchedule.Parse(s_gSchedSpd);
+        }
         IsUsingOverride = false;
     }
 

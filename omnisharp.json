@@ -1,5 +1,4 @@
 {
-  "projects": ["NOAutopilot.csproj"],
   "RoslynExtensionsOptions": {
     "enableAnalyzersSupport": true
   },
@@ -8,9 +7,7 @@
   },
   "fileOptions": {
     "excludeSearchPatterns": [
-      "**/Core/PID/PIDLoop2.cs", 
-      "**/.github/ci/**", 
-      "**/NOAutopilot.CI.csproj"
+      "**/Core/PID/PIDLoop2.cs"
     ]
   }
 }

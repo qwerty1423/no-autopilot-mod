@@ -2,8 +2,6 @@
 
 ## [Unreleased]
 
-## [5.5.0]
-
 ### Added
 
 - config to save map position
@@ -14,6 +12,7 @@
 
 - some pid tuning
 - default pid values are now all json, so config regeneration can be reduced
+- fuel time and range is smoothed better now
 
 ## [5.4.0]
 

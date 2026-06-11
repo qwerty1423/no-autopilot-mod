@@ -81,6 +81,7 @@ internal static class ControlOverridePatch
         PidPitch.Reset();
         PidRoll.Reset();
         PidRollRate.Reset();
+        PidYaw.Reset();
         PidCrs.Reset();
         PidGCAS.Reset();
         PidSpd.Reset();
@@ -116,6 +117,7 @@ internal static class ControlOverridePatch
         PidPitch.Reset();
         PidRoll.Reset();
         PidRollRate.Reset();
+        PidYaw.Reset();
         PidCrs.Reset();
         PidGCAS.Reset();
 
@@ -167,15 +169,20 @@ internal static class ControlOverridePatch
 
             float stickPitch = inputObj.pitch;
             float stickRoll = inputObj.roll;
+            float stickYaw = inputObj.yaw;
             float currentThrottle = inputObj.throttle;
             bool pilotPitch = Mathf.Abs(stickPitch) > Plugin.StickTempThreshold.Value;
             bool pilotRoll = Mathf.Abs(stickRoll) > Plugin.StickTempThreshold.Value;
+            bool pilotYaw = Mathf.Abs(stickYaw) > Plugin.StickTempThreshold.Value;
 
             Vector3 pForward = APData.PlayerTransform.forward;
             Vector3 pUp = APData.PlayerTransform.up;
             Vector3 localAngVel = APData.PlayerTransform.InverseTransformDirection(APData.PlayerRB.angularVelocity);
             float rollRate = localAngVel.z * Mathf.Rad2Deg;
             Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
+
+            Vector3 localVel = APData.PlayerTransform.InverseTransformDirection(APData.PlayerRB.velocity);
+            float sideslip = Mathf.Atan2(localVel.x, localVel.z) * Mathf.Rad2Deg;
 
             float dt = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
             float noiseT = Time.time * Plugin.RandomSpeed.Value;
@@ -541,7 +548,7 @@ internal static class ControlOverridePatch
             }
 
             // stick disengage
-            if (pilotPitch || pilotRoll)
+            if (pilotPitch || pilotRoll || pilotYaw)
             {
                 APData.LastOverrideInputTime = Time.time;
 
@@ -799,14 +806,17 @@ internal static class ControlOverridePatch
 
                 if (rollAxisActive)
                 {
+                    if ((pilotYaw || isWaitingToReengage) && !APData.GCASActive)
+                    {
+                        _ = PidYaw.Update(sideslip, sideslip, 0, stickYaw, stickYaw, Mode.Track);
+                    }
+
                     if ((pilotRoll || isWaitingToReengage) && !APData.GCASActive)
                     {
                         PidCrs.Reset();
-                        // Outer loop: track current angle as target
-                        PidRoll.Update(APData.CurrentRoll, APData.CurrentRoll,
+                        _ = PidRoll.Update(APData.CurrentRoll, APData.CurrentRoll,
                             0, 0, 0, Mode.Track);
-                        // Inner loop: track pilot's stick input  
-                        PidRollRate.Update(rollRate, rollRate,
+                        _ = PidRollRate.Update(rollRate, rollRate,
                             0, stickRoll, stickRoll, Mode.Track);
                     }
                     else
@@ -917,26 +927,19 @@ internal static class ControlOverridePatch
 
                         inputObj.roll = Mathf.Clamp(rollOut, -1f, 1f);
 
-                        if (APData.Enabled || APData.GCASActive)
+                        if (localVel.sqrMagnitude > 1f && !pilotYaw)
                         {
-                            Vector3 localVel = APData.PlayerTransform.InverseTransformDirection(APData.PlayerRB.velocity);
+                            float target = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Yaw, 0, sideslip);
 
-                            if (localVel.sqrMagnitude > 1f)
-                            {
-                                float sideslip = Mathf.Atan2(localVel.x, localVel.z) * Mathf.Rad2Deg;
+                            ConfigurePID(PidYaw, ActivePid.Yaw, dt, -1f, 1f);
 
-                                float target = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Yaw, 0, sideslip);
+                            float rawYawOut = (float)PidYaw.Update(target, sideslip);
 
-                                ConfigurePID(PidYaw, ActivePid.Yaw, dt, -1f, 1f);
+                            PIDLogger.Log(PIDLogger.StepTarget.Yaw, rawYawOut, sideslip);
 
-                                float rawYawOut = (float)PidYaw.Update(target, sideslip);
+                            float yawOut = -rawYawOut;
 
-                                PIDLogger.Log(PIDLogger.StepTarget.Yaw, rawYawOut, sideslip);
-
-                                float yawOut = -rawYawOut;
-
-                                inputObj.yaw = Mathf.Clamp(yawOut, -1f, 1f);
-                            }
+                            inputObj.yaw = Mathf.Clamp(yawOut, -1f, 1f);
                         }
                     }
                 }

@@ -56,6 +56,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> OverlayOffsetX,
         OverlayOffsetY,
         FuelSmoothing,
+        RangeSmoothing,
         FuelUpdateInterval,
         DisplayUpdateInterval;
 
@@ -267,10 +268,11 @@ public class Plugin : BaseUnityPlugin
         UI_Width = Config.Bind("Visuals - UI", "3. Window Width", 227f, "Saved Width");
         UI_Height = Config.Bind("Visuals - UI", "4. Window Height", 330f, "Saved Height");
 
-        FuelSmoothing = Config.Bind("Calculations", "1. Fuel Flow Smoothing", 0.1f, "Alpha value");
-        FuelUpdateInterval = Config.Bind("Calculations", "2. Fuel Update Interval", 1.0f, "Seconds");
-        FuelWarnMinutes = Config.Bind("Calculations", "3. Fuel Warning Time", 15, "Minutes");
-        FuelCritMinutes = Config.Bind("Calculations", "4. Fuel Critical Time", 5, "Minutes");
+        FuelSmoothing = Config.Bind("Calculations", "1. Fuel flow smoothing filter Tf", 1.0f, "Time constant for the second-order signal filter.");
+        RangeSmoothing = Config.Bind("Calculations", "2. Range smoothing filter Tf", 1.0f, "Time constant for the second-order signal filter.");
+        FuelUpdateInterval = Config.Bind("Calculations", "3. Fuel Update Interval", 1.0f, "Seconds");
+        FuelWarnMinutes = Config.Bind("Calculations", "4. Fuel Warning Time", 15, "Minutes");
+        FuelCritMinutes = Config.Bind("Calculations", "5. Fuel Critical Time", 5, "Minutes");
 
         // Settings
         StickTempThreshold = Config.Bind("Settings", "1. Temp disengage Stick Threshold", 0.01f,

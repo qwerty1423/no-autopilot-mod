@@ -6,6 +6,7 @@ using HarmonyLib;
 using JetBrains.Annotations;
 
 using NOAutopilot.Core.Flight;
+using NOAutopilot.Core.PID;
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -39,6 +40,10 @@ internal static class HUDVisualsPatch
     private static Vector3 s_fuelLabelPosOffset;
     private static readonly StringBuilder SbHud = new(1024);
     private static GameObject s_lastVehicleChecked;
+
+    // this is for the fuel time and range. yes.
+    private static PIDController s_rangeFilter;
+    private static PIDController s_fuelFlowFilter;
 
     public static void Reset()
     {
@@ -79,6 +84,9 @@ internal static class HUDVisualsPatch
         s_cachedRefLabel = null;
         s_lastVehicleChecked = null;
         SbHud.Clear();
+
+        s_rangeFilter?.Reset();
+        s_fuelFlowFilter?.Reset();
     }
 
     [UsedImplicitly]
@@ -135,6 +143,9 @@ internal static class HUDVisualsPatch
                     s_fuelLabelPosOffset = __instance.GetHUDCenter()
                         .InverseTransformPoint(s_cachedRefLabel.transform.position);
                 }
+
+                s_rangeFilter?.Reset();
+                s_fuelFlowFilter?.Reset();
             }
 
             if (s_cachedFuelGauge == null || s_cachedRefLabel == null)
@@ -183,7 +194,21 @@ internal static class HUDVisualsPatch
                     {
                         float burned = s_lastFuelMass - currentFuel;
                         float flow = Mathf.Max(0f, burned / dt);
-                        s_fuelFlowEma = Mathf.Lerp(s_fuelFlowEma, flow, Plugin.FuelSmoothing.Value);
+
+                        if (s_fuelFlowFilter == null)
+                        {
+                            s_fuelFlowFilter = new PIDController
+                            {
+                                FilterTf = Plugin.FuelSmoothing.Value,
+                                Ts = dt
+                            };
+                        }
+                        else
+                        {
+                            s_fuelFlowFilter.Ts = dt;
+                        }
+                        s_fuelFlowEma = (float)s_fuelFlowFilter.Filter(flow);
+
                         s_lastUpdateTime = time;
                         s_lastFuelMass = currentFuel;
                     }
@@ -217,6 +242,10 @@ internal static class HUDVisualsPatch
                         {
                             float calcFlow = Mathf.Max(s_fuelFlowEma, 0.0001f);
                             float secs = currentFuel / calcFlow;
+                            if (secs > 359999f)
+                            {
+                                secs = 0f;
+                            }
                             string sTime = "";
                             try
                             {
@@ -242,10 +271,23 @@ internal static class HUDVisualsPatch
                             float distMeters = secs * APData.SpeedEma;
                             if (distMeters > 99999000f)
                             {
-                                distMeters = 99999000f;
+                                distMeters = 0f;
                             }
 
-                            s_smoothedRange = Mathf.Lerp(s_smoothedRange, distMeters, Time.deltaTime * 0.5f);
+                            if (s_rangeFilter == null)
+                            {
+                                s_rangeFilter = new PIDController
+                                {
+                                    FilterTf = Plugin.RangeSmoothing.Value,
+                                    Ts = Time.deltaTime
+                                };
+                            }
+                            else
+                            {
+                                s_rangeFilter.Ts = Time.deltaTime;
+                            }
+
+                            s_smoothedRange = (float)s_rangeFilter.Filter(distMeters);
 
                             string sRange = ModUtils.ProcessGameString(UnitConverter.DistanceReading(s_smoothedRange),
                                 Plugin.DistShowUnit.Value);

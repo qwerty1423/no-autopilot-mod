@@ -31,6 +31,7 @@ internal static class HUDVisualsPatch
     private static float s_lastFuelMass;
     private static float s_fuelFlowEma;
     private static float s_lastUpdateTime;
+    private static float s_smoothedRange;
 
     private static float s_lastStringUpdate;
     private static FuelGauge s_cachedFuelGauge;
@@ -72,11 +73,12 @@ internal static class HUDVisualsPatch
         s_lastFuelMass = 0f;
         s_fuelFlowEma = 0f;
         s_lastUpdateTime = 0f;
+        s_smoothedRange = 0f;
         s_lastStringUpdate = 0f;
         s_cachedFuelGauge = null;
         s_cachedRefLabel = null;
         s_lastVehicleChecked = null;
-        _ = SbHud.Clear();
+        SbHud.Clear();
     }
 
     [UsedImplicitly]
@@ -195,7 +197,7 @@ internal static class HUDVisualsPatch
                 if (Time.time - s_lastStringUpdate >= Plugin.DisplayUpdateInterval.Value)
                 {
                     s_lastStringUpdate = Time.time;
-                    _ = SbHud.Clear();
+                    SbHud.Clear();
 
                     if (Plugin.ShowFuelOverlay.Value)
                     {
@@ -237,14 +239,15 @@ internal static class HUDVisualsPatch
 
                             SbHud.Append("<color=").Append(fuelCol).Append(">").Append(sTime).Append("</color>\n");
 
-                            // float spd = aircraft.rb != null ? aircraft.rb.velocity.magnitude : 0f;
                             float distMeters = secs * APData.SpeedEma;
                             if (distMeters > 99999000f)
                             {
                                 distMeters = 99999000f;
                             }
 
-                            string sRange = ModUtils.ProcessGameString(UnitConverter.DistanceReading(distMeters),
+                            s_smoothedRange = Mathf.Lerp(s_smoothedRange, distMeters, Time.deltaTime * 0.5f);
+
+                            string sRange = ModUtils.ProcessGameString(UnitConverter.DistanceReading(s_smoothedRange),
                                 Plugin.DistShowUnit.Value);
                             SbHud.Append("<color=").Append(Plugin.ColorRange.Value).Append(">").Append(sRange)
                                 .Append("</color>\n\n");

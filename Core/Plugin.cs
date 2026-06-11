@@ -13,6 +13,7 @@ using JetBrains.Annotations;
 
 using Mirage;
 
+using NOAutopilot.Core.Audio;
 using NOAutopilot.Core.Config;
 using NOAutopilot.Core.Flight;
 using NOAutopilot.Core.HUD;
@@ -69,6 +70,14 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> VertSpeedShowUnit;
     public static ConfigEntry<bool> SpeedShowUnit;
     public static ConfigEntry<bool> AngleShowUnit;
+
+    // Sound
+    public static ConfigEntry<bool> APSoundEnabled;
+    public static ConfigEntry<int> APSoundVolumePercent;
+    public static ConfigEntry<string> APSoundFile;
+    public static ConfigEntry<float> APModeCueStartSeconds;
+    public static ConfigEntry<float> APModeCueCooldown;
+    private APAudio _apAudio;
 
     // Settings
     public static ConfigEntry<float> StickTempThreshold, StickDisengageThreshold;
@@ -267,6 +276,17 @@ public class Plugin : BaseUnityPlugin
             "-1 = Auto Bottom Right, otherwise pixel value");
         UI_Width = Config.Bind("Visuals - UI", "3. Window Width", 227f, "Saved Width");
         UI_Height = Config.Bind("Visuals - UI", "4. Window Height", 330f, "Saved Height");
+
+        APSoundEnabled = Config.Bind("Sound", "1. Enable AP Sounds", true,
+            "Play autopilot disconnect and mode change sounds.");
+        APSoundVolumePercent = Config.Bind("Sound", "2. Volume Percent", 100,
+            "AP sound volume");
+        APSoundFile = Config.Bind("Sound", "3. Sound File", "ap_disconnect.ogg",
+            "Audio file name inside the Audio folder, or absolute path. Use WAV, MP3, or OGG Vorbis.");
+        APModeCueStartSeconds = Config.Bind("Sound", "4. Mode Change Start Seconds", 2.0f,
+            "Where in the sound file the mode change begins.");
+        APModeCueCooldown = Config.Bind("Sound", "5. Mode Change Cooldown", 0.25f,
+            "Minimum seconds between mode change sounds.");
 
         FuelSmoothing = Config.Bind("Calculations", "1. Fuel flow smoothing filter Tf", 1.0f, "Time constant for the second-order signal filter.");
         RangeSmoothing = Config.Bind("Calculations", "2. Range smoothing filter Tf", 1.0f, "Time constant for the second-order signal filter.");
@@ -572,6 +592,9 @@ public class Plugin : BaseUnityPlugin
         ActivePid.LoadGlobalDefaults();
         ActivePid.WriteGlobalDefaultsToConfig();
 
+        _apAudio = new APAudio(gameObject);
+        _apAudio.Load();
+
         _harmony = new Harmony(Guid);
         try
         {
@@ -614,6 +637,8 @@ public class Plugin : BaseUnityPlugin
                 MinimapLayoutPatch.Reset();
                 MinimapTerrainOpacityPatch.Reset();
                 MinimapGridOpacityPatch.Reset();
+                _apAudio?.Destroy();
+                _apAudio = null;
 
                 if (APData.NavVisuals != null)
                 {
@@ -634,6 +659,7 @@ public class Plugin : BaseUnityPlugin
             }
 
             RewiredConfigManager.Update();
+            _apAudio?.Update();
 
             if (APData.PlayerRB != null)
             {
@@ -879,6 +905,8 @@ public class Plugin : BaseUnityPlugin
         MinimapGridOpacityPatch.Reset();
         RewiredConfigManager.Reset();
         InputHelper.Reset();
+        _apAudio?.Destroy();
+        _apAudio = null;
         if (APData.NavVisuals != null)
         {
             foreach (GameObject obj in APData.NavVisuals)

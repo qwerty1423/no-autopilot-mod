@@ -139,7 +139,7 @@ internal sealed class APAudio
 
     private static bool IsAutopilotLikeActive()
     {
-        return APData.Enabled || APData.GCASActive || APData.ALSActive;
+        return (APData.Enabled && !APData.GCASActive) || APData.ALSActive;
     }
 
     private static string GetModeSignature(bool active)

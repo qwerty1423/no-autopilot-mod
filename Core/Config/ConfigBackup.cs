@@ -268,7 +268,7 @@ internal static class ConfigBackup
         try
         {
             string backupDir = GetBackupDir();
-            _ = Directory.CreateDirectory(backupDir);
+            Directory.CreateDirectory(backupDir);
 
             string tagPrefix = tag.Split('-')[0];
 

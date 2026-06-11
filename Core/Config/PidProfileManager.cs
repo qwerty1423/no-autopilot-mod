@@ -69,7 +69,7 @@ public static class PidProfileManager
 
         try
         {
-            _ = Directory.CreateDirectory(BackupDir);
+            Directory.CreateDirectory(BackupDir);
             string backupPath = Path.Combine(BackupDir, $"{id}_{DateTime.Now:yyyy-MM-ddTHH-mm-ss}.json");
             File.Move(path, backupPath);
             Plugin.Logger.LogInfo($"[PidProfileManager] Profile '{id}' moved to backup.");
@@ -136,7 +136,7 @@ public static class PidProfileManager
 
         if (!partial.IsEmpty())
         {
-            _ = Directory.CreateDirectory(UserDir);
+            Directory.CreateDirectory(UserDir);
             File.WriteAllText(Path.Combine(UserDir, $"{id}.json"), JsonUtility.ToJson(partial, true));
         }
         else

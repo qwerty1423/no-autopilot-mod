@@ -808,15 +808,15 @@ internal static class ControlOverridePatch
                 {
                     if ((pilotYaw || isWaitingToReengage) && !APData.GCASActive)
                     {
-                        _ = PidYaw.Update(sideslip, sideslip, 0, stickYaw, stickYaw, Mode.Track);
+                        PidYaw.Update(sideslip, sideslip, 0, stickYaw, stickYaw, Mode.Track);
                     }
 
                     if ((pilotRoll || isWaitingToReengage) && !APData.GCASActive)
                     {
                         PidCrs.Reset();
-                        _ = PidRoll.Update(APData.CurrentRoll, APData.CurrentRoll,
+                        PidRoll.Update(APData.CurrentRoll, APData.CurrentRoll,
                             0, 0, 0, Mode.Track);
-                        _ = PidRollRate.Update(rollRate, rollRate,
+                        PidRollRate.Update(rollRate, rollRate,
                             0, stickRoll, stickRoll, Mode.Track);
                     }
                     else

@@ -218,13 +218,13 @@ public class Plugin : BaseUnityPlugin
             Logger.LogInfo("[ConfigBackup] Config was regenerated from defaults.");
         }
 
-        _ = TomlTypeConverter.AddConverter(typeof(PIDTuning), new TypeConverter
+        TomlTypeConverter.AddConverter(typeof(PIDTuning), new TypeConverter
         {
             ConvertToString = static (obj, _) => ((PIDTuning)obj).ToString(),
             ConvertToObject = static (str, _) => PIDTuning.Parse(str)
         });
 
-        _ = TomlTypeConverter.AddConverter(typeof(GainSchedule), new TypeConverter
+        TomlTypeConverter.AddConverter(typeof(GainSchedule), new TypeConverter
         {
             ConvertToString = static (obj, _) => ((GainSchedule)obj).ToString(),
             ConvertToObject = static (str, _) => GainSchedule.Parse(str)

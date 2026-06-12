@@ -111,9 +111,9 @@ First check if this issue is not present in vanilla. It might just be the wind.
 
 ### Aircraft can't take off
 
-If you have NOTT, it probably broke in some way. If it broke because of changes in this mod, then you can either disable this mod or disable NOTT, and if it broke because of a different mod then disable NOTT or disable the other mod.
+If you have NOTT, it probably broke in some way. You can try disabling the autopilot option in NOTT's config. 
 
-This mod is unlikely to stop your aircraft from taking off, it should not change your aircraft's aerodynamics in any way.
+This mod by itself is unlikely to stop your aircraft from taking off, it should not change your aircraft's aerodynamics in any way.
 
 ## Default Controls
 

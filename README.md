@@ -1,5 +1,34 @@
 # Nuclear Option Autopilot Mod
 
+- [Changelog](#changelog)
+- [Installation](#installation)
+  - [Mod manager](#mod-manager)
+  - [Manual installation](#manual-installation)
+- [Updates](#updates)
+- [Issues and questions](#issues-and-questions)
+  - [Autopilot not engaging](#autopilot-not-engaging)
+  - [Aircraft pulling up automatically / BOTE installed and vehicle is moving automatically](#aircraft-pulling-up-automatically--bote-installed-and-vehicle-is-moving-automatically)
+  - [Auto jam not working](#auto-jam-not-working)
+  - [Aircraft oscillating on autopilot](#aircraft-oscillating-on-autopilot)
+  - [ALS crashes my aircraft](#als-crashes-my-aircraft)
+  - [Aircraft other than the ifrit don't work as well](#aircraft-other-than-the-ifrit-dont-work-as-well)
+  - [Mod not working, none of the keys work](#mod-not-working-none-of-the-keys-work)
+  - [Any issue with aircraft flying differently after installing the mod, with autopilot disabled](#any-issue-with-aircraft-flying-differently-after-installing-the-mod-with-autopilot-disabled)
+  - [Aircraft can't take off](#aircraft-cant-take-off)
+- [Default Controls](#default-controls)
+- [screenshot of an old version?](#screenshot-of-an-old-version)
+- [features and not features](#features-and-not-features)
+  - [list of notable features in the mod](#list-of-notable-features-in-the-mod)
+  - [features not in the mod (yet?)](#features-not-in-the-mod-yet)
+- [Autopilot](#autopilot)
+- [Auto Jammer](#auto-jammer)
+- [Fuel time and range display](#fuel-time-and-range-display)
+- [Auto-GCAS](#auto-gcas)
+- [Waypoints](#waypoints)
+- [ALS](#als)
+- [Building from source](#building-from-source)
+
+
 Adds autopilot and some other features. Clientside and multiplayer compatible.
 
 It would be best to make sure the host is ok with you using the mod, especially in PVP.

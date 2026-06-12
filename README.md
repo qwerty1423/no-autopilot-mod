@@ -19,6 +19,8 @@ Another list can be found in [this mod's post](https://discord.com/channels/9090
 
 ## Installation
 
+After install, if you know how, you should probably enable the bepinex logging console if it isn't already so you can view error messages while the game is running, if you have a second monitor then have the logging console window to it.
+
 ### Mod manager
 
 [NOMM](https://github.com/Combat787/NOMM) - probably recommended
@@ -66,6 +68,52 @@ There are also more mods available on the discord.
 ## Updates
 
 After updates, it is sometimes recommended to regenerate your config file at `BepInEx/config/com.qwerty1423.NOAutopilot.cfg` by either deleting it or moving it somewhere else and merging your changes with the newer version, because default config may change after an update.
+
+If you somehow encounter strange issues such as the fuel time indicator being at the wrong position, regenerating the config may help.
+
+## Issues and questions
+
+### Autopilot not engaging
+
+This is probably because you are making stick inputs. This can be an issue on keyboard and mouse. In the config, you can raise the thresholds for autopilot disengage on stick input so that they don't trigger. You can also try using the mod that allows you to toggle the virtual joystick, it's probably on discord somewhere.
+
+### Aircraft pulling up automatically / BOTE installed and vehicle is moving automatically
+
+Auto-GCAS can be disabled with the `\` key by default or with the button in the F8 menu, and can be configured to start disabled in bepinex config manager or in the config file.
+
+### Auto jam not working
+
+The auto jammer will jam if there is a target selected, the jammer pods are selected, and the capacitor is full.
+
+### Aircraft oscillating on autopilot
+
+The pid is probably not tuned properly for that aircraft yet. You can tune it yourself in bepinex config manager, wait for an update, or just not use autopilot for that aircraft.
+
+### ALS crashes my aircraft
+
+It probably works only for fixed wing aircraft. I think I only tested the ifrit.
+
+### Aircraft other than the ifrit don't work as well
+
+I do 90% of the testing in an ifrit.
+
+### Mod not working, none of the keys work
+
+If this happened after an update, the update probably broke the mod.
+
+If not soon after an update, then first check if you can install a different mod first, just to make sure that the issue is with this mod. It might be because of your bepinex not being installed properly.
+
+If it still isn't working, and others say that it isn't working, then the mod is probably just broken, wait for an update.
+
+### Any issue with aircraft flying differently after installing the mod, with autopilot disabled
+
+First check if this issue is not present in vanilla. It might just be the wind.
+
+### Aircraft can't take off
+
+If you have NOTT, it probably broke in some way. If it broke because of changes in this mod, then you can either disable this mod or disable NOTT, and if it broke because of a different mod then disable NOTT or disable the other mod.
+
+This mod is unlikely to stop your aircraft from taking off, it should not change your aircraft's aerodynamics in any way.
 
 ## Default Controls
 
@@ -133,11 +181,11 @@ In approximate likelihood of implementation order descending.
 
 <https://github.com/user-attachments/assets/3d2eaeaa-b810-4353-a4b6-90a1107e3cb9>
 
-Autopilot controls roll and pitch. (helicopters somehow work, but probably require small ascent/descent rate limits). Ascent/descent rate limits and target altitude can be configured with keyboard while flying. Target bank angle can be set so that plane turns in a circle. Should be useful for Medusa, for easier loitering. Large stick inputs will disengage the autopilot.
+Autopilot controls roll, pitch, and yaw. (helicopters somehow work, but probably require small ascent/descent rate limits). Ascent/descent rate limits and target altitude can be configured with keyboard while flying. Target bank angle can be set so that plane turns in a circle. Making inputs will disengage the autopilot by default, the thresholds for this can be configured.
 
 Displays current settings on the HUD. There is also a GUI that opens with F8 key by default.
 
-PID values can be tuned further if you like, but the defaults should be quite effective. They may not work in all situations or in all aircraft, however. There is no limit to the minimum altitude or maximum altitude, but crashes and engine flameouts may result from flying too low or too high.
+PID values can be tuned further if you like, but the defaults should be quite effective. They may not work in all situations or in all aircraft, however.
 
 Some default pid profiles for each aircraft are provided, you can override them in the bepinex config manager or by creating JSON files with the correct name and format.
 
@@ -153,7 +201,7 @@ Displays fuel time remaining and range. Units use the game's metric/imperial set
 
 <https://github.com/user-attachments/assets/aca3060d-a035-4750-953d-b189f833b2e2>
 
-Will pull up if you are going to hit the ground and warns you a while before. Can be disabled with `\` key by default, and can be configured to start disabled. GCAS OFF warning can be disabled as well. If you are making large inputs, it will not pull up.
+Will pull up if you are going to hit the ground and warns you a while before. Can be disabled with `\` key by default, and can be configured to start disabled. 'GCAS-' warning can be disabled as well. If you are making large inputs, it will not pull up.
 
 Video is old, so the chevron indicator is missing.
 
@@ -183,6 +231,6 @@ steps
 
 you can also run the container build script thing in /scripts?
 
-With some luck the hashes may match but since the game dlls change a lot this is not guaranteed, so just decompile if you want to feel safe.
+If you do, with some luck the hashes of the compiled dlls may match with the released ones, but since the game dlls change a lot this is not guaranteed.
 
 PS the code is terrible, it really needs a rewrite.

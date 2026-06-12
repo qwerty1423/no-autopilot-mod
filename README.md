@@ -7,7 +7,7 @@
 - [Updates](#updates)
 - [Issues and questions](#issues-and-questions)
   - [Autopilot not engaging](#autopilot-not-engaging)
-  - [Aircraft pulling up automatically / BOTE installed and vehicle is moving automatically](#aircraft-pulling-up-automatically--bote-installed-and-vehicle-is-moving-automatically)
+  - [Aircraft pulling up automatically / KAR or BOTE installed and vehicle is moving automatically](#aircraft-pulling-up-automatically--kar-or-bote-installed-and-vehicle-is-moving-automatically)
   - [Auto jam not working](#auto-jam-not-working)
   - [Aircraft oscillating on autopilot](#aircraft-oscillating-on-autopilot)
   - [ALS crashes my aircraft](#als-crashes-my-aircraft)
@@ -105,7 +105,7 @@ If you somehow encounter strange issues such as the fuel time indicator being at
 
 This is probably because you are making stick inputs. This can be an issue on keyboard and mouse. In the config, you can raise the thresholds for autopilot disengage on stick input so that they don't trigger. You can also try using the mod that allows you to toggle the virtual joystick, it's probably on discord somewhere.
 
-### Aircraft pulling up automatically / BOTE installed and vehicle is moving automatically
+### Aircraft pulling up automatically / KAR or BOTE installed and vehicle is moving automatically
 
 Auto-GCAS can be disabled with the `\` key by default or with the button in the F8 menu, and can be configured to start disabled in bepinex config manager or in the config file.
 

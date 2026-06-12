@@ -1,5 +1,3 @@
-// Core/APAudio.cs
-
 using System;
 using System.IO;
 using System.Reflection;
@@ -111,7 +109,7 @@ internal sealed class APAudio
 
         if (_wasActive && !active)
         {
-            PlayFullDisconnect();
+            PlayDisconnect();
         }
         else if (_wasActive && active && modeSignature != _lastModeSignature)
         {
@@ -169,7 +167,7 @@ internal sealed class APAudio
         return $"{vertical}|{lateral}|{throttle}";
     }
 
-    private void PlayFullDisconnect()
+    private void PlayDisconnect()
     {
         PlayFrom(0f, interrupt: true);
     }
@@ -208,12 +206,10 @@ internal sealed class APAudio
         _source.loop = false;
         _source.volume = Mathf.Clamp(Plugin.APSoundVolumePercent.Value / 100f, 0f, 2f);
 
-        int sample = Mathf.Clamp(
+        _source.timeSamples = Mathf.Clamp(
             Mathf.RoundToInt(seconds * _clip.frequency),
             0,
             Mathf.Max(0, _clip.samples - 1));
-
-        _source.timeSamples = sample;
         _source.Play();
     }
 

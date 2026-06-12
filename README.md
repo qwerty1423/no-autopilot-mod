@@ -28,7 +28,6 @@
 - [ALS](#als)
 - [Building from source](#building-from-source)
 
-
 Adds autopilot and some other features. Clientside and multiplayer compatible.
 
 It would be best to make sure the host is ok with you using the mod, especially in PVP.
@@ -140,7 +139,7 @@ First check if this issue is not present in vanilla. It might just be the wind.
 
 ### Aircraft can't take off
 
-If you have NOTT, it probably broke in some way. You can try disabling the autopilot option in NOTT's config. 
+If you have NOTT, it probably broke in some way. You can try disabling the autopilot option in NOTT's config.
 
 This mod by itself is unlikely to stop your aircraft from taking off, it should not change your aircraft's aerodynamics in any way.
 

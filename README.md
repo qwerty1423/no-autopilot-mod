@@ -12,7 +12,7 @@
   - [Aircraft oscillating on autopilot](#aircraft-oscillating-on-autopilot)
   - [ALS crashing aircraft](#als-crashing-aircraft)
   - [Mod not working, none of the keys work](#mod-not-working-none-of-the-keys-work)
-  - [Any issue with aircraft flying differently after installing the mod, with autopilot disabled](#any-issue-with-aircraft-flying-differently-after-installing-the-mod-with-autopilot-disabled)
+  - [Any issue with aircraft flying differently after installing the mod with autopilot disabled](#any-issue-with-aircraft-flying-differently-after-installing-the-mod-with-autopilot-disabled)
   - [Aircraft can't take off](#aircraft-cant-take-off)
   - [Disabling features](#disabling-features)
 - [Default controls](#default-controls)
@@ -135,7 +135,7 @@ If not soon after an update, then first check if you can install a different mod
 
 If it still isn't working, and others say that it isn't working, then the mod is probably just broken, wait for an update.
 
-### Any issue with aircraft flying differently after installing the mod, with autopilot disabled
+### Any issue with aircraft flying differently after installing the mod with autopilot disabled
 
 First check if this issue is not present in vanilla. It might just be the wind.
 

@@ -7,6 +7,7 @@
 - config to save map position
 - yaw control
 - container build script thing
+- some sounds for the autopilot
 
 ### Changed
 

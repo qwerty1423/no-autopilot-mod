@@ -279,7 +279,7 @@ public class Plugin : BaseUnityPlugin
 
         APSoundEnabled = Config.Bind("Sound", "1. Enable AP Sounds", true,
             "Play autopilot disconnect and mode change sounds.");
-        APSoundVolumePercent = Config.Bind("Sound", "2. Volume Percent", 30,
+        APSoundVolumePercent = Config.Bind("Sound", "2. Volume Percent", 10,
             "AP sound volume");
         APSoundFile = Config.Bind("Sound", "3. Sound File", "ap_disconnect.ogg",
             "Audio file name inside the Audio folder, or absolute path. Use WAV, MP3, or OGG Vorbis.");

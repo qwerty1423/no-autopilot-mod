@@ -4,21 +4,21 @@
 - [Installation](#installation)
   - [Mod manager](#mod-manager)
   - [Manual installation](#manual-installation)
-- [Updates](#updates)
+- [After updates](#after-updates)
 - [Issues and questions](#issues-and-questions)
   - [Autopilot not engaging](#autopilot-not-engaging)
   - [Aircraft pulling up automatically / KAR or BOTE installed and vehicle is moving automatically](#aircraft-pulling-up-automatically--kar-or-bote-installed-and-vehicle-is-moving-automatically)
   - [Auto jam not working](#auto-jam-not-working)
   - [Aircraft oscillating on autopilot](#aircraft-oscillating-on-autopilot)
-  - [ALS crashes my aircraft](#als-crashes-my-aircraft)
-  - [Aircraft other than the ifrit don't work as well](#aircraft-other-than-the-ifrit-dont-work-as-well)
+  - [ALS crashing aircraft](#als-crashing-aircraft)
   - [Mod not working, none of the keys work](#mod-not-working-none-of-the-keys-work)
   - [Any issue with aircraft flying differently after installing the mod, with autopilot disabled](#any-issue-with-aircraft-flying-differently-after-installing-the-mod-with-autopilot-disabled)
   - [Aircraft can't take off](#aircraft-cant-take-off)
-- [Default Controls](#default-controls)
+  - [Disabling features](#disabling-features)
+- [Default controls](#default-controls)
 - [screenshot of an old version?](#screenshot-of-an-old-version)
 - [features and not features](#features-and-not-features)
-  - [list of notable features in the mod](#list-of-notable-features-in-the-mod)
+  - [list of some features](#list-of-some-features)
   - [features not in the mod (yet?)](#features-not-in-the-mod-yet)
 - [Autopilot](#autopilot)
 - [Auto Jammer](#auto-jammer)
@@ -27,6 +27,8 @@
 - [Waypoints](#waypoints)
 - [ALS](#als)
 - [Building from source](#building-from-source)
+
+---
 
 Adds autopilot and some other features. Clientside and multiplayer compatible.
 
@@ -49,6 +51,8 @@ Another list can be found in [this mod's post](https://discord.com/channels/9090
 
 After install, if you know how, you should probably enable the bepinex logging console if it isn't already so you can view error messages while the game is running, if you have a second monitor then have the logging console window to it.
 
+---
+
 ### Mod manager
 
 [NOMM](https://github.com/Combat787/NOMM) - probably recommended
@@ -58,6 +62,8 @@ After install, if you know how, you should probably enable the bepinex logging c
 install the mod manager, and then look for this mod and the [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager).
 
 If you are on linux, add override in steam launch options: `WINEDLLOVERRIDES="winhttp=n,b" %command%`
+
+---
 
 ### Manual installation
 
@@ -93,11 +99,11 @@ or ask for help on the nuclear option discord.
 
 There are also more mods available on the discord.
 
-## Updates
+## After updates
 
-After updates, it is sometimes recommended to regenerate your config file at `BepInEx/config/com.qwerty1423.NOAutopilot.cfg` by either deleting it or moving it somewhere else and merging your changes with the newer version, because default config may change after an update.
+It is sometimes recommended to regenerate your config file at `BepInEx/config/com.qwerty1423.NOAutopilot.cfg` by either deleting it or moving it somewhere else and merging your changes with the newer version, because default config may change after an update.
 
-If you somehow encounter strange issues such as the fuel time indicator being at the wrong position, regenerating the config may help.
+If you somehow encounter strange issues such as the fuel time indicator being at the wrong position, or other unexpected behaviour, regenerating the config may help.
 
 ## Issues and questions
 
@@ -117,13 +123,9 @@ The auto jammer will jam if there is a target selected, the jammer pods are sele
 
 The pid is probably not tuned properly for that aircraft yet. You can tune it yourself in bepinex config manager, wait for an update, or just not use autopilot for that aircraft.
 
-### ALS crashes my aircraft
+### ALS crashing aircraft
 
-It probably works only for fixed wing aircraft. I think I only tested the ifrit.
-
-### Aircraft other than the ifrit don't work as well
-
-I do 90% of the testing in an ifrit.
+It probably works only for fixed wing aircraft. I think I only tested the ifrit and compass.
 
 ### Mod not working, none of the keys work
 
@@ -139,11 +141,15 @@ First check if this issue is not present in vanilla. It might just be the wind.
 
 ### Aircraft can't take off
 
-If you have NOTT, it probably broke in some way. You can try disabling the autopilot option in NOTT's config.
+If you have NOTT, it probably broke in some way. You can try disabling the autopilot option in NOTT's config, it might help.
 
 This mod by itself is unlikely to stop your aircraft from taking off, it should not change your aircraft's aerodynamics in any way.
 
-## Default Controls
+### Disabling features
+
+Some features can be disabled in the config, it helps if you have bepinex config manager so you can modify it ingame. For example, if the fuel time display overlaps with another mod, you can move it around or disable it in config.
+
+## Default controls
 
 The autopilot can be configured using only the `F8` gui window and the map, so `F8` is probably the most important keybind to remember.
 Leave blank the text boxes that you don't want to be controlled by the autopilot, then click set values.
@@ -177,9 +183,7 @@ After installation of the config manager, you can press F1 to bring up the confi
 
 Some of the not features may eventually be implemented.
 
-### list of notable features in the mod
-
-In order of implementation, earliest first
+### list of some features
 
 - wing leveller and altitude hold
 - climb/descend to altitude at set rate
@@ -198,9 +202,6 @@ In order of implementation, earliest first
   
 ### features not in the mod (yet?)
 
-In approximate likelihood of implementation order descending.
-
-- yaw control
 - nap of the earth flying
 - proper helicopter support
 - auto take-off

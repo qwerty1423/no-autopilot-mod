@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [5.5.0]
+
 ### Added
 
 - config to save map position
@@ -373,7 +375,8 @@
 
 ## [4.8.4] - 2025-12-29
 
-[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.4.0...HEAD
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.5.0...HEAD
+[5.5.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.4.0...v5.5.0
 [5.4.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.3.0...v5.4.0
 [5.3.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.2.0...v5.3.0
 [5.2.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.1.2...v5.2.0

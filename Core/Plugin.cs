@@ -13,6 +13,7 @@ using JetBrains.Annotations;
 
 using Mirage;
 
+using NOAutopilot.Core.Audio;
 using NOAutopilot.Core.Config;
 using NOAutopilot.Core.Flight;
 using NOAutopilot.Core.HUD;
@@ -56,6 +57,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> OverlayOffsetX,
         OverlayOffsetY,
         FuelSmoothing,
+        RangeSmoothing,
         FuelUpdateInterval,
         DisplayUpdateInterval;
 
@@ -69,6 +71,14 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> SpeedShowUnit;
     public static ConfigEntry<bool> AngleShowUnit;
 
+    // Sound
+    public static ConfigEntry<bool> APSoundEnabled;
+    public static ConfigEntry<int> APSoundVolumePercent;
+    public static ConfigEntry<string> APSoundFile;
+    public static ConfigEntry<float> APModeCueStartSeconds;
+    public static ConfigEntry<float> APModeCueCooldown;
+    private APAudio _apAudio;
+
     // Settings
     public static ConfigEntry<float> StickTempThreshold, StickDisengageThreshold;
     public static ConfigEntry<float> DisengageDelay, ReengageDelay;
@@ -79,7 +89,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> KeepSetAltKey, KeepSetAltStick, UnpatchIfBroken;
 
     // Map
-    public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom, SaveMapZoom;
+    public static ConfigEntry<bool> UnlockMapPan, UnlockMapZoom, SaveMapPosition, SaveMapZoom;
     // public static ConfigEntry<float> MinimapMinZoom, MinimapMaxZoom;
     public static ConfigEntry<float> MinimapDefaultZoom;
     public static ConfigEntry<bool> EnableMinimapPatches;
@@ -125,9 +135,8 @@ public class Plugin : BaseUnityPlugin
 
     // pid
     public static ConfigEntry<PIDTuning> ConfPidAlt, ConfPidVs, ConfPidPitch;
-    public static ConfigEntry<PIDTuning> ConfPidRoll, ConfPidRollRate, ConfPidCrs;
-    public static ConfigEntry<PIDTuning> ConfPidSpd;
-    public static ConfigEntry<PIDTuning> ConfPidGcas;
+    public static ConfigEntry<PIDTuning> ConfPidRoll, ConfPidRollRate, ConfPidYaw;
+    public static ConfigEntry<PIDTuning> ConfPidCrs, ConfPidSpd, ConfPidGcas;
 
     public static ConfigEntry<GainSchedule> SchedPidPitch;
     public static ConfigEntry<GainSchedule> SchedPidRollRate;
@@ -218,13 +227,13 @@ public class Plugin : BaseUnityPlugin
             Logger.LogInfo("[ConfigBackup] Config was regenerated from defaults.");
         }
 
-        _ = TomlTypeConverter.AddConverter(typeof(PIDTuning), new TypeConverter
+        TomlTypeConverter.AddConverter(typeof(PIDTuning), new TypeConverter
         {
             ConvertToString = static (obj, _) => ((PIDTuning)obj).ToString(),
             ConvertToObject = static (str, _) => PIDTuning.Parse(str)
         });
 
-        _ = TomlTypeConverter.AddConverter(typeof(GainSchedule), new TypeConverter
+        TomlTypeConverter.AddConverter(typeof(GainSchedule), new TypeConverter
         {
             ConvertToString = static (obj, _) => ((GainSchedule)obj).ToString(),
             ConvertToObject = static (str, _) => GainSchedule.Parse(str)
@@ -268,10 +277,22 @@ public class Plugin : BaseUnityPlugin
         UI_Width = Config.Bind("Visuals - UI", "3. Window Width", 227f, "Saved Width");
         UI_Height = Config.Bind("Visuals - UI", "4. Window Height", 330f, "Saved Height");
 
-        FuelSmoothing = Config.Bind("Calculations", "1. Fuel Flow Smoothing", 0.1f, "Alpha value");
-        FuelUpdateInterval = Config.Bind("Calculations", "2. Fuel Update Interval", 1.0f, "Seconds");
-        FuelWarnMinutes = Config.Bind("Calculations", "3. Fuel Warning Time", 15, "Minutes");
-        FuelCritMinutes = Config.Bind("Calculations", "4. Fuel Critical Time", 5, "Minutes");
+        APSoundEnabled = Config.Bind("Sound", "1. Enable AP Sounds", true,
+            "Play autopilot disconnect and mode change sounds.");
+        APSoundVolumePercent = Config.Bind("Sound", "2. Volume Percent", 100,
+            "AP sound volume");
+        APSoundFile = Config.Bind("Sound", "3. Sound File", "ap_disconnect.ogg",
+            "Audio file name inside the Audio folder, or absolute path. Use WAV, MP3, or OGG Vorbis.");
+        APModeCueStartSeconds = Config.Bind("Sound", "4. Mode Change Start Seconds", 2.0f,
+            "Where in the sound file the mode change begins.");
+        APModeCueCooldown = Config.Bind("Sound", "5. Mode Change Cooldown", 0.25f,
+            "Minimum seconds between mode change sounds.");
+
+        FuelSmoothing = Config.Bind("Calculations", "1. Fuel flow smoothing filter Tf", 1.0f, "Time constant for the second-order signal filter.");
+        RangeSmoothing = Config.Bind("Calculations", "2. Range smoothing filter Tf", 1.0f, "Time constant for the second-order signal filter.");
+        FuelUpdateInterval = Config.Bind("Calculations", "3. Fuel Update Interval", 1.0f, "Seconds");
+        FuelWarnMinutes = Config.Bind("Calculations", "4. Fuel Warning Time", 15, "Minutes");
+        FuelCritMinutes = Config.Bind("Calculations", "5. Fuel Critical Time", 5, "Minutes");
 
         // Settings
         StickTempThreshold = Config.Bind("Settings", "1. Temp disengage Stick Threshold", 0.01f,
@@ -311,6 +332,7 @@ public class Plugin : BaseUnityPlugin
 
         UnlockMapPan = Config.Bind("Settings - Map", "Unlock Map Pan", true, "Requires restart to apply.");
         UnlockMapZoom = Config.Bind("Settings - Map", "Unlock Map Zoom", true, "Requires restart to apply.");
+        SaveMapPosition = Config.Bind("Settings - Map", "Save Map Position", false, "Prevent map from resetting position when reopened.");
         SaveMapZoom = Config.Bind("Settings - Map", "Save Map Zoom", false,
             "Prevent map from resetting zoom when reopened.");
         // MinimapMinZoom = Config.Bind("Settings - Map - Minimap", "Minimap Min Zoom", 0.01f, "Minimum zoom level");
@@ -479,44 +501,47 @@ public class Plugin : BaseUnityPlugin
             }));
 
         ConfPidAlt = PIDTuningBinder.Bind(Config, pidSect, "01. Altitude > VS",
-            new PIDTuning(0.5, 0, 3), "Altitude > Vertical Speed");
+            new PIDTuning(), "Altitude > Vertical Speed");
 
         ConfPidVs = PIDTuningBinder.Bind(Config, pidSect, "02. VS > Pitch",
-            new PIDTuning(2.44967771875362, 2.31068044043631, 0.549968619394224), "Vertical Speed > Pitch Angle");
+            new PIDTuning(), "Vertical Speed > Pitch Angle");
 
         ConfPidPitch = PIDTuningBinder.Bind(Config, pidSect, "03. Pitch > Stick",
-            new PIDTuning(0.02, 5.7512084040881, 0.12329376291698, 5, c: 0.1, smoothOut: 0.3), "Pitch Angle > Stick");
+            new PIDTuning(), "Pitch Angle > Stick");
 
         ConfPidRoll = PIDTuningBinder.Bind(Config, pidSect, "05. Roll > Roll Rate",
-            new PIDTuning(5, 0, 0.2), "Roll > Roll rate");
+            new PIDTuning(), "Roll > Roll rate");
 
         ConfPidRollRate = PIDTuningBinder.Bind(Config, pidSect, "06. Roll Rate > Stick",
-            new PIDTuning(0.004, 0.3851634589019024, 0), "Roll rate > Stick");
+            new PIDTuning(), "Roll rate > Stick");
 
-        ConfPidCrs = PIDTuningBinder.Bind(Config, pidSect, "07. Course > Course Rate",
-            new PIDTuning(1, 30, 0, clegg: true), "Course Error > Course Rate");
+        ConfPidYaw = PIDTuningBinder.Bind(Config, pidSect, "07. Yaw",
+            new PIDTuning(), "Yaw error > Stick");
 
-        ConfPidSpd = PIDTuningBinder.Bind(Config, pidSect, "08. Speed > Throttle",
-            new PIDTuning(0.276635855846017, 4.55835278395057, 0.486418840935585, 1), "Speed Error > Throttle");
+        ConfPidCrs = PIDTuningBinder.Bind(Config, pidSect, "08. Course > Course Rate",
+            new PIDTuning(), "Course Error > Course Rate");
 
-        ConfPidGcas = PIDTuningBinder.Bind(Config, pidSect, "09. G-Force > Stick",
-            new PIDTuning(0.448050807726941, 0.947761066338411, 0, smoothOut: 0.1), "GCAS G Error > Stick");
+        ConfPidSpd = PIDTuningBinder.Bind(Config, pidSect, "09. Speed > Throttle",
+            new PIDTuning(), "Speed Error > Throttle");
+
+        ConfPidGcas = PIDTuningBinder.Bind(Config, pidSect, "10. G-Force > Stick",
+            new PIDTuning(), "GCAS G Error > Stick");
 
         const string schedSect = "PID Gain Scheduling (much basic)";
         SchedPidVs = GainScheduleBinder.Bind(Config, schedSect, "01. VS > Pitch Schedule",
-            new GainSchedule(refQ: 18750f, kpExp: 0.3f, tiExp: 0.3f, tdExp: 0f, clampMin: 0.1f, clampMax: 10f),
+            new GainSchedule(),
             "Scales Pitch > Angle PID");
 
         SchedPidPitch = GainScheduleBinder.Bind(Config, schedSect, "02. Pitch > Stick Schedule",
-            new GainSchedule(refQ: 18750f, kpExp: 0.3f, tiExp: 0.3f, tdExp: 0f, clampMin: 0.1f, clampMax: 10f),
+            new GainSchedule(),
             "Scales VS > Pitch PID");
 
         SchedPidRollRate = GainScheduleBinder.Bind(Config, schedSect, "03. Roll > Stick Schedule",
-            new GainSchedule(refQ: 18750f, kpExp: 0.3f, tiExp: 0.3f, tdExp: 0f, clampMin: 0.1f, clampMax: 10f),
+            new GainSchedule(),
             "Scales Roll > Stick PID");
 
         SchedPidSpd = GainScheduleBinder.Bind(Config, schedSect, "04. Speed > Throttle Schedule",
-            new GainSchedule(refQ: 18750f, kpExp: 0f, tiExp: 0f, tdExp: 0f, clampMin: 1.0f, clampMax: 1.0f),
+            new GainSchedule(),
             "Scales Speed > Throttle PID");
 
         ShowQ = Config.Bind(schedSect, "Show Q values", false,
@@ -564,6 +589,11 @@ public class Plugin : BaseUnityPlugin
         ConfigBackup.WriteSchemaVersion(Config);
 
         ActivePid.CacheGlobalDefaults();
+        ActivePid.LoadGlobalDefaults();
+        ActivePid.WriteGlobalDefaultsToConfig();
+
+        _apAudio = new APAudio(gameObject);
+        _apAudio.Load();
 
         _harmony = new Harmony(Guid);
         try
@@ -607,6 +637,8 @@ public class Plugin : BaseUnityPlugin
                 MinimapLayoutPatch.Reset();
                 MinimapTerrainOpacityPatch.Reset();
                 MinimapGridOpacityPatch.Reset();
+                _apAudio?.Destroy();
+                _apAudio = null;
 
                 if (APData.NavVisuals != null)
                 {
@@ -627,6 +659,7 @@ public class Plugin : BaseUnityPlugin
             }
 
             RewiredConfigManager.Update();
+            _apAudio?.Update();
 
             if (APData.PlayerRB != null)
             {
@@ -871,6 +904,9 @@ public class Plugin : BaseUnityPlugin
         MinimapTerrainOpacityPatch.Reset();
         MinimapGridOpacityPatch.Reset();
         RewiredConfigManager.Reset();
+        InputHelper.Reset();
+        _apAudio?.Destroy();
+        _apAudio = null;
         if (APData.NavVisuals != null)
         {
             foreach (GameObject obj in APData.NavVisuals)

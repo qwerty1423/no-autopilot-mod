@@ -1,0 +1,28 @@
+<Project>
+  <PropertyGroup>
+    <NuclearOptionDir Condition="'$(NuclearOptionDir)' == ''">$(HOME)/.local/share/Steam/steamapps/common/Nuclear Option</NuclearOptionDir>
+    <ManagedDir>$(NuclearOptionDir)/NuclearOption_Data/Managed</ManagedDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(ManagedDir)/Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+      <Publicize>true</Publicize>
+    </Reference>
+    <Reference Include="Mirage">
+      <HintPath>$(ManagedDir)/Mirage.dll</HintPath>
+      <Private>false</Private>
+      <Publicize>true</Publicize>
+    </Reference>
+    <Reference Include="Rewired_Core">
+      <HintPath>$(ManagedDir)/Rewired_Core.dll</HintPath>
+      <Private>false</Private>
+      <Publicize>true</Publicize>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(ManagedDir)/UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

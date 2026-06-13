@@ -6,6 +6,8 @@
     "enableEditorConfigSupport": true
   },
   "fileOptions": {
-    "excludeSearchPatterns": ["**/Core/PID/PIDLoop2.cs"]
+    "excludeSearchPatterns": [
+      "**/Core/PID/PIDLoop2.cs"
+    ]
   }
 }

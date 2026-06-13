@@ -412,11 +412,11 @@ public class PIDController
 public enum Mode
 {
     /// <summary>Automatic mode: normal operation.</summary>
-    Auto,
+    Auto = 0,
 
     /// <summary>Manual mode: output follows uman.</summary>
-    Man,
+    Man = 1,
 
     /// <summary>Tracking mode: output tracks utrack.</summary>
-    Track
+    Track = 2
 }

@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added
+
+- config to save map position
+- yaw control
+- container build script thing
+
+### Changed
+
+- some pid tuning
+- default pid values are now all json, so config regeneration can be reduced
+- fuel time and range is smoothed better now
+
 ## [5.4.0]
 
 ### Added

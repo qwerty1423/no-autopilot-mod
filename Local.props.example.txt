@@ -1,0 +1,6 @@
+<Project>
+  <!-- if the default path is incorrect, copy the contents of this file to Local.props and edit if necessary -->
+  <PropertyGroup>
+    <NuclearOptionDir>C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option</NuclearOptionDir>
+  </PropertyGroup>
+</Project>

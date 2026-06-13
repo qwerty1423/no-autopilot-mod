@@ -1,5 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="Local.props" Condition="Exists('Local.props')" />
+
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>com.qwerty1423.NOAutopilot</AssemblyName>
@@ -8,7 +10,7 @@
     </AssemblyCopyright>
     <Product>NOAutopilot</Product>
     <Description>no autopilot?</Description>
-    <Version>5.4.0</Version>
+    <Version>5.5.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>
@@ -18,11 +20,6 @@
     </RestoreAdditionalProjectSources>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <GameDir>$(HOME)/.local/share/Steam/steamapps/common/Nuclear Option</GameDir>
-    <ManagedDir>$(GameDir)/NuclearOption_Data/Managed</ManagedDir>
   </PropertyGroup>
 
   <ItemDefinitionGroup>
@@ -65,35 +62,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="UnityEngine.Modules" Version="2022.3.62" IncludeAssets="compile" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>$(ManagedDir)/Assembly-CSharp.dll</HintPath>
-      <Publicize>true</Publicize>
-    </Reference>
-    <Reference Include="Mirage">
-      <HintPath>$(ManagedDir)/Mirage.dll</HintPath>
-      <Publicize>true</Publicize>
-    </Reference>
-    <Reference Include="Rewired_Core">
-      <HintPath>$(ManagedDir)/Rewired_Core.dll</HintPath>
-      <Publicize>true</Publicize>
-    </Reference>
-
-    <Reference Include="UnityEngine"><HintPath>$(ManagedDir)/UnityEngine.dll</HintPath></Reference>
-    <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)/UnityEngine.CoreModule.dll</HintPath></Reference>
-    <Reference Include="UnityEngine.UI"><HintPath>$(ManagedDir)/UnityEngine.UI.dll</HintPath></Reference>
-    <Reference Include="UnityEngine.UIModule"><HintPath>$(ManagedDir)/UnityEngine.UIModule.dll</HintPath></Reference>
-    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(ManagedDir)/UnityEngine.InputLegacyModule.dll</HintPath></Reference>
-    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(ManagedDir)/UnityEngine.PhysicsModule.dll</HintPath></Reference>
-    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(ManagedDir)/UnityEngine.TextRenderingModule.dll</HintPath></Reference>
-    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(ManagedDir)/UnityEngine.IMGUIModule.dll</HintPath></Reference>
-    <Reference Include="UnityEngine.JSONSerializeModule"><HintPath>$(ManagedDir)/UnityEngine.JSONSerializeModule.dll</HintPath></Reference>
   </ItemGroup>
 
   <ItemGroup>
@@ -109,11 +82,12 @@
 
   <ItemGroup>
     <ProfileFiles Include="Profiles\*.json" />
+    <AudioFiles Include="Audio\*.*" />
   </ItemGroup>
 
   <Target Name="DeployPlugin" AfterTargets="Build"
           Condition="'$(Configuration)' == 'Debug' AND '$(PluginDeployPath)' != ''"
-          Inputs="$(OutputPath)$(AssemblyName).dll;$(OutputPath)$(AssemblyName).pdb;@(ProfileFiles)"
+          Inputs="$(OutputPath)$(AssemblyName).dll;$(OutputPath)$(AssemblyName).pdb;@(ProfileFiles);@(AudioFiles)"
           Outputs="$(PluginDeployPath)/$(AssemblyName).dll">
     <PropertyGroup>
       <DeployRoot>$(PluginDeployPath)</DeployRoot>
@@ -121,24 +95,22 @@
     <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(DeployRoot)/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).pdb&quot; &quot;$(DeployRoot)/&quot;" />
     <Exec Command="rsync -rcv --delete --mkpath &quot;$(MSBuildProjectDirectory)/Profiles/&quot; &quot;$(DeployRoot)/Profiles/&quot;" />
+    <Exec Command="rsync -rcv --delete --mkpath &quot;$(MSBuildProjectDirectory)/Audio/&quot; &quot;$(DeployRoot)/Audio/&quot;" />
   </Target>
 
   <Target Name="CreateZip" AfterTargets="Build"
     Condition="'$(Configuration)' == 'Release'"
-    Inputs="$(OutputPath)$(AssemblyName).dll;LICENSE;CHANGELOG.md;README.md;@(ProfileFiles)"
+    Inputs="$(OutputPath)$(AssemblyName).dll;LICENSE;CHANGELOG.md;README.md;@(ProfileFiles);@(AudioFiles)"
     Outputs="$(OutputPath)../$(AssemblyName)-$(Version).7z">
 
     <PropertyGroup>
       <StagingDir>$(OutputPath)Staging</StagingDir>
       <RootModFolder>$(StagingDir)/no-autopilot-mod</RootModFolder>
-      <GpgKeyId>515C633449FCE7DA8BCB4F31E3CE2BE2DFAB3E73</GpgKeyId>
     </PropertyGroup>
 
-    <Exec Command="gpg --batch --yes --detach-sign --armor --local-user &quot;$(GpgKeyId)&quot; --output &quot;$(OutputPath)$(AssemblyName).dll.asc&quot; &quot;$(OutputPath)$(AssemblyName).dll&quot;" />
-
     <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(RootModFolder)/&quot;" />
-    <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll.asc&quot; &quot;$(RootModFolder)/&quot;" />
     <Exec Command="rsync -rcv --delete --mkpath &quot;$(MSBuildProjectDirectory)/Profiles/&quot; &quot;$(RootModFolder)/Profiles/&quot;" />
+    <Exec Command="rsync -rcv --delete --mkpath &quot;$(MSBuildProjectDirectory)/Audio/&quot; &quot;$(RootModFolder)/Audio/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;LICENSE&quot; &quot;$(RootModFolder)/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;CHANGELOG.md&quot; &quot;$(RootModFolder)/&quot;" />
     <Exec Command="rsync -rcv --mkpath &quot;README.md&quot; &quot;$(RootModFolder)/&quot;" />

@@ -75,6 +75,7 @@ internal static class HudPatch
             APData.LocalWeaponManager = aircraft.weaponManager;
             APData.TargetAlt = aircraft.transform.position.GlobalY();
             APData.TargetRoll = 0f;
+            APData.SaveMapPosition = Plugin.SaveMapPosition.Value;
             APData.SaveMapZoom = Plugin.SaveMapZoom.Value;
 
             // Load PID settings for this aircraft

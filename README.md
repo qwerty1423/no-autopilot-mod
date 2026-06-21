@@ -26,6 +26,7 @@
 - [Auto-GCAS](#auto-gcas)
 - [Waypoints](#waypoints)
 - [ALS](#als)
+- [Minimap config](#minimap-config)
 - [Building from source](#building-from-source)
 
 ---
@@ -243,6 +244,12 @@ Right click / shift + right click on the map to make a path, then press equals (
 ## ALS
 
 default shortcut is `left ctrl` + `=`. Your plane will attempt to land itself. uses the logic that AI planes use to land. only works for planes.
+
+## Minimap config
+
+The minimap can be resized, its appearance and location can be changed, and its zoom can be adjusted. To do so, enable the minimap patches in the bepinex config manager.
+
+![Screenshot-1778571055](https://github.com/user-attachments/assets/40d50ca1-33ff-49a0-a0df-f5fe7c85eee2)
 
 ## Building from source
 

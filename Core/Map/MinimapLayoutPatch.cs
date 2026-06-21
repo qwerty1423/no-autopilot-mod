@@ -21,6 +21,9 @@ internal static class MinimapLayoutPatch
     private static RectMask2D s_panelRectMask;
     private static RectTransform s_canvasRect;
     private static Vector2? s_baseHudMapAnchorPos;
+    private static readonly Vector3[] CanvasCorners = new Vector3[4];
+    private static Vector2 s_cachedCanvasSize;
+    private static bool s_canvasValid;
     private const string BaseMarkerName = "NOA_MinimapBase";
 
     public static void Reset()
@@ -32,6 +35,7 @@ internal static class MinimapLayoutPatch
         s_panelRectMask = null;
         s_canvasRect = null;
         s_baseHudMapAnchorPos = null;
+        s_canvasValid = false;
     }
 
     [UsedImplicitly]
@@ -226,17 +230,21 @@ internal static class MinimapLayoutPatch
             return;
         }
 
-        Canvas.ForceUpdateCanvases();
+        Vector2 currentSize = canvasRect.rect.size;
+        if (!s_canvasValid || currentSize != s_cachedCanvasSize)
+        {
+            Canvas.ForceUpdateCanvases();
+            canvasRect.GetWorldCorners(CanvasCorners);
+            s_cachedCanvasSize = currentSize;
+            s_canvasValid = true;
+        }
 
         Vector3 mapCenter = mapRectTransform.position;
 
-        Vector3[] canvasCorners = new Vector3[4];
-        canvasRect.GetWorldCorners(canvasCorners);
-
-        float canvasMinX = canvasCorners[0].x;
-        float canvasMaxX = canvasCorners[2].x;
-        float canvasMinY = canvasCorners[0].y;
-        float canvasMaxY = canvasCorners[2].y;
+        float canvasMinX = CanvasCorners[0].x;
+        float canvasMaxX = CanvasCorners[2].x;
+        float canvasMinY = CanvasCorners[0].y;
+        float canvasMaxY = CanvasCorners[2].y;
 
         Vector3 delta = Vector3.zero;
 

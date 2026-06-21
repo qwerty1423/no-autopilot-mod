@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [5.5.1]
+
+### Fixed
+
+- minimap patch slowing the game down by ~5 fps when enabled.
+
 ## [5.5.0]
 
 ### Added
@@ -375,7 +381,8 @@
 
 ## [4.8.4] - 2025-12-29
 
-[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.5.0...HEAD
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.5.1...HEAD
+[5.5.1]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.5.0...v5.5.1
 [5.5.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.4.0...v5.5.0
 [5.4.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.3.0...v5.4.0
 [5.3.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.2.0...v5.3.0

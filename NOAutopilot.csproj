@@ -29,8 +29,7 @@
   </ItemDefinitionGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <DebugType>portable</DebugType>
-    <DebugSymbols>true</DebugSymbols>
+    <DebugType>embedded</DebugType>
     <GenerateDependencyFile>false</GenerateDependencyFile>
     <Optimize>true</Optimize>
     <PathMap>$(MSBuildProjectDirectory)=.</PathMap>
@@ -41,8 +40,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DebugType>none</DebugType>
-    <DebugSymbols>false</DebugSymbols>
+    <DebugType>embedded</DebugType>
     <GenerateDependencyFile>false</GenerateDependencyFile>
     <Optimize>true</Optimize>
     <PathMap>$(MSBuildProjectDirectory)=.</PathMap>
@@ -87,13 +85,12 @@
 
   <Target Name="DeployPlugin" AfterTargets="Build"
           Condition="'$(Configuration)' == 'Debug' AND '$(PluginDeployPath)' != ''"
-          Inputs="$(OutputPath)$(AssemblyName).dll;$(OutputPath)$(AssemblyName).pdb;@(ProfileFiles);@(AudioFiles)"
+          Inputs="$(OutputPath)$(AssemblyName).dll;@(ProfileFiles);@(AudioFiles)"
           Outputs="$(PluginDeployPath)/$(AssemblyName).dll">
     <PropertyGroup>
       <DeployRoot>$(PluginDeployPath)</DeployRoot>
     </PropertyGroup>
     <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(DeployRoot)/&quot;" />
-    <Exec Command="rsync -rcv --mkpath &quot;$(OutputPath)$(AssemblyName).pdb&quot; &quot;$(DeployRoot)/&quot;" />
     <Exec Command="rsync -rcv --delete --mkpath &quot;$(MSBuildProjectDirectory)/Profiles/&quot; &quot;$(DeployRoot)/Profiles/&quot;" />
     <Exec Command="rsync -rcv --delete --mkpath &quot;$(MSBuildProjectDirectory)/Audio/&quot; &quot;$(DeployRoot)/Audio/&quot;" />
   </Target>

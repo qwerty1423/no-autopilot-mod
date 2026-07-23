@@ -43,6 +43,7 @@ Hosts known to permit use:
 Hosts known to prohibit use:
 
 - GrayWar
+- Tomo's Co-Op/PvP
 
 Another list can be found in [this mod's post](https://discord.com/channels/909034158205059082/1458083280250208307/1458083280250208307) on the nuclear option discord's mod forum.
 

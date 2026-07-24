@@ -1,21 +1,21 @@
 name: build
 
 on:
-  # push:
-  #   branches: [testing]
-  #   paths:
-  #     - "**/*.cs"
-  #     - "**/*.csproj"
-  #     - "**/*.sln"
-  #     - "Directory.Build.*"
-  #     - ".github/**"
-  # pull_request:
-  #   paths:
-  #     - "**/*.cs"
-  #     - "**/*.csproj"
-  #     - "**/*.sln"
-  #     - "Directory.Build.*"
-  #     - ".github/**"
+  push:
+    branches: [testing]
+    paths:
+      - "**/*.cs"
+      - "**/*.csproj"
+      - "**/*.sln"
+      - "Directory.Build.*"
+      - ".github/**"
+  pull_request:
+    paths:
+      - "**/*.cs"
+      - "**/*.csproj"
+      - "**/*.sln"
+      - "Directory.Build.*"
+      - ".github/**"
   workflow_dispatch:
   workflow_call:
 

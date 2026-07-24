@@ -1,5 +1,5 @@
 #!/bin/bash
-# Usage: ./scripts/build.sh "/path/to/Nuclear Option"
+# Usage: ./scripts/build.sh "/path/to/Nuclear Option/Managed"
 
 set -e
 
@@ -19,8 +19,6 @@ if [ -z "$GAME_DIR" ]; then
     exit 1
 fi
 
-echo "Building with game from $GAME_DIR"
-
 mkdir -p build-output
 
 $CONTAINER_MANAGER build -f Dockerfile.build -t noautopilot-build .
@@ -34,6 +32,7 @@ $CONTAINER_MANAGER run --rm \
     rsync -a --exclude bin --exclude obj /src/ /tmp/build/ &&
     cd /tmp/build &&
     dotnet build NOAutopilot.csproj -c Release \
+      -p:ManagedDir=/game/NuclearOptionServer_Data/Managed \
       -p:NuclearOptionDir=/game \
       -p:OutputPath=/out/
     '

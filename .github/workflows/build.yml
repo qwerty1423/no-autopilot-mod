@@ -34,15 +34,44 @@ jobs:
         id: nomod
         uses: ./.github/actions/prepare-nomod
 
+      - name: Hash managed dlls
+        run: |
+          set -euo pipefail
+          MANAGED="${{ steps.nomod.outputs.managed-dir }}"
+          {
+            echo "Managed dir: $MANAGED"
+            echo
+            echo "Managed DLL hashes:"
+            sha256sum \
+              "$MANAGED/Assembly-CSharp.dll" \
+              "$MANAGED/Mirage.dll" \
+              "$MANAGED/Rewired_Core.dll" \
+              "$MANAGED/UnityEngine.UI.dll"
+          } | tee managed-hashes.txt
+
       - name: Build in container
         run: ./scripts/build.sh --managed-dir "${{ steps.nomod.outputs.managed-dir }}"
 
-      - name: List output
-        run: find build-output/ -type f | sort
+      - name: Hash outputs
+        run: |
+          set -euo pipefail
+          {
+            echo "Build output files:"
+            find build-output -maxdepth 1 -type f | sort
+            echo
+            echo "Plugin DLL hash:"
+            sha256sum build-output/com.qwerty1423.NOAutopilot.dll
+            echo
+            echo "Archive hash:"
+            sha256sum build-output/com.qwerty1423.NOAutopilot-*.7z
+          } | tee output-hashes.txt
 
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: NOAutopilot-release
-          path: build-output/com.qwerty1423.NOAutopilot-*.7z
+          path: |
+            build-output/com.qwerty1423.NOAutopilot-*.7z
+            managed-hashes.txt
+            output-hashes.txt
           if-no-files-found: error

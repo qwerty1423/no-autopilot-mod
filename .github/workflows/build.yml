@@ -60,5 +60,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: NOAutopilot-release
-          path: build-output/
+          path: com.qwerty1423.NOAutopilot-*.7z
           if-no-files-found: error

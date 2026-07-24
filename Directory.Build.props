@@ -1,8 +1,15 @@
 <Project>
   <PropertyGroup>
     <NuclearOptionDir Condition="'$(NuclearOptionDir)' == ''">$(HOME)/.local/share/Steam/steamapps/common/Nuclear Option</NuclearOptionDir>
-    <ManagedDir>$(NuclearOptionDir)/NuclearOption_Data/Managed</ManagedDir>
+
+    <ManagedDir Condition="'$(ManagedDir)' == '' and Exists('$(NuclearOptionDir)/NuclearOption_Data/Managed')">$(NuclearOptionDir)/NuclearOption_Data/Managed</ManagedDir>
+    <ManagedDir Condition="'$(ManagedDir)' == '' and Exists('$(NuclearOptionDir)/NuclearOptionServer_Data/Managed')">$(NuclearOptionDir)/NuclearOptionServer_Data/Managed</ManagedDir>
   </PropertyGroup>
+
+  <Target Name="ValidateManagedDir" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(ManagedDir)/Assembly-CSharp.dll')"
+           Text="ManagedDir is invalid or missing: $(ManagedDir)" />
+  </Target>
 
   <ItemGroup>
     <Reference Include="Assembly-CSharp">

@@ -54,7 +54,8 @@ mkdir -p "$OUTPUT_DIR"
   noautopilot-build \
   bash -lc '
     set -euo pipefail
-    rsync -a --exclude bin --exclude obj /src/ /tmp/build/
+    mkdir -p /tmp/build
+    git -C /src archive --format=tar HEAD | tar -xf - -C /tmp/build
     cd /tmp/build
     dotnet restore NOAutopilot.csproj --locked-mode
     dotnet build NOAutopilot.csproj \

@@ -14,10 +14,21 @@ runs:
       uses: actions/cache@v6
       with:
         path: ~/nomod-managed
-        key: nomod-managed-v1
+        key: nomod-managed-6
+        restore-keys: nomod-managed-
+
+    - name: Check managed dir
+      id: managed
+      shell: bash
+      run: |
+        if [[ -f "$HOME/nomod-managed/Assembly-CSharp.dll" ]]; then
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Install SteamCMD
-      if: steps.cache.outputs.cache-hit != 'true'
+      if: steps.managed.outputs.ready != 'true'
       shell: bash
       run: |
         sudo add-apt-repository multiverse
@@ -28,7 +39,7 @@ runs:
         sudo apt-get install -y steamcmd
 
     - name: Download Nuclear Option server
-      if: steps.cache.outputs.cache-hit != 'true'
+      if: steps.managed.outputs.ready != 'true'
       shell: bash
       run: |
         steamcmd \

@@ -8,6 +8,14 @@ on:
       - "**/*.csproj"
       - "**/*.sln"
       - "Directory.Build.*"
+      - "packages.lock.json"
+      - "Dockerfile.build"
+      - "scripts/**"
+      - "Profiles/**"
+      - "Audio/**"
+      - "LICENSE"
+      - "README.md"
+      - "CHANGELOG.md"
       - ".github/**"
   pull_request:
     paths:
@@ -15,20 +23,33 @@ on:
       - "**/*.csproj"
       - "**/*.sln"
       - "Directory.Build.*"
+      - "packages.lock.json"
+      - "Dockerfile.build"
+      - "scripts/**"
+      - "Profiles/**"
+      - "Audio/**"
+      - "LICENSE"
+      - "README.md"
+      - "CHANGELOG.md"
       - ".github/**"
   workflow_dispatch:
-  workflow_call:
 
-defaults:
-  run:
-    shell: bash
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Prepare Nuclear Option
         id: nomod
@@ -57,7 +78,7 @@ jobs:
           } | tee output-hashes.txt
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: NOAutopilot-release
           path: |
@@ -65,3 +86,4 @@ jobs:
             input-hashes.txt
             output-hashes.txt
           if-no-files-found: error
+          compression-level: 0

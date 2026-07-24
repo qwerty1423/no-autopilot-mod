@@ -11,7 +11,7 @@ runs:
   steps:
     - name: Cache Managed assemblies
       id: cache
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ~/nomod-managed
         key: nomod-managed-${{ github.run_number }}

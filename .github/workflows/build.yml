@@ -39,15 +39,12 @@ jobs:
           set -euo pipefail
           MANAGED="${{ steps.nomod.outputs.managed-dir }}"
           {
-            echo "Managed dir: $MANAGED"
-            echo
-            echo "Managed DLL hashes:"
             sha256sum \
               "$MANAGED/Assembly-CSharp.dll" \
               "$MANAGED/Mirage.dll" \
               "$MANAGED/Rewired_Core.dll" \
               "$MANAGED/UnityEngine.UI.dll"
-          } | tee managed-hashes.txt
+          } | tee input-hashes.txt
 
       - name: Build in container
         run: ./scripts/build.sh --managed-dir "${{ steps.nomod.outputs.managed-dir }}"
@@ -56,10 +53,6 @@ jobs:
         run: |
           set -euo pipefail
           {
-            echo "Build output files:"
-            find build-output -maxdepth 1 -type f | sort
-            echo
-            echo "Plugin DLL hash:"
             sha256sum build-output/com.qwerty1423.NOAutopilot.dll
           } | tee output-hashes.txt
 
@@ -69,6 +62,6 @@ jobs:
           name: NOAutopilot-release
           path: |
             build-output/com.qwerty1423.NOAutopilot-*.7z
-            managed-hashes.txt
+            input-hashes.txt
             output-hashes.txt
           if-no-files-found: error

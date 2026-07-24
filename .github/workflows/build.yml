@@ -61,9 +61,6 @@ jobs:
             echo
             echo "Plugin DLL hash:"
             sha256sum build-output/com.qwerty1423.NOAutopilot.dll
-            echo
-            echo "Archive hash:"
-            sha256sum build-output/com.qwerty1423.NOAutopilot-*.7z
           } | tee output-hashes.txt
 
       - name: Upload artifacts

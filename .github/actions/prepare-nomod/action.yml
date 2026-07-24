@@ -14,8 +14,7 @@ runs:
       uses: actions/cache@v6
       with:
         path: ~/nomod-managed
-        key: nomod-managed-${{ github.run_number }}
-        restore-keys: nomod-managed-
+        key: nomod-managed-v1
 
     - name: Install SteamCMD
       if: steps.cache.outputs.cache-hit != 'true'

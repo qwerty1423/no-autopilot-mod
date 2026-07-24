@@ -1,39 +1,65 @@
-#!/bin/bash
-# Usage: ./scripts/build.sh "/path/to/Nuclear Option"
+#!/usr/bin/env bash
+set -euo pipefail
 
-set -e
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 
-CONTAINER_MANAGER="${CONTAINER_MANAGER:-$(command -v podman || command -v docker)}"
-
-if [ -z "$CONTAINER_MANAGER" ]; then
-    echo "Error: Neither podman nor docker found. Please install one or set CONTAINER_MANAGER."
-    exit 1
+CONTAINER_MANAGER="${CONTAINER_MANAGER:-$(command -v podman || command -v docker || true)}"
+if [[ -z "${CONTAINER_MANAGER}" ]]; then
+  echo "Error: neither podman nor docker found."
+  exit 1
 fi
 
-echo "Using $CONTAINER_MANAGER"
+MANAGED_DIR=""
+OUTPUT_DIR="$REPO_ROOT/build-output"
 
-GAME_DIR="$1"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --managed-dir)
+      MANAGED_DIR="$2"
+      shift 2
+      ;;
+    --output-dir)
+      OUTPUT_DIR="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown argument: $1"
+      exit 1
+      ;;
+  esac
+done
 
-if [ -z "$GAME_DIR" ]; then
-    echo "Usage: $0 \"/path/to/Nuclear Option\""
-    exit 1
+if [[ -z "$MANAGED_DIR" ]]; then
+  echo "Usage: $0 --managed-dir /path/to/Managed [--output-dir /path/to/out]"
+  exit 1
 fi
 
-echo "Building with game from $GAME_DIR"
+if [[ ! -f "$MANAGED_DIR/Assembly-CSharp.dll" ]]; then
+  echo "Error: invalid Managed dir: $MANAGED_DIR"
+  exit 1
+fi
 
-mkdir -p build-output
+mkdir -p "$OUTPUT_DIR"
 
-$CONTAINER_MANAGER build -f Dockerfile.build -t noautopilot-build .
+"$CONTAINER_MANAGER" build \
+  -f "$REPO_ROOT/Dockerfile.build" \
+  -t noautopilot-build \
+  "$REPO_ROOT"
 
-$CONTAINER_MANAGER run --rm \
-  -v "$(pwd)":/src:ro \
-  -v "$(pwd)/build-output":/out \
-  -v "$GAME_DIR":/game:ro \
+"$CONTAINER_MANAGER" run --rm \
+  -v "$REPO_ROOT":/src:ro \
+  -v "$OUTPUT_DIR":/out \
+  -v "$MANAGED_DIR":/managed:ro \
   noautopilot-build \
   bash -lc '
-    rsync -a --exclude bin --exclude obj /src/ /tmp/build/ &&
-    cd /tmp/build &&
-    dotnet build NOAutopilot.csproj -c Release \
-      -p:NuclearOptionDir=/game \
+    set -euo pipefail
+    rsync -a --exclude bin --exclude obj /src/ /tmp/build/
+    cd /tmp/build
+    dotnet restore NOAutopilot.csproj --locked-mode
+    dotnet build NOAutopilot.csproj \
+      -c Release \
+      --no-restore \
+      -p:ManagedDir=/managed \
       -p:OutputPath=/out/
-    '
+  '

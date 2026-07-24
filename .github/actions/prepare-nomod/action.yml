@@ -1,0 +1,46 @@
+name: prepare-nomod
+description: modified from Tyler Kuhn's action
+
+outputs:
+  managed-dir:
+    description: Path to the Managed assemblies directory
+    value: ${{ steps.resolve.outputs.managed-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Cache Managed assemblies
+      id: cache
+      uses: actions/cache@4
+      with:
+        path: ~/nomod-managed
+        key: nomod-managed-${{ github.run_number }}
+        restore-keys: nomod-managed-
+
+    - name: Install SteamCMD
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        sudo add-apt-repository multiverse
+        sudo dpkg --add-architecture i386
+        sudo apt-get update
+        echo steam steam/question select "I AGREE" | sudo debconf-set-selections
+        echo steam steam/license note '' | sudo debconf-set-selections
+        sudo apt-get install -y steamcmd
+
+    - name: Download Nuclear Option server
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        steamcmd \
+          +force_install_dir "$RUNNER_TEMP/NuclearOptionServer" \
+          +login anonymous \
+          +app_update 3930080 validate \
+          +quit
+        cp -r "$RUNNER_TEMP/NuclearOptionServer/NuclearOptionServer_Data/Managed" ~/nomod-managed
+        rm -rf "$RUNNER_TEMP/NuclearOptionServer"
+
+    - name: Resolve managed-dir
+      id: resolve
+      shell: bash
+      run: echo "managed-dir=$HOME/nomod-managed" >> "$GITHUB_OUTPUT"

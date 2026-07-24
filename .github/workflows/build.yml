@@ -1,0 +1,64 @@
+name: build
+
+on:
+  push:
+    branches: [testing]
+    paths:
+      - "**/*.cs"
+      - "**/*.csproj"
+      - "**/*.sln"
+      - "Directory.Build.*"
+      - ".github/**"
+  pull_request:
+    paths:
+      - "**/*.cs"
+      - "**/*.csproj"
+      - "**/*.sln"
+      - "Directory.Build.*"
+      - ".github/**"
+  workflow_dispatch:
+  workflow_call:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.x
+
+      - name: Prepare Nuclear Option
+        id: nomod
+        uses: ./.github/actions/prepare-nomod
+
+      - name: Install build tools
+        run: sudo apt-get install -y p7zip-full rsync
+
+      - name: Restore
+        run: dotnet restore NOAutopilot.csproj
+
+      - name: Build
+        run: >
+          dotnet build NOAutopilot.csproj
+          -c Release
+          --no-restore
+          -p:ManagedDir="${{ steps.nomod.outputs.managed-dir }}"
+          -p:OutputPath="$PWD/build-output/"
+
+      - name: List output
+        run: find build-output/ -type f | sort
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOAutopilot-release
+          path: build-output/
+          if-no-files-found: error

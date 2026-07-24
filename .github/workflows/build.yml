@@ -1,21 +1,21 @@
 name: build
 
 on:
-  push:
-    branches: [testing]
-    paths:
-      - "**/*.cs"
-      - "**/*.csproj"
-      - "**/*.sln"
-      - "Directory.Build.*"
-      - ".github/**"
-  pull_request:
-    paths:
-      - "**/*.cs"
-      - "**/*.csproj"
-      - "**/*.sln"
-      - "Directory.Build.*"
-      - ".github/**"
+  # push:
+  #   branches: [testing]
+  #   paths:
+  #     - "**/*.cs"
+  #     - "**/*.csproj"
+  #     - "**/*.sln"
+  #     - "Directory.Build.*"
+  #     - ".github/**"
+  # pull_request:
+  #   paths:
+  #     - "**/*.cs"
+  #     - "**/*.csproj"
+  #     - "**/*.sln"
+  #     - "Directory.Build.*"
+  #     - ".github/**"
   workflow_dispatch:
   workflow_call:
 
@@ -60,5 +60,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: NOAutopilot-release
-          path: com.qwerty1423.NOAutopilot-*.7z
+          path: build-output/
           if-no-files-found: error

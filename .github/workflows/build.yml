@@ -120,7 +120,7 @@ jobs:
       - name: Rename
         run: |
           set -euo pipefail
-          cd dist
+          cd dist/build-output
           for f in com.qwerty1423.NOAutopilot-*.7z; do
             [ -e "$f" ] || continue
             mv "$f" "com.qwerty1423.NOAutopilot-continuous.7z"
@@ -141,7 +141,7 @@ jobs:
           name: Continuous Build
           prerelease: true
           files: |
-            dist/com.qwerty1423.NOAutopilot-continuous.7z
+            dist/build-output/com.qwerty1423.NOAutopilot-continuous.7z
             dist/input-hashes.txt
             dist/output-hashes.txt
             dist/build-info.txt

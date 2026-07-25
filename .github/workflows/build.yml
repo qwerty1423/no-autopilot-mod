@@ -91,7 +91,7 @@ jobs:
     needs: build
     if: >-
       github.event_name == 'push' &&
-      github.repository == 'qwerty1423/NOAutopilot'
+      github.repository == 'qwerty1423/no-autopilot-mod'
     runs-on: ubuntu-latest
     permissions:
       contents: write

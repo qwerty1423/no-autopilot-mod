@@ -1,4 +1,5 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0
+# dotnet/sdk:10.0.302
+FROM mcr.microsoft.com/dotnet/sdk@sha256:ed034a8bf0b24ded0cbbac07e17825d8e9ebfe21e308191d0f7421eaf5ad4664
 RUN apt-get update && apt-get install -y --no-install-recommends p7zip-full rsync \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /build

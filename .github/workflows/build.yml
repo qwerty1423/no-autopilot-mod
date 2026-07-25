@@ -10,14 +10,14 @@ on:
       - ".editorconfig"
       - "omnisharp.json"
       - "Local.props.example.txt"
-  pull_request:
-    paths-ignore:
-      - "**/*.md"
-      - "LICENSE"
-      - ".gitignore"
-      - ".editorconfig"
-      - "omnisharp.json"
-      - "Local.props.example.txt"
+  # pull_request:
+  #   paths-ignore:
+  #     - "**/*.md"
+  #     - "LICENSE"
+  #     - ".gitignore"
+  #     - ".editorconfig"
+  #     - "omnisharp.json"
+  #     - "Local.props.example.txt"
   workflow_dispatch:
 
 permissions:
@@ -63,9 +63,7 @@ jobs:
           name: NOAutopilot-continuous
           path: |
             build-output/com.qwerty1423.NOAutopilot-*.7z
-            input-hashes.txt
-            output-hashes.txt
-            build-info.txt
+            hashes.txt
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
@@ -124,6 +122,9 @@ jobs:
           tag_name: ${{ env.RELEASE_TAG }}
           name: Continuous Build
           prerelease: true
+          make_latest: false
+          fail_on_unmatched_files: true
+          overwrite_files: true
           files: |
             dist/build-output/com.qwerty1423.NOAutopilot-continuous.7z
           body: |

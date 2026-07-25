@@ -41,37 +41,21 @@ jobs:
         id: nomod
         uses: ./.github/actions/prepare-nomod
 
-      - name: Hash managed dlls
+      - name: Build in container
+        run: ./scripts/build.sh --managed-dir "${{ steps.nomod.outputs.managed-dir }}"
+
+      - name: Hash stuff
         run: |
           set -euo pipefail
           MANAGED="${{ steps.nomod.outputs.managed-dir }}"
           {
             sha256sum \
-              "$MANAGED/Assembly-CSharp.dll" \
-              "$MANAGED/Mirage.dll" \
-              "$MANAGED/Rewired_Core.dll" \
-              "$MANAGED/UnityEngine.UI.dll"
-          } | tee input-hashes.txt
-
-      - name: Get continuous version metadata
-        run: |
-          set -euo pipefail
-          {
-            echo "commit=${GITHUB_SHA}"
-            echo "short=${GITHUB_SHA::7}"
-            echo "built=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-            echo "run=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          } | tee build-info.txt
-
-      - name: Build in container
-        run: ./scripts/build.sh --managed-dir "${{ steps.nomod.outputs.managed-dir }}"
-
-      - name: Hash outputs
-        run: |
-          set -euo pipefail
-          {
-            sha256sum build-output/com.qwerty1423.NOAutopilot.dll
-          } | tee output-hashes.txt
+                "$MANAGED/Assembly-CSharp.dll" \
+                "$MANAGED/Mirage.dll" \
+                "$MANAGED/Rewired_Core.dll" \
+                "$MANAGED/UnityEngine.UI.dll" \
+                "build-output/com.qwerty1423.NOAutopilot.dll"
+          } | tee hashes.txt
 
       - name: Upload artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -142,9 +126,6 @@ jobs:
           prerelease: true
           files: |
             dist/build-output/com.qwerty1423.NOAutopilot-continuous.7z
-            dist/input-hashes.txt
-            dist/output-hashes.txt
-            dist/build-info.txt
           body: |
             Triggered on ${{ github.event.repository.updated_at }} by commit ${{ github.sha }} (@${{ github.actor }})
 

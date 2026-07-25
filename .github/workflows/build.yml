@@ -148,6 +148,6 @@ jobs:
           body: |
             Triggered on ${{ github.event.repository.updated_at }} by commit ${{ github.sha }} (@${{ github.actor }})
 
-            This is an automated build of the latest source. It may be unstable. Use with caution!
+            This is an automated build of the latest source, and may be unstable. Use with caution!
 
             ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

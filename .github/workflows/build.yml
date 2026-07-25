@@ -3,21 +3,6 @@ name: build
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - "LICENSE"
-      - ".gitignore"
-      - ".editorconfig"
-      - "omnisharp.json"
-      - "Local.props.example.txt"
-  # pull_request:
-  #   paths-ignore:
-  #     - "**/*.md"
-  #     - "LICENSE"
-  #     - ".gitignore"
-  #     - ".editorconfig"
-  #     - "omnisharp.json"
-  #     - "Local.props.example.txt"
   workflow_dispatch:
 
 permissions:

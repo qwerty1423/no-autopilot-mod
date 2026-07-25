@@ -266,8 +266,12 @@ steps
    it should work? I haven't tested.
 3. `dotnet build -c Release`
 
-you can also run the container build script thing in /scripts?
+You can also run the container build script thing in /scripts with a copy of the nuclear option dedicated server.
 
-If you do, with some luck the hashes of the compiled dlls may match with the released ones, but since the game dlls change a lot this is not guaranteed.
+something like:
+
+`./scripts/build.sh --managed-dir /path/to/NuclearOptionServer_Data/Managed`
+
+If you do, with some luck the hashes of the compiled dll may match the released one, but since the game dlls change a lot this is not guaranteed.
 
 PS the code is terrible, it really needs a rewrite.

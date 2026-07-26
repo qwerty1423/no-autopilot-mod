@@ -41,7 +41,7 @@ jobs:
                 "$MANAGED/Rewired_Core.dll" \
                 "$MANAGED/UnityEngine.UI.dll" \
                 "build-output/com.qwerty1423.NOAutopilot.dll"
-          } | tee hashes.txt
+          }
 
       - name: Upload artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -49,6 +49,6 @@ jobs:
           name: NOAutopilot
           path: |
             build-output/com.qwerty1423.NOAutopilot-*.7z
-            hashes.txt
           if-no-files-found: error
           compression-level: 0
+          archive: false

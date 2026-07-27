@@ -40,6 +40,7 @@ jobs:
                 "$MANAGED/Mirage.dll" \
                 "$MANAGED/Rewired_Core.dll" \
                 "$MANAGED/UnityEngine.UI.dll" \
+                "$MANAGED/Unity.TextMeshPro.dll" \
                 "build-output/com.qwerty1423.NOAutopilot.dll"
           }
 

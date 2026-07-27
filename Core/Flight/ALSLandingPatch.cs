@@ -7,7 +7,7 @@ namespace NOAutopilot.Core.Flight;
 [HarmonyPatch]
 internal static class ALSLandingPatch
 {
-    [HarmonyPatch(typeof(AIPilotLandingState), nameof(AIPilotLandingState.CheckApproachParameters))]
+    [HarmonyPatch(typeof(AIPilotLandingState), nameof(AIPilotLandingState.FixedUpdateState))]
     [HarmonyPatch(typeof(AIPilotShortLandingState), nameof(AIPilotShortLandingState.CheckApproachParameters))]
     private static bool Prefix(PilotBaseState __instance)
     {
@@ -22,7 +22,6 @@ internal static class ALSLandingPatch
             {
                 if (__instance is AIPilotLandingState ls)
                 {
-                    ls.SearchBestAirbase();
                     if (ls.runwayUsage.Runway == null)
                     {
                         return false;

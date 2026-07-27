@@ -41,7 +41,7 @@ internal static class MinimapLayoutPatch
     [UsedImplicitly]
     private static void Postfix(
         DynamicMap __instance,
-        GameObject ___hudMapAnchor,
+        RectTransform ___hudMapAnchor,
         RectTransform ___mapRectTransform,
         RectTransform ___backgroundRectTransform)
     {
@@ -115,18 +115,11 @@ internal static class MinimapLayoutPatch
         return marker.anchoredPosition;
     }
 
-    private static bool TryCacheRefs(GameObject hudMapAnchor)
+    private static bool TryCacheRefs(RectTransform hudMapAnchor)
     {
-        if (s_hudMapAnchorRect == null || s_hudMapAnchorRect.gameObject != hudMapAnchor)
+        if (s_hudMapAnchorRect == null || s_hudMapAnchorRect != hudMapAnchor)
         {
-            s_hudMapAnchorRect = hudMapAnchor.GetComponent<RectTransform>();
-            if (s_hudMapAnchorRect == null)
-            {
-                Plugin.Logger.LogError("[MinimapLayoutPatch] HUDMapAnchor RectTransform not found");
-                Plugin.IsBroken = true;
-                return false;
-            }
-
+            s_hudMapAnchorRect = hudMapAnchor;
             s_baseHudMapAnchorPos = GetOrCreateBasePosition(s_hudMapAnchorRect);
         }
         else if (s_baseHudMapAnchorPos == null)
@@ -136,7 +129,7 @@ internal static class MinimapLayoutPatch
 
         if (s_lowerLeftPanel == null)
         {
-            Transform parent = hudMapAnchor.transform.parent;
+            Transform parent = hudMapAnchor.parent;
             if (parent == null || parent.name != "LowerLeftPanel")
             {
                 Plugin.Logger.LogError($"[MinimapLayoutPatch] Expected LowerLeftPanel, got '{parent?.name}'");

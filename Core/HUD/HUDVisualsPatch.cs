@@ -8,8 +8,9 @@ using JetBrains.Annotations;
 using NOAutopilot.Core.Flight;
 using NOAutopilot.Core.PID;
 
+using TMPro;
+
 using UnityEngine;
-using UnityEngine.UI;
 
 using Object = UnityEngine.Object;
 
@@ -19,14 +20,14 @@ namespace NOAutopilot.Core.HUD;
 internal static class HUDVisualsPatch
 {
     private static GameObject s_infoOverlayObj;
-    private static Text s_overlayText;
+    private static TextMeshProUGUI s_overlayText;
 
     private static GameObject s_gcasLeftObj;
     private static GameObject s_gcasRightObj;
     private static GameObject s_gcasTopObj;
-    private static Text s_gcasLeftText;
-    private static Text s_gcasRightText;
-    private static Text s_gcasTopText;
+    private static TextMeshProUGUI s_gcasLeftText;
+    private static TextMeshProUGUI s_gcasRightText;
+    private static TextMeshProUGUI s_gcasTopText;
     private static float s_smoothedConverge;
 
     private static float s_lastFuelMass;
@@ -36,7 +37,7 @@ internal static class HUDVisualsPatch
 
     private static float s_lastStringUpdate;
     private static FuelGauge s_cachedFuelGauge;
-    private static Text s_cachedRefLabel;
+    private static TextMeshProUGUI s_cachedRefLabel;
     private static Vector3 s_fuelLabelPosOffset;
     private static readonly StringBuilder SbHud = new(1024);
     private static GameObject s_lastVehicleChecked;
@@ -158,12 +159,12 @@ internal static class HUDVisualsPatch
                 s_infoOverlayObj = Object.Instantiate(s_cachedRefLabel.gameObject, __instance.GetHUDCenter());
                 s_infoOverlayObj.name = "AP_CombinedOverlay";
                 s_infoOverlayObj.transform.localPosition = s_fuelLabelPosOffset;
-                s_overlayText = s_infoOverlayObj.GetComponent<Text>();
-                s_overlayText.resizeTextForBestFit = false;
-                s_overlayText.supportRichText = true;
-                s_overlayText.alignment = TextAnchor.UpperLeft;
-                s_overlayText.horizontalOverflow = HorizontalWrapMode.Overflow;
-                s_overlayText.verticalOverflow = VerticalWrapMode.Overflow;
+                s_overlayText = s_infoOverlayObj.GetComponent<TextMeshProUGUI>();
+                s_overlayText.enableAutoSizing = false;
+                s_overlayText.richText = true;
+                s_overlayText.alignment = TextAlignmentOptions.TopLeft;
+                s_overlayText.enableWordWrapping = false;
+                s_overlayText.overflowMode = TextOverflowModes.Overflow;
                 RectTransform rect = s_infoOverlayObj.GetComponent<RectTransform>();
                 rect.pivot = new Vector2(0, 1);
                 rect.anchorMin = new Vector2(0, 1);
@@ -507,13 +508,13 @@ internal static class HUDVisualsPatch
                     {
                         GameObject obj = Object.Instantiate(s_cachedRefLabel.gameObject, hudCenter);
                         obj.name = name;
-                        Text t = obj.GetComponent<Text>();
-                        t.fontStyle = FontStyle.Normal;
+                        TextMeshProUGUI t = obj.GetComponent<TextMeshProUGUI>();
+                        t.fontStyle = FontStyles.Normal;
                         t.text = txt;
-                        t.alignment = TextAnchor.MiddleCenter;
-                        t.horizontalOverflow = HorizontalWrapMode.Overflow;
-                        t.verticalOverflow = VerticalWrapMode.Overflow;
-                        t.resizeTextForBestFit = false;
+                        t.alignment = TextAlignmentOptions.Center;
+                        t.enableWordWrapping = false;
+                        t.overflowMode = TextOverflowModes.Overflow;
+                        t.enableAutoSizing = false;
 
                         obj.transform.localRotation = Quaternion.identity;
                         obj.transform.localScale = Vector3.one;
@@ -528,13 +529,13 @@ internal static class HUDVisualsPatch
                     }
 
                     s_gcasLeftObj = CreateObj("GCAS_Left", ">");
-                    s_gcasLeftText = s_gcasLeftObj.GetComponent<Text>();
+                    s_gcasLeftText = s_gcasLeftObj.GetComponent<TextMeshProUGUI>();
 
                     s_gcasRightObj = CreateObj("GCAS_Right", "<");
-                    s_gcasRightText = s_gcasRightObj.GetComponent<Text>();
+                    s_gcasRightText = s_gcasRightObj.GetComponent<TextMeshProUGUI>();
 
                     s_gcasTopObj = CreateObj("GCAS_Top", "FLYUP");
-                    s_gcasTopText = s_gcasTopObj.GetComponent<Text>();
+                    s_gcasTopText = s_gcasTopObj.GetComponent<TextMeshProUGUI>();
                 }
 
                 float target = APData.GCASConverge;

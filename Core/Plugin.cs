@@ -20,8 +20,6 @@ using NOAutopilot.Core.HUD;
 using NOAutopilot.Core.Map;
 using NOAutopilot.Core.PID;
 
-using Rewired;
-
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;

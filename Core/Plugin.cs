@@ -20,6 +20,8 @@ using NOAutopilot.Core.HUD;
 using NOAutopilot.Core.Map;
 using NOAutopilot.Core.PID;
 
+using Rewired;
+
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -1921,6 +1923,7 @@ public class Plugin : BaseUnityPlugin
 
     private static bool StartAutoland()
     {
+        APData.ALSActive = true;
         Pilot pilot = APData.LocalPilot;
         Aircraft aircraft = APData.LocalAircraft;
 
@@ -1938,27 +1941,24 @@ public class Plugin : BaseUnityPlugin
             return false;
         }
 
-        switch (pilot.pilotType)
+        if (pilot.pilotType == Pilot.PilotType.Plane)
         {
-            case Pilot.PilotType.Plane:
-                pilot.AILandingState ??= new AIPilotLandingState();
+            pilot.AILandingState ??= new AIPilotLandingState();
 
-                pilot.SwitchState(pilot.AILandingState);
-                break;
-
-            case Pilot.PilotType.Helo:
-            case Pilot.PilotType.Tiltwing:
-                pilot.AIHeloLandingState ??= new AIHeloLandingState();
-
-                pilot.SwitchState(pilot.AIHeloLandingState);
-                break;
-
-            default:
-                APData.ALSStatusText = "ALS: UNSUPPORTED AIRCRAFT";
-                return false;
+            pilot.SwitchState(pilot.AILandingState);
+        }
+        // else if (pilot.pilotType == Pilot.PilotType.Helo ||
+        //     pilot.pilotType == Pilot.PilotType.Tiltwing)
+        // {
+        //     pilot.AIHeloLandingState ??= new AIHeloLandingState();
+        //     pilot.SwitchState(pilot.AIHeloLandingState);
+        // }
+        else
+        {
+            APData.ALSStatusText = "ALS: UNSUPPORTED AIRCRAFT";
+            return false;
         }
 
-        APData.ALSActive = true;
         APData.ALSStatusText = "ALS: SEARCH";
         return true;
     }

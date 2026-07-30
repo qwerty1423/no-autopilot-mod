@@ -1945,12 +1945,11 @@ public class Plugin : BaseUnityPlugin
 
             pilot.SwitchState(pilot.AILandingState);
         }
-        // else if (pilot.pilotType == Pilot.PilotType.Helo ||
-        //     pilot.pilotType == Pilot.PilotType.Tiltwing)
-        // {
-        //     pilot.AIHeloLandingState ??= new AIHeloLandingState();
-        //     pilot.SwitchState(pilot.AIHeloLandingState);
-        // }
+        else if (pilot.pilotType == Pilot.PilotType.Helo)
+        {
+            pilot.AIHeloLandingState ??= new AIHeloLandingState();
+            pilot.SwitchState(pilot.AIHeloLandingState);
+        }
         else
         {
             APData.ALSStatusText = "ALS: UNSUPPORTED AIRCRAFT";

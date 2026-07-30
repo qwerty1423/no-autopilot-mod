@@ -10,7 +10,7 @@ namespace NOAutopilot.Core.HUD;
 internal static class UpdateHUDAutolandPatch
 {
     [HarmonyPatch(typeof(AIPilotLandingState), nameof(AIPilotLandingState.FixedUpdateState))]
-    [HarmonyPatch(typeof(AIPilotShortLandingState), nameof(AIPilotShortLandingState.FixedUpdateState))]
+    [HarmonyPatch(typeof(AIHeloLandingState), nameof(AIHeloLandingState.FixedUpdateState))]
     [HarmonyPatch(typeof(AIPilotTaxiState), nameof(AIPilotTaxiState.FixedUpdateState))]
     private static void Postfix(PilotBaseState __instance)
     {
@@ -62,18 +62,18 @@ internal static class UpdateHUDAutolandPatch
 
                 landed = ls.landingMode == AIPilotLandingState.LandingMode.Touched_Down;
             }
-            else if (__instance is AIPilotShortLandingState sls)
+            if (__instance is AIHeloLandingState hs)
             {
-                if (sls.runwayUsage.Runway == null)
+                if (hs.nearestAirbase == null)
                 {
                     searching = true;
                 }
                 else
                 {
-                    baseName = sls.runwayUsage.Runway.airbase.name;
+                    baseName = hs.nearestAirbase.name;
                 }
 
-                landed = sls.touchedDown;
+                landed = hs.touchedDown;
             }
             else if (__instance is AIPilotTaxiState ts)
             {

@@ -62,7 +62,7 @@ internal static class UpdateHUDAutolandPatch
 
                 landed = ls.landingMode == AIPilotLandingState.LandingMode.Touched_Down;
             }
-            if (__instance is AIHeloLandingState hs)
+            else if (__instance is AIHeloLandingState hs)
             {
                 if (hs.nearestAirbase == null)
                 {

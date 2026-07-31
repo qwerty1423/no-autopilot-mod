@@ -34,22 +34,61 @@ jobs:
         run: |
           set -euo pipefail
           MANAGED="${{ steps.nomod.outputs.managed-dir }}"
-          {
-            sha256sum \
-                "$MANAGED/Assembly-CSharp.dll" \
-                "$MANAGED/Mirage.dll" \
-                "$MANAGED/Rewired_Core.dll" \
-                "$MANAGED/UnityEngine.UI.dll" \
-                "$MANAGED/Unity.TextMeshPro.dll" \
-                "build-output/com.qwerty1423.NOAutopilot.dll"
-          }
+          sha256sum \
+              "$MANAGED/Assembly-CSharp.dll" \
+              "$MANAGED/Mirage.dll" \
+              "$MANAGED/Rewired_Core.dll" \
+              "$MANAGED/UnityEngine.UI.dll" \
+              "$MANAGED/Unity.TextMeshPro.dll" \
+              "build-output/com.qwerty1423.NOAutopilot.dll"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: NOAutopilot
-          path: |
-            build-output/com.qwerty1423.NOAutopilot-*.7z
+          path: build-output/com.qwerty1423.NOAutopilot-*.7z
           if-no-files-found: error
           compression-level: 0
           archive: false
+
+  draft:
+    name: Draft release
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download package
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: com.qwerty1423.NOAutopilot-*.7z
+          merge-multiple: true
+          path: dist
+
+      - name: Read version from artifact
+        id: pkg
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=(dist/com.qwerty1423.NOAutopilot-*.7z)
+          (( ${#assets[@]} == 1 )) || { echo "::error::expected 1 asset, got ${#assets[@]}"; exit 1; }
+          base="$(basename "${assets[0]}" .7z)"
+          echo "version=${base#com.qwerty1423.NOAutopilot-}" >> "$GITHUB_OUTPUT"
+
+      - name: Draft release
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
+        with:
+          tag_name: v${{ steps.pkg.outputs.version }}
+          name: v${{ steps.pkg.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          draft: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: dist/com.qwerty1423.NOAutopilot-*.7z
+          append_body: true
+          body: |
+            Built from ${{ github.sha }} by @${{ github.actor }}
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

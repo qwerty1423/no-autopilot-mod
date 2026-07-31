@@ -741,26 +741,16 @@ public class Plugin : BaseUnityPlugin
 
             if (InputHelper.IsDown(ToggleALSRW) || ToggleALSKey.Value.IsDown())
             {
-                APData.ALSActive = !APData.ALSActive;
-                if (!APData.ALSActive)
+                if (APData.ALSActive)
                 {
+                    APData.ALSActive = false;
                     APData.ALSStatusText = "";
+
                     APData.LocalPilot?.SwitchState(APData.LocalPilot.playerState);
                 }
                 else
                 {
-                    FactionHQ hq = APData.LocalAircraft?.NetworkHQ;
-                    if (hq != null)
-                    {
-                        if (hq.GetAirbases().Any())
-                        {
-                            APData.LocalPilot?.SwitchState(new AIPilotLandingState());
-                        }
-                        else
-                        {
-                            APData.ALSStatusText = "ALS: NO AIRBASE";
-                        }
-                    }
+                    StartAutoland();
                 }
             }
 
@@ -1529,26 +1519,16 @@ public class Plugin : BaseUnityPlugin
         GUI.backgroundColor = APData.ALSActive ? Color.green : Color.white;
         if (GUILayout.Button(new GUIContent(APData.ALSActive ? "ALS" : "ALS-", "autoland"), _styleButton))
         {
-            APData.ALSActive = !APData.ALSActive;
-            if (!APData.ALSActive)
+            if (APData.ALSActive)
             {
+                APData.ALSActive = false;
                 APData.ALSStatusText = "";
+
                 APData.LocalPilot?.SwitchState(APData.LocalPilot.playerState);
             }
             else
             {
-                FactionHQ hq = APData.LocalAircraft?.NetworkHQ;
-                if (hq != null)
-                {
-                    if (hq.GetAirbases().Any())
-                    {
-                        APData.LocalPilot?.SwitchState(new AIPilotLandingState());
-                    }
-                    else
-                    {
-                        APData.ALSStatusText = "ALS: NO AIRBASE";
-                    }
-                }
+                StartAutoland();
             }
 
             GUI.FocusControl(null);
@@ -1937,6 +1917,47 @@ public class Plugin : BaseUnityPlugin
             Logger.LogError($"[UpdateFBWState] Error: {ex.Message}");
             IsBroken = true;
         }
+    }
+
+    private static bool StartAutoland()
+    {
+        APData.ALSActive = true;
+        Pilot pilot = APData.LocalPilot;
+        Aircraft aircraft = APData.LocalAircraft;
+
+        if (pilot == null || aircraft == null)
+        {
+            APData.ALSStatusText = "ALS: NO PILOT";
+            return false;
+        }
+
+        FactionHQ hq = aircraft.NetworkHQ;
+
+        if (hq?.GetAirbases().Any() != true)
+        {
+            APData.ALSStatusText = "ALS: NO AIRBASE";
+            return false;
+        }
+
+        if (pilot.pilotType == Pilot.PilotType.Plane)
+        {
+            pilot.AILandingState ??= new AIPilotLandingState();
+
+            pilot.SwitchState(pilot.AILandingState);
+        }
+        else if (pilot.pilotType == Pilot.PilotType.Helo)
+        {
+            pilot.AIHeloLandingState ??= new AIHeloLandingState();
+            pilot.SwitchState(pilot.AIHeloLandingState);
+        }
+        else
+        {
+            APData.ALSStatusText = "ALS: UNSUPPORTED AIRCRAFT";
+            return false;
+        }
+
+        APData.ALSStatusText = "ALS: SEARCH";
+        return true;
     }
 
     private void OnSceneUnloaded(Scene scene)

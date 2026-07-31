@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- autoland
+- hud elements not displaying with fuel and throttle gauges disabled
+
 ## [5.5.2]
 
 ### Fixed

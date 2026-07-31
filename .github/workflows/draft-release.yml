@@ -1,0 +1,112 @@
+name: draft-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Build run to publish"
+        required: false
+        type: string
+      tag:
+        description: "Tag override"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: draft-release
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-24.04
+
+    permissions:
+      actions: read
+      contents: write
+
+    steps:
+      - name: Resolve build run
+        id: run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          INPUT_RUN_ID: ${{ inputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "$INPUT_RUN_ID" ]]; then
+            id="$INPUT_RUN_ID"
+          else
+            id="$(gh run list --workflow build.yml --branch main \
+                    --status success --limit 1 --json databaseId -q '.[0].databaseId')"
+            [[ -n "$id" ]] || { echo "::error::no successful build.yml run on main"; exit 1; }
+          fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          echo "Using build run $id"
+
+      - name: Download package
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          run-id: ${{ steps.run.outputs.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: com.qwerty1423.NOAutopilot-*.7z
+          merge-multiple: true
+          path: dist
+
+      - name: Resolve tag and check it is free
+        id: pkg
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG_OVERRIDE: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=(dist/com.qwerty1423.NOAutopilot-*.7z)
+          (( ${#assets[@]} == 1 )) || { echo "::error::expected 1 asset, got ${#assets[@]}"; exit 1; }
+          base="$(basename "${assets[0]}" .7z)"
+          version="${base#com.qwerty1423.NOAutopilot-}"
+          tag="${TAG_OVERRIDE:-v$version}"
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            state="$(gh release view "$tag" --json isDraft -q 'if .isDraft then "draft" else "published" end')"
+            echo "::error::A $state release already exists for tag '$tag'."
+            if [[ "$state" == "published" ]]; then
+              echo "::error::Immutable releases cannot be modified. Bump the version in your"
+              echo "::error::build, or pass a different 'tag' input."
+            else
+              echo "::error::Delete the existing draft first, or pass a different 'tag' input."
+            fi
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag"         >> "$GITHUB_OUTPUT"
+
+      - name: Draft release
+        id: release
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
+        with:
+          tag_name: ${{ steps.pkg.outputs.tag }}
+          name: ${{ steps.pkg.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          draft: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: dist/com.qwerty1423.NOAutopilot-*.7z
+          append_body: true
+          body: |
+            Built by ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.run.outputs.id }}
+
+      - name: Summary
+        shell: bash
+        run: |
+          {
+            echo "### Draft \`${{ steps.pkg.outputs.tag }}\`"
+            echo "- from build run \`${{ steps.run.outputs.id }}\`"
+            echo "- ${{ steps.release.outputs.url }}"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -160,6 +160,7 @@ internal static class HUDVisualsPatch
                 s_infoOverlayObj.name = "AP_CombinedOverlay";
                 s_infoOverlayObj.transform.localPosition = s_fuelLabelPosOffset;
                 s_overlayText = s_infoOverlayObj.GetComponent<TextMeshProUGUI>();
+                s_overlayText.enabled = true;
                 s_overlayText.enableAutoSizing = false;
                 s_overlayText.richText = true;
                 s_overlayText.alignment = TextAlignmentOptions.TopLeft;
@@ -509,6 +510,7 @@ internal static class HUDVisualsPatch
                         GameObject obj = Object.Instantiate(s_cachedRefLabel.gameObject, hudCenter);
                         obj.name = name;
                         TextMeshProUGUI t = obj.GetComponent<TextMeshProUGUI>();
+                        t.enabled = true;
                         t.fontStyle = FontStyles.Normal;
                         t.text = txt;
                         t.alignment = TextAlignmentOptions.Center;

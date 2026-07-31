@@ -95,12 +95,12 @@ jobs:
           name: ${{ steps.pkg.outputs.tag }}
           target_commitish: ${{ github.sha }}
           draft: true
-          generate_release_notes: true
+          generate_release_notes: false
           fail_on_unmatched_files: true
           files: dist/com.qwerty1423.NOAutopilot-*.7z
           append_body: true
           body: |
-            Built by ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.run.outputs.id }}
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.run.outputs.id }}
 
       - name: Summary
         shell: bash

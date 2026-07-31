@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [5.5.3]
+
 ### Fixed
 
 - autoland
@@ -393,7 +395,8 @@ currently the autoland is not working.
 
 ## [4.8.4] - 2025-12-29
 
-[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.5.2...HEAD
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.5.3...HEAD
+[5.5.2]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.5.2...v5.5.3
 [5.5.2]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.5.1...v5.5.2
 [5.5.1]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.5.0...v5.5.1
 [5.5.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.4.0...v5.5.0

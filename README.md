@@ -51,7 +51,7 @@ Another list can be found in [this mod's post](https://discord.com/channels/9090
 
 ## Installation
 
-After install, if you know how, you should probably enable the bepinex logging console if it isn't already so you can view error messages while the game is running, if you have a second monitor then have the logging console window to it.
+After install, you should enable the BepInEx logging console so you can view error messages while the game is running.
 
 ---
 
@@ -204,7 +204,7 @@ Some of the not features may eventually be implemented.
   
 ### features not in the mod (yet?)
 
-- nap of the earth flying
+- terrain following
 - proper helicopter support
 - auto take-off
 

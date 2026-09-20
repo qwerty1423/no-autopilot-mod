@@ -1,4 +1,8 @@
-# Nuclear Option Autopilot Mod
+# NOAutopilot
+
+This project is an unofficial fan modification not affiliated with, sponsored by, or endorsed by Shockfront Studios. All original Nuclear Option assets and code are Copyright © 2026 Shockfront Studios. Shockfront Studios and Nuclear Option are trademarks of Shockfront Studios. All other trademarks and original mod content belong to their respective owners.
+
+---
 
 - [Changelog](#changelog)
 - [Installation](#installation)

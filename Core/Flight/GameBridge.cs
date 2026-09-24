@@ -9,8 +9,8 @@ namespace NOAutopilot.Core.Flight;
 
 public enum FlightControllerType
 {
-    UnifiedIndi = 0,
-    LegacyPid = 1
+    Indi = 0,
+    Pid = 1
 }
 
 internal static class GameBridge

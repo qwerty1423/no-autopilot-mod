@@ -29,7 +29,7 @@ public static class UnifiedConfig
     public static void Bind(ConfigFile cfg)
     {
         const string main = "INDI";
-        ControllerType = cfg.Bind(main, "01. Controller", FlightControllerType.UnifiedIndi,
+        ControllerType = cfg.Bind(main, "01. Controller", FlightControllerType.Indi,
             "The INDI is usually better. It is better if you are missing wings, or if you are flying some modded or strange aircraft like the tarantula. I feel like I am going to have to add per aircraft config for INDI at some point.");
         ManeuverMaxG = cfg.Bind(main, "02. Autopilot max G", 5f,
             "g limit");

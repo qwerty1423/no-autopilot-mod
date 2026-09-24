@@ -490,6 +490,8 @@ public class Plugin : BaseUnityPlugin
         MaxRollRate = Config.Bind("Limits", "6. Max Roll Rate", 360f,
             "Maximum commanded roll rate in deg/s");
 
+        UnifiedConfig.Bind(Config);
+
         // PID Loops
         const string pidSect = "PID (Warning: Improper values may cause instability.)";
 
@@ -583,8 +585,6 @@ public class Plugin : BaseUnityPlugin
             "Start Sleeping (m/s² acceleration)");
         Rand_Acc_Outer = Config.Bind("Settings - Random", "22. Accel Tolerance Outer", 0.5f,
             "Wake Up (m/s² acceleration)");
-
-        UnifiedConfig.Bind(Config);
 
         ConfigBackup.BindBackupSettings(Config);
 

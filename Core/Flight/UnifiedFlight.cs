@@ -54,7 +54,7 @@ internal static class UnifiedFlight
                 return false;
             }
 
-            return UnifiedConfig.ControllerType.Value == FlightControllerType.UnifiedIndi ||
+            return UnifiedConfig.ControllerType.Value == FlightControllerType.Indi ||
                 (APData.NavEnabled && APData.NavQueue.Count > 0);
         }
     }

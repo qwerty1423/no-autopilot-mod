@@ -108,6 +108,8 @@ internal static class ControlOverridePatch
         s_cachedGloc = null;
         s_glocPilot = null;
         s_glocNextRetry = 0f;
+
+        UnifiedFlight.Reset();
     }
 
     private static void ResetIntegrators()
@@ -230,13 +232,13 @@ internal static class ControlOverridePatch
                 Vector3 diff = targetPos - playerPos;
 
                 float distSq = new Vector2(diff.x, diff.z).sqrMagnitude;
-                bool passed = Vector3.Dot(pForward, diff.normalized) < 0;
+                bool passed = Vector3.Dot(pForward, new Vector3(diff.x, 0f, diff.z).normalized) < 0;
+                bool farPast = passed && Vector3.Dot(pForward, new Vector3(-diff.x, 0f, -diff.z)) > 200f;
 
                 float threshold = Plugin.NavReachDistance.Value;
                 float passedThreshold = Plugin.NavPassedDistance.Value;
 
-                // if (close) or (behind and not too far away)
-                if (distSq < threshold * threshold || (passed && distSq < passedThreshold * passedThreshold))
+                if (distSq < threshold * threshold || (passed && distSq < passedThreshold * passedThreshold) || farPast)
                 {
                     Vector3 reachedPoint = APData.NavQueue[0];
                     APData.NavQueue.RemoveAt(0);
@@ -432,7 +434,7 @@ internal static class ControlOverridePatch
                     }
                     else if (s_dangerImminent)
                     {
-                        if (!pilotOverride && APData.GCASEnabled)
+                        if (!pilotOverride && APData.GCASEnabled && !APData.ALSActive)
                         {
                             ApStateBeforeGCAS = APData.Enabled;
                             APData.Enabled = true;
@@ -599,6 +601,34 @@ internal static class ControlOverridePatch
 
             bool isWaitingToReengage = Time.time - APData.LastOverrideInputTime < Plugin.ReengageDelay.Value;
 
+            if (UnifiedFlight.UseUnified)
+            {
+                if (PIDLogger.IsTestActive && !APData.Enabled && !APData.GCASActive)
+                {
+                    PIDLogger.StopTest();
+                }
+
+                TickContext ctx = new()
+                {
+                    Dt = dt,
+                    StickPitch = stickPitch,
+                    StickRoll = stickRoll,
+                    StickYaw = stickYaw,
+                    PilotPitch = pilotPitch,
+                    PilotRoll = pilotRoll,
+                    PilotYaw = pilotYaw,
+                    WaitingToReengage = isWaitingToReengage,
+                    UseRandom = useRandom,
+                    NoiseT = noiseT,
+                    CurrentG = currentG,
+                    GcasOverG = s_overGFactor
+                };
+                UnifiedFlight.Step(inputObj, ctx);
+                return;
+            }
+
+            UnifiedFlight.ThrottleOutput = float.NaN;
+
             // throttle control
             if (APData.TargetSpeed >= 0 || PIDLogger.IsTesting(PIDLogger.StepTarget.Spd))
             {
@@ -661,140 +691,7 @@ internal static class ControlOverridePatch
             }
 
             {
-                // keys
-                if (!APData.ALSActive && !CursorManager.GetFlag(CursorFlags.Chat))
-                {
-                    const float fpsRef = 60f;
-                    float aStep = Plugin.AltStep.Value * fpsRef * dt;
-                    float bStep = Plugin.BigAltStep.Value * fpsRef * dt;
-                    float cStep = Plugin.ClimbRateStep.Value * fpsRef * dt;
-                    float rStep = Plugin.BankStep.Value * fpsRef * dt;
-                    if (InputHelper.IsPressed(Plugin.UpRW) || Plugin.UpKey.Value.IsPressed())
-                    {
-                        APData.TargetAlt += aStep;
-                    }
-
-                    if (InputHelper.IsPressed(Plugin.DownRW) || Plugin.DownKey.Value.IsPressed())
-                    {
-                        APData.TargetAlt -= aStep;
-                    }
-
-                    if (InputHelper.IsPressed(Plugin.BigUpRW) || Plugin.BigUpKey.Value.IsPressed())
-                    {
-                        APData.TargetAlt += bStep;
-                    }
-
-                    if (InputHelper.IsPressed(Plugin.BigDownRW) || Plugin.BigDownKey.Value.IsPressed())
-                    {
-                        APData.TargetAlt = Mathf.Max(APData.TargetAlt - bStep, Plugin.MinAltitude.Value);
-                    }
-
-                    if (InputHelper.IsPressed(Plugin.ClimbRateUpRW) || Plugin.ClimbRateUpKey.Value.IsPressed())
-                    {
-                        APData.CurrentMaxClimbRate += cStep;
-                    }
-
-                    if (InputHelper.IsPressed(Plugin.ClimbRateDownRW) || Plugin.ClimbRateDownKey.Value.IsPressed())
-                    {
-                        APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - cStep);
-                    }
-
-                    if (APData.NavEnabled)
-                    {
-                        bool bankLeft = InputHelper.IsPressed(Plugin.BankLeftRW) ||
-                                        Plugin.BankLeftKey.Value.IsPressed();
-                        bool bankRight = InputHelper.IsPressed(Plugin.BankRightRW) ||
-                                         Plugin.BankRightKey.Value.IsPressed();
-                        if (bankLeft || bankRight)
-                        {
-                            if (APData.TargetRoll == -999f)
-                            {
-                                APData.TargetRoll = Plugin.DefaultCRLimit.Value;
-                            }
-
-                            if (bankLeft)
-                            {
-                                APData.TargetRoll -= rStep;
-                            }
-
-                            if (bankRight)
-                            {
-                                APData.TargetRoll += rStep;
-                            }
-
-                            APData.TargetRoll = Mathf.Clamp(APData.TargetRoll, 1f, 90f);
-                        }
-                    }
-
-                    if (APData.TargetCourse >= 0f)
-                    {
-                        if (InputHelper.IsPressed(Plugin.BankLeftRW) || Plugin.BankLeftKey.Value.IsPressed())
-                        {
-                            APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - rStep, 360f);
-                        }
-
-                        if (InputHelper.IsPressed(Plugin.BankRightRW) || Plugin.BankRightKey.Value.IsPressed())
-                        {
-                            APData.TargetCourse = Mathf.Repeat(APData.TargetCourse + rStep, 360f);
-                        }
-                    }
-                    else
-                    {
-                        bool bankLeft = InputHelper.IsPressed(Plugin.BankLeftRW) ||
-                                        Plugin.BankLeftKey.Value.IsPressed();
-                        bool bankRight = InputHelper.IsPressed(Plugin.BankRightRW) ||
-                                         Plugin.BankRightKey.Value.IsPressed();
-                        if (bankLeft || bankRight)
-                        {
-                            if (APData.TargetRoll == -999f)
-                            {
-                                APData.TargetRoll = APData.CurrentRoll;
-                            }
-
-                            if (bankLeft)
-                            {
-                                APData.TargetRoll = Mathf.Repeat(APData.TargetRoll + rStep + 180f, 360f) - 180f;
-                            }
-
-                            if (bankRight)
-                            {
-                                APData.TargetRoll = Mathf.Repeat(APData.TargetRoll - rStep + 180f, 360f) - 180f;
-                            }
-                        }
-                    }
-
-                    if (InputHelper.IsDown(Plugin.ClearRW) || Plugin.ClearKey.Value.IsDown())
-                    {
-                        if (APData.NavEnabled)
-                        {
-                            float crlimit = Plugin.DefaultCRLimit.Value;
-                            if (APData.TargetRoll != crlimit)
-                            {
-                                APData.TargetRoll = crlimit;
-                            }
-                            else
-                            {
-                                APData.NavEnabled = false;
-                            }
-                        }
-                        else if (APData.TargetCourse != -1f)
-                        {
-                            APData.TargetCourse = -1f;
-                        }
-                        else if (APData.TargetRoll != 0f)
-                        {
-                            APData.TargetRoll = 0f;
-                        }
-                        else if (APData.TargetAlt != -1f)
-                        {
-                            APData.TargetAlt = -1f;
-                        }
-                        else
-                        {
-                            APData.TargetRoll = -999f;
-                        }
-                    }
-                }
+                HandleKeys(dt);
 
                 // roll/course control
                 bool rollTest = PIDLogger.IsTesting(PIDLogger.StepTarget.Roll) ||
@@ -1096,6 +993,148 @@ internal static class ControlOverridePatch
         }
     }
 
+    internal static void HandleKeys(float dt)
+    {
+        if (!APData.Enabled && !APData.GCASActive)
+        {
+            return;
+        }
+
+        if (!APData.ALSActive && !CursorManager.GetFlag(CursorFlags.Chat))
+        {
+            const float fpsRef = 60f;
+            float aStep = Plugin.AltStep.Value * fpsRef * dt;
+            float bStep = Plugin.BigAltStep.Value * fpsRef * dt;
+            float cStep = Plugin.ClimbRateStep.Value * fpsRef * dt;
+            float rStep = Plugin.BankStep.Value * fpsRef * dt;
+            if (InputHelper.IsPressed(Plugin.UpRW) || Plugin.UpKey.Value.IsPressed())
+            {
+                APData.TargetAlt += aStep;
+            }
+
+            if (InputHelper.IsPressed(Plugin.DownRW) || Plugin.DownKey.Value.IsPressed())
+            {
+                APData.TargetAlt -= aStep;
+            }
+
+            if (InputHelper.IsPressed(Plugin.BigUpRW) || Plugin.BigUpKey.Value.IsPressed())
+            {
+                APData.TargetAlt += bStep;
+            }
+
+            if (InputHelper.IsPressed(Plugin.BigDownRW) || Plugin.BigDownKey.Value.IsPressed())
+            {
+                APData.TargetAlt = Mathf.Max(APData.TargetAlt - bStep, Plugin.MinAltitude.Value);
+            }
+
+            if (InputHelper.IsPressed(Plugin.ClimbRateUpRW) || Plugin.ClimbRateUpKey.Value.IsPressed())
+            {
+                APData.CurrentMaxClimbRate += cStep;
+            }
+
+            if (InputHelper.IsPressed(Plugin.ClimbRateDownRW) || Plugin.ClimbRateDownKey.Value.IsPressed())
+            {
+                APData.CurrentMaxClimbRate = Mathf.Max(0.5f, APData.CurrentMaxClimbRate - cStep);
+            }
+
+            if (APData.NavEnabled)
+            {
+                bool bankLeft = InputHelper.IsPressed(Plugin.BankLeftRW) ||
+                                Plugin.BankLeftKey.Value.IsPressed();
+                bool bankRight = InputHelper.IsPressed(Plugin.BankRightRW) ||
+                                 Plugin.BankRightKey.Value.IsPressed();
+                if (bankLeft || bankRight)
+                {
+                    if (APData.TargetRoll == -999f)
+                    {
+                        APData.TargetRoll = Plugin.DefaultCRLimit.Value;
+                    }
+
+                    if (bankLeft)
+                    {
+                        APData.TargetRoll -= rStep;
+                    }
+
+                    if (bankRight)
+                    {
+                        APData.TargetRoll += rStep;
+                    }
+
+
+                }
+            }
+
+            if (APData.TargetCourse >= 0f)
+            {
+                if (InputHelper.IsPressed(Plugin.BankLeftRW) || Plugin.BankLeftKey.Value.IsPressed())
+                {
+                    APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - rStep, 360f);
+                }
+
+                if (InputHelper.IsPressed(Plugin.BankRightRW) || Plugin.BankRightKey.Value.IsPressed())
+                {
+                    APData.TargetCourse = Mathf.Repeat(APData.TargetCourse + rStep, 360f);
+                }
+            }
+            else
+            {
+                bool bankLeft = InputHelper.IsPressed(Plugin.BankLeftRW) ||
+                                Plugin.BankLeftKey.Value.IsPressed();
+                bool bankRight = InputHelper.IsPressed(Plugin.BankRightRW) ||
+                                 Plugin.BankRightKey.Value.IsPressed();
+                if (bankLeft || bankRight)
+                {
+                    if (APData.TargetRoll == -999f)
+                    {
+                        APData.TargetRoll = APData.CurrentRoll;
+                    }
+
+                    if (bankLeft)
+                    {
+                        APData.TargetRoll = Mathf.Repeat(APData.TargetRoll + rStep + 180f, 360f) - 180f;
+                    }
+
+                    if (bankRight)
+                    {
+                        APData.TargetRoll = Mathf.Repeat(APData.TargetRoll - rStep + 180f, 360f) - 180f;
+                    }
+                }
+            }
+
+            if (InputHelper.IsDown(Plugin.ClearRW) || Plugin.ClearKey.Value.IsDown())
+            {
+                if (APData.NavEnabled)
+                {
+                    float crlimit = Plugin.DefaultCRLimit.Value;
+                    if (APData.TargetRoll != crlimit)
+                    {
+                        APData.TargetRoll = crlimit;
+                    }
+                    else
+                    {
+                        APData.NavEnabled = false;
+                    }
+                }
+                else if (APData.TargetCourse != -1f)
+                {
+                    APData.TargetCourse = -1f;
+                }
+                else if (APData.TargetRoll != 0f)
+                {
+                    APData.TargetRoll = 0f;
+                }
+                else if (APData.TargetAlt != -1f)
+                {
+                    APData.TargetAlt = -1f;
+                }
+                else
+                {
+                    APData.TargetRoll = -999f;
+                }
+            }
+        }
+    }
+
     private static GLOC GetGloc(Pilot pilot)
     {
         if (pilot != s_glocPilot)
@@ -1137,15 +1176,39 @@ internal static class ThrottleOverridePatch
             return;
         }
 
-        if (APData.TargetSpeed < 0 && !PIDLogger.IsTesting(PIDLogger.StepTarget.Spd))
-        {
-            return;
-        }
-
         try
         {
             ControlInputs inputObj = __instance.controlInputs;
             if (inputObj == null)
+            {
+                return;
+            }
+
+            if (UnifiedFlight.UseUnified)
+            {
+                if (!float.IsNaN(UnifiedFlight.ThrottleOutput))
+                {
+                    inputObj.throttle = UnifiedFlight.ThrottleOutput;
+                    float lever = UnifiedFlight.ThrottleOutput;
+                    if (__instance.collective && PlayerSettings.invertCollective)
+                    {
+                        lever = 1f - lever;
+                    }
+
+                    __instance.simulatedThrottle = PlayerSettings.throttleUseNegative
+                        ? Mathf.Clamp((lever * 2f) - 1f, -1f, 1f)
+                        : lever;
+                }
+
+                if (!float.IsNaN(UnifiedFlight.BrakeOutput))
+                {
+                    inputObj.brake = UnifiedFlight.BrakeOutput;
+                }
+
+                return;
+            }
+
+            if (APData.TargetSpeed < 0 && !PIDLogger.IsTesting(PIDLogger.StepTarget.Spd))
             {
                 return;
             }

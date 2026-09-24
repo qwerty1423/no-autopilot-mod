@@ -220,7 +220,7 @@ Autopilot controls roll, pitch, and yaw. (helicopters somehow work, but probably
 
 Displays current settings on the HUD. There is also a GUI that opens with F8 key by default.
 
-PID values can be tuned further if you like, but the defaults should be quite effective. They may not work in all situations or in all aircraft, however.
+By default it uses INDI but you can switch back to PID in the config.
 
 Some default pid profiles for each aircraft are provided, you can override them in the bepinex config manager or by creating JSON files with the correct name and format.
 
@@ -246,9 +246,11 @@ Video is old, so the chevron indicator is missing.
 
 Right click / shift + right click on the map to make a path, then press equals (to enable autopilot) and F8 (to bring up the UI). Click the nav mode toggle to enable nav mode. Hover mouse over the UI for tooltips. Setting waypoints will work as long as you don't create any yellow unit path lines, so as long as the first unit you have selected is not commandable then you can make a waypoint.
 
+You can make 3d waypoints. It may be difficult to use, but probably nobody will use it anyway so it shouldn't matter.
+
 ## ALS
 
-default shortcut is `left ctrl` + `=`. Your plane will attempt to land itself. uses the logic that AI planes use to land. only works for planes.
+default shortcut is `left ctrl` + `=`. Your plane will attempt to land itself. uses the logic that AI planes use to land. only works for planes and helicopters.
 
 ## Minimap config
 

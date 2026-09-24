@@ -430,8 +430,9 @@ internal static class HUDVisualsPatch
                                     SbHud.Append(" ");
                                 }
 
-                                float d = Vector3.Distance(APData.PlayerRB.position.ToGlobalPosition().AsVector3(),
-                                    APData.NavQueue[0]);
+                                Vector3 wpG = APData.NavQueue[0];
+                                Vector3 acG = APData.PlayerRB.position.ToGlobalPosition().AsVector3();
+                                float d = new Vector2(acG.x - wpG.x, acG.z - wpG.z).magnitude;
                                 SbHud.Append("W>").Append(ModUtils.ProcessGameString(UnitConverter.DistanceReading(d),
                                     Plugin.DistShowUnit.Value));
                                 hasLine3 = true;
@@ -499,7 +500,8 @@ internal static class HUDVisualsPatch
                 }
             }
 
-            if (!APData.ALSActive && (APData.GCASActive || (APData.GCASWarning && !APData.IsOnGround)))
+            if (!APData.ALSActive &&
+                (APData.GCASActive || (APData.GCASWarning && !APData.IsOnGround)))
             {
                 if (s_gcasLeftObj == null)
                 {

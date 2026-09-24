@@ -584,6 +584,8 @@ public class Plugin : BaseUnityPlugin
         Rand_Acc_Outer = Config.Bind("Settings - Random", "22. Accel Tolerance Outer", 0.5f,
             "Wake Up (m/s² acceleration)");
 
+        UnifiedConfig.Bind(Config);
+
         ConfigBackup.BindBackupSettings(Config);
 
         ConfigBackup.WriteSchemaVersion(Config);
@@ -701,7 +703,11 @@ public class Plugin : BaseUnityPlugin
                 }
             }
 
-            if (InputHelper.IsDown(ToggleRW) || ToggleKey.Value.IsDown())
+            if ((InputHelper.IsDown(ToggleRW) || ToggleKey.Value.IsDown()) && APData.ALSActive)
+            {
+                CancelAutoland();
+            }
+            else if (InputHelper.IsDown(ToggleRW) || ToggleKey.Value.IsDown())
             {
                 APData.Enabled = !APData.Enabled;
                 if (!APData.Enabled)
@@ -741,17 +747,7 @@ public class Plugin : BaseUnityPlugin
 
             if (InputHelper.IsDown(ToggleALSRW) || ToggleALSKey.Value.IsDown())
             {
-                if (APData.ALSActive)
-                {
-                    APData.ALSActive = false;
-                    APData.ALSStatusText = "";
-
-                    APData.LocalPilot?.SwitchState(APData.LocalPilot.playerState);
-                }
-                else
-                {
-                    StartAutoland();
-                }
+                ToggleAutoland();
             }
 
             if (InputHelper.IsDown(SpeedHoldRW) || SpeedHoldKey.Value.IsDown())
@@ -923,6 +919,17 @@ public class Plugin : BaseUnityPlugin
         {
             _cachedTableContent = new GUIContent("(Hover for controls)", _table);
             _cachedExtraInfoContent = new GUIContent("(Hover above for some info)\n(Hover here for controls)", _table);
+        }
+
+        s_labelFont ??= GUI.skin.font;
+        Map.WaypointAltDialog.Draw();
+
+        foreach (GameObject obj in APData.NavVisuals)
+        {
+            if (obj != null && obj.name == "AP_NavMarker")
+            {
+                obj.SetActive(DynamicMap.mapMaximized);
+            }
         }
 
         if (_showRegenNotice)
@@ -1455,7 +1462,15 @@ public class Plugin : BaseUnityPlugin
         GUI.backgroundColor = APData.Enabled ? Color.green : Color.red;
         if (GUILayout.Button(new GUIContent(APData.Enabled ? "Disengage" : "Engage", "toggle AP"), _styleButton))
         {
-            APData.Enabled = !APData.Enabled;
+            if (APData.ALSActive)
+            {
+                CancelAutoland();
+            }
+            else
+            {
+                APData.Enabled = !APData.Enabled;
+            }
+
             if (APData.Enabled)
             {
                 if (string.IsNullOrEmpty(s_bufAlt))
@@ -1516,21 +1531,11 @@ public class Plugin : BaseUnityPlugin
             GUI.FocusControl(null);
         }
 
-        GUI.backgroundColor = APData.ALSActive ? Color.green : Color.white;
-        if (GUILayout.Button(new GUIContent(APData.ALSActive ? "ALS" : "ALS-", "autoland"), _styleButton))
+        bool alsOn = APData.ALSActive;
+        GUI.backgroundColor = alsOn ? Color.green : Color.white;
+        if (GUILayout.Button(new GUIContent(alsOn ? "ALS" : "ALS-", "autoland"), _styleButton))
         {
-            if (APData.ALSActive)
-            {
-                APData.ALSActive = false;
-                APData.ALSStatusText = "";
-
-                APData.LocalPilot?.SwitchState(APData.LocalPilot.playerState);
-            }
-            else
-            {
-                StartAutoland();
-            }
-
+            ToggleAutoland();
             GUI.FocusControl(null);
         }
 
@@ -1587,10 +1592,9 @@ public class Plugin : BaseUnityPlugin
 
         GUILayout.EndHorizontal();
 
-        // nav
         GUILayout.BeginHorizontal();
-        bool newNavState =
-            GUILayout.Toggle(APData.NavEnabled, new GUIContent("Nav mode", "switch for waypoint ap mode."));
+        bool newNavState = GUILayout.Toggle(APData.NavEnabled,
+            new GUIContent("Nav", "switch for waypoint ap mode."));
         if (newNavState != APData.NavEnabled)
         {
             APData.NavEnabled = newNavState;
@@ -1603,7 +1607,24 @@ public class Plugin : BaseUnityPlugin
         }
 
         NavCycle.Value = GUILayout.Toggle(NavCycle.Value,
-            new GUIContent("Cycle wp", "On: cycles to next wp upon reaching wp, Off: Deletes upon reaching wp"));
+            new GUIContent("Cycle", "On: cycles to next wp upon reaching wp, Off: Deletes upon reaching wp"));
+
+        bool newAlts = GUILayout.Toggle(UnifiedConfig.ShowWaypointAlts.Value,
+            new GUIContent("AL", "Show waypoint altitudes on the map."));
+        if (newAlts != UnifiedConfig.ShowWaypointAlts.Value)
+        {
+            UnifiedConfig.ShowWaypointAlts.Value = newAlts;
+            RefreshNavVisuals();
+        }
+
+        bool newWp3D = GUILayout.Toggle(APData.WpAltEdit,
+            new GUIContent("3D", "Adjust waypoint altitudes: right click makes a 3D waypoint and opens " +
+                "the editor, left click edits a waypoint."));
+        if (newWp3D != APData.WpAltEdit)
+        {
+            APData.WpAltEdit = newWp3D;
+        }
+
         GUILayout.EndHorizontal();
 
         GUILayout.BeginHorizontal();
@@ -1694,7 +1715,7 @@ public class Plugin : BaseUnityPlugin
             // display massive tooltips??
             GUILayout.EndHorizontal();
             GUILayout.Label(
-                new GUIContent("RMB the map to set wp.\nShift+RMB for multiple.",
+                new GUIContent("RMB the map to set wp.",
                     "Here, RMB means Right Mouse Button click.\nShift + RMB means Shift key + Right Mouse Button.\nThis will only work on the map screen.\nIf nothing is happening after you drew a hundred lines on screen,\nthen you may have just forgotten to engage the autopilot with the equals key/set values button/engage button\n(tbh the original text was probably self explanatory)\n\nAlso if you see the last waypoint hovering around, just ignore it for now, afaik it's only a cosmetic defect.\n\nOh also, the tooltip logic is inspired by Firefox.\nIf you hover over something for some time on gui, it will show tooltip.\nIf you then your mouse away from the position you held your mouse in,\nthe tooltip will disappear and won't reappear until your mouse leaves the item."),
                 _styleLabel);
 
@@ -1787,6 +1808,8 @@ public class Plugin : BaseUnityPlugin
         }
     }
 
+    private static Font s_labelFont;
+
     public static void RefreshNavVisuals()
     {
         try
@@ -1838,11 +1861,13 @@ public class Plugin : BaseUnityPlugin
                 APData.NavVisuals.Add(line);
             }
 
+            bool showAlts = UnifiedConfig.ShowWaypointAlts.Value;
+
             for (int i = 0; i < APData.NavQueue.Count; i++)
             {
                 Vector3 currentMap = new(APData.NavQueue[i].x * factor, APData.NavQueue[i].z * factor, 0f);
 
-                if (i == APData.NavQueue.Count - 1)
+                if (showAlts || i == APData.NavQueue.Count - 1)
                 {
                     GameObject marker = Instantiate(map.mapWaypoint, map.mapImage.transform);
                     marker.name = "AP_NavMarker";
@@ -1851,6 +1876,25 @@ public class Plugin : BaseUnityPlugin
                     if (marker.TryGetComponent(out Image mImg))
                     {
                         mImg.color = navCol;
+                    }
+
+                    if (showAlts && APData.NavQueue[i].y > 0f && s_labelFont != null)
+                    {
+                        GameObject label = new("AP_NavAlt", typeof(RectTransform));
+                        label.transform.SetParent(marker.transform, false);
+                        RectTransform lrt = (RectTransform)label.transform;
+                        lrt.anchoredPosition = new Vector2(0f, -14f);
+                        lrt.sizeDelta = new Vector2(80f, 14f);
+                        Text txt = label.AddComponent<Text>();
+                        txt.font = s_labelFont;
+                        txt.fontSize = 11;
+                        txt.alignment = TextAnchor.MiddleCenter;
+                        txt.color = navCol;
+                        txt.text = ModUtils.ProcessGameString(
+                            UnitConverter.AltitudeReading(APData.NavQueue[i].y), AltShowUnit.Value);
+                        txt.raycastTarget = false;
+                        txt.horizontalOverflow = HorizontalWrapMode.Overflow;
+                        txt.verticalOverflow = VerticalWrapMode.Overflow;
                     }
 
                     APData.NavVisuals.Add(marker);
@@ -1919,6 +1963,46 @@ public class Plugin : BaseUnityPlugin
         }
     }
 
+    private static void ToggleAutoland()
+    {
+        if (APData.ALSActive)
+        {
+            CancelAutoland();
+            return;
+        }
+
+        StartAutoland();
+    }
+
+    internal static void CancelAutoland()
+    {
+        if (!APData.ALSActive)
+        {
+            return;
+        }
+
+        APData.ALSActive = false;
+        APData.ALSStatusText = "";
+        APData.ALSStatusColor = ModUtils.GetColor(ColorInfo.Value, Color.gray);
+        APData.LocalPilot?.SwitchState(APData.LocalPilot.playerState);
+
+        Aircraft aircraft = APData.LocalAircraft;
+        if (aircraft != null && aircraft.radarAlt > 5f && APData.PlayerRB != null)
+        {
+            APData.Enabled = true;
+            APData.TargetAlt = Mathf.Max(APData.CurrentAlt, MinAltitude.Value);
+            APData.TargetRoll = 0f;
+            APData.TargetCourse = -1f;
+            APData.NavEnabled = false;
+            APData.SpeedHoldIsMach = false;
+            APData.TargetSpeed = Mathf.Max(APData.PlayerRB.velocity.magnitude,
+                GameBridge.Model != null ? GameBridge.Model.AdjustedLandingSpeed() * 1.4f : 80f);
+        }
+
+        SyncMenuValues();
+        UnifiedFlight.Announce("Autoland <b>Disengaged</b>");
+    }
+
     private static bool StartAutoland()
     {
         APData.ALSActive = true;
@@ -1956,7 +2040,19 @@ public class Plugin : BaseUnityPlugin
             return false;
         }
 
+        APData.Enabled = false;
+        APData.TargetSpeed = -1f;
+        APData.GCASActive = false;
+        if (APData.FBWDisabled)
+        {
+            APData.FBWDisabled = false;
+            UpdateFBWState();
+        }
+
+        SyncMenuValues();
         APData.ALSStatusText = "ALS: SEARCH";
+        APData.ALSStatusColor = ModUtils.GetColor(ColorWarn.Value, Color.yellow);
+        UnifiedFlight.Announce("Autoland <b>Engaged</b>");
         return true;
     }
 

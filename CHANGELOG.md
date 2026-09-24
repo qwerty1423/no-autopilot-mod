@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+
+- 3d waypoints
+- INDI, so I don't have to tune pid anymore
+- inverted flight
+
+### Fixed
+
+- waypoint end marker floating around outside the minimap
+
 ## [5.5.3]
 
 ### Fixed

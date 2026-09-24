@@ -38,6 +38,7 @@ public static class APData
     public static bool IsMultiplayerCached;
     public static float NextMultiplayerCheck;
     public static bool SaveMapPosition;
+    public static bool WpAltEdit;
     public static bool SaveMapZoom;
     public static bool MapPositionStored;
     public static bool MapZoomStored;

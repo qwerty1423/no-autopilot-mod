@@ -361,7 +361,7 @@ public class Plugin : BaseUnityPlugin
         // nav
         NavReachDistance = Config.Bind("Settings - Navigation", "1. Reach Distance", 2500f,
             "Distance in meters to consider a waypoint reached.");
-        NavPassedDistance = Config.Bind("Settings - Navigation", "2. Passed Distance", 10000f,
+        NavPassedDistance = Config.Bind("Settings - Navigation", "2. Passed Distance", 15000f,
             "Distance in meters after waypoint is behind plane to consider it reached");
         NavCycle = Config.Bind("Settings - Navigation", "3. Cycle wp", true,
             "On: cycles to next wp upon reaching wp, Off: Deletes wp upon reaching wp");

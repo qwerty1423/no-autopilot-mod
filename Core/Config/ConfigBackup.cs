@@ -15,7 +15,7 @@ internal static class ConfigBackup
     /// <summary>
     /// Bump this if necessary.
     /// </summary>
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
     public const string SchemaSection = "􏿽􏿽􏿽Internal􏿽􏿽􏿽";
     public const string SchemaKey = "ConfigSchemaVersion";
 

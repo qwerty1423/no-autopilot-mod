@@ -233,12 +233,12 @@ internal static class ControlOverridePatch
 
                 float distSq = new Vector2(diff.x, diff.z).sqrMagnitude;
                 bool passed = Vector3.Dot(pForward, new Vector3(diff.x, 0f, diff.z).normalized) < 0;
-                bool farPast = passed && Vector3.Dot(pForward, new Vector3(-diff.x, 0f, -diff.z)) > 200f;
 
                 float threshold = Plugin.NavReachDistance.Value;
                 float passedThreshold = Plugin.NavPassedDistance.Value;
 
-                if (distSq < threshold * threshold || (passed && distSq < passedThreshold * passedThreshold) || farPast)
+                // if (close) or (behind and not too far away)
+                if (distSq < threshold * threshold || (passed && distSq < passedThreshold * passedThreshold))
                 {
                     Vector3 reachedPoint = APData.NavQueue[0];
                     APData.NavQueue.RemoveAt(0);
@@ -1172,6 +1172,11 @@ internal static class ThrottleOverridePatch
         }
 
         if (__instance == null || APData.LocalAircraft == null || APData.PlayerRB == null)
+        {
+            return;
+        }
+
+        if (APData.TargetSpeed < 0 && !PIDLogger.IsTesting(PIDLogger.StepTarget.Spd))
         {
             return;
         }

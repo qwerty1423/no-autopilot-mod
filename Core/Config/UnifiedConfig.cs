@@ -79,7 +79,7 @@ public static class UnifiedConfig
         VerticalAccelShape = cfg.Bind(adv, "13. Altitude capture acceleration (m/s^2)", 4f, "Smoothness of level-offs.");
         InputDelayTicks = cfg.Bind(adv, "14. Input delay (physics ticks)", 2, "Ticks between writing the stick and seeing the rate change.");
 
-        ShowWaypointAlts = cfg.Bind("Waypoints", "01. Show waypoint altitudes", true,
+        ShowWaypointAlts = cfg.Bind("Waypoints", "01. Show waypoint altitudes", false,
             "Draw each waypoint's altitude under its node on the map.");
 
     }

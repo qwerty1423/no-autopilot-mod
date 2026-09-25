@@ -246,7 +246,7 @@ public class Plugin : BaseUnityPlugin
         ColorWarn = Config.Bind("Visuals - Colors", "4. Color Warning", "#FFFF00", "Yellow");
         ColorCrit = Config.Bind("Visuals - Colors", "5. Color Critical", "#FF0000", "Red");
         ColorRange = Config.Bind("Visuals - Colors", "6. Range display color", "#00FFFF", "color for range");
-        ColorNav = Config.Bind("Visuals - Colors", "7. Navigation Color", "#ff00ffcc", "color for flight path lines.");
+        ColorNav = Config.Bind("Visuals - Colors", "7. Navigation Color", "#ff00ff80", "color for flight path lines.");
         OverlayOffsetX = Config.Bind("Visuals - Layout", "1. Stack Start X", -18f, "HUD Horizontal position");
         OverlayOffsetY = Config.Bind("Visuals - Layout", "2. Stack Start Y", -10f, "HUD Vertical position");
         DisplayUpdateInterval = Config.Bind("Visuals", "HUD overlay update interval", 0.02f, "seconds");
@@ -479,9 +479,9 @@ public class Plugin : BaseUnityPlugin
         GcasMinAlt = Config.Bind("Auto GCAS", "09. Minimum altitude", 2.0f, "Minimum altitude (m)");
         GcasRollRate = Config.Bind("Auto GCAS", "10. Estimated roll rate", 30.0f, "Estimate of roll rate for GCAS (deg/s)");
 
-        DefaultMaxClimbRate = Config.Bind("Limits", "1. Default Max Climb Rate", 10f, "Startup value");
+        DefaultMaxClimbRate = Config.Bind("Limits", "1. Default Max Climb Rate", 50f, "Startup value");
         Conf_VS_MaxAngle = Config.Bind("Limits", "2. Max Pitch Angle", 85.0f, "angle from horizon limit");
-        DefaultCRLimit = Config.Bind("Limits", "3. Default course roll limit", 10.0f,
+        DefaultCRLimit = Config.Bind("Limits", "3. Default course roll limit", 60.0f,
             "default roll limit when turning in course/nav mode");
         ThrottleMinLimit = Config.Bind("Limits", "4. Safe Min Throttle", 0.01f,
             "Minimum throttle when limiter is active (prevents Airbrake)");

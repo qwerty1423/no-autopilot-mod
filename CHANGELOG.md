@@ -7,6 +7,7 @@
 - 3d waypoints
 - INDI, so I don't have to tune pid anymore
 - inverted flight
+- config to set GCAS Chevron placement
 
 ### Fixed
 

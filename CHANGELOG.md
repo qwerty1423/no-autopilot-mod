@@ -7,6 +7,13 @@
 ### Added
 
 - config to set GCAS Chevron placement (HUD or HMD)
+@@ -2,6 +2,12 @@
+
+## [Unreleased]
+
+### Added
+
+- config to set GCAS Chevron placement
 
 ## [5.5.3]
 

@@ -49,6 +49,7 @@ internal static class MapWaypointPatch
 
                 if (obj.name == "AP_NavMarker")
                 {
+                    obj.SetActive(DynamicMap.mapMaximized);
                     obj.transform.localScale = Vector3.one * invZoom;
                 }
                 else

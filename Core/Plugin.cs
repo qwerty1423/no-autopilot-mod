@@ -920,17 +920,7 @@ public class Plugin : BaseUnityPlugin
             _cachedTableContent = new GUIContent("(Hover for controls)", _table);
             _cachedExtraInfoContent = new GUIContent("(Hover above for some info)\n(Hover here for controls)", _table);
         }
-
         s_labelFont ??= GUI.skin.font;
-        Map.WaypointAltDialog.Draw();
-
-        foreach (GameObject obj in APData.NavVisuals)
-        {
-            if (obj?.name == "AP_NavMarker")
-            {
-                obj.SetActive(DynamicMap.mapMaximized);
-            }
-        }
 
         if (_showRegenNotice)
         {
@@ -1124,6 +1114,7 @@ public class Plugin : BaseUnityPlugin
 
             GUI.depth = -1;
             DrawCustomTooltip();
+            WaypointAltDialog.Draw();
         }
         catch (Exception ex)
         {

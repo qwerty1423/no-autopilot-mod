@@ -213,11 +213,11 @@ internal static class ControlOverridePatch
                 if (APData.Enabled)
                 {
                     ResetIntegrators();
-                    if (APData.FBWDisabled)
-                    {
-                        APData.FBWDisabled = false;
-                        Plugin.UpdateFBWState();
-                    }
+                    // if (APData.FBWDisabled)
+                    // {
+                    //     APData.FBWDisabled = false;
+                    //     Plugin.UpdateFBWState();
+                    // }
                 }
 
                 s_wasEnabled = APData.Enabled;

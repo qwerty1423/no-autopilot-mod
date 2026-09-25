@@ -97,11 +97,11 @@ internal static class UnifiedFlight
 
         BuildAutopilotCommand(s, ctx, ref cmd, apOn);
 
-        if (APData.FBWDisabled && apOn)
-        {
-            APData.FBWDisabled = false;
-            Plugin.UpdateFBWState();
-        }
+        // if (APData.FBWDisabled && apOn)
+        // {
+        //     APData.FBWDisabled = false;
+        //     Plugin.UpdateFBWState();
+        // }
 
         if (gcas)
         {

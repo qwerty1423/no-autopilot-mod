@@ -14,7 +14,7 @@ namespace NOAutopilot.Core.Map;
 internal static class MapInteractionPatch
 {
     private const float NodeHitRadius = 8f;
-    private static readonly RaycastHit[] s_hits = new RaycastHit[16];
+    private static readonly RaycastHit[] Hits = new RaycastHit[16];
 
     public static void Reset()
     {
@@ -162,19 +162,19 @@ internal static class MapInteractionPatch
     {
         Vector3 origin = Datum.originPosition;
         Vector3 top = new(x + origin.x, 12000f + origin.y, z + origin.z);
-        int n = Physics.SphereCastNonAlloc(top, 30f, Vector3.down, s_hits, 24000f,
+        int n = Physics.SphereCastNonAlloc(top, 30f, Vector3.down, Hits, 24000f,
             (1 << 6) | (1 << 11), QueryTriggerInteraction.Ignore);
-        Transform own = APData.PlayerTransform != null ? APData.PlayerTransform.root : null;
+        Transform own = APData.PlayerTransform?.root;
         float best = 0f;
         for (int i = 0; i < n; i++)
         {
-            if (s_hits[i].transform == null || s_hits[i].distance <= 0f ||
-                (own != null && s_hits[i].transform.root == own))
+            if (Hits[i].transform == null || Hits[i].distance <= 0f ||
+                (own != null && Hits[i].transform.root == own))
             {
                 continue;
             }
 
-            best = Mathf.Max(best, s_hits[i].point.y - origin.y);
+            best = Mathf.Max(best, Hits[i].point.y - origin.y);
         }
 
         return best;

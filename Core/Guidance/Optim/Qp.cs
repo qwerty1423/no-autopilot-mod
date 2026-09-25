@@ -8,26 +8,15 @@ namespace NOAutopilot.Core.Guidance.Optim;
 ///   subject to  lo &lt;= A x &lt;= hi      (use +-float.PositiveInfinity for open sides)
 /// P must be positive semidefinite (a small ridge is added internally).
 /// </summary>
-public sealed class Qp
+public sealed class Qp(int n, int m)
 {
-    public readonly int N;      // variables
-    public readonly int M;      // constraints
-    public readonly float[,] P; // N x N symmetric
-    public readonly float[] Q;  // N
-    public readonly float[,] A; // M x N
-    public readonly float[] Lo; // M
-    public readonly float[] Hi; // M
-
-    public Qp(int n, int m)
-    {
-        N = n;
-        M = m;
-        P = new float[n, n];
-        Q = new float[n];
-        A = new float[m, n];
-        Lo = new float[m];
-        Hi = new float[m];
-    }
+    public readonly int N = n;      // variables
+    public readonly int M = m;      // constraints
+    public readonly float[,] P = new float[n, n]; // N x N symmetric
+    public readonly float[] Q = new float[n];  // N
+    public readonly float[,] A = new float[m, n]; // M x N
+    public readonly float[] Lo = new float[m]; // M
+    public readonly float[] Hi = new float[m]; // M
 
     public void SetBound(int row, float lo, float hi)
     {
@@ -89,7 +78,7 @@ public static class QpSolver
                     {
                         acc += (double)rhoCur * qp.A[r, i] * qp.A[r, j];
                     }
-                    k[i * n + j] = acc;
+                    k[(i * n) + j] = acc;
                 }
             }
         }
@@ -147,7 +136,7 @@ public static class QpSolver
                     float ar = qp.A[r, i];
                     if (ar != 0f)
                     {
-                        acc += ar * (rhoCur * z[r] - y[r]);
+                        acc += ar * ((rhoCur * z[r]) - y[r]);
                     }
                 }
                 rhs[i] = acc;
@@ -159,7 +148,7 @@ public static class QpSolver
             for (int i = 0; i < n; i++)
             {
                 float xn = (float)tmp[i];
-                xPrev[i] = x[i] + alpha * (xn - x[i]);
+                xPrev[i] = x[i] + (alpha * (xn - x[i]));
                 x[i] = xn;
             }
 
@@ -169,7 +158,7 @@ public static class QpSolver
             for (int r = 0; r < m; r++)
             {
                 float zt = ax[r];
-                float zp = Mathf2.Clamp(zt + y[r] / rhoCur, qp.Lo[r], qp.Hi[r]);
+                float zp = Mathf2.Clamp(zt + (y[r] / rhoCur), qp.Lo[r], qp.Hi[r]);
                 priMax = Math.Max(priMax, Math.Abs(zt - zp));
                 y[r] += rhoCur * (zt - zp);
                 z[r] = zp;
@@ -199,7 +188,7 @@ public static class QpSolver
 
             priRes = priMax;
             duaRes = duaMax;
-            duaTol = 1f + 0.02f * Math.Max(nPxQ, nATy);
+            duaTol = 1f + (0.02f * Math.Max(nPxQ, nATy));
             bool tight = priRes < eps && duaRes < eps;
             bool looseOk = priRes < 0.05f && duaRes < duaTol;
             if (tight || (eps >= 1e-3f && looseOk))
@@ -238,13 +227,7 @@ public static class QpSolver
             }
         }
 
-        // near-feasible, near-optimal is enough for guidance (constraints are hard limits, cost is preference)
-        if (Diagnostics != null)
-        {
-            Diagnostics($"iters={it} pri={priRes:E2} dua={duaRes:E2} tol={duaTol:E2}");
-        }
-        // acceptance: constraints met to ~1 m (scaled units: 0.05*ts) and a small dual residual relative
-        // to the cost/constraint scales.
+        Diagnostics?.Invoke($"iters={it} pri={priRes:E2} dua={duaRes:E2} tol={duaTol:E2}");
         return priRes < Math.Max(eps, 0.05f) && duaRes < Math.Max(eps, duaTol);
     }
 
@@ -268,10 +251,10 @@ public static class QpSolver
         {
             for (int j = 0; j <= i; j++)
             {
-                double sum = l[i * n + j];
+                double sum = l[(i * n) + j];
                 for (int k = 0; k < j; k++)
                 {
-                    sum -= l[i * n + k] * l[j * n + k];
+                    sum -= l[(i * n) + k] * l[(j * n) + k];
                 }
 
                 if (i == j)
@@ -280,11 +263,11 @@ public static class QpSolver
                     {
                         return false;
                     }
-                    l[i * n + i] = Math.Sqrt(sum);
+                    l[(i * n) + i] = Math.Sqrt(sum);
                 }
                 else
                 {
-                    l[i * n + j] = sum / l[j * n + j];
+                    l[(i * n) + j] = sum / l[(j * n) + j];
                 }
             }
         }
@@ -299,9 +282,9 @@ public static class QpSolver
             double sum = b[i];
             for (int k = 0; k < i; k++)
             {
-                sum -= l[i * n + k] * x[k];
+                sum -= l[(i * n) + k] * x[k];
             }
-            x[i] = sum / l[i * n + i];
+            x[i] = sum / l[(i * n) + i];
         }
         // backward substitution L' x = y
         for (int i = n - 1; i >= 0; i--)
@@ -309,9 +292,9 @@ public static class QpSolver
             double sum = x[i];
             for (int k = i + 1; k < n; k++)
             {
-                sum -= l[k * n + i] * x[k];
+                sum -= l[(k * n) + i] * x[k];
             }
-            x[i] = sum / l[i * n + i];
+            x[i] = sum / l[(i * n) + i];
         }
     }
 }

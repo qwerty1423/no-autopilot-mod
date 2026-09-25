@@ -926,7 +926,7 @@ public class Plugin : BaseUnityPlugin
 
         foreach (GameObject obj in APData.NavVisuals)
         {
-            if (obj != null && obj.name == "AP_NavMarker")
+            if (obj?.name == "AP_NavMarker")
             {
                 obj.SetActive(DynamicMap.mapMaximized);
             }
@@ -1987,7 +1987,7 @@ public class Plugin : BaseUnityPlugin
         APData.LocalPilot?.SwitchState(APData.LocalPilot.playerState);
 
         Aircraft aircraft = APData.LocalAircraft;
-        if (aircraft != null && aircraft.radarAlt > 5f && APData.PlayerRB != null)
+        if (aircraft?.radarAlt > 5f && APData.PlayerRB != null)
         {
             APData.Enabled = true;
             APData.TargetAlt = Mathf.Max(APData.CurrentAlt, MinAltitude.Value);

@@ -16,10 +16,10 @@ public struct ControllerTelemetry
     public bool NSaturated, AlphaLimited;
 }
 
-public sealed class UnifiedController
+public sealed class UnifiedController(ControllerSettings settings, AircraftModel model)
 {
-    public readonly ControllerSettings Settings;
-    public AircraftModel Model;
+    public readonly ControllerSettings Settings = settings;
+    public AircraftModel Model = model;
 
     private readonly IndiAxis _pAxis = new();
     private readonly IndiAxis _qAxis = new();
@@ -36,24 +36,19 @@ public sealed class UnifiedController
 
     private float _vsCmdPrev;
     private bool _vsCmdPrevValid;
-    private float _vsInt;
     private bool _vsIntFrozen;
-    private bool _hover;
-    private bool _stall;
     private float _hoverPsi;
     private float _hoverThrottle = float.NaN;
 
-    public float VsInt => _vsInt;
+    public float VsInt { get; private set; }
 
-    public bool HoverActive => _hover;
+    public bool HoverActive { get; private set; }
 
-    public bool StallAssistActive => _stall;
+    public bool StallAssistActive { get; private set; }
     private float _nCmdPrev;
     private bool _nCmdPrevValid;
     private float _pCmdPrev, _qCmdPrev, _rCmdPrev;
     private bool _pWasActive, _qWasActive, _rWasActive, _tWasActive;
-    private float _lastPitch, _lastRoll, _lastYaw, _lastThrottle;
-
     private float _nAlpha = -1f;
     private bool _nAlphaInit;
 
@@ -61,18 +56,11 @@ public sealed class UnifiedController
 
     private float _thrSatHighTime, _thrSatLowTime, _energyRateMeasured;
     private int _energyLimited;
-    private bool _airbrake;
     private float _airbrakeTimer;
 
-    public bool AirbrakeActive => _airbrake;
+    public bool AirbrakeActive { get; private set; }
 
     public ControllerTelemetry Telemetry;
-
-    public UnifiedController(ControllerSettings settings, AircraftModel model)
-    {
-        Settings = settings;
-        Model = model;
-    }
 
     public void Reset()
     {
@@ -88,17 +76,17 @@ public sealed class UnifiedController
         _vsCmdPrevValid = false;
         _nAlpha = -1f;
         _nAlphaInit = false;
-        _hover = false;
-        _stall = false;
+        HoverActive = false;
+        StallAssistActive = false;
         _hoverThrottle = float.NaN;
         _heloSpeedHold = float.NaN;
         Telemetry = default;
     }
 
-    public float LastPitch => _lastPitch;
-    public float LastRoll => _lastRoll;
-    public float LastYaw => _lastYaw;
-    public float LastThrottle => _lastThrottle;
+    public float LastPitch { get; private set; }
+    public float LastRoll { get; private set; }
+    public float LastYaw { get; private set; }
+    public float LastThrottle { get; private set; }
 
     public ControlOutput Step(FlightState s, AutopilotCommand cmd, AppliedInputs applied)
     {
@@ -126,28 +114,28 @@ public sealed class UnifiedController
             (Model.MaxThrust > (1.05f * Model.Mass * g)) && (Model.LandingSpeed < 45f);
         if (hoverCapable && !s.OnGround)
         {
-            bool want = _hover ? s.V < (c.HoverSpeed + 8f) : s.V < c.HoverSpeed;
-            if (want != _hover)
+            bool want = HoverActive ? s.V < (c.HoverSpeed + 8f) : s.V < c.HoverSpeed;
+            if (want != HoverActive)
             {
-                _hover = want;
+                HoverActive = want;
                 _hoverPsi = s.Psi;
                 _hoverThrottle = float.NaN;
             }
         }
         else
         {
-            _hover = false;
+            HoverActive = false;
         }
 
-        bool stallCapable = c.StallAssist && !Model.IsHelicopter && !s.OnGround && !_hover;
+        bool stallCapable = c.StallAssist && !Model.IsHelicopter && !s.OnGround && !HoverActive;
         if (stallCapable)
         {
             float aEng = Mathf.Clamp((Model.FbwAlphaLimiter - 2f) * Mathf.Deg2Rad, 0.24f, 0.55f);
             float aExit = aEng - 0.09f;
-            bool want = _stall ? (s.Alpha > aExit) : (s.Alpha > aEng);
-            if (want != _stall)
+            bool want = StallAssistActive ? (s.Alpha > aExit) : (s.Alpha > aEng);
+            if (want != StallAssistActive)
             {
-                _stall = want;
+                StallAssistActive = want;
                 if (want)
                 {
                     _hoverPsi = s.Psi;
@@ -157,11 +145,11 @@ public sealed class UnifiedController
         }
         else
         {
-            _stall = false;
+            StallAssistActive = false;
         }
 
-        bool hover = _hover;
-        bool stall = _stall;
+        bool hover = HoverActive;
+        bool stall = StallAssistActive;
         bool thrustVert = hover || stall;
 
         bool pitchActive = cmd.PitchAxisActive;
@@ -260,23 +248,23 @@ public sealed class UnifiedController
 
             if (Mathf.Abs(vsDesDot) < 0.5f)
             {
-                if (!_vsIntFrozen || (_vsInt * vsErr) < 0f)
+                if (!_vsIntFrozen || (VsInt * vsErr) < 0f)
                 {
-                    _vsInt = Mathf.Clamp(_vsInt + (0.25f * kvs * vsErr * dt), -0.3f * g, 0.3f * g);
+                    VsInt = Mathf.Clamp(VsInt + (0.25f * kvs * vsErr * dt), -0.3f * g, 0.3f * g);
                 }
             }
             else
             {
-                _vsInt *= Mathf.Exp(-dt / 2f);
+                VsInt *= Mathf.Exp(-dt / 2f);
             }
 
-            aVert = (kvs * vsErr) + vsDesDot + _vsInt;
+            aVert = (kvs * vsErr) + vsDesDot + VsInt;
             haveAVert = true;
         }
         else
         {
             _vsCmdPrevValid = false;
-            _vsInt = 0f;
+            VsInt = 0f;
         }
 
         t.VsCmd = vsDes;
@@ -321,18 +309,11 @@ public sealed class UnifiedController
 
         if (thrustVert)
         {
-            if (cmd.Lateral == LateralMode.Bank)
-            {
-                phiDes = cmd.Bank;
-            }
-            else if (haveALat && cmd.Lateral != LateralMode.Course)
-            {
-                phiDes = Mathf.Atan2(aLat, Mathf.Max(aVert + g, 2f));
-            }
-            else
-            {
-                phiDes = 0f;
-            }
+            phiDes = cmd.Lateral == LateralMode.Bank
+                ? cmd.Bank
+                : haveALat && cmd.Lateral != LateralMode.Course
+                    ? Mathf.Atan2(aLat, Mathf.Max(aVert + g, 2f))
+                    : 0f;
 
             muDes = float.NaN;
         }
@@ -344,7 +325,7 @@ public sealed class UnifiedController
                 aVert = 0f;
             }
 
-            Allocate(s, aVert, aLat, haveALat, phiDes, pitchActive, bankLimit, nMin, nMax, ref nDes, ref muDes);
+            Allocate(s, aVert, aLat, haveALat, phiDes, pitchActive, bankLimit, nMax, ref nDes, ref muDes);
         }
 
         float pCmd = float.NaN;
@@ -356,20 +337,11 @@ public sealed class UnifiedController
         {
             float maxRate = cmd.AggressiveRoll ? 2f * c.MaxRollRate : c.MaxRollRate;
             float maxAccel = cmd.AggressiveRoll ? c.MaxRollAccel * 3f : c.MaxRollAccel;
-            float err;
-            if (ControlMath.IsFinite(phiDes))
-            {
-                err = ControlMath.WrapPi(phiDes - s.Phi);
-            }
-            else if (ControlMath.IsFinite(muDes))
-            {
-                err = ControlMath.WrapPi(muDes - s.Mu);
-            }
-            else
-            {
-                err = ControlMath.WrapPi(-s.Phi);
-            }
-
+            float err = ControlMath.IsFinite(phiDes)
+                ? ControlMath.WrapPi(phiDes - s.Phi)
+                : ControlMath.IsFinite(muDes)
+                    ? ControlMath.WrapPi(muDes - s.Mu)
+                    : ControlMath.WrapPi(-s.Phi);
             float kb = c.BankGain;
             float phiDot = ControlMath.ShapedRate(err, kb, maxAccel, maxRate);
             // Euler bank rate -> body roll rate: phi' = p + (q sin(phi) + r cos(phi)) tan(theta)
@@ -432,14 +404,9 @@ public sealed class UnifiedController
             _vsIntFrozen = t.NSaturated;
 
             float nRate = c.LoadFactorRateLimit * (cmd.AggressiveRoll ? 2.5f : 1f);
-            if (_nCmdPrevValid)
-            {
-                nDes = Mathf.Clamp(nDes, _nCmdPrev - (nRate * dt), _nCmdPrev + (nRate * dt));
-            }
-            else
-            {
-                nDes = Mathf.Clamp(nDes, s.NLift - (nRate * 0.2f), s.NLift + (nRate * 0.2f));
-            }
+            nDes = _nCmdPrevValid
+                ? Mathf.Clamp(nDes, _nCmdPrev - (nRate * dt), _nCmdPrev + (nRate * dt))
+                : Mathf.Clamp(nDes, s.NLift - (nRate * 0.2f), s.NLift + (nRate * 0.2f));
 
             _nCmdPrev = nDes;
             _nCmdPrevValid = true;
@@ -490,7 +457,7 @@ public sealed class UnifiedController
             if (!ControlMath.IsFinite(cmd.SideslipOverride) && haveALat && c.SkidAssist > 0f && !cmd.NoSkidAssist)
             {
                 float vRef = Mathf.Max(Model.CornerSpeed, 40f);
-                float lowSpeed = Mathf.Clamp01((1.15f * vRef - s.V) / (0.6f * vRef));
+                float lowSpeed = Mathf.Clamp01(((1.15f * vRef) - s.V) / (0.6f * vRef));
                 betaDes -= c.SkidAssist * (aLat / g) * lowSpeed;
             }
 
@@ -552,15 +519,15 @@ public sealed class UnifiedController
         t.EEta = _eAxis.Eta;
         Telemetry = t;
 
-        _lastPitch = o.Pitch;
-        _lastRoll = o.Roll;
-        _lastYaw = o.Yaw;
-        _lastThrottle = o.Throttle;
+        LastPitch = o.Pitch;
+        LastRoll = o.Roll;
+        LastYaw = o.Yaw;
+        LastThrottle = o.Throttle;
         return o;
     }
 
     private void Allocate(FlightState s, float aVert, float aLat, bool haveALat, float phiDes, bool pitchActive,
-        float bankLimit, float nMin, float nMax, ref float nDes, ref float muDes)
+        float bankLimit, float nMax, ref float nDes, ref float muDes)
     {
         const float g = ControlMath.G;
         float cosGamma = Mathf.Max(Mathf.Cos(s.Gamma), 0.2f);
@@ -683,17 +650,19 @@ public sealed class UnifiedController
         float vErr = cmd.Airspeed - vMeas;
         float vDotDes = Mathf.Clamp(0.3f * vErr, -3f, 3f);
         float available = _energyRateMeasured - (vMeas * vDotDes / g);
+
         if (_energyLimited > 0 && vErr > 3f)
         {
             return Mathf.Min(vsDes, Mathf.Max(available, 0f));
         }
-
-        if (_energyLimited < 0 && vErr < -3f)
+        else if (_energyLimited < 0 && vErr < -3f)
         {
             return Mathf.Max(vsDes, Mathf.Min(available, 0f));
         }
-
-        return vsDes;
+        else
+        {
+            return vsDes;
+        }
     }
 
     private float SpeedProtectVs(FlightState s, float vsDes)
@@ -756,11 +725,11 @@ public sealed class UnifiedController
             tau, 0f, dt);
     }
 
-    private float PitchLagNow() =>
-        Settings.ResponseIdentification && _qId.Confident ? _qId.Tau : Settings.PitchLag;
+    // private float PitchLagNow() =>
+    //     Settings.ResponseIdentification && _qId.Confident ? _qId.Tau : Settings.PitchLag;
 
-    private float RollLagNow() =>
-        Settings.ResponseIdentification && _pId.Confident ? _pId.Tau : Settings.RollLag;
+    // private float RollLagNow() =>
+    //     Settings.ResponseIdentification && _pId.Confident ? _pId.Tau : Settings.RollLag;
 
     private float EnergyChannel(FlightState s, AutopilotCommand cmd, AppliedInputs applied, float hDotPath,
         ref ControllerTelemetry t)
@@ -821,11 +790,11 @@ public sealed class UnifiedController
         float gE = v * Model.ThrottleEffectiveness(s.Rho) / (g * c.ThrottleEffectivenessScale);
 
         bool airbrakeAllowed = tMin <= 1e-4f;
-        if (airbrakeAllowed && _airbrake)
+        if (airbrakeAllowed && AirbrakeActive)
         {
             if (vErr > -1.5f)
             {
-                _airbrake = false;
+                AirbrakeActive = false;
             }
             else
             {
@@ -839,7 +808,7 @@ public sealed class UnifiedController
         }
         else if (!airbrakeAllowed)
         {
-            _airbrake = false;
+            AirbrakeActive = false;
         }
 
         float tMinIndi = airbrakeAllowed ? 0.004f : tMin;
@@ -851,7 +820,7 @@ public sealed class UnifiedController
             _airbrakeTimer += dt;
             if (_airbrakeTimer > 0.3f)
             {
-                _airbrake = true;
+                AirbrakeActive = true;
                 _airbrakeTimer = 0f;
                 thr = 0f;
             }
@@ -1035,7 +1004,6 @@ public sealed class UnifiedController
 
         float fwdSpeed = Vector3.Dot(s.Velocity, Vector3.ProjectOnPlane(s.Forward, Vector3.up).normalized);
         bool pitchActive = cmd.PitchAxisActive || cmd.Speed == SpeedMode.Airspeed;
-        float thetaDes = 0f;
         if (cmd.Speed == SpeedMode.Airspeed)
         {
             _heloSpeedHold = cmd.Airspeed;
@@ -1046,7 +1014,7 @@ public sealed class UnifiedController
         }
 
         float aFwd = Mathf.Clamp(c.SpeedGain * (_heloSpeedHold - fwdSpeed), -0.3f * g, 0.3f * g);
-        thetaDes = -Mathf.Atan(aFwd / g);
+        float thetaDes = -Mathf.Atan(aFwd / g);
         thetaDes = Mathf.Clamp(thetaDes, -0.35f, 0.3f);
         t.VDotCmd = aFwd;
 
@@ -1073,7 +1041,7 @@ public sealed class UnifiedController
         }
         else if (cmd.RollAxisActive)
         {
-            float phiDes = 0f;
+            float phiDes;
             switch (cmd.Lateral)
             {
                 case LateralMode.Bank:
@@ -1104,17 +1072,14 @@ public sealed class UnifiedController
 
             if (cmd.Lateral == LateralMode.Course && !fast)
             {
-                // hover taxi: point the nose
                 float psiErr = ControlMath.WrapPi(cmd.Course - s.Psi);
                 rCmd = ControlMath.ShapedRate(psiErr, 0.8f, 0.5f, 0.5f);
             }
-            else if (c.YawCoordination && fast)
-            {
-                rCmd = (g / Mathf.Max(s.V, 10f) * Mathf.Sin(s.Phi)) + (c.SideslipGain * s.Beta);
-            }
             else
             {
-                rCmd = 0f;
+                rCmd = c.YawCoordination && fast
+                    ? (g / Mathf.Max(s.V, 10f) * Mathf.Sin(s.Phi)) + (c.SideslipGain * s.Beta)
+                    : 0f;
             }
         }
 
@@ -1155,10 +1120,10 @@ public sealed class UnifiedController
         t.EEta = _vzAxis.Eta;
         Telemetry = t;
 
-        _lastPitch = o.Pitch;
-        _lastRoll = o.Roll;
-        _lastYaw = o.Yaw;
-        _lastThrottle = o.Throttle;
+        LastPitch = o.Pitch;
+        LastRoll = o.Roll;
+        LastYaw = o.Yaw;
+        LastThrottle = o.Throttle;
         return o;
     }
 }

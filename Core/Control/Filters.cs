@@ -116,15 +116,10 @@ internal sealed class LowPass1
 }
 
 /// <summary>Fixed length history of past samples (index 0 = most recent).</summary>
-internal sealed class SampleHistory
+internal sealed class SampleHistory(int capacity)
 {
-    private readonly float[] _buffer;
+    private readonly float[] _buffer = new float[Math.Max(capacity, 1)];
     private int _head;
-
-    public SampleHistory(int capacity)
-    {
-        _buffer = new float[Math.Max(capacity, 1)];
-    }
 
     public int Capacity => _buffer.Length;
 

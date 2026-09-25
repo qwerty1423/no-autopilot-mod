@@ -26,8 +26,8 @@ internal struct TickContext
 internal static class UnifiedFlight
 {
     private static bool s_pitchSleeping, s_rollSleeping, s_spdSleeping;
-    private static readonly WaypointGuidance s_waypoints = new();
-    private static readonly WaypointRoutePlan s_routePlan = new();
+    private static readonly WaypointGuidance Waypoints = new();
+    private static readonly WaypointRoutePlan RoutePlan = new();
     private static float s_pitchSleepUntil, s_rollSleepUntil, s_spdSleepUntil;
     private static float s_holdPitch, s_holdRoll, s_holdThrottle;
     private static Vector3 s_legPrev, s_legTarget = new(float.NaN, 0f, 0f);
@@ -61,7 +61,7 @@ internal static class UnifiedFlight
 
     private static bool IsHelicopter =>
         (APData.LocalPilot != null && APData.LocalPilot.pilotType == Pilot.PilotType.Helo) ||
-        (APData.LocalAircraft != null && APData.LocalAircraft.GetControlsFilter() is HeloControlsFilter);
+        (APData.LocalAircraft?.GetControlsFilter() is HeloControlsFilter);
 
     public static void Reset()
     {
@@ -95,7 +95,7 @@ internal static class UnifiedFlight
         bool gcas = APData.GCASActive;
         bool apOn = APData.Enabled || gcas;
 
-        BuildAutopilotCommand(s, ctx, ref cmd, apOn);
+        BuildAutopilotCommand(s, ref cmd, apOn);
 
         // if (APData.FBWDisabled && apOn)
         // {
@@ -198,7 +198,7 @@ internal static class UnifiedFlight
         LogStepTests(s, ctl);
     }
 
-    private static void BuildAutopilotCommand(FlightState s, TickContext ctx, ref AutopilotCommand cmd,
+    private static void BuildAutopilotCommand(FlightState s, ref AutopilotCommand cmd,
         bool apOn)
     {
         if (s.OnGround)
@@ -212,7 +212,7 @@ internal static class UnifiedFlight
             return;
         }
 
-        bool heli = GameBridge.Model != null && GameBridge.Model.IsHelicopter;
+        bool heli = GameBridge.Model?.IsHelicopter == true;
         if (APData.TargetSpeed >= 0f && (!heli || apOn))
         {
             float target = APData.TargetSpeed;
@@ -244,7 +244,7 @@ internal static class UnifiedFlight
         float gLimitBank = Mathf.Acos(1f / Mathf.Max(UnifiedConfig.ManeuverMaxG.Value, 1.01f));
         if (!APData.NavEnabled || APData.NavQueue.Count == 0)
         {
-            s_routePlan.Reset();
+            RoutePlan.Reset();
         }
 
         if (APData.NavEnabled && APData.NavQueue.Count > 0 && s.GroundSpeed > 1f)
@@ -268,12 +268,12 @@ internal static class UnifiedFlight
                 s_legTarget.y = APData.NavQueue[0].y;
             }
 
-            cmd.LateralAccel = s_waypoints.Step(s, APData.NavQueue[0], APData.NavQueue.Count > 1,
+            cmd.LateralAccel = Waypoints.Step(s, APData.NavQueue[0], APData.NavQueue.Count > 1,
                 APData.NavQueue.Count > 1 ? APData.NavQueue[1] : default, s_legPrev, bankLimit, cs.CourseGain,
                 cs.CourseRollRate);
             cmd.BankLimit = bankLimit;
 
-            if (s_routePlan.Update(s, APData.NavQueue, UnifiedConfig.ManeuverMaxG.Value,
+            if (RoutePlan.Update(s, APData.NavQueue, UnifiedConfig.ManeuverMaxG.Value,
                     out float routeAlt, out float routeSlope))
             {
                 cmd.Vertical = VerticalMode.Altitude;
@@ -508,7 +508,7 @@ internal static class UnifiedFlight
 
     private static void ApplyAuxOutputs(ControlInputs inputs)
     {
-        if (!float.IsNaN(BrakeOutput) && APData.PlayerRB != null && APData.PlayerRB.velocity.magnitude > 0.5f)
+        if (!float.IsNaN(BrakeOutput) && APData.PlayerRB?.velocity.magnitude > 0.5f)
         {
             inputs.brake = Mathf.Clamp01(BrakeOutput);
         }

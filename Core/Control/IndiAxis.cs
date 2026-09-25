@@ -12,11 +12,10 @@ internal sealed class IndiAxis
     private readonly SampleHistory _history = new(8);
 
     private float _prevMeasF;
-    private float _actuator;
     private bool _initialized;
 
     // online estimation of the effectiveness multiplier (eta) and the state derivative term (F)
-    private float _eta = 1f, _f;
+    private float _f;
     private float _p11 = 10f, _p12, _p22 = 10f;
     private float _prevU0F, _prevDerivF, _prevMeasFForRls;
     private int _oscillationCount;
@@ -26,8 +25,8 @@ internal sealed class IndiAxis
     public float Derivative { get; private set; }
     public float MeasurementFiltered { get; private set; }
     public float EffectivenessUsed { get; private set; }
-    public float ActuatorModel => _actuator;
-    public float Eta => _eta;
+    public float ActuatorModel { get; private set; }
+    public float Eta { get; private set; } = 1f;
 
     /// <summary>Safety factor applied to the effectiveness.</summary>
     public float EffectivenessMargin { get; set; } = 1.3f;
@@ -38,7 +37,7 @@ internal sealed class IndiAxis
         currentInput = ControlMath.Finite(currentInput);
         measurement = ControlMath.Finite(measurement);
         _history.Fill(currentInput);
-        _actuator = currentInput;
+        ActuatorModel = currentInput;
         _inputFilter.Reset(currentInput);
         _measFilter.Reset(measurement);
         _prevMeasF = measurement;
@@ -56,7 +55,7 @@ internal sealed class IndiAxis
     /// <summary>Forget the learned effectiveness (e.g. new aircraft).</summary>
     public void ResetEstimator()
     {
-        _eta = 1f;
+        Eta = 1f;
         _f = 0f;
         _p11 = 10f;
         _p12 = 0f;
@@ -80,7 +79,7 @@ internal sealed class IndiAxis
         MeasurementFiltered = measF;
 
         AdvanceActuator(delayTicks, actuatorTau, actuatorRate, dt);
-        _inputFilter.Step(_actuator);
+        _inputFilter.Step(ActuatorModel);
 
         _history.Push(appliedInput);
         Command = appliedInput;
@@ -122,10 +121,10 @@ internal sealed class IndiAxis
         Derivative = deriv;
 
         AdvanceActuator(delayTicks, actuatorTau, actuatorRate, dt);
-        float u0 = _inputFilter.Step(_actuator);
+        float u0 = _inputFilter.Step(ActuatorModel);
 
         gPrior = Mathf.Max(ControlMath.Finite(gPrior, 1f), 1e-4f);
-        float g = gPrior * _eta * EffectivenessMargin;
+        float g = gPrior * Eta * EffectivenessMargin;
         if (g < 1e-4f)
         {
             g = 1e-4f;
@@ -182,7 +181,7 @@ internal sealed class IndiAxis
         MeasurementFiltered = measF;
 
         AdvanceActuator(delayTicks, responseTau, 0f, dt);
-        float u0 = _inputFilter.Step(_actuator);
+        float u0 = _inputFilter.Step(ActuatorModel);
 
         gainPrior = ControlMath.Finite(gainPrior, 1f);
         if (Mathf.Abs(gainPrior) < 1e-4f)
@@ -190,7 +189,7 @@ internal sealed class IndiAxis
             gainPrior = 1e-4f;
         }
 
-        float k = gainPrior * _eta * EffectivenessMargin;
+        float k = gainPrior * Eta * EffectivenessMargin;
         if (Mathf.Abs(k) < 1e-4f)
         {
             k = 1e-4f;
@@ -246,8 +245,8 @@ internal sealed class IndiAxis
         const float lambda = 0.998f;
         float den = lambda + (phi * phi * _p11);
         float kk = _p11 * phi / den;
-        float e = y - (_eta * phi);
-        _eta += kk * e;
+        float e = y - (Eta * phi);
+        Eta += kk * e;
         _p11 = (_p11 - (kk * phi * _p11)) / lambda;
     }
 
@@ -255,14 +254,14 @@ internal sealed class IndiAxis
     {
         // command that reaches the actuator this tick
         float target = _history.Get(Mathf.Max(delayTicks - 1, 0));
-        float next = tau > 1e-4f ? _actuator + ((target - _actuator) * (1f - Mathf.Exp(-dt / tau))) : target;
+        float next = tau > 1e-4f ? ActuatorModel + ((target - ActuatorModel) * (1f - Mathf.Exp(-dt / tau))) : target;
         if (rate > 0f)
         {
             float step = rate * dt;
-            next = Mathf.Clamp(next, _actuator - step, _actuator + step);
+            next = Mathf.Clamp(next, ActuatorModel - step, ActuatorModel + step);
         }
 
-        _actuator = ControlMath.Finite(next, target);
+        ActuatorModel = ControlMath.Finite(next, target);
     }
 
     private void Configure(float cutoff, float dt)
@@ -304,9 +303,9 @@ internal sealed class IndiAxis
 
         float k1 = pp1 / den;
         float k2 = pp2 / den;
-        float e = y - (_eta * phi1) - (_f * phi2);
+        float e = y - (Eta * phi1) - (_f * phi2);
 
-        _eta += k1 * e;
+        Eta += k1 * e;
         _f += k2 * e;
 
         _p11 = (_p11 - (k1 * pp1)) / lambda;
@@ -344,7 +343,7 @@ internal sealed class IndiAxis
 
         if (_oscillationCount > 120)
         {
-            _eta *= 1.25f;
+            Eta *= 1.25f;
             _p11 = 10f;
             _p12 = 0f;
             _p22 = 10f;

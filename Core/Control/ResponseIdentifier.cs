@@ -2,9 +2,9 @@ using UnityEngine;
 
 namespace NOAutopilot.Core.Control;
 
-internal sealed class ResponseIdentifier
+internal sealed class ResponseIdentifier(float tauPrior, float gainPrior)
 {
-    private static readonly float[] Taus = { 0.06f, 0.09f, 0.13f, 0.19f, 0.27f, 0.38f, 0.54f, 0.75f, 1.05f, 1.5f };
+    private static readonly float[] Taus = [0.06f, 0.09f, 0.13f, 0.19f, 0.27f, 0.38f, 0.54f, 0.75f, 1.05f, 1.5f];
 
     private readonly float[] _model = new float[Taus.Length];
     private readonly float[] _modelBp = new float[Taus.Length];
@@ -16,17 +16,11 @@ internal sealed class ResponseIdentifier
     private bool _init;
     private int _samples;
 
-    public float Tau { get; private set; }
-    public float Gain { get; private set; }
+    public float Tau { get; private set; } = tauPrior;
+    public float Gain { get; private set; } = gainPrior;
     public float Fit { get; private set; }
 
     public bool Confident => _samples > 200 && Fit > 0.6f;
-
-    public ResponseIdentifier(float tauPrior, float gainPrior)
-    {
-        Tau = tauPrior;
-        Gain = gainPrior;
-    }
 
     public void Reset(float tauPrior, float gainPrior)
     {
@@ -42,6 +36,9 @@ internal sealed class ResponseIdentifier
         }
     }
 
+    /// <summary>
+    /// Compute gains?
+    /// </summary>
     /// <param name="u">Input actually applied (stick, controller convention).</param>
     /// <param name="y">Measured rate.</param>
     /// <param name="delayTicks">Transport delay.</param>

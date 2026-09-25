@@ -95,7 +95,7 @@ public sealed class DubinsPath
 
         SegmentType[] types = Words[bestWord];
         Word = WordNames[bestWord];
-        float[] lengths = { bt * radius, bp * radius, bq * radius };
+        float[] lengths = [bt * radius, bp * radius, bq * radius];
 
         Vector2 pos = p0;
         float theta = theta0;
@@ -155,16 +155,16 @@ public sealed class DubinsPath
     }
 
     private static readonly SegmentType[][] Words =
-    {
-        new[] { SegmentType.Left, SegmentType.Straight, SegmentType.Left },
-        new[] { SegmentType.Right, SegmentType.Straight, SegmentType.Right },
-        new[] { SegmentType.Left, SegmentType.Straight, SegmentType.Right },
-        new[] { SegmentType.Right, SegmentType.Straight, SegmentType.Left },
-        new[] { SegmentType.Right, SegmentType.Left, SegmentType.Right },
-        new[] { SegmentType.Left, SegmentType.Right, SegmentType.Left }
-    };
+    [
+        [SegmentType.Left, SegmentType.Straight, SegmentType.Left],
+        [SegmentType.Right, SegmentType.Straight, SegmentType.Right],
+        [SegmentType.Left, SegmentType.Straight, SegmentType.Right],
+        [SegmentType.Right, SegmentType.Straight, SegmentType.Left],
+        [SegmentType.Right, SegmentType.Left, SegmentType.Right],
+        [SegmentType.Left, SegmentType.Right, SegmentType.Left]
+    ];
 
-    private static readonly string[] WordNames = { "LSL", "RSR", "LSR", "RSL", "RLR", "LRL" };
+    private static readonly string[] WordNames = ["LSL", "RSR", "LSR", "RSL", "RLR", "LRL"];
 
     private static bool Solve(int word, float alpha, float beta, float d, float dsq, float sa, float sb, float ca,
         float cb, float cab, out float t, out float p, out float q)
@@ -266,7 +266,6 @@ public sealed class DubinsPath
 
 public sealed class PathFollower
 {
-    private int _segment;
     private float _alongSegment;
 
     // continuous (unwrapped) progress along the current arc
@@ -275,7 +274,7 @@ public sealed class PathFollower
     private bool _arcInit;
 
     public DubinsPath Path { get; private set; }
-    public int SegmentIndex => _segment;
+    public int SegmentIndex { get; private set; }
 
     /// <summary>Remaining path length from the current projection.</summary>
     public float Remaining { get; private set; }
@@ -288,10 +287,10 @@ public sealed class PathFollower
     public void SetPath(DubinsPath path)
     {
         Path = path;
-        _segment = 0;
+        SegmentIndex = 0;
         _alongSegment = 0f;
         _arcInit = false;
-        Finished = path == null || !path.Valid;
+        Finished = path?.Valid != true;
         Remaining = path?.Length ?? 0f;
         // skip zero length segments
         SkipEmpty();
@@ -299,13 +298,13 @@ public sealed class PathFollower
 
     private void SkipEmpty()
     {
-        while (Path != null && _segment < 3 && Path.Segments[_segment].Length < 1f)
+        while (Path != null && SegmentIndex < 3 && Path.Segments[SegmentIndex].Length < 1f)
         {
-            _segment++;
+            SegmentIndex++;
             _arcInit = false;
         }
 
-        if (_segment >= 3)
+        if (SegmentIndex >= 3)
         {
             Finished = true;
         }
@@ -318,7 +317,7 @@ public sealed class PathFollower
     {
         course = 0f;
         courseRateFf = 0f;
-        if (Path == null || !Path.Valid)
+        if (Path?.Valid != true)
         {
             return false;
         }
@@ -327,37 +326,37 @@ public sealed class PathFollower
         float k = 1f / Mathf.Max(fieldLength, 1f);
 
         // advance through finished segments
-        for (int guard = 0; guard < 3 && _segment < 3; guard++)
+        for (int guard = 0; guard < 3 && SegmentIndex < 3; guard++)
         {
-            DubinsPath.Segment seg = Path.Segments[_segment];
+            DubinsPath.Segment seg = Path.Segments[SegmentIndex];
             float along = Progress(seg, p, r);
-            if (along < seg.Length - 0.5f || _segment == 2)
+            if (along < seg.Length - 0.5f || SegmentIndex == 2)
             {
                 break;
             }
 
-            _segment++;
+            SegmentIndex++;
             _arcInit = false;
             SkipEmpty();
         }
 
-        if (_segment >= 3)
+        if (SegmentIndex >= 3)
         {
-            _segment = 2;
+            SegmentIndex = 2;
             Finished = true;
         }
 
-        DubinsPath.Segment s = Path.Segments[_segment];
+        DubinsPath.Segment s = Path.Segments[SegmentIndex];
         _alongSegment = Mathf.Clamp(Progress(s, p, r), 0f, s.Length);
 
         float rem = s.Length - _alongSegment;
-        for (int i = _segment + 1; i < 3; i++)
+        for (int i = SegmentIndex + 1; i < 3; i++)
         {
             rem += Path.Segments[i].Length;
         }
 
         Remaining = rem;
-        if (_segment == 2 && _alongSegment >= s.Length - 0.5f)
+        if (SegmentIndex == 2 && _alongSegment >= s.Length - 0.5f)
         {
             Finished = true;
         }

@@ -267,7 +267,7 @@ public sealed class ProfilePlan
             return H[N - 1];
         }
         float frac = f - i0;
-        return H[i0] * (1f - frac) + H[i0 + 1] * frac;
+        return (H[i0] * (1f - frac)) + (H[i0 + 1] * frac);
     }
 
     /// <summary>Planned slope at along-track distance d.</summary>
@@ -282,7 +282,7 @@ public sealed class ProfilePlan
     {
         float dx = x - OriginX;
         float dz = z - OriginZ;
-        return dx * Mathf.Sin(OriginChi) + dz * Mathf.Cos(OriginChi);
+        return (dx * Mathf.Sin(OriginChi)) + (dz * Mathf.Cos(OriginChi));
     }
 }
 

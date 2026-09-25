@@ -130,7 +130,7 @@ internal static class WaypointAltDialog
             end++;
         }
 
-        return float.TryParse(s.Substring(0, end), NumberStyles.Float, CultureInfo.InvariantCulture, out float v)
+        return float.TryParse(s[..end], NumberStyles.Float, CultureInfo.InvariantCulture, out float v)
             ? ModUtils.ConvertAlt_FromDisplay(v) : 0f;
     }
 

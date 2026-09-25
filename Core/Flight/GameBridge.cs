@@ -93,7 +93,7 @@ internal static class GameBridge
             m.Mass = Mathf.Max(aircraft.GetMass(), 100f);
             m.MaxWeight = Mathf.Max(aircraft.definition?.aircraftInfo?.maxWeight ?? m.Mass, 1f);
             m.GearHeight = aircraft.definition != null ? aircraft.definition.spawnOffset.y : 1.5f;
-            m.HasTailHook = aircraft.weaponManager != null && aircraft.weaponManager.HasTailHook();
+            m.HasTailHook = aircraft.weaponManager?.HasTailHook() == true;
             m.MaxThrust = aircraft.GetMaxThrust(out float thrust) ? thrust : 0f;
 
             ControlsFilter filter = aircraft.GetControlsFilter();
@@ -106,7 +106,7 @@ internal static class GameBridge
                 m.HeloGLimit = helo.heloFlyByWire.gLimit;
                 m.HeloMaxAngularVel = helo.heloFlyByWire.maxAngularVel;
             }
-            else if (filter != null && filter.flyByWire != null)
+            else if (filter?.flyByWire != null)
             {
                 ControlsFilter.FlyByWire f = filter.flyByWire;
                 m.FbwEnabled = f.Enabled;
@@ -164,7 +164,7 @@ internal static class GameBridge
         if (Model != null)
         {
             ControlsFilter filter = aircraft.GetControlsFilter();
-            if (filter != null && filter.flyByWire != null && filter is not HeloControlsFilter)
+            if (filter?.flyByWire != null && filter is not HeloControlsFilter)
             {
                 Model.FbwLimitFactor = filter.flyByWire.limitFactorSmoothed;
             }

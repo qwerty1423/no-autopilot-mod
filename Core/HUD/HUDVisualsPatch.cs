@@ -503,7 +503,12 @@ internal static class HUDVisualsPatch
             {
                 if (s_gcasLeftObj == null)
                 {
-                    Transform hudCenter = __instance.GetHUDCenter();
+                    Transform hudCenter = Plugin.GCASChevronPlacement.Value switch
+                    {
+                        Plugin.GCASChevronPlacementEnum.HUD => __instance.GetHUDCenter(),
+                        Plugin.GCASChevronPlacementEnum.HMD => SceneSingleton<CombatHUD>.i.transform,
+                        _ => throw new Exception ("Invalid GCAS Chevron placement")
+                    };
 
                     GameObject CreateObj(string name, string txt)
                     {

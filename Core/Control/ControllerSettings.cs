@@ -27,11 +27,9 @@ public sealed class ControllerSettings
     public float RollRateBandwidth = 5f, PitchRateBandwidth = 4f, YawRateBandwidth = 2.5f;
 
     /// <summary>
-    /// Time constant (s) of the aircraft + fly-by-wire rate response. Used as the synchronization model of the
-    /// input feedback. Err on the slow side: a model that is slower than reality only costs a bit of speed,
-    /// a model that is faster than reality can make the loop ring.
+    /// Time constant (s) of the aircraft + fly-by-wire rate response. Used as the synchronization model of the input feedback.
     /// </summary>
-    public float RollLag = 0.12f, PitchLag = 0.12f, YawLag = 0.2f;
+    public float RollLag = 0.5f, PitchLag = 0.5f, YawLag = 0.5f;
 
     /// <summary>Cut-off of the synchronized INDI feedback filters (rad/s), acceleration inner loop and speed.</summary>
     public float FilterCutoff = 20f;

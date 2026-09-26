@@ -59,11 +59,11 @@ public static class UnifiedConfig
             "Experimental. Off keeps nominal pitch/roll/yaw allocation diagonal; full MIMO activates automatically after rank loss or a suspected effectiveness fault.");
         CompensationGain = cfg.Bind(adv, "08. INDI compensation gain", 1f,
             "0..1. Strength of measured low-frequency inversion-error correction.");
-        PitchLag = cfg.Bind(adv, "09. Pitch response lag (s)", 0.12f,
+        PitchLag = cfg.Bind(adv, "09. Pitch response lag (s)", 0.5f,
             "Assumed pitch stick-to-rate response time.");
-        RollLag = cfg.Bind(adv, "10. Roll response lag (s)", 0.12f,
+        RollLag = cfg.Bind(adv, "10. Roll response lag (s)", 0.5f,
             "Assumed roll stick-to-rate response time.");
-        YawLag = cfg.Bind(adv, "11. Yaw response lag (s)", 0.2f,
+        YawLag = cfg.Bind(adv, "11. Yaw response lag (s)", 0.5f,
             "Assumed yaw stick-to-rate response time.");
         PitchAuthority = cfg.Bind(adv, "12. Pitch authority", 1f, "Maximum absolute pitch input.");
         RollAuthority = cfg.Bind(adv, "13. Roll authority", 1f, "Maximum absolute roll input.");

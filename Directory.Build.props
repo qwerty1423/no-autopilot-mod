@@ -16,16 +16,19 @@
       <HintPath>$(ManagedDir)/Assembly-CSharp.dll</HintPath>
       <Private>false</Private>
       <Publicize>true</Publicize>
+      <ExternallyResolved>true</ExternallyResolved>
     </Reference>
     <Reference Include="Mirage">
       <HintPath>$(ManagedDir)/Mirage.dll</HintPath>
       <Private>false</Private>
       <Publicize>true</Publicize>
+      <ExternallyResolved>true</ExternallyResolved>
     </Reference>
     <Reference Include="Rewired_Core">
       <HintPath>$(ManagedDir)/Rewired_Core.dll</HintPath>
       <Private>false</Private>
       <Publicize>true</Publicize>
+      <ExternallyResolved>true</ExternallyResolved>
     </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>$(ManagedDir)/UnityEngine.UI.dll</HintPath>
@@ -34,6 +37,7 @@
     <Reference Include="Unity.TextMeshPro">
       <HintPath>$(ManagedDir)/Unity.TextMeshPro.dll</HintPath>
       <Private>false</Private>
+      <ExternallyResolved>true</ExternallyResolved>
     </Reference>
   </ItemGroup>
 </Project>

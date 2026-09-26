@@ -36,14 +36,15 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
 
     private readonly LowPass1 _vsCmdDotFilter = new();
     private readonly LowPass1 _hDotPathFilter = new();
+    private readonly LowPass2 _outerAccelVerticalFilter = new();
+    private readonly LowPass2 _outerAccelLateralFilter = new();
+    private readonly LowPass2 _outerLiftVerticalFilter = new();
+    private readonly LowPass2 _outerLiftLateralFilter = new();
 
     private float _vsCmdPrev;
     private bool _vsCmdPrevValid;
-    private bool _vsIntFrozen;
     private float _hoverPsi;
     private float _hoverThrottle = float.NaN;
-
-    public float VsInt { get; private set; }
 
     public bool HoverActive { get; private set; }
 
@@ -79,6 +80,10 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
         _mimoRates.Clear();
         _pWasActive = _qWasActive = _rWasActive = _tWasActive = false;
         _vsCmdPrevValid = false;
+        _outerAccelVerticalFilter.Reset(0f);
+        _outerAccelLateralFilter.Reset(0f);
+        _outerLiftVerticalFilter.Reset(ControlMath.G);
+        _outerLiftLateralFilter.Reset(0f);
         _nAlpha = -1f;
         _nAlphaInit = false;
         HoverActive = false;
@@ -176,13 +181,10 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
                     float climbLimit = cmd.MaxClimbRate;
                     float descentLimit = cmd.MaxDescentRate;
                     float err = cmd.Altitude - s.Altitude;
-
-                    float relativeVs = s.VerticalSpeed - cmd.VerticalSpeedFeedForward;
-                    float captureErr = err - (c.AltitudeCaptureLead * relativeVs);
                     float aShape = thrustVert
                         ? 0.4f * Mathf.Max((Model.MaxThrust / Mathf.Max(Model.Mass, 1f)) - g, 1f)
                         : VerticalShapeAccel(nMax, nMin, cmd);
-                    vsDes = ControlMath.ShapedRate(captureErr, c.AltitudeGain, aShape, 0f);
+                    vsDes = ControlMath.ShapedRate(err, c.AltitudeGain, aShape, 0f);
                     vsDes += cmd.VerticalSpeedFeedForward;
                     vsDes = Mathf.Clamp(vsDes, -descentLimit, climbLimit);
                     haveVsDes = true;
@@ -258,26 +260,12 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
             float kvs = c.VerticalSpeedGain;
             float vsErr = vsDes - s.VerticalSpeed;
 
-            if (Mathf.Abs(vsDesDot) < 0.5f)
-            {
-                if (!_vsIntFrozen || (VsInt * vsErr) < 0f)
-                {
-                    float iLimit = Mathf.Max(c.VerticalSpeedIntegralLimit, 0f);
-                    VsInt = Mathf.Clamp(VsInt + (c.VerticalSpeedIntegralGain * kvs * vsErr * dt), -iLimit, iLimit);
-                }
-            }
-            else
-            {
-                VsInt *= Mathf.Exp(-dt / 2f);
-            }
-
-            aVert = (kvs * vsErr) + vsDesDot + VsInt;
+            aVert = (kvs * vsErr) + vsDesDot;
             haveAVert = true;
         }
         else
         {
             _vsCmdPrevValid = false;
-            VsInt = 0f;
         }
 
         t.VsCmd = vsDes;
@@ -338,7 +326,8 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
                 aVert = 0f;
             }
 
-            Allocate(s, aVert, aLat, haveALat, phiDes, pitchActive, bankLimit, nMax, ref nDes, ref muDes);
+            Allocate(s, aVert, aLat, haveALat, phiDes, pitchActive, bankLimit, nMax, dt,
+                ref nDes, ref muDes);
         }
 
         float pCmd = float.NaN;
@@ -414,7 +403,6 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
 
             nDes = Mathf.Clamp(nDes, nMin, nMax);
             t.NSaturated = nDes >= nMax - 1e-3f || nDes <= nMin + 1e-3f;
-            _vsIntFrozen = t.NSaturated;
 
             float nRateUp = c.LoadFactorRateLimit * (cmd.AggressiveRoll ? 2.5f : 1f);
             float nRateDown = c.LoadFactorUnloadRateLimit * (cmd.AggressiveRoll ? 2.5f : 1f);
@@ -428,7 +416,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
 
             float kn = c.LoadFactorGain;
             float nuN = kn * (nDes - s.NLift);
-            float qPathDes = ((nDes * Mathf.Cos(s.Mu)) - Mathf.Cos(s.Gamma)) * ControlMath.G / v;
+            float qPathDes = (nDes - (Mathf.Cos(s.Gamma) * Mathf.Cos(s.Mu))) * ControlMath.G / v;
             float qPathReference = Mathf.Lerp(s.QPath, qPathDes, 0.5f);
             qCmd = qPathReference + (nuN / Mathf.Max(_nAlpha, 1f));
         }
@@ -546,15 +534,30 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
     }
 
     private void Allocate(FlightState s, float aVert, float aLat, bool haveALat, float phiDes, bool pitchActive,
-        float bankLimit, float nMax, ref float nDes, ref float muDes)
+        float bankLimit, float nMax, float dt, ref float nDes, ref float muDes)
     {
         const float g = ControlMath.G;
         float cosGamma = Mathf.Max(Mathf.Cos(s.Gamma), 0.2f);
         float sinGamma = Mathf.Sin(s.Gamma);
 
-        float aEv = (aVert - (sinGamma * s.VDot)) / cosGamma;
-        float fEv = pitchActive ? aEv + (g * Mathf.Cos(s.Gamma)) : s.NLift * g * Mathf.Cos(s.Mu);
-        float fEl = haveALat ? aLat : 0f;
+        float aEvDes = (aVert - (sinGamma * s.VDot)) / cosGamma;
+        float aEvMeas = (s.Accel.y - (sinGamma * s.VDot)) / cosGamma;
+        float aElMeas = s.V * s.RPath;
+        float liftEv = s.NLift * g * Mathf.Cos(s.Mu);
+        float liftEl = s.NLift * g * Mathf.Sin(s.Mu);
+
+        float cutoff = Settings.CompensationCutoff;
+        _outerAccelVerticalFilter.Configure(cutoff, dt);
+        _outerAccelLateralFilter.Configure(cutoff, dt);
+        _outerLiftVerticalFilter.Configure(cutoff, dt);
+        _outerLiftLateralFilter.Configure(cutoff, dt);
+        float aEv0 = _outerAccelVerticalFilter.Step(aEvMeas);
+        float aEl0 = _outerAccelLateralFilter.Step(aElMeas);
+        float fEv0 = _outerLiftVerticalFilter.Step(liftEv);
+        float fEl0 = _outerLiftLateralFilter.Step(liftEl);
+
+        float fEv = pitchActive ? fEv0 + (aEvDes - aEv0) : fEv0;
+        float fEl = haveALat ? fEl0 + (aLat - aEl0) : fEl0;
 
         if (!haveALat)
         {
@@ -567,7 +570,6 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
                     nDes = fEv / (g * cmu);
                 }
             }
-
             return;
         }
 
@@ -578,10 +580,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
 
         if (pitchActive)
         {
-            float cmu = Mathf.Max(Mathf.Cos(mu), 0.1f);
-            nDes = fEv / (g * cmu);
-
-            // if vertical is fine but n is capped, the bank has to give
+            nDes = Mathf.Sqrt((fEv * fEv) + (fEl * fEl)) / g;
             if (nDes > nMax && fEv > 0f)
             {
                 float cmuMax = Mathf.Clamp01(fEv / (g * nMax));

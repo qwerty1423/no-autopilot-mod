@@ -15,7 +15,6 @@ public static class UnifiedConfig
     public static ConfigEntry<FlightControllerType> ControllerType;
     public static ConfigEntry<float> ManeuverMaxG, ManeuverMinG, AltitudeGain, VerticalSpeedGain, CourseGain;
     public static ConfigEntry<float> SpeedGain, BankGain, LoadFactorGain, SideslipGain;
-    public static ConfigEntry<float> AltitudeCaptureLead, VerticalSpeedIntegralGain, VerticalSpeedIntegralLimit;
     public static ConfigEntry<bool> SpeedPriority, OnlineIdentification, MimoEnabled;
     public static ConfigEntry<float> EffectivenessMargin, StickRateLimit, YawAuthority, FilterCutoff;
     public static ConfigEntry<float> CompensationGain, PitchLag, RollLag, YawLag, PitchAuthority, RollAuthority;
@@ -47,8 +46,8 @@ public static class UnifiedConfig
             "Keep enabled.");
         OnlineIdentification = cfg.Bind(adv, "02. Adapt effectiveness online", true,
             "Keep enabled.");
-        FilterCutoff = cfg.Bind(adv, "03. Synchronized filter cutoff (rad/s)", 12f,
-            "Applied equally to measured rates and delayed input feedback.");
+        FilterCutoff = cfg.Bind(adv, "03. Synchronized INDI filter cutoff (rad/s)", 50f,
+            "Applied equally to measured motion and retained-input feedback.");
         EffectivenessMargin = cfg.Bind(adv, "04. Effectiveness margin", 1.15f,
             "Values above one make allocation more conservative.");
         StickRateLimit = cfg.Bind(adv, "05. Stick rate limit (1/s)", 1f,
@@ -72,14 +71,6 @@ public static class UnifiedConfig
             "Maximum reduction of commanded load factor.");
         EnergyFeedForward = cfg.Bind(adv, "16. Climb power feedforward", 0.8f,
             "0..1. Anticipates the energy required by commanded climbs; does not affect pitch allocation.");
-
-        const string capture = "INDI - Altitude capture";
-        AltitudeCaptureLead = cfg.Bind(capture, "01. Capture look-ahead (s)", 1.2f,
-            "Projects current vertical speed forward. Increase to reduce altitude overshoot.");
-        VerticalSpeedIntegralGain = cfg.Bind(capture, "02. Vertical-speed integral gain", 0.1f,
-            "Removes persistent vertical-speed error. Excessive values increase overshoot.");
-        VerticalSpeedIntegralLimit = cfg.Bind(capture, "03. Vertical-speed integral limit (m/s^2)", 1.5f,
-            "Maximum acceleration correction retained by the vertical-speed integrator.");
 
         ShowWaypointAlts = cfg.Bind("Waypoints", "01. Show waypoint altitudes", false,
             "Draw each waypoint's altitude under its map node.");
@@ -117,9 +108,6 @@ public static class UnifiedConfig
         s.LoadFactorRateLimit = Mathf.Max(LoadFactorRateLimit.Value, 0.1f);
         s.LoadFactorUnloadRateLimit = Mathf.Max(LoadFactorUnloadRateLimit.Value, s.LoadFactorRateLimit);
         s.EnergyFeedForward = Mathf.Clamp01(EnergyFeedForward.Value);
-        s.AltitudeCaptureLead = Mathf.Max(AltitudeCaptureLead.Value, 0f);
-        s.VerticalSpeedIntegralGain = Mathf.Max(VerticalSpeedIntegralGain.Value, 0f);
-        s.VerticalSpeedIntegralLimit = Mathf.Max(VerticalSpeedIntegralLimit.Value, 0f);
         if (Plugin.ThrottleMinLimit != null)
         {
             s.ThrottleMin = Plugin.ThrottleMinLimit.Value;

@@ -39,7 +39,7 @@ public sealed class ControllerSettings
     /// (rad/s) and compensation gain Kc (1 = full integral action). A low cut-off keeps the sensor based part out
     /// of the frequency range where the fly-by-wire / servo dynamics are poorly known.
     /// </summary>
-    public float CompensationCutoff = 1.2f, CompensationGain = 1f;
+    public float CompensationCutoff = 50f, CompensationGain = 1f;
 
     /// <summary>Safety factor on the rate per stick priors (> 1 = conservative).</summary>
     public float RateEffectivenessMargin = 1.3f;
@@ -106,16 +106,8 @@ public sealed class ControllerSettings
     /// <summary>Altitude to vertical speed gain (1/s).</summary>
     public float AltitudeGain = 0.3f;
 
-    /// <summary>
-    /// Altitude-capture look-ahead (s).
-    /// </summary>
-    public float AltitudeCaptureLead = 1.2f;
-
-    /// <summary>Vertical speed to vertical acceleration gain (1/s).</summary>
+    /// <summary>Vertical speed to desired vertical acceleration gain (1/s).</summary>
     public float VerticalSpeedGain = 1.0f;
-
-    /// <summary>Vertical-speed integral gain multiplier and acceleration limit.</summary>
-    public float VerticalSpeedIntegralGain = 0.1f, VerticalSpeedIntegralLimit = 1f;
 
     /// <summary>Vertical acceleration used to shape altitude captures (m/s^2).</summary>
     public float VerticalAccelShape = 4f;

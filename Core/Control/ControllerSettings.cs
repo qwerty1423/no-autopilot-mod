@@ -15,6 +15,12 @@ public sealed class ControllerSettings
     /// </summary>
     public bool AccelerationInnerLoop;
 
+    /// <summary>
+    /// Use one full 3x3 pitch/roll/yaw effectiveness matrix in the default rate-command inner loop.
+    /// Disable only for comparison with the legacy three-channel SISO implementation.
+    /// </summary>
+    public bool MimoRateControl = true;
+
     /// <summary>Closed loop bandwidth of the roll / pitch / yaw rate loops (1/s), acceleration inner loop only.</summary>
     public float RollRateBandwidth = 5f, PitchRateBandwidth = 4f, YawRateBandwidth = 2.5f;
 
@@ -36,7 +42,7 @@ public sealed class ControllerSettings
     public float CompensationCutoff = 1.2f, CompensationGain = 1f;
 
     /// <summary>Safety factor on the rate per stick priors (> 1 = conservative).</summary>
-    public float RateEffectivenessMargin = 1.15f;
+    public float RateEffectivenessMargin = 1.3f;
 
     /// <summary>Online identification of the stick -> rate response (gain and lag) of every axis.</summary>
     public bool ResponseIdentification = true;

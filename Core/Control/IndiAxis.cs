@@ -230,14 +230,15 @@ internal sealed class IndiAxis
 
     private void UpdateGainEstimate(float u0, float measF, float gainPrior, float min, float max)
     {
-        float phi = gainPrior * (u0 - _prevU0F);
+        float deltaU = u0 - _prevU0F;
+        float phi = gainPrior * deltaU;
         float y = measF - _prevMeasFForRls;
         _prevU0F = u0;
         _prevMeasFForRls = measF;
 
         float span = max - min;
         bool saturated = u0 <= min + (0.03f * span) || u0 >= max - (0.03f * span);
-        if (saturated || Mathf.Abs(u0 - _prevU0F) > 0.2f * span || Mathf.Abs(phi) < 1e-4f * Mathf.Abs(gainPrior))
+        if (saturated || Mathf.Abs(deltaU) > 0.2f * span || Mathf.Abs(phi) < 1e-4f * Mathf.Abs(gainPrior))
         {
             return;
         }
@@ -246,8 +247,12 @@ internal sealed class IndiAxis
         float den = lambda + (phi * phi * _p11);
         float kk = _p11 * phi / den;
         float e = y - (Eta * phi);
-        Eta += kk * e;
+        Eta = Mathf.Clamp(ControlMath.Finite(Eta + (kk * e), 1f), 0.1f, 4f);
         _p11 = (_p11 - (kk * phi * _p11)) / lambda;
+        if (!ControlMath.IsFinite(_p11) || _p11 <= 0f || _p11 > 100f)
+        {
+            _p11 = 10f;
+        }
     }
 
     private void AdvanceActuator(int delayTicks, float tau, float rate, float dt)
@@ -272,7 +277,8 @@ internal sealed class IndiAxis
 
     private void UpdateEstimator(float u0, float deriv, float measF, float gPrior, float min, float max)
     {
-        float phi1 = gPrior * (u0 - _prevU0F);
+        float deltaU = u0 - _prevU0F;
+        float phi1 = gPrior * deltaU;
         float phi2 = measF - _prevMeasFForRls;
         float y = deriv - _prevDerivF;
 
@@ -282,7 +288,7 @@ internal sealed class IndiAxis
 
         float span = max - min;
         bool saturated = u0 <= min + (0.03f * span) || u0 >= max - (0.03f * span);
-        if (Mathf.Abs(u0 - _prevU0F) > 0f && saturated)
+        if (Mathf.Abs(deltaU) > 0.2f * span)
         {
             return;
         }
@@ -305,8 +311,8 @@ internal sealed class IndiAxis
         float k2 = pp2 / den;
         float e = y - (Eta * phi1) - (_f * phi2);
 
-        Eta += k1 * e;
-        _f += k2 * e;
+        Eta = Mathf.Clamp(ControlMath.Finite(Eta + (k1 * e), 1f), 0.1f, 4f);
+        _f = Mathf.Clamp(ControlMath.Finite(_f + (k2 * e)), -4f, 4f);
 
         _p11 = (_p11 - (k1 * pp1)) / lambda;
         _p12 = (_p12 - (k1 * pp2)) / lambda;
@@ -343,7 +349,7 @@ internal sealed class IndiAxis
 
         if (_oscillationCount > 120)
         {
-            Eta *= 1.25f;
+            Eta = Mathf.Clamp(Eta * 1.25f, 0.1f, 4f);
             _p11 = 10f;
             _p12 = 0f;
             _p22 = 10f;

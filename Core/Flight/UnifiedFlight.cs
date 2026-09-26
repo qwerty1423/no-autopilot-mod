@@ -49,19 +49,14 @@ internal static class UnifiedFlight
                 return false;
             }
 
-            if (IsHelicopter && !UnifiedConfig.UnifiedHelicopters.Value)
-            {
-                return false;
-            }
-
             return UnifiedConfig.ControllerType.Value == FlightControllerType.Indi ||
                 (APData.NavEnabled && APData.NavQueue.Count > 0);
         }
     }
 
-    private static bool IsHelicopter =>
-        (APData.LocalPilot != null && APData.LocalPilot.pilotType == Pilot.PilotType.Helo) ||
-        (APData.LocalAircraft?.GetControlsFilter() is HeloControlsFilter);
+    // private static bool IsHelicopter =>
+    //     (APData.LocalPilot != null && APData.LocalPilot.pilotType == Pilot.PilotType.Helo) ||
+    //     (APData.LocalAircraft?.GetControlsFilter() is HeloControlsFilter);
 
     public static void Reset()
     {
@@ -132,10 +127,7 @@ internal static class UnifiedFlight
         applied.RollOverride = (ctx.PilotRoll || overrideAll) && !gcas;
         applied.YawOverride = (ctx.PilotYaw || overrideAll) && !gcas;
 
-        bool hoverCapable = UnifiedConfig.HoverEnabled.Value && GameBridge.Model != null &&
-            GameBridge.Model.MaxThrust > (1.05f * GameBridge.Model.Mass * ControlMath.G) &&
-            GameBridge.Model.LandingSpeed < 45f;
-        bool slowHandOff = !s.OnGround && s.V < 30f && !hoverCapable;
+        bool slowHandOff = !s.OnGround && s.V < 30f;
         if (!GameBridge.Model.IsHelicopter && !gcas && (aircraft.IsAutoHoverEnabled() || slowHandOff))
         {
             applied.PitchOverride = applied.RollOverride = applied.YawOverride = true;

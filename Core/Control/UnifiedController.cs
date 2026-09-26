@@ -13,7 +13,9 @@ public struct ControllerTelemetry
     public float VsCmd, AVertCmd, ALatCmd, NCmd, MuCmd, PCmd, QCmd, RCmd, VDotCmd, EnergyRateCmd;
     public float PEta, QEta, REta, EEta, NAlpha;
     public float PGain, QGain, RGain;
-    public bool NSaturated, AlphaLimited;
+    public float MimoResidual, MimoCondition, MimoConfidence, RollFromYaw, YawFromRoll;
+    public int MimoRank;
+    public bool MimoFault, UpsetRecovery, NSaturated;
 }
 
 public sealed class UnifiedController(ControllerSettings settings, AircraftModel model)
@@ -26,6 +28,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
     private readonly IndiAxis _rAxis = new();
     private readonly IndiAxis _eAxis = new();
     private readonly IndiAxis _vzAxis = new();
+    private readonly MimoIndiController _mimoRates = new();
 
     private readonly ResponseIdentifier _pId = new(0.25f, 3f);
     private readonly ResponseIdentifier _qId = new(0.35f, 0.5f);
@@ -51,6 +54,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
     private bool _pWasActive, _qWasActive, _rWasActive, _tWasActive;
     private float _nAlpha = -1f;
     private bool _nAlphaInit;
+    private bool _upsetActive;
 
     private float _heloSpeedHold = float.NaN;
 
@@ -72,12 +76,14 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
         _rAxis.ResetEstimator();
         _eAxis.ResetEstimator();
         _vzAxis.ResetEstimator();
+        _mimoRates.Clear();
         _pWasActive = _qWasActive = _rWasActive = _tWasActive = false;
         _vsCmdPrevValid = false;
         _nAlpha = -1f;
         _nAlphaInit = false;
         HoverActive = false;
         StallAssistActive = false;
+        _upsetActive = false;
         _hoverThrottle = float.NaN;
         _heloSpeedHold = float.NaN;
         Telemetry = default;
@@ -130,7 +136,10 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
         bool stallCapable = c.StallAssist && !Model.IsHelicopter && !s.OnGround && !HoverActive;
         if (stallCapable)
         {
-            float aEng = Mathf.Clamp((Model.FbwAlphaLimiter - 2f) * Mathf.Deg2Rad, 0.24f, 0.55f);
+            // Enter before the FBW alpha limiter completely arrests the pitch response.  The MIMO rate
+            // allocator can hold just below that limiter, so waiting until limiter-2 deg may make the old
+            // threshold unreachable while the aircraft is already deeply stalled.
+            float aEng = Mathf.Clamp((Model.FbwAlphaLimiter - 4f) * Mathf.Deg2Rad, 0.24f, 0.55f);
             float aExit = aEng - 0.09f;
             bool want = StallAssistActive ? (s.Alpha > aExit) : (s.Alpha > aEng);
             if (want != StallAssistActive)
@@ -415,8 +424,8 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
             float kn = c.LoadFactorGain;
             float nuN = kn * (nDes - s.NLift);
             float qPathDes = (nDes - (Mathf.Cos(s.Gamma) * Mathf.Cos(s.Mu))) * ControlMath.G / v;
-            float qPathFf = Mathf.Lerp(s.QPath, qPathDes, 0.5f);
-            qCmd = qPathFf + (nuN / Mathf.Max(_nAlpha, 1f));
+            float qPathReference = Mathf.Lerp(s.QPath, qPathDes, 0.5f);
+            qCmd = qPathReference + (nuN / Mathf.Max(_nAlpha, 1f));
         }
 
         if (!pitchActive || ControlMath.IsFinite(cmd.PitchRateOverride) || cmd.Vertical == VerticalMode.PitchAttitude)
@@ -424,19 +433,15 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
             _nCmdPrevValid = false;
         }
 
-        if (ControlMath.IsFinite(qCmd) && !thrustVert)
+        // Keep the commanded rate inside the aircraft FBW's measured alpha envelope.  This is a plant
+        // feasibility constraint, not a user tuning knob, and prevents the allocator being asked for an
+        // unattainable pitch response.
+        if (ControlMath.IsFinite(qCmd))
         {
-            float alphaLim = c.AlphaLimit;
-            float qMaxAlpha = s.QPath + (3f * (alphaLim - s.Alpha));
-            float qMinAlpha = s.QPath + (3f * ((-0.5f * alphaLim) - s.Alpha));
-            if (qCmd > qMaxAlpha)
-            {
-                qCmd = qMaxAlpha;
-                t.AlphaLimited = true;
-            }
-
-            qCmd = Mathf.Max(qCmd, qMinAlpha);
-
+            float alphaEnvelope = Mathf.Max((Model.FbwAlphaLimiter - 2f) * Mathf.Deg2Rad, 0.2f);
+            qCmd = Mathf.Clamp(qCmd,
+                s.QPath + (3f * ((-0.5f * alphaEnvelope) - s.Alpha)),
+                s.QPath + (3f * (alphaEnvelope - s.Alpha)));
         }
 
         float rCmd = float.NaN;
@@ -460,10 +465,24 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
                 float lowSpeed = Mathf.Clamp01(((1.15f * vRef) - s.V) / (0.6f * vRef));
                 betaDes -= c.SkidAssist * (aLat / g) * lowSpeed;
             }
-
-            float rCoord = g / v * Mathf.Sin(s.Phi) * Mathf.Cos(s.Theta);
-            rCmd = rCoord + (c.SideslipGain * (s.Beta - betaDes));
+            float coordinatedRate = g / v * Mathf.Sin(s.Phi) * Mathf.Cos(s.Theta);
+            rCmd = coordinatedRate + (c.SideslipGain * (s.Beta - betaDes));
             rCmd = Mathf.Clamp(rCmd, -1f, 1f);
+        }
+
+        // Explicit upset supervisor.  Normal attitude/path objectives are dropped while the vehicle is at
+        // extreme incidence or rotating rapidly; the MIMO allocator then spends the remaining authority on
+        // unloading and body-rate damping.  Hysteresis prevents mode chatter.
+        float rotation = Mathf.Abs(s.P) + Mathf.Abs(s.Q) + Mathf.Abs(s.R);
+        _upsetActive = _upsetActive
+            ? !s.OnGround && !thrustVert && (Mathf.Abs(s.Alpha) > 0.55f || rotation > 2.5f)
+            : !s.OnGround && !thrustVert && (Mathf.Abs(s.Alpha) > 0.9f || rotation > 5.0f);
+        if (_upsetActive)
+        {
+            t.UpsetRecovery = true;
+            pCmd = -1.4f * s.P;
+            qCmd = s.QPath - (2.0f * s.Alpha) - (1.2f * s.Q);
+            rCmd = -1.2f * s.R;
         }
 
         float cutoff = c.FilterCutoff;
@@ -477,16 +496,8 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
         float gP = PriorRoll(s), gQ = PriorPitch(s), gR = PriorYaw(s);
 
         ApplyDirect(cmd, applied, ref o, out AppliedInputs track);
-        bool learn = !s.OnGround && s.V > 40f && s.RadarAltitude > 5f;
-        float pitchMin = Model.IsHelicopter ? 0.15f : 0.5f;
-        o.Pitch = RateChannel(_qAxis, _qId, ref _qWasActive, ref _qCmdPrev, o.PitchActive, s.Q, qCmd, track.Pitch,
-            c.PitchRateBandwidth, gQ, c.PitchLag, pitchMin, c.PitchAuthority, cutoff, delay, adapt, learn, dt,
-            out t.QGain);
-        o.Roll = RateChannel(_pAxis, _pId, ref _pWasActive, ref _pCmdPrev, o.RollActive, s.P, pCmd, track.Roll,
-            c.RollRateBandwidth, gP, c.RollLag, 0.1f, c.RollAuthority, cutoff, delay, adapt, learn, dt, out t.PGain);
-        o.Yaw = RateChannel(_rAxis, _rId, ref _rWasActive, ref _rCmdPrev, o.YawActive, s.R, rCmd, track.Yaw,
-            c.YawRateBandwidth, gR, c.YawLag, 0.1f, c.YawAuthority, cutoff, delay, adapt, learn, dt, out t.RGain);
-        FinishDirect(cmd, applied, ref o);
+        ApplyRateControllers(s, cmd, applied, track, qCmd, pCmd, rCmd, gQ, gP, gR,
+            cutoff, delay, adapt, dt, ref o, ref t);
 
         float hDotPath = haveVsDes && pitchActive ? vsDes : s.VerticalSpeed;
         if (thrustVert)
@@ -677,6 +688,77 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
         float veas = s.V * Mathf.Sqrt(s.Rho / 1.225f);
         float f = Mathf.Clamp01((veas - vMin) / Mathf.Max(vProt - vMin, 1f));
         return vsDes * f;
+    }
+
+    private void ApplyRateControllers(FlightState s, AutopilotCommand cmd, AppliedInputs applied,
+        AppliedInputs track, float qCmd, float pCmd, float rCmd, float gQ, float gP, float gR,
+        float cutoff, int delay, bool adapt, float dt, ref ControlOutput o, ref ControllerTelemetry t)
+    {
+        ControllerSettings c = Settings;
+        bool direct = ControlMath.IsFinite(cmd.DirectPitch) || ControlMath.IsFinite(cmd.DirectRoll) ||
+                      ControlMath.IsFinite(cmd.DirectYaw);
+        bool mimo = c.MimoRateControl && !c.AccelerationInnerLoop && !direct;
+        if (mimo)
+        {
+            bool qControlled = o.PitchActive;
+            bool pControlled = o.RollActive;
+            bool rControlled = o.YawActive;
+            bool any = qControlled || pControlled || rControlled;
+            if (!any)
+            {
+                _mimoRates.Track(track.Pitch, track.Roll, track.Yaw, s.Q, s.P, s.R,
+                    gQ, gP, gR, c.CompensationCutoff, c.PitchLag, delay, dt);
+                o.Pitch = track.Pitch;
+                o.Roll = track.Roll;
+                o.Yaw = track.Yaw;
+            }
+            else
+            {
+                // All non-overridden virtual inputs remain available to the allocator.  This is what permits,
+                // for example, a yaw input to satisfy a roll-rate objective after loss of roll effectiveness.
+                _mimoRates.Step(s.Q, s.P, s.R,
+                    qControlled ? qCmd : s.Q, pControlled ? pCmd : s.P, rControlled ? rCmd : s.R,
+                    track.Pitch, track.Roll, track.Yaw,
+                    !applied.PitchOverride, !applied.RollOverride, !applied.YawOverride,
+                    qControlled, pControlled, rControlled,
+                    gQ, gP, gR,
+                    c.PitchAuthority, c.RollAuthority, c.YawAuthority,
+                    c.StickRateLimit, delay, c.CompensationCutoff,
+                    Mathf.Max(c.PitchLag, Mathf.Max(c.RollLag, c.YawLag)), adapt,
+                    c.RateEffectivenessMargin, dt,
+                    out float pitch, out float roll, out float yaw);
+                o.Pitch = pitch;
+                o.Roll = roll;
+                o.Yaw = yaw;
+                o.PitchActive = !applied.PitchOverride;
+                o.RollActive = !applied.RollOverride;
+                o.YawActive = !applied.YawOverride;
+            }
+
+            t.QGain = gQ;
+            t.PGain = gP;
+            t.RGain = gR;
+            t.MimoResidual = _mimoRates.Residual;
+            t.MimoCondition = _mimoRates.Condition;
+            t.MimoConfidence = _mimoRates.Confidence;
+            t.MimoRank = _mimoRates.Rank;
+            t.MimoFault = _mimoRates.FaultSuspected;
+            t.RollFromYaw = _mimoRates.GetEffectiveness(1, 2);
+            t.YawFromRoll = _mimoRates.GetEffectiveness(2, 1);
+            _pWasActive = _qWasActive = _rWasActive = false;
+            return;
+        }
+
+        bool learn = !s.OnGround && s.V > 40f && s.RadarAltitude > 5f;
+        float pitchMin = Model.IsHelicopter ? 0.15f : 0.5f;
+        o.Pitch = RateChannel(_qAxis, _qId, ref _qWasActive, ref _qCmdPrev, o.PitchActive, s.Q, qCmd, track.Pitch,
+            c.PitchRateBandwidth, gQ, c.PitchLag, pitchMin, c.PitchAuthority, cutoff, delay, adapt, learn, dt,
+            out t.QGain);
+        o.Roll = RateChannel(_pAxis, _pId, ref _pWasActive, ref _pCmdPrev, o.RollActive, s.P, pCmd, track.Roll,
+            c.RollRateBandwidth, gP, c.RollLag, 0.1f, c.RollAuthority, cutoff, delay, adapt, learn, dt, out t.PGain);
+        o.Yaw = RateChannel(_rAxis, _rId, ref _rWasActive, ref _rCmdPrev, o.YawActive, s.R, rCmd, track.Yaw,
+            c.YawRateBandwidth, gR, c.YawLag, 0.1f, c.YawAuthority, cutoff, delay, adapt, learn, dt, out t.RGain);
+        FinishDirect(cmd, applied, ref o);
     }
 
     private float RateChannel(IndiAxis axis, ResponseIdentifier id, ref bool wasActive, ref float cmdPrev,
@@ -1097,16 +1179,8 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
 
         float gP = PriorRoll(s), gQ = PriorPitch(s), gR = PriorYaw(s);
         ApplyDirect(cmd, applied, ref o, out AppliedInputs track);
-        bool learn = !s.OnGround && s.V > 40f && s.RadarAltitude > 5f;
-        float pitchMin = Model.IsHelicopter ? 0.15f : 0.5f;
-        o.Pitch = RateChannel(_qAxis, _qId, ref _qWasActive, ref _qCmdPrev, o.PitchActive, s.Q, qCmd, track.Pitch,
-            c.PitchRateBandwidth, gQ, c.PitchLag, pitchMin, c.PitchAuthority, cutoff, delay, adapt, learn, dt,
-            out t.QGain);
-        o.Roll = RateChannel(_pAxis, _pId, ref _pWasActive, ref _pCmdPrev, o.RollActive, s.P, pCmd, track.Roll,
-            c.RollRateBandwidth, gP, c.RollLag, 0.1f, c.RollAuthority, cutoff, delay, adapt, learn, dt, out t.PGain);
-        o.Yaw = RateChannel(_rAxis, _rId, ref _rWasActive, ref _rCmdPrev, o.YawActive, s.R, rCmd, track.Yaw,
-            c.YawRateBandwidth, gR, c.YawLag, 0.1f, c.YawAuthority, cutoff, delay, adapt, learn, dt, out t.RGain);
-        FinishDirect(cmd, applied, ref o);
+        ApplyRateControllers(s, cmd, applied, track, qCmd, pCmd, rCmd, gQ, gP, gR,
+            cutoff, delay, adapt, dt, ref o, ref t);
 
         o.Throttle = collective;
         o.ThrottleActive = collectiveActive;

@@ -415,10 +415,8 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
             t.NCmd = nDes;
 
             float kn = c.LoadFactorGain;
-            float nuN = kn * (nDes - s.NLift);
-            float qPathDes = (nDes - (Mathf.Cos(s.Gamma) * Mathf.Cos(s.Mu))) * ControlMath.G / v;
-            float qPathReference = Mathf.Lerp(s.QPath, qPathDes, 0.5f);
-            qCmd = qPathReference + (nuN / Mathf.Max(_nAlpha, 1f));
+            float qCmdIncrement = kn * (nDes - s.NLift) / Mathf.Max(_nAlpha, 1f);
+            qCmd = s.Q + qCmdIncrement;
         }
 
         if (!pitchActive || ControlMath.IsFinite(cmd.PitchRateOverride) || cmd.Vertical == VerticalMode.PitchAttitude)

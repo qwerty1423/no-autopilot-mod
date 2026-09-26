@@ -34,11 +34,6 @@ public sealed class ControllerSettings
     /// <summary>Cut-off of the synchronized INDI feedback filters (rad/s), acceleration inner loop and speed.</summary>
     public float FilterCutoff = 20f;
 
-    /// <summary>
-    /// Hybrid INDI inversion error compensation (Pollack 2024, eq. 4.6): cut-off of the compensation filter Hc
-    /// (rad/s) and compensation gain Kc (1 = full integral action). A low cut-off keeps the sensor based part out
-    /// of the frequency range where the fly-by-wire / servo dynamics are poorly known.
-    /// </summary>
     public float CompensationCutoff = 50f, CompensationGain = 1f;
 
     /// <summary>Safety factor on the rate per stick priors (> 1 = conservative).</summary>

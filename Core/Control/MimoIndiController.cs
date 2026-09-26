@@ -30,6 +30,7 @@ internal sealed class MimoIndiController
     public int Rank { get; private set; } = N;
     public bool FaultSuspected { get; private set; }
     public bool Degraded => Rank < N || FaultSuspected;
+    public bool CrossAxisAllocationActive { get; private set; }
 
     public float GetEffectiveness(int output, int input) => _b[output, input];
 
@@ -96,7 +97,7 @@ internal sealed class MimoIndiController
         float pitchGain, float rollGain, float yawGain,
         float pitchAuthority, float rollAuthority, float yawAuthority,
         float rateLimit, int delayTicks, float cutoff, float pitchTau, float rollTau, float yawTau,
-        bool adapt, float margin, float dt,
+        bool crossAxisInNormalFlight, bool adapt, float margin, float dt,
         out float pitch, out float roll, out float yaw)
     {
         if (!_initialized)
@@ -130,9 +131,8 @@ internal sealed class MimoIndiController
         {
             UpdateRank();
         }
-        // Overrides remove columns from the matrix actually available to allocation.  Keep RawRank as estimator
-        // telemetry, but use effective Rank for reduced-output supervision.
         UpdateRank(available);
+        CrossAxisAllocationActive = crossAxisInNormalFlight || Rank < N || FaultSuspected;
 
         float[] error = new float[N];
         float[] weight = new float[N];
@@ -274,6 +274,9 @@ internal sealed class MimoIndiController
         return best;
     }
 
+    private float AllocationEffectiveness(int output, int input) =>
+        CrossAxisAllocationActive || output == input ? _b[output, input] : 0f;
+
     private bool SolveFree(float[] target, float[] weight, float margin, int[] state, int[] free, int nf, float[] x)
     {
         const float damping = 0.01f;
@@ -290,16 +293,16 @@ internal sealed class MimoIndiController
                 {
                     if (state[k] != 1)
                     {
-                        fixedPrediction += _b[i, k] * x[k] * margin;
+                        fixedPrediction += AllocationEffectiveness(i, k) * x[k] * margin;
                     }
                 }
 
-                float bij = _b[i, j] * margin;
+                float bij = AllocationEffectiveness(i, j) * margin;
                 rhs[row] += weight[i] * bij * (target[i] - fixedPrediction);
                 for (int col = 0; col < nf; col++)
                 {
                     int k = free[col];
-                    a[row, col] += weight[i] * bij * _b[i, k] * margin;
+                    a[row, col] += weight[i] * bij * AllocationEffectiveness(i, k) * margin;
                 }
             }
             a[row, row] += damping;
@@ -370,7 +373,7 @@ internal sealed class MimoIndiController
             float y = 0f;
             for (int j = 0; j < N; j++)
             {
-                y += _b[i, j] * x[j] * margin;
+                y += AllocationEffectiveness(i, j) * x[j] * margin;
             }
 
             float e = target[i] - y;
@@ -532,7 +535,7 @@ internal sealed class MimoIndiController
             float achieved = 0f;
             for (int j = 0; j < N; j++)
             {
-                achieved += _b[i, j] * du[j] * margin;
+                achieved += AllocationEffectiveness(i, j) * du[j] * margin;
             }
 
             float e = weight[i] * (error[i] - achieved);

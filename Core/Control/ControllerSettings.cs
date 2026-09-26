@@ -21,6 +21,8 @@ public sealed class ControllerSettings
     /// </summary>
     public bool MimoRateControl = true;
 
+    public bool MimoCrossAxisInNormalFlight;
+
     /// <summary>Closed loop bandwidth of the roll / pitch / yaw rate loops (1/s), acceleration inner loop only.</summary>
     public float RollRateBandwidth = 5f, PitchRateBandwidth = 4f, YawRateBandwidth = 2.5f;
 

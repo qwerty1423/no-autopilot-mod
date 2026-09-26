@@ -15,7 +15,7 @@ public static class UnifiedConfig
     public static ConfigEntry<FlightControllerType> ControllerType;
     public static ConfigEntry<float> ManeuverMaxG, ManeuverMinG, AltitudeGain, VerticalSpeedGain, CourseGain;
     public static ConfigEntry<float> SpeedGain, BankGain, LoadFactorGain, SideslipGain;
-    public static ConfigEntry<bool> SpeedPriority, OnlineIdentification, MimoEnabled;
+    public static ConfigEntry<bool> SpeedPriority, OnlineIdentification, MimoEnabled, MimoCrossAxisNormal;
     public static ConfigEntry<float> EffectivenessMargin, StickRateLimit, YawAuthority, FilterCutoff;
     public static ConfigEntry<float> CompensationGain, PitchLag, RollLag, YawLag, PitchAuthority, RollAuthority;
     public static ConfigEntry<float> LoadFactorRateLimit, LoadFactorUnloadRateLimit, EnergyFeedForward;
@@ -55,6 +55,8 @@ public static class UnifiedConfig
         YawAuthority = cfg.Bind(adv, "06. Yaw authority", 1f, "Maximum yaw input.");
         InputDelayTicks = cfg.Bind(adv, "07. Input delay (physics ticks)", 2,
             "Delay used to synchronize applied-input and sensor feedback.");
+        MimoCrossAxisNormal = cfg.Bind(adv, "07b. Cross-axis allocation in normal flight", false,
+            "Experimental. Off keeps nominal pitch/roll/yaw allocation diagonal; full MIMO activates automatically after rank loss or a suspected effectiveness fault.");
         CompensationGain = cfg.Bind(adv, "08. INDI compensation gain", 1f,
             "0..1. Strength of measured low-frequency inversion-error correction.");
         PitchLag = cfg.Bind(adv, "09. Pitch response lag (s)", 0.12f,
@@ -93,6 +95,7 @@ public static class UnifiedConfig
         s.SpeedGain = SpeedGain.Value;
         s.SideslipGain = SideslipGain.Value;
         s.MimoRateControl = MimoEnabled.Value;
+        s.MimoCrossAxisInNormalFlight = MimoCrossAxisNormal.Value;
         s.OnlineEstimation = OnlineIdentification.Value;
         s.CompensationCutoff = FilterCutoff.Value;
         s.RateEffectivenessMargin = EffectivenessMargin.Value;

@@ -15,7 +15,7 @@ public struct ControllerTelemetry
     public float PGain, QGain, RGain;
     public float MimoResidual, MimoCondition, MimoConfidence, RollFromYaw, YawFromRoll;
     public int MimoRank, MimoRawRank;
-    public bool MimoFault, MimoAdapting, UpsetRecovery, NSaturated;
+    public bool MimoFault, MimoAdapting, MimoCrossAxis, UpsetRecovery, NSaturated;
 }
 
 public sealed class UnifiedController(ControllerSettings settings, AircraftModel model)
@@ -729,7 +729,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
                     gQ, gP, gR,
                     c.PitchAuthority, c.RollAuthority, c.YawAuthority,
                     c.StickRateLimit, delay, c.CompensationCutoff,
-                    c.PitchLag, c.RollLag, c.YawLag, adapt,
+                    c.PitchLag, c.RollLag, c.YawLag, c.MimoCrossAxisInNormalFlight, adapt,
                     c.RateEffectivenessMargin, dt,
                     out float pitch, out float roll, out float yaw);
                 o.Pitch = pitch;
@@ -749,6 +749,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
             t.MimoRank = _mimoRates.Rank;
             t.MimoRawRank = _mimoRates.RawRank;
             t.MimoFault = _mimoRates.FaultSuspected;
+            t.MimoCrossAxis = _mimoRates.CrossAxisAllocationActive;
             t.RollFromYaw = _mimoRates.GetEffectiveness(1, 2);
             t.YawFromRoll = _mimoRates.GetEffectiveness(2, 1);
             _pWasActive = _qWasActive = _rWasActive = false;
@@ -1035,176 +1036,176 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
 
     private float _aLp, _nLp, _aBp, _nBp, _sAn, _sAa;
 
-    private ControlOutput StepHelicopter(FlightState s, AutopilotCommand cmd, AppliedInputs applied)
-    {
-        ControllerSettings c = Settings;
-        float dt = Mathf.Max(s.Dt, 1e-3f);
-        const float g = ControlMath.G;
-        ControlOutput o = default;
-        ControllerTelemetry t = default;
+    // private ControlOutput StepHelicopter(FlightState s, AutopilotCommand cmd, AppliedInputs applied)
+    // {
+    //     ControllerSettings c = Settings;
+    //     float dt = Mathf.Max(s.Dt, 1e-3f);
+    //     const float g = ControlMath.G;
+    //     ControlOutput o = default;
+    //     ControllerTelemetry t = default;
 
-        bool vertActive = cmd.Vertical != VerticalMode.None;
-        float aVert = 0f;
-        float vsDes = s.VerticalSpeed;
-        switch (cmd.Vertical)
-        {
-            case VerticalMode.Altitude:
-                {
-                    float err = cmd.Altitude - s.Altitude;
-                    vsDes = ControlMath.ShapedRate(err, c.AltitudeGain, 2f, 0f) + cmd.VerticalSpeedFeedForward;
-                    vsDes = Mathf.Clamp(vsDes, -Mathf.Max(cmd.MaxDescentRate, 0.5f), Mathf.Max(cmd.MaxClimbRate, 0.5f));
-                    aVert = c.VerticalSpeedGain * (vsDes - s.VerticalSpeed);
-                    break;
-                }
-            case VerticalMode.VerticalSpeed:
-            case VerticalMode.FlightPathAngle:
-                vsDes = cmd.Vertical == VerticalMode.VerticalSpeed ? cmd.VerticalSpeed : s.Speed * Mathf.Sin(cmd.FlightPathAngle);
-                aVert = c.VerticalSpeedGain * (vsDes - s.VerticalSpeed);
-                break;
-            case VerticalMode.LoadFactor:
-                aVert = (cmd.LoadFactor - 1f) * g;
-                break;
-            case VerticalMode.Acceleration:
-                aVert = cmd.VerticalAccel;
-                break;
-            case VerticalMode.PitchAttitude:
-                vertActive = false;
-                break;
-        }
+    //     bool vertActive = cmd.Vertical != VerticalMode.None;
+    //     float aVert = 0f;
+    //     float vsDes = s.VerticalSpeed;
+    //     switch (cmd.Vertical)
+    //     {
+    //         case VerticalMode.Altitude:
+    //             {
+    //                 float err = cmd.Altitude - s.Altitude;
+    //                 vsDes = ControlMath.ShapedRate(err, c.AltitudeGain, 2f, 0f) + cmd.VerticalSpeedFeedForward;
+    //                 vsDes = Mathf.Clamp(vsDes, -Mathf.Max(cmd.MaxDescentRate, 0.5f), Mathf.Max(cmd.MaxClimbRate, 0.5f));
+    //                 aVert = c.VerticalSpeedGain * (vsDes - s.VerticalSpeed);
+    //                 break;
+    //             }
+    //         case VerticalMode.VerticalSpeed:
+    //         case VerticalMode.FlightPathAngle:
+    //             vsDes = cmd.Vertical == VerticalMode.VerticalSpeed ? cmd.VerticalSpeed : s.Speed * Mathf.Sin(cmd.FlightPathAngle);
+    //             aVert = c.VerticalSpeedGain * (vsDes - s.VerticalSpeed);
+    //             break;
+    //         case VerticalMode.LoadFactor:
+    //             aVert = (cmd.LoadFactor - 1f) * g;
+    //             break;
+    //         case VerticalMode.Acceleration:
+    //             aVert = cmd.VerticalAccel;
+    //             break;
+    //         case VerticalMode.PitchAttitude:
+    //             vertActive = false;
+    //             break;
+    //     }
 
-        aVert = Mathf.Clamp(aVert, -0.5f * g, Mathf.Max(Model.HeloGLimit - 1f, 0.5f) * g);
-        t.VsCmd = vsDes;
-        t.AVertCmd = aVert;
+    //     aVert = Mathf.Clamp(aVert, -0.5f * g, Mathf.Max(Model.HeloGLimit - 1f, 0.5f) * g);
+    //     t.VsCmd = vsDes;
+    //     t.AVertCmd = aVert;
 
-        bool collectiveActive = vertActive && !applied.ThrottleOverride;
-        float collective;
-        if (collectiveActive)
-        {
-            float gC = 2f * g / c.ThrottleEffectivenessScale;
-            collective = _vzAxis.Step(s.VerticalSpeed, aVert, gC, 0f, 1f, 0f, c.InputDelayTicks,
-                c.SpeedFilterCutoff * 2f, c.OnlineEstimation, 0.2f, 2f, dt);
-        }
-        else
-        {
-            _vzAxis.Track(applied.Throttle, s.VerticalSpeed, c.SpeedFilterCutoff * 2f, 0.2f, 2f, c.InputDelayTicks, dt);
-            collective = applied.Throttle;
-        }
+    //     bool collectiveActive = vertActive && !applied.ThrottleOverride;
+    //     float collective;
+    //     if (collectiveActive)
+    //     {
+    //         float gC = 2f * g / c.ThrottleEffectivenessScale;
+    //         collective = _vzAxis.Step(s.VerticalSpeed, aVert, gC, 0f, 1f, 0f, c.InputDelayTicks,
+    //             c.SpeedFilterCutoff * 2f, c.OnlineEstimation, 0.2f, 2f, dt);
+    //     }
+    //     else
+    //     {
+    //         _vzAxis.Track(applied.Throttle, s.VerticalSpeed, c.SpeedFilterCutoff * 2f, 0.2f, 2f, c.InputDelayTicks, dt);
+    //         collective = applied.Throttle;
+    //     }
 
-        float fwdSpeed = Vector3.Dot(s.Velocity, Vector3.ProjectOnPlane(s.Forward, Vector3.up).normalized);
-        bool pitchActive = cmd.PitchAxisActive || cmd.Speed == SpeedMode.Airspeed;
-        if (cmd.Speed == SpeedMode.Airspeed)
-        {
-            _heloSpeedHold = cmd.Airspeed;
-        }
-        else if (!ControlMath.IsFinite(_heloSpeedHold) || !pitchActive)
-        {
-            _heloSpeedHold = fwdSpeed;
-        }
+    //     float fwdSpeed = Vector3.Dot(s.Velocity, Vector3.ProjectOnPlane(s.Forward, Vector3.up).normalized);
+    //     bool pitchActive = cmd.PitchAxisActive || cmd.Speed == SpeedMode.Airspeed;
+    //     if (cmd.Speed == SpeedMode.Airspeed)
+    //     {
+    //         _heloSpeedHold = cmd.Airspeed;
+    //     }
+    //     else if (!ControlMath.IsFinite(_heloSpeedHold) || !pitchActive)
+    //     {
+    //         _heloSpeedHold = fwdSpeed;
+    //     }
 
-        float aFwd = Mathf.Clamp(c.SpeedGain * (_heloSpeedHold - fwdSpeed), -0.3f * g, 0.3f * g);
-        float thetaDes = -Mathf.Atan(aFwd / g);
-        thetaDes = Mathf.Clamp(thetaDes, -0.35f, 0.3f);
-        t.VDotCmd = aFwd;
+    //     float aFwd = Mathf.Clamp(c.SpeedGain * (_heloSpeedHold - fwdSpeed), -0.3f * g, 0.3f * g);
+    //     float thetaDes = -Mathf.Atan(aFwd / g);
+    //     thetaDes = Mathf.Clamp(thetaDes, -0.35f, 0.3f);
+    //     t.VDotCmd = aFwd;
 
-        float qCmd = float.NaN;
-        if (ControlMath.IsFinite(cmd.PitchRateOverride))
-        {
-            qCmd = cmd.PitchRateOverride;
-        }
-        else if (cmd.Vertical == VerticalMode.PitchAttitude)
-        {
-            qCmd = c.PitchAttitudeGain * ControlMath.WrapPi(cmd.PitchAttitude - s.Theta);
-        }
-        else if (pitchActive)
-        {
-            qCmd = c.PitchAttitudeGain * ControlMath.WrapPi(thetaDes - s.Theta);
-        }
+    //     float qCmd = float.NaN;
+    //     if (ControlMath.IsFinite(cmd.PitchRateOverride))
+    //     {
+    //         qCmd = cmd.PitchRateOverride;
+    //     }
+    //     else if (cmd.Vertical == VerticalMode.PitchAttitude)
+    //     {
+    //         qCmd = c.PitchAttitudeGain * ControlMath.WrapPi(cmd.PitchAttitude - s.Theta);
+    //     }
+    //     else if (pitchActive)
+    //     {
+    //         qCmd = c.PitchAttitudeGain * ControlMath.WrapPi(thetaDes - s.Theta);
+    //     }
 
-        float pCmd = float.NaN, rCmd = float.NaN;
-        float bankLimit = Mathf.Clamp(cmd.BankLimit, 0.02f, 0.6f);
-        bool fast = s.GroundSpeed > 25f;
-        if (ControlMath.IsFinite(cmd.RollRateOverride))
-        {
-            pCmd = cmd.RollRateOverride;
-        }
-        else if (cmd.RollAxisActive)
-        {
-            float phiDes;
-            switch (cmd.Lateral)
-            {
-                case LateralMode.Bank:
-                    phiDes = Mathf.Clamp(cmd.Bank, -bankLimit, bankLimit);
-                    break;
-                case LateralMode.Course when fast:
-                    {
-                        float chiErr = ControlMath.WrapPi(cmd.Course - s.Chi);
-                        float chiDot = ControlMath.ShapedRate(chiErr, c.CourseGain, g * c.CourseRollRate / s.GroundSpeed,
-                            g * Mathf.Tan(bankLimit) / s.GroundSpeed);
-                        phiDes = Mathf.Atan(s.GroundSpeed * chiDot / g);
-                        break;
-                    }
-                case LateralMode.Acceleration:
-                    phiDes = Mathf.Clamp(Mathf.Atan(cmd.LateralAccel / g), -bankLimit, bankLimit);
-                    break;
-                default:
-                    {
-                        // slow: kill sideways drift with bank
-                        float sideSpeed = Vector3.Dot(s.Velocity, s.Right);
-                        phiDes = Mathf.Clamp(-0.05f * sideSpeed, -0.25f, 0.25f);
-                        break;
-                    }
-            }
+    //     float pCmd = float.NaN, rCmd = float.NaN;
+    //     float bankLimit = Mathf.Clamp(cmd.BankLimit, 0.02f, 0.6f);
+    //     bool fast = s.GroundSpeed > 25f;
+    //     if (ControlMath.IsFinite(cmd.RollRateOverride))
+    //     {
+    //         pCmd = cmd.RollRateOverride;
+    //     }
+    //     else if (cmd.RollAxisActive)
+    //     {
+    //         float phiDes;
+    //         switch (cmd.Lateral)
+    //         {
+    //             case LateralMode.Bank:
+    //                 phiDes = Mathf.Clamp(cmd.Bank, -bankLimit, bankLimit);
+    //                 break;
+    //             case LateralMode.Course when fast:
+    //                 {
+    //                     float chiErr = ControlMath.WrapPi(cmd.Course - s.Chi);
+    //                     float chiDot = ControlMath.ShapedRate(chiErr, c.CourseGain, g * c.CourseRollRate / s.GroundSpeed,
+    //                         g * Mathf.Tan(bankLimit) / s.GroundSpeed);
+    //                     phiDes = Mathf.Atan(s.GroundSpeed * chiDot / g);
+    //                     break;
+    //                 }
+    //             case LateralMode.Acceleration:
+    //                 phiDes = Mathf.Clamp(Mathf.Atan(cmd.LateralAccel / g), -bankLimit, bankLimit);
+    //                 break;
+    //             default:
+    //                 {
+    //                     // slow: kill sideways drift with bank
+    //                     float sideSpeed = Vector3.Dot(s.Velocity, s.Right);
+    //                     phiDes = Mathf.Clamp(-0.05f * sideSpeed, -0.25f, 0.25f);
+    //                     break;
+    //                 }
+    //         }
 
-            pCmd = ControlMath.ShapedRate(ControlMath.WrapPi(phiDes - s.Phi), c.BankGain, c.MaxRollAccel, 1f);
-            t.MuCmd = phiDes;
+    //         pCmd = ControlMath.ShapedRate(ControlMath.WrapPi(phiDes - s.Phi), c.BankGain, c.MaxRollAccel, 1f);
+    //         t.MuCmd = phiDes;
 
-            if (cmd.Lateral == LateralMode.Course && !fast)
-            {
-                float psiErr = ControlMath.WrapPi(cmd.Course - s.Psi);
-                rCmd = ControlMath.ShapedRate(psiErr, 0.8f, 0.5f, 0.5f);
-            }
-            else
-            {
-                rCmd = c.YawCoordination && fast
-                    ? (g / Mathf.Max(s.V, 10f) * Mathf.Sin(s.Phi)) + (c.SideslipGain * s.Beta)
-                    : 0f;
-            }
-        }
+    //         if (cmd.Lateral == LateralMode.Course && !fast)
+    //         {
+    //             float psiErr = ControlMath.WrapPi(cmd.Course - s.Psi);
+    //             rCmd = ControlMath.ShapedRate(psiErr, 0.8f, 0.5f, 0.5f);
+    //         }
+    //         else
+    //         {
+    //             rCmd = c.YawCoordination && fast
+    //                 ? (g / Mathf.Max(s.V, 10f) * Mathf.Sin(s.Phi)) + (c.SideslipGain * s.Beta)
+    //                 : 0f;
+    //         }
+    //     }
 
-        if (ControlMath.IsFinite(cmd.YawRateOverride))
-        {
-            rCmd = cmd.YawRateOverride;
-        }
+    //     if (ControlMath.IsFinite(cmd.YawRateOverride))
+    //     {
+    //         rCmd = cmd.YawRateOverride;
+    //     }
 
-        float cutoff = c.FilterCutoff;
-        int delay = c.InputDelayTicks;
-        bool adapt = c.OnlineEstimation && !s.OnGround && s.V > 25f;
-        t.MimoAdapting = adapt;
-        o.PitchActive = ControlMath.IsFinite(qCmd) && !applied.PitchOverride;
-        o.RollActive = ControlMath.IsFinite(pCmd) && !applied.RollOverride;
-        o.YawActive = ControlMath.IsFinite(rCmd) && !applied.YawOverride;
+    //     float cutoff = c.FilterCutoff;
+    //     int delay = c.InputDelayTicks;
+    //     bool adapt = c.OnlineEstimation && !s.OnGround && s.V > 25f;
+    //     t.MimoAdapting = adapt;
+    //     o.PitchActive = ControlMath.IsFinite(qCmd) && !applied.PitchOverride;
+    //     o.RollActive = ControlMath.IsFinite(pCmd) && !applied.RollOverride;
+    //     o.YawActive = ControlMath.IsFinite(rCmd) && !applied.YawOverride;
 
-        float gP = PriorRoll(s), gQ = PriorPitch(s), gR = PriorYaw(s);
-        ApplyDirect(cmd, applied, ref o, out AppliedInputs track);
-        ApplyRateControllers(s, cmd, applied, track, qCmd, pCmd, rCmd, gQ, gP, gR,
-            cutoff, delay, adapt, dt, ref o, ref t);
+    //     float gP = PriorRoll(s), gQ = PriorPitch(s), gR = PriorYaw(s);
+    //     ApplyDirect(cmd, applied, ref o, out AppliedInputs track);
+    //     ApplyRateControllers(s, cmd, applied, track, qCmd, pCmd, rCmd, gQ, gP, gR,
+    //         cutoff, delay, adapt, dt, ref o, ref t);
 
-        o.Throttle = collective;
-        o.ThrottleActive = collectiveActive;
+    //     o.Throttle = collective;
+    //     o.ThrottleActive = collectiveActive;
 
-        t.PCmd = pCmd;
-        t.QCmd = qCmd;
-        t.RCmd = rCmd;
-        t.PEta = _pAxis.Eta;
-        t.QEta = _qAxis.Eta;
-        t.REta = _rAxis.Eta;
-        t.EEta = _vzAxis.Eta;
-        Telemetry = t;
+    //     t.PCmd = pCmd;
+    //     t.QCmd = qCmd;
+    //     t.RCmd = rCmd;
+    //     t.PEta = _pAxis.Eta;
+    //     t.QEta = _qAxis.Eta;
+    //     t.REta = _rAxis.Eta;
+    //     t.EEta = _vzAxis.Eta;
+    //     Telemetry = t;
 
-        LastPitch = o.Pitch;
-        LastRoll = o.Roll;
-        LastYaw = o.Yaw;
-        LastThrottle = o.Throttle;
-        return o;
-    }
+    //     LastPitch = o.Pitch;
+    //     LastRoll = o.Roll;
+    //     LastYaw = o.Yaw;
+    //     LastThrottle = o.Throttle;
+    //     return o;
+    // }
 }

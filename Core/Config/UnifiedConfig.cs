@@ -24,7 +24,7 @@ public static class UnifiedConfig
     {
         const string main = "INDI";
         ControllerType = cfg.Bind(main, "01. Controller", FlightControllerType.Indi,
-            "Incremental Nonlinear Dynamic Inversion, and Proportional Integral Derivative, something like that.");
+            "INDI: Incremental Nonlinear Dynamic Inversion, PID: Proportional Integral Derivative, something like that. INDI is better for strange or damaged aircraft, but may be worse for seaskimming currently.");
         ManeuverMaxG = cfg.Bind(main, "02. Maximum commanded load factor", 5f,
             "maximum G limit");
         ManeuverMinG = cfg.Bind(main, "03. Minimum commanded load factor", -1.5f,
@@ -46,7 +46,7 @@ public static class UnifiedConfig
             "Keep enabled.");
         FilterCutoff = cfg.Bind(adv, "03. Synchronized filter cutoff (rad/s)", 1.2f,
             "Applied equally to measured rates and delayed input feedback.");
-        EffectivenessMargin = cfg.Bind(adv, "04. Effectiveness margin", 1.3f,
+        EffectivenessMargin = cfg.Bind(adv, "04. Effectiveness margin", 1.15f,
             "Values above one make allocation more conservative.");
         StickRateLimit = cfg.Bind(adv, "05. Stick rate limit (1/s)", 1f,
             "Max stick movement per second.");

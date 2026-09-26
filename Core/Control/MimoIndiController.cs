@@ -26,6 +26,7 @@ internal sealed class MimoIndiController
     public float Condition { get; private set; }
     public float Residual { get; private set; }
     public float Confidence { get; private set; }
+    public int RawRank { get; private set; } = N;
     public int Rank { get; private set; } = N;
     public bool FaultSuspected { get; private set; }
     public bool Degraded => Rank < N || FaultSuspected;
@@ -66,7 +67,8 @@ internal sealed class MimoIndiController
     }
 
     public void Track(float pitch, float roll, float yaw, float q, float pRate, float r,
-        float pitchGain, float rollGain, float yawGain, float cutoff, float tau, int delayTicks, float dt)
+        float pitchGain, float rollGain, float yawGain, float cutoff,
+        float pitchTau, float rollTau, float yawTau, int delayTicks, float dt)
     {
         if (!_initialized)
         {
@@ -76,10 +78,11 @@ internal sealed class MimoIndiController
 
         float[] u = [pitch, roll, yaw];
         float[] y = [q, pRate, r];
+        float[] tau = [pitchTau, rollTau, yawTau];
         Configure(cutoff, dt);
         for (int i = 0; i < N; i++)
         {
-            AdvanceActuator(i, delayTicks, tau, dt);
+            AdvanceActuator(i, delayTicks, tau[i], dt);
             _lastInput[i] = _inputFilter[i].Step(_actuator[i]);
             _lastRate[i] = _rateFilter[i].Step(y[i]);
             _history[i].Push(u[i]);
@@ -92,7 +95,8 @@ internal sealed class MimoIndiController
         bool qControlled, bool pControlled, bool rControlled,
         float pitchGain, float rollGain, float yawGain,
         float pitchAuthority, float rollAuthority, float yawAuthority,
-        float rateLimit, int delayTicks, float cutoff, float tau, bool adapt, float margin, float dt,
+        float rateLimit, int delayTicks, float cutoff, float pitchTau, float rollTau, float yawTau,
+        bool adapt, float margin, float dt,
         out float pitch, out float roll, out float yaw)
     {
         if (!_initialized)
@@ -107,12 +111,13 @@ internal sealed class MimoIndiController
         bool[] available = [pitchAvailable, rollAvailable, yawAvailable];
         float[] applied = [pitchApplied, rollApplied, yawApplied];
         float[] authority = [pitchAuthority, rollAuthority, yawAuthority];
+        float[] tau = [pitchTau, rollTau, yawTau];
         float[] u0 = new float[N];
         float[] yf = new float[N];
 
         for (int i = 0; i < N; i++)
         {
-            AdvanceActuator(i, delayTicks, tau, dt);
+            AdvanceActuator(i, delayTicks, tau[i], dt);
             u0[i] = _inputFilter[i].Step(_actuator[i]);
             yf[i] = _rateFilter[i].Step(ControlMath.Finite(measured[i], _lastRate[i]));
         }
@@ -125,6 +130,9 @@ internal sealed class MimoIndiController
         {
             UpdateRank();
         }
+        // Overrides remove columns from the matrix actually available to allocation.  Keep RawRank as estimator
+        // telemetry, but use effective Rank for reduced-output supervision.
+        UpdateRank(available);
 
         float[] error = new float[N];
         float[] weight = new float[N];
@@ -452,9 +460,10 @@ internal sealed class MimoIndiController
         UpdateRank();
     }
 
-    private void UpdateRank()
+    private void UpdateRank(bool[] available = null)
     {
-        // Singular values are sqrt(eigenvalues(B*B^T)).  Jacobi sweeps are deterministic for this 3x3 case.
+        // Singular values are sqrt(eigenvalues(B*B^T)).  When availability is supplied, omitted actuator columns
+        // are excluded so supervision sees the authority that can actually be allocated this tick.
         float[,] a = new float[N, N];
         for (int i = 0; i < N; i++)
         {
@@ -462,7 +471,10 @@ internal sealed class MimoIndiController
             {
                 for (int k = 0; k < N; k++)
                 {
-                    a[i, j] += _b[i, k] * _b[j, k];
+                    if (available == null || available[k])
+                    {
+                        a[i, j] += _b[i, k] * _b[j, k];
+                    }
                 }
             }
         }
@@ -476,7 +488,12 @@ internal sealed class MimoIndiController
         float s2 = Mathf.Sqrt(Mathf.Max(a[2, 2], 0f));
         float max = Mathf.Max(s0, Mathf.Max(s1, s2));
         float threshold = Mathf.Max(0.04f * max, 1e-3f);
-        Rank = (s0 > threshold ? 1 : 0) + (s1 > threshold ? 1 : 0) + (s2 > threshold ? 1 : 0);
+        int rank = (s0 > threshold ? 1 : 0) + (s1 > threshold ? 1 : 0) + (s2 > threshold ? 1 : 0);
+        if (available == null)
+        {
+            RawRank = rank;
+        }
+        Rank = rank;
         float min = Mathf.Min(s0, Mathf.Min(s1, s2));
         Condition = max > 1e-6f ? min / max : 0f;
     }

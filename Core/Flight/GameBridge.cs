@@ -97,8 +97,8 @@ internal static class GameBridge
             m.MaxThrust = aircraft.GetMaxThrust(out float thrust) ? thrust : 0f;
 
             ControlsFilter filter = aircraft.GetControlsFilter();
-            m.IsHelicopter = filter is HeloControlsFilter ||
-                             (APData.LocalPilot != null && APData.LocalPilot.pilotType == Pilot.PilotType.Helo);
+            // disable for now
+            m.IsHelicopter = false;
 
             if (filter is HeloControlsFilter helo && helo.heloFlyByWire != null)
             {

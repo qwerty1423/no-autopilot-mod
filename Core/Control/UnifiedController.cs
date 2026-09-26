@@ -14,8 +14,8 @@ public struct ControllerTelemetry
     public float PEta, QEta, REta, EEta, NAlpha;
     public float PGain, QGain, RGain;
     public float MimoResidual, MimoCondition, MimoConfidence, RollFromYaw, YawFromRoll;
-    public int MimoRank;
-    public bool MimoFault, UpsetRecovery, NSaturated;
+    public int MimoRank, MimoRawRank;
+    public bool MimoFault, MimoAdapting, UpsetRecovery, NSaturated;
 }
 
 public sealed class UnifiedController(ControllerSettings settings, AircraftModel model)
@@ -96,7 +96,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
 
     public ControlOutput Step(FlightState s, AutopilotCommand cmd, AppliedInputs applied)
     {
-        return Model.IsHelicopter ? StepHelicopter(s, cmd, applied) : StepFixedWing(s, cmd, applied);
+        return StepFixedWing(s, cmd, applied);
     }
 
     private ControlOutput StepFixedWing(FlightState s, AutopilotCommand cmd, AppliedInputs applied)
@@ -176,10 +176,15 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
                     float climbLimit = cmd.MaxClimbRate;
                     float descentLimit = cmd.MaxDescentRate;
                     float err = cmd.Altitude - s.Altitude;
+                    // Project the altitude error forward by the aircraft's vertical momentum.  The old proportional
+                    // command only began braking at the target and could overshoot by several metres after a small
+                    // step.  Subtract only motion relative to route/feedforward intent.
+                    float relativeVs = s.VerticalSpeed - cmd.VerticalSpeedFeedForward;
+                    float captureErr = err - (c.AltitudeCaptureLead * relativeVs);
                     float aShape = thrustVert
                         ? 0.4f * Mathf.Max((Model.MaxThrust / Mathf.Max(Model.Mass, 1f)) - g, 1f)
                         : VerticalShapeAccel(nMax, nMin, cmd);
-                    vsDes = ControlMath.ShapedRate(err, c.AltitudeGain, aShape, 0f);
+                    vsDes = ControlMath.ShapedRate(captureErr, c.AltitudeGain, aShape, 0f);
                     vsDes += cmd.VerticalSpeedFeedForward;
                     vsDes = Mathf.Clamp(vsDes, -descentLimit, climbLimit);
                     haveVsDes = true;
@@ -259,7 +264,8 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
             {
                 if (!_vsIntFrozen || (VsInt * vsErr) < 0f)
                 {
-                    VsInt = Mathf.Clamp(VsInt + (0.25f * kvs * vsErr * dt), -0.3f * g, 0.3f * g);
+                    float iLimit = Mathf.Max(c.VerticalSpeedIntegralLimit, 0f);
+                    VsInt = Mathf.Clamp(VsInt + (c.VerticalSpeedIntegralGain * kvs * vsErr * dt), -iLimit, iLimit);
                 }
             }
             else
@@ -487,7 +493,10 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
 
         float cutoff = c.FilterCutoff;
         int delay = c.InputDelayTicks;
-        bool adapt = c.OnlineEstimation;
+        // Do not identify ground reactions, deep-upset aerodynamics, or near-static controls as actuator
+        // effectiveness.  Tracking/filter state continues while adaptation is frozen.
+        bool adapt = c.OnlineEstimation && !s.OnGround && s.RadarAltitude > 5f && s.V > 25f && !_upsetActive;
+        t.MimoAdapting = adapt;
 
         o.PitchActive = ControlMath.IsFinite(qCmd) && !applied.PitchOverride;
         o.RollActive = ControlMath.IsFinite(pCmd) && !applied.RollOverride;
@@ -707,7 +716,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
             if (!any)
             {
                 _mimoRates.Track(track.Pitch, track.Roll, track.Yaw, s.Q, s.P, s.R,
-                    gQ, gP, gR, c.CompensationCutoff, c.PitchLag, delay, dt);
+                    gQ, gP, gR, c.CompensationCutoff, c.PitchLag, c.RollLag, c.YawLag, delay, dt);
                 o.Pitch = track.Pitch;
                 o.Roll = track.Roll;
                 o.Yaw = track.Yaw;
@@ -724,7 +733,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
                     gQ, gP, gR,
                     c.PitchAuthority, c.RollAuthority, c.YawAuthority,
                     c.StickRateLimit, delay, c.CompensationCutoff,
-                    Mathf.Max(c.PitchLag, Mathf.Max(c.RollLag, c.YawLag)), adapt,
+                    c.PitchLag, c.RollLag, c.YawLag, adapt,
                     c.RateEffectivenessMargin, dt,
                     out float pitch, out float roll, out float yaw);
                 o.Pitch = pitch;
@@ -742,6 +751,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
             t.MimoCondition = _mimoRates.Condition;
             t.MimoConfidence = _mimoRates.Confidence;
             t.MimoRank = _mimoRates.Rank;
+            t.MimoRawRank = _mimoRates.RawRank;
             t.MimoFault = _mimoRates.FaultSuspected;
             t.RollFromYaw = _mimoRates.GetEffectiveness(1, 2);
             t.YawFromRoll = _mimoRates.GetEffectiveness(2, 1);
@@ -1172,7 +1182,8 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
 
         float cutoff = c.FilterCutoff;
         int delay = c.InputDelayTicks;
-        bool adapt = c.OnlineEstimation;
+        bool adapt = c.OnlineEstimation && !s.OnGround && s.RadarAltitude > 5f && s.V > 25f;
+        t.MimoAdapting = adapt;
         o.PitchActive = ControlMath.IsFinite(qCmd) && !applied.PitchOverride;
         o.RollActive = ControlMath.IsFinite(pCmd) && !applied.RollOverride;
         o.YawActive = ControlMath.IsFinite(rCmd) && !applied.YawOverride;

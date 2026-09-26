@@ -15,8 +15,11 @@ public static class UnifiedConfig
     public static ConfigEntry<FlightControllerType> ControllerType;
     public static ConfigEntry<float> ManeuverMaxG, ManeuverMinG, AltitudeGain, VerticalSpeedGain, CourseGain;
     public static ConfigEntry<float> SpeedGain, BankGain, LoadFactorGain, SideslipGain;
+    public static ConfigEntry<float> AltitudeCaptureLead, VerticalSpeedIntegralGain, VerticalSpeedIntegralLimit;
     public static ConfigEntry<bool> SpeedPriority, OnlineIdentification, MimoEnabled;
     public static ConfigEntry<float> EffectivenessMargin, StickRateLimit, YawAuthority, FilterCutoff;
+    public static ConfigEntry<float> CompensationGain, PitchLag, RollLag, YawLag, PitchAuthority, RollAuthority;
+    public static ConfigEntry<float> LoadFactorRateLimit, EnergyFeedForward;
     public static ConfigEntry<int> InputDelayTicks;
     public static ConfigEntry<bool> ShowWaypointAlts;
 
@@ -53,6 +56,28 @@ public static class UnifiedConfig
         YawAuthority = cfg.Bind(adv, "06. Yaw authority", 1f, "Maximum yaw input.");
         InputDelayTicks = cfg.Bind(adv, "07. Input delay (physics ticks)", 2,
             "Delay used to synchronize applied-input and sensor feedback.");
+        CompensationGain = cfg.Bind(adv, "08. INDI compensation gain", 1f,
+            "0..1. Strength of measured low-frequency inversion-error correction.");
+        PitchLag = cfg.Bind(adv, "09. Pitch response lag (s)", 0.12f,
+            "Assumed pitch stick-to-rate response time.");
+        RollLag = cfg.Bind(adv, "10. Roll response lag (s)", 0.12f,
+            "Assumed roll stick-to-rate response time.");
+        YawLag = cfg.Bind(adv, "11. Yaw response lag (s)", 0.2f,
+            "Assumed yaw stick-to-rate response time.");
+        PitchAuthority = cfg.Bind(adv, "12. Pitch authority", 1f, "Maximum absolute pitch input.");
+        RollAuthority = cfg.Bind(adv, "13. Roll authority", 1f, "Maximum absolute roll input.");
+        LoadFactorRateLimit = cfg.Bind(adv, "14. Load-factor command rate (g/s)", 4f,
+            "Rate limit used between vertical guidance and the pitch-rate loop.");
+        EnergyFeedForward = cfg.Bind(adv, "15. Climb power feedforward", 0.8f,
+            "0..1. Anticipates the energy required by commanded climbs; does not affect pitch allocation.");
+
+        const string capture = "INDI - Altitude capture";
+        AltitudeCaptureLead = cfg.Bind(capture, "01. Capture look-ahead (s)", 1.2f,
+            "Projects current vertical speed forward. Increase to reduce altitude overshoot.");
+        VerticalSpeedIntegralGain = cfg.Bind(capture, "02. Vertical-speed integral gain", 0.1f,
+            "Removes persistent vertical-speed error. Excessive values increase overshoot.");
+        VerticalSpeedIntegralLimit = cfg.Bind(capture, "03. Vertical-speed integral limit (m/s^2)", 1.5f,
+            "Maximum acceleration correction retained by the vertical-speed integrator.");
 
         ShowWaypointAlts = cfg.Bind("Waypoints", "01. Show waypoint altitudes", false,
             "Draw each waypoint's altitude under its map node.");
@@ -79,8 +104,19 @@ public static class UnifiedConfig
         s.CompensationCutoff = FilterCutoff.Value;
         s.RateEffectivenessMargin = EffectivenessMargin.Value;
         s.StickRateLimit = StickRateLimit.Value;
-        s.YawAuthority = YawAuthority.Value;
-        s.InputDelayTicks = InputDelayTicks.Value;
+        s.YawAuthority = Mathf.Clamp01(YawAuthority.Value);
+        s.InputDelayTicks = Mathf.Max(InputDelayTicks.Value, 0);
+        s.CompensationGain = Mathf.Clamp01(CompensationGain.Value);
+        s.PitchLag = Mathf.Max(PitchLag.Value, 0.01f);
+        s.RollLag = Mathf.Max(RollLag.Value, 0.01f);
+        s.YawLag = Mathf.Max(YawLag.Value, 0.01f);
+        s.PitchAuthority = Mathf.Clamp01(PitchAuthority.Value);
+        s.RollAuthority = Mathf.Clamp01(RollAuthority.Value);
+        s.LoadFactorRateLimit = Mathf.Max(LoadFactorRateLimit.Value, 0.1f);
+        s.EnergyFeedForward = Mathf.Clamp01(EnergyFeedForward.Value);
+        s.AltitudeCaptureLead = Mathf.Max(AltitudeCaptureLead.Value, 0f);
+        s.VerticalSpeedIntegralGain = Mathf.Max(VerticalSpeedIntegralGain.Value, 0f);
+        s.VerticalSpeedIntegralLimit = Mathf.Max(VerticalSpeedIntegralLimit.Value, 0f);
         if (Plugin.ThrottleMinLimit != null)
         {
             s.ThrottleMin = Plugin.ThrottleMinLimit.Value;

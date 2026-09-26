@@ -103,8 +103,16 @@ public sealed class ControllerSettings
     /// <summary>Altitude to vertical speed gain (1/s).</summary>
     public float AltitudeGain = 0.3f;
 
+    /// <summary>
+    /// Altitude-capture look-ahead (s).
+    /// </summary>
+    public float AltitudeCaptureLead = 1.2f;
+
     /// <summary>Vertical speed to vertical acceleration gain (1/s).</summary>
     public float VerticalSpeedGain = 1.0f;
+
+    /// <summary>Vertical-speed integral gain multiplier and acceleration limit.</summary>
+    public float VerticalSpeedIntegralGain = 0.1f, VerticalSpeedIntegralLimit = 1f;
 
     /// <summary>Vertical acceleration used to shape altitude captures (m/s^2).</summary>
     public float VerticalAccelShape = 4f;

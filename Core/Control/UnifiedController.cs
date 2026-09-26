@@ -495,7 +495,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
         int delay = c.InputDelayTicks;
         // Do not identify ground reactions, deep-upset aerodynamics, or near-static controls as actuator
         // effectiveness.  Tracking/filter state continues while adaptation is frozen.
-        bool adapt = c.OnlineEstimation && !s.OnGround && s.RadarAltitude > 5f && s.V > 25f && !_upsetActive;
+        bool adapt = c.OnlineEstimation && !s.OnGround && s.V > 25f && !_upsetActive;
         t.MimoAdapting = adapt;
 
         o.PitchActive = ControlMath.IsFinite(qCmd) && !applied.PitchOverride;
@@ -759,7 +759,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
             return;
         }
 
-        bool learn = !s.OnGround && s.V > 40f && s.RadarAltitude > 5f;
+        bool learn = !s.OnGround && s.V > 40f;
         float pitchMin = Model.IsHelicopter ? 0.15f : 0.5f;
         o.Pitch = RateChannel(_qAxis, _qId, ref _qWasActive, ref _qCmdPrev, o.PitchActive, s.Q, qCmd, track.Pitch,
             c.PitchRateBandwidth, gQ, c.PitchLag, pitchMin, c.PitchAuthority, cutoff, delay, adapt, learn, dt,
@@ -1182,7 +1182,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
 
         float cutoff = c.FilterCutoff;
         int delay = c.InputDelayTicks;
-        bool adapt = c.OnlineEstimation && !s.OnGround && s.RadarAltitude > 5f && s.V > 25f;
+        bool adapt = c.OnlineEstimation && !s.OnGround && s.V > 25f;
         t.MimoAdapting = adapt;
         o.PitchActive = ControlMath.IsFinite(qCmd) && !applied.PitchOverride;
         o.RollActive = ControlMath.IsFinite(pCmd) && !applied.RollOverride;

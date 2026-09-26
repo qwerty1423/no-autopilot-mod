@@ -71,10 +71,13 @@ public sealed class ControllerSettings
     /// <summary>Maximum stick movement per second (smoothness); 0 = unlimited.</summary>
     public float StickRateLimit = 4f;
 
-    /// <summary>Maximum rate of change of the load factor command (g/s) and of the vertical speed command.</summary>
+    /// <summary>Maximum rate of increase of the load-factor command (g/s).</summary>
     public float LoadFactorRateLimit = 4f;
 
-    // ---------------- attitude / load factor -------------------------------------------------------------
+    /// <summary>Maximum load-factor reduction rate (g/s). Faster unloading prevents lift carry-through on roll-out.</summary>
+    public float LoadFactorUnloadRateLimit = 12f;
+
+    // attitude / load factor 
     /// <summary>Bank (lift vector roll) loop gain (1/s).</summary>
     public float BankGain = 2.2f;
 

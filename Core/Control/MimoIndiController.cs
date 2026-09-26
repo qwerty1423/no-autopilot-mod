@@ -471,7 +471,7 @@ internal sealed class MimoIndiController
             {
                 for (int k = 0; k < N; k++)
                 {
-                    if (available == null || available[k])
+                    if (available?[k] != false)
                     {
                         a[i, j] += _b[i, k] * _b[j, k];
                     }

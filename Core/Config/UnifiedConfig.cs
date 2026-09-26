@@ -19,7 +19,7 @@ public static class UnifiedConfig
     public static ConfigEntry<bool> SpeedPriority, OnlineIdentification, MimoEnabled;
     public static ConfigEntry<float> EffectivenessMargin, StickRateLimit, YawAuthority, FilterCutoff;
     public static ConfigEntry<float> CompensationGain, PitchLag, RollLag, YawLag, PitchAuthority, RollAuthority;
-    public static ConfigEntry<float> LoadFactorRateLimit, EnergyFeedForward;
+    public static ConfigEntry<float> LoadFactorRateLimit, LoadFactorUnloadRateLimit, EnergyFeedForward;
     public static ConfigEntry<int> InputDelayTicks;
     public static ConfigEntry<bool> ShowWaypointAlts;
 
@@ -47,7 +47,7 @@ public static class UnifiedConfig
             "Keep enabled.");
         OnlineIdentification = cfg.Bind(adv, "02. Adapt effectiveness online", true,
             "Keep enabled.");
-        FilterCutoff = cfg.Bind(adv, "03. Synchronized filter cutoff (rad/s)", 1.2f,
+        FilterCutoff = cfg.Bind(adv, "03. Synchronized filter cutoff (rad/s)", 12f,
             "Applied equally to measured rates and delayed input feedback.");
         EffectivenessMargin = cfg.Bind(adv, "04. Effectiveness margin", 1.15f,
             "Values above one make allocation more conservative.");
@@ -66,9 +66,11 @@ public static class UnifiedConfig
             "Assumed yaw stick-to-rate response time.");
         PitchAuthority = cfg.Bind(adv, "12. Pitch authority", 1f, "Maximum absolute pitch input.");
         RollAuthority = cfg.Bind(adv, "13. Roll authority", 1f, "Maximum absolute roll input.");
-        LoadFactorRateLimit = cfg.Bind(adv, "14. Load-factor command rate (g/s)", 4f,
-            "Rate limit used between vertical guidance and the pitch-rate loop.");
-        EnergyFeedForward = cfg.Bind(adv, "15. Climb power feedforward", 0.8f,
+        LoadFactorRateLimit = cfg.Bind(adv, "14. Load-factor pull rate (g/s)", 12f,
+            "Maximum increase of commanded load factor.");
+        LoadFactorUnloadRateLimit = cfg.Bind(adv, "15. Load-factor unload rate (g/s)", 12f,
+            "Maximum reduction of commanded load factor.");
+        EnergyFeedForward = cfg.Bind(adv, "16. Climb power feedforward", 0.8f,
             "0..1. Anticipates the energy required by commanded climbs; does not affect pitch allocation.");
 
         const string capture = "INDI - Altitude capture";
@@ -113,6 +115,7 @@ public static class UnifiedConfig
         s.PitchAuthority = Mathf.Clamp01(PitchAuthority.Value);
         s.RollAuthority = Mathf.Clamp01(RollAuthority.Value);
         s.LoadFactorRateLimit = Mathf.Max(LoadFactorRateLimit.Value, 0.1f);
+        s.LoadFactorUnloadRateLimit = Mathf.Max(LoadFactorUnloadRateLimit.Value, s.LoadFactorRateLimit);
         s.EnergyFeedForward = Mathf.Clamp01(EnergyFeedForward.Value);
         s.AltitudeCaptureLead = Mathf.Max(AltitudeCaptureLead.Value, 0f);
         s.VerticalSpeedIntegralGain = Mathf.Max(VerticalSpeedIntegralGain.Value, 0f);

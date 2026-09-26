@@ -176,9 +176,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
                     float climbLimit = cmd.MaxClimbRate;
                     float descentLimit = cmd.MaxDescentRate;
                     float err = cmd.Altitude - s.Altitude;
-                    // Project the altitude error forward by the aircraft's vertical momentum.  The old proportional
-                    // command only began braking at the target and could overshoot by several metres after a small
-                    // step.  Subtract only motion relative to route/feedforward intent.
+
                     float relativeVs = s.VerticalSpeed - cmd.VerticalSpeedFeedForward;
                     float captureErr = err - (c.AltitudeCaptureLead * relativeVs);
                     float aShape = thrustVert
@@ -418,10 +416,11 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
             t.NSaturated = nDes >= nMax - 1e-3f || nDes <= nMin + 1e-3f;
             _vsIntFrozen = t.NSaturated;
 
-            float nRate = c.LoadFactorRateLimit * (cmd.AggressiveRoll ? 2.5f : 1f);
+            float nRateUp = c.LoadFactorRateLimit * (cmd.AggressiveRoll ? 2.5f : 1f);
+            float nRateDown = c.LoadFactorUnloadRateLimit * (cmd.AggressiveRoll ? 2.5f : 1f);
             nDes = _nCmdPrevValid
-                ? Mathf.Clamp(nDes, _nCmdPrev - (nRate * dt), _nCmdPrev + (nRate * dt))
-                : Mathf.Clamp(nDes, s.NLift - (nRate * 0.2f), s.NLift + (nRate * 0.2f));
+                ? Mathf.Clamp(nDes, _nCmdPrev - (nRateDown * dt), _nCmdPrev + (nRateUp * dt))
+                : Mathf.Clamp(nDes, s.NLift - (nRateDown * 0.2f), s.NLift + (nRateUp * 0.2f));
 
             _nCmdPrev = nDes;
             _nCmdPrevValid = true;
@@ -429,7 +428,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
 
             float kn = c.LoadFactorGain;
             float nuN = kn * (nDes - s.NLift);
-            float qPathDes = (nDes - (Mathf.Cos(s.Gamma) * Mathf.Cos(s.Mu))) * ControlMath.G / v;
+            float qPathDes = ((nDes * Mathf.Cos(s.Mu)) - Mathf.Cos(s.Gamma)) * ControlMath.G / v;
             float qPathReference = Mathf.Lerp(s.QPath, qPathDes, 0.5f);
             qCmd = qPathReference + (nuN / Mathf.Max(_nAlpha, 1f));
         }

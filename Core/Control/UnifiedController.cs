@@ -57,7 +57,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
     private bool _nAlphaInit;
     private bool _upsetActive;
 
-    private float _heloSpeedHold = float.NaN;
+    // private float _heloSpeedHold = float.NaN;
 
     private float _thrSatHighTime, _thrSatLowTime, _energyRateMeasured;
     private int _energyLimited;
@@ -90,7 +90,7 @@ public sealed class UnifiedController(ControllerSettings settings, AircraftModel
         StallAssistActive = false;
         _upsetActive = false;
         _hoverThrottle = float.NaN;
-        _heloSpeedHold = float.NaN;
+        // _heloSpeedHold = float.NaN;
         Telemetry = default;
     }
 

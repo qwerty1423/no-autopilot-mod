@@ -65,7 +65,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> ShowExtraInfo;
     public static ConfigEntry<bool> ShowFuelOverlay, ShowAPOverlay;
     public static ConfigEntry<bool> ShowGCASOff, ShowGCASChevronOff, ShowOverride, ShowPlaceholders;
-    public enum GCASChevronPlacementEnum { HUD, HMD };
+    public enum GCASChevronPlacementEnum { Hud = 0, Hmd = 1 };
     public static ConfigEntry<GCASChevronPlacementEnum> GCASChevronPlacement;
     public static ConfigEntry<bool> AltShowUnit;
     public static ConfigEntry<bool> DistShowUnit;
@@ -259,7 +259,7 @@ public class Plugin : BaseUnityPlugin
         ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show GCAS- on HUD");
         ShowGCASChevronOff = Config.Bind("Visuals", "Show GCAS chevron while disabled", true,
             "Show chevron while GCAS disabled");
-        GCASChevronPlacement = Config.Bind("Visuals", "GCAS chevron placement", GCASChevronPlacementEnum.HUD,
+        GCASChevronPlacement = Config.Bind("Visuals", "GCAS chevron placement", GCASChevronPlacementEnum.Hud,
             "GCAS chevron placement (respawn to apply changes to this setting)");
         ShowOverride = Config.Bind("Visuals", "Show Override Delay", true, "Show Override on HUD");
         ShowPlaceholders = Config.Bind("Visuals", "Show Overlay Placeholders", false,
@@ -494,8 +494,6 @@ public class Plugin : BaseUnityPlugin
         MaxRollRate = Config.Bind("Limits", "6. Max Roll Rate", 360f,
             "Maximum commanded roll rate in deg/s");
 
-        UnifiedConfig.Bind(Config);
-
         // PID Loops
         const string pidSect = "PID (Warning: Improper values may cause instability.)";
 
@@ -590,8 +588,9 @@ public class Plugin : BaseUnityPlugin
         Rand_Acc_Outer = Config.Bind("Settings - Random", "22. Accel Tolerance Outer", 0.5f,
             "Wake Up (m/s² acceleration)");
 
-        ConfigBackup.BindBackupSettings(Config);
+        UnifiedConfig.Bind(Config);
 
+        ConfigBackup.BindBackupSettings(Config);
         ConfigBackup.WriteSchemaVersion(Config);
 
         ActivePid.CacheGlobalDefaults();

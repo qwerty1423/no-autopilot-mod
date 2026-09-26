@@ -24,9 +24,9 @@ public static class UnifiedConfig
 
     public static void Bind(ConfigFile cfg)
     {
-        const string main = "INDI";
-        ControllerType = cfg.Bind(main, "01. Controller", FlightControllerType.Indi,
-            "INDI: Incremental Nonlinear Dynamic Inversion, PID: Proportional Integral Derivative, something like that. INDI is better for strange or damaged aircraft, but may be worse for seaskimming currently.");
+        const string main = "INDI (experimental)";
+        ControllerType = cfg.Bind(main, "01. Controller", FlightControllerType.Pid,
+            "INDI: Incremental Nonlinear Dynamic Inversion, PID: Proportional Integral Derivative, something like that. INDI is better for strange aircraft, damaged aircraft, and aircraft without pid profiles, but is quite unreliable currently.");
         ManeuverMaxG = cfg.Bind(main, "02. Maximum commanded load factor", 5f,
             "maximum G limit");
         ManeuverMinG = cfg.Bind(main, "03. Minimum commanded load factor", -1.5f,

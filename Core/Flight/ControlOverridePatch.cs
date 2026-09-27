@@ -180,15 +180,17 @@ internal static class ControlOverridePatch
             Vector3 localAngVel = APData.PlayerTransform.InverseTransformDirection(APData.PlayerRB.angularVelocity);
             float rollRate = localAngVel.z * Mathf.Rad2Deg;
             Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
+            Vector3 airVel = APData.PlayerRB.velocity - APData.LocalAircraft.GetWindVelocity();
+            Vector3 localVel = APData.PlayerTransform.InverseTransformDirection(airVel);
 
-            Vector3 localVel = APData.PlayerTransform.InverseTransformDirection(APData.PlayerRB.velocity);
             float sideslip = Mathf.Atan2(localVel.x, localVel.z) * Mathf.Rad2Deg;
 
             float dt = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
             float noiseT = Time.time * Plugin.RandomSpeed.Value;
 
             float speed3d = APData.PlayerRB.velocity.magnitude;
-            float currentQ = GainScheduler.DynamicPressure(speed3d, APData.CurrentAlt);
+            float airSpeed3d = airVel.magnitude;
+            float currentQ = GainScheduler.DynamicPressure(airSpeed3d, APData.CurrentAlt);
 
             if (Plugin.StepTestKey.Value.IsDown())
             {
@@ -840,7 +842,7 @@ internal static class ControlOverridePatch
                             PIDLogger.Log(PIDLogger.StepTarget.Crs, desiredTurnRate, curCrs);
 
                             const float gravity = 9.81f;
-                            float velocity = Mathf.Max(speed3d, 1f);
+                            float velocity = Mathf.Max(airSpeed3d, 1f);
                             float turnRateRad = desiredTurnRate * Mathf.Deg2Rad;
                             float bankReq = Mathf.Atan(velocity * turnRateRad / gravity) * Mathf.Rad2Deg;
 
@@ -1054,7 +1056,7 @@ internal static class ControlOverridePatch
 
                             targetVS = PIDLogger.GetSetpoint(PIDLogger.StepTarget.VS, targetVS, currentVS);
 
-                            float airspeed = Mathf.Max(flatVel.magnitude, 1f);
+                            float airspeed = Mathf.Max(airSpeed3d, 1f);
                             float vsRatio = Mathf.Clamp(targetVS / airspeed, -1f, 1f);
                             float vsFf = Mathf.Asin(vsRatio) * Mathf.Rad2Deg;
 

@@ -1,6 +1,6 @@
 # NOAutopilot
 
-This project is an unofficial fan modification not affiliated with, sponsored by, or endorsed by Shockfront Studios. All original Nuclear Option assets and code are Copyright © 2026 Shockfront Studios. Shockfront Studios and Nuclear Option are trademarks of Shockfront Studios. All other trademarks and original mod content belong to their respective owners.
+This project is an unofficial community modification and is not affiliated with, sponsored by, or endorsed by Shockfront Studios Pty Ltd. Original Nuclear Option assets, vehicle designs, audio, and code are Copyright (c) 2026 Shockfront Studios Pty Ltd. All rights reserved. Nuclear Option and Shockfront Studios are trademarks or registered trademarks of Shockfront Studios Pty Ltd. Original mod content and all other trademarks belong to their respective owners.
 
 ---
 

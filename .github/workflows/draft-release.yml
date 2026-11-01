@@ -56,7 +56,8 @@ jobs:
         with:
           run-id: ${{ steps.run.outputs.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          name: package
+          pattern: com.qwerty1423.NOAutopilot-*.7z
+          merge-multiple: true
           path: dist
 
       - name: Download build metadata
@@ -65,7 +66,8 @@ jobs:
         with:
           run-id: ${{ steps.run.outputs.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          name: build-info
+          pattern: build-info*
+          merge-multiple: true
           path: dist
 
       - name: Read build metadata

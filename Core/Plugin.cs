@@ -116,6 +116,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<KeyboardShortcut> UpKey, DownKey, BigUpKey, BigDownKey;
     public static ConfigEntry<KeyboardShortcut> ClimbRateUpKey, ClimbRateDownKey;
     public static ConfigEntry<KeyboardShortcut> BankLeftKey, BankRightKey;
+    public static ConfigEntry<KeyboardShortcut> TrackHoldKey, NavHoldKey;
     public static ConfigEntry<KeyboardShortcut> SpeedHoldKey, SpeedUpKey, SpeedDownKey;
     public static ConfigEntry<KeyboardShortcut> ToggleMachKey, ToggleABKey;
 
@@ -125,6 +126,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<string> UpRW, DownRW, BigUpRW, BigDownRW;
     public static ConfigEntry<string> ClimbRateUpRW, ClimbRateDownRW;
     public static ConfigEntry<string> BankLeftRW, BankRightRW;
+    public static ConfigEntry<string> TrackHoldRW, NavHoldRW;
     public static ConfigEntry<string> SpeedHoldRW, SpeedUpRW, SpeedDownRW;
     public static ConfigEntry<string> ToggleMachRW, ToggleABRW;
 
@@ -183,7 +185,9 @@ public class Plugin : BaseUnityPlugin
         "<b>Target Alt Small:</b> Up / Down Arrow | Small adjustment\n" +
         "<b>Target Alt Large:</b> Left / Right Arrow | Large adjustment\n" +
         "<b>Max Climb Rate:</b> PgUp / PgDn | Limit vertical speed\n" +
-        "<b>Bank/Track L/R:</b> [ and ] | Adjust roll or track\n\n" +
+        "<b>Bank/Track L/R:</b> [ and ] | Adjust roll or track\n" +
+        "<b>Track Hold:</b> LShift + { | Hold current track\n" +
+        "<b>Nav Hold:</b> LShift + } | Toggle nav mode\n\n" +
         "<b>Toggle Speed Hold:</b> ; (Semicolon) | Matches current speed\n" +
         "<b>Speed Up / Down:</b> LShift / LCtrl | Adjust target speed\n" +
         "<b>Mach/TAS Hold:</b> Home | Switch between Mach/TAS\n" +
@@ -392,6 +396,10 @@ public class Plugin : BaseUnityPlugin
             new KeyboardShortcut(KeyCode.Equals, KeyCode.LeftControl), "Turn autoland on/off");
         ClearKey = Config.Bind("Controls", "6. clear roll/nav/trk/roll/alt/roll", new KeyboardShortcut(KeyCode.Quote),
             "every press will clear/reset first thing it sees isn't clear from left to right");
+        TrackHoldKey = Config.Bind("Controls", "7. Track Hold Key", new KeyboardShortcut(KeyCode.LeftBracket, KeyCode.LeftShift),
+            "Hold current track (LShift + [)");
+        NavHoldKey = Config.Bind("Controls", "8. Nav Hold Key", new KeyboardShortcut(KeyCode.RightBracket, KeyCode.LeftShift),
+            "Toggle nav mode (LShift + ])");
         UpKey = Config.Bind("Controls - Altitude", "1. Altitude Up (Small)", new KeyboardShortcut(KeyCode.UpArrow),
             "small increase");
         DownKey = Config.Bind("Controls - Altitude", "2. Altitude Down (Small)",
@@ -432,6 +440,10 @@ public class Plugin : BaseUnityPlugin
             RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5.1 Toggle ALS", "Turn autoland on/off");
         ClearRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear roll/nav/trk/roll/alt/roll",
             "every use will clear/reset first thing it sees isn't clear from left to right");
+        TrackHoldRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "7. Track Hold",
+            "Hold current track (LShift + [)");
+        NavHoldRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "8. Nav Hold",
+            "Toggle nav mode (LShift + ])");
         UpRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "1. Altitude Up (Small)",
             "small increase");
         DownRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "2. Altitude Down (Small)",
@@ -723,6 +735,40 @@ public class Plugin : BaseUnityPlugin
                 else if (!KeepSetAltKey.Value)
                 {
                     APData.TargetAlt = APData.CurrentAlt;
+                }
+
+                SyncMenuValues();
+            }
+
+            if (InputHelper.IsDown(TrackHoldRW) || TrackHoldKey.Value.IsDown())
+            {
+                bool wasNav = APData.NavEnabled;
+                APData.NavEnabled = false;
+
+                if (APData.TargetTrack >= 0f && !wasNav)
+                {
+                    APData.TargetTrack = -1f;
+                    APData.TargetRoll = 0f;
+                }
+                else if (APData.PlayerRB?.velocity.sqrMagnitude > 1f)
+                {
+                    Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
+                    APData.TargetTrack = Quaternion.LookRotation(flatVel).eulerAngles.y;
+                    if (APData.TargetRoll == -999f || APData.TargetRoll == 0f)
+                    {
+                        APData.TargetRoll = DefaultTrkRollLimit.Value;
+                    }
+                }
+
+                SyncMenuValues();
+            }
+
+            if (InputHelper.IsDown(NavHoldRW) || NavHoldKey.Value.IsDown())
+            {
+                APData.NavEnabled = !APData.NavEnabled;
+                if (APData.NavEnabled && (APData.TargetRoll == -999f || APData.TargetRoll == 0f))
+                {
+                    APData.TargetRoll = DefaultTrkRollLimit.Value;
                 }
 
                 SyncMenuValues();

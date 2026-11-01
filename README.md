@@ -169,6 +169,8 @@ A more up to date version of the table below is included in one of the tooltips 
 | Target Alt Large Adjustment | `Left` / `Right` Arrow | Large adjustments (100m default)             |
 | Max Climb Rate +/-          | `PageUp` / `PageDown`  | Limit vertical speed                         |
 | Bank Left/Right             | `[` and `]`            | Adjust roll angle                            |
+| Track Hold                  | `Shift + {`            | Hold current track                           |
+| Nav Hold                    | `Shift + }`            | Toggle nav mode                              |
 | C Trk/R Roll/C Alt/C Roll   | `'` (Quote)            | clear/reset in that order, one per keystroke |
 | Toggle GCAS                 | `\` (Backslash)        | added just in case                           |
 | Toggle autothrottle         | `;`                    | will write current speed to ui/delete it     |

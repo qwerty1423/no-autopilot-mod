@@ -907,9 +907,15 @@ public class Plugin : BaseUnityPlugin
             if (InputHelper.IsDown(ToggleFBWRW) || ToggleFBWKey.Value.IsDown())
             {
                 APData.NextMultiplayerCheck = 0f;
+                bool wasDisabled = APData.FBWDisabled;
                 APData.FBWDisabled = !IsMultiplayer() && !APData.FBWDisabled;
 
                 UpdateFBWState();
+
+                if (APData.FBWDisabled != wasDisabled)
+                {
+                    AnnounceFBWState(APData.FBWDisabled);
+                }
             }
 
             // no need because plane respawns and the toggle above exists
@@ -1966,6 +1972,24 @@ public class Plugin : BaseUnityPlugin
         {
             Logger.LogError($"[UpdateFBWState] Error: {ex.Message}");
             IsBroken = true;
+        }
+    }
+
+    private static void AnnounceFBWState(bool fbwDisabled)
+    {
+        try
+        {
+            AircraftActionsReport report = SceneSingleton<AircraftActionsReport>.i;
+            if (report == null)
+            {
+                return;
+            }
+
+            report.ReportText(fbwDisabled ? "FBW <b>Disabled</b>" : "FBW <b>Enabled</b>", 3f);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning($"[AnnounceFBWState] Error: {ex.Message}");
         }
     }
 

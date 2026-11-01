@@ -22,7 +22,8 @@ public static class PIDLogger
         Yaw = 6,
         Trk = 7,
         Spd = 8,
-        GCAS = 9
+        GCAS = 9,
+        LvlChg = 10
     }
 
     public static bool IsTestActive { get; private set; }

@@ -145,8 +145,7 @@ jobs:
           files: dist/com.qwerty1423.NOAutopilot-*.7z
           append_body: true
           body: |
-            **Mod version:** `${{ steps.pkg.outputs.version }}`
-            **Nuclear Option:** `${{ steps.info.outputs.game-version }}` (build `${{ steps.info.outputs.game-build }}`)
+            **Nuclear Option version:** `${{ steps.info.outputs.game-version }}` (build `${{ steps.info.outputs.game-build }}`)
             **Build commit:** `${{ steps.run.outputs.head_sha }}` on `${{ steps.run.outputs.head_branch }}`
             **Build run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.run.outputs.id }}
 

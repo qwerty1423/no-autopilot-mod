@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+### Added
+
+- HMD announcements
+- level change
+- track and nav hold binds
+
+### Changed
+
+- renamed course to track, this will probably break mods.
+
+### Fixed
+
+- autoland taxi doesn't spin around on servers anymore and will work properly
+- null checks
+
 ## [5.6.0]
 
 ### Added

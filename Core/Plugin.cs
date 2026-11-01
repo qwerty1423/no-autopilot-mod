@@ -135,7 +135,11 @@ public class Plugin : BaseUnityPlugin
 
     // Limits
     public static ConfigEntry<float> DefaultMaxClimbRate, Conf_VS_MaxAngle, DefaultTrkRollLimit;
-    public static ConfigEntry<float> LvlChgCaptureDistance;
+    public static ConfigEntry<float> LvlChgCaptureArmDistance;
+    public static ConfigEntry<float> LvlChgVsAccelLimit;
+    public static ConfigEntry<float> ConfLvlChgCaptureDecelG;
+    public static ConfigEntry<float> ConfLvlChgHandoffDistance;
+    public static ConfigEntry<float> ConfLvlChgHandoffVS;
     public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, MaxRollRate;
 
     // pid
@@ -505,8 +509,10 @@ public class Plugin : BaseUnityPlugin
         Conf_VS_MaxAngle = Config.Bind("Limits", "2. Max Pitch Angle", 85.0f, "angle from horizon limit");
         DefaultTrkRollLimit = Config.Bind("Limits", "3. Default track roll limit", 10.0f,
             "default roll limit when turning in track/nav mode");
-        LvlChgCaptureDistance = Config.Bind("Limits", "7. LVL CHG Capture Distance", 100f,
-            "Distance from target altitude to hand back to altitude hold");
+        LvlChgCaptureArmDistance = Config.Bind("Limits", "7. LVL CHG Capture Arm Distance", 100f,
+            "Minimum distance from target altitude to begin LVL CHG capture");
+        LvlChgVsAccelLimit = Config.Bind("Limits", "8. LVL CHG VS Accel Limit", 2.0f,
+            "Maximum rate of change of the LVL CHG target vertical speed");
         ThrottleMinLimit = Config.Bind("Limits", "4. Safe Min Throttle", 0.01f,
             "Minimum throttle when limiter is active (prevents Airbrake)");
         ThrottleMaxLimit = Config.Bind("Limits", "5. Safe Max Throttle", 0.89f,
@@ -553,6 +559,14 @@ public class Plugin : BaseUnityPlugin
 
         ConfPidLvlChg = PIDTuningBinder.Bind(Config, pidSect, "11. LVL CHG Speed > VS",
             new PIDTuning(), "Speed Error > Target Vertical Speed");
+
+        const string lvlChgSect = "LVL CHG Capture";
+        ConfLvlChgCaptureDecelG = Config.Bind(lvlChgSect, "01. Capture Decel (g)", 0.05f,
+            "LVL CHG capture flight-path deceleration");
+        ConfLvlChgHandoffDistance = Config.Bind(lvlChgSect, "02. Handoff Distance (m)", 2f,
+            "Altitude error at which capture hands off to altitude hold");
+        ConfLvlChgHandoffVS = Config.Bind(lvlChgSect, "03. Handoff Vertical Speed (m/s)", 0.5f,
+            "Vertical speed at which capture hands off to altitude hold");
 
         const string schedSect = "PID Gain Scheduling (much basic)";
         SchedPidVs = GainScheduleBinder.Bind(Config, schedSect, "01. VS > Pitch Schedule",
@@ -797,7 +811,7 @@ public class Plugin : BaseUnityPlugin
                 float altError = Mathf.Abs(APData.TargetAlt - APData.CurrentAlt);
                 bool ready = APData.Enabled && APData.TargetAlt > 0f && APData.TargetSpeed >= 0f &&
                              !APData.GCASActive && !APData.ALSActive &&
-                             altError > LvlChgCaptureDistance.Value;
+                             altError > LvlChgCaptureArmDistance.Value;
 
                 AircraftActionsReport report = SceneSingleton<AircraftActionsReport>.i;
 
@@ -817,7 +831,7 @@ public class Plugin : BaseUnityPlugin
                     if (report != null)
                     {
                         string message = APData.TargetAlt > 0f && APData.TargetSpeed >= 0f &&
-                                         altError <= LvlChgCaptureDistance.Value
+                                         altError <= LvlChgCaptureArmDistance.Value
                             ? "LC Altitude Reached"
                             : "LC: Needs Altitude and Speed Target";
                         report.ReportText(message, 3f);

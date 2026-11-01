@@ -29,6 +29,7 @@ internal static class ControlOverridePatch
     private static readonly PIDController PidLvlChg = new();
     private static bool s_wasEnabled;
     private static bool s_wasLvlChg;
+    private static bool s_lvlChgCapture;
     private static float s_pitchSleepUntil;
     private static float s_rollSleepUntil;
     private static float s_spdSleepUntil;
@@ -91,6 +92,7 @@ internal static class ControlOverridePatch
 
         s_wasEnabled = false;
         s_wasLvlChg = false;
+        s_lvlChgCapture = false;
         s_pitchSleepUntil = 0f;
         s_rollSleepUntil = 0f;
         s_spdSleepUntil = 0f;
@@ -609,19 +611,6 @@ internal static class ControlOverridePatch
             bool lvlChgActive = APData.LvlChgEnabled && APData.Enabled && !APData.GCASActive && !APData.ALSActive &&
                                 APData.LocalAircraft != null && APData.TargetAlt > 0f && APData.TargetSpeed >= 0f;
 
-            if (lvlChgActive &&
-                Mathf.Abs(APData.TargetAlt - APData.CurrentAlt) <= Plugin.LvlChgCaptureDistance.Value)
-            {
-                APData.LvlChgEnabled = false;
-                lvlChgActive = false;
-
-                AircraftActionsReport report = SceneSingleton<AircraftActionsReport>.i;
-                if (report != null)
-                {
-                    report.ReportText("LC Altitude Reached", 2f);
-                }
-            }
-
             if (APData.LvlChgEnabled && !lvlChgActive)
             {
                 APData.LvlChgEnabled = false;
@@ -629,9 +618,13 @@ internal static class ControlOverridePatch
 
             if (lvlChgActive != s_wasLvlChg)
             {
-                PidLvlChg.Reset();
-                PidAlt.Reset();
-                PidSpd.Reset();
+                if (lvlChgActive)
+                {
+                    PidLvlChg.Reset();
+                    PidSpd.Reset();
+                }
+
+                s_lvlChgCapture = false;
                 s_wasLvlChg = lvlChgActive;
             }
 
@@ -651,9 +644,22 @@ internal static class ControlOverridePatch
             // throttle control
             if (lvlChgActive)
             {
-                ThrottleOutput = APData.TargetAlt > APData.CurrentAlt
+                float fixedThrottle = APData.TargetAlt > APData.CurrentAlt
                     ? (APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value)
                     : (APData.AllowExtremeThrottle ? 0f : Plugin.ThrottleMinLimit.Value);
+
+                if (s_lvlChgCapture && lvlChgTargetSpeedMS >= 0f)
+                {
+                    float speedError = lvlChgTargetSpeedMS - speed3d;
+                    if (speedError > 0.5f)
+                    {
+                        float floor = Mathf.Clamp01(Plugin.ThrottleMinLimit.Value + (speedError * 0.03f));
+                        fixedThrottle = Mathf.Max(fixedThrottle, floor);
+                    }
+                }
+
+                float maxThrottle = APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value;
+                ThrottleOutput = Mathf.Min(fixedThrottle, maxThrottle);
             }
             else if (APData.TargetSpeed >= 0 || PIDLogger.IsTesting(PIDLogger.StepTarget.Spd))
             {
@@ -1050,12 +1056,24 @@ internal static class ControlOverridePatch
                     else if (APData.TargetAlt > 0f || pitchTest)
                     {
                         float currentVS = APData.PlayerRB.velocity.y;
+                        float altError = APData.TargetAlt - APData.CurrentAlt;
+                        float absAltError = Mathf.Abs(altError);
+                        float captureDecel = Mathf.Max(ActivePid.LvlChgCaptureDecelG, 0.01f) * 9.81f;
+                        float stoppingDistance = currentVS * currentVS / (2f * captureDecel);
+                        float armDistance = Mathf.Max(Plugin.LvlChgCaptureArmDistance.Value,
+                            stoppingDistance * 1.25f + 10f);
+                        bool lvlChgCapture = lvlChgActive && !lvlChgTest &&
+                                             (s_lvlChgCapture || absAltError <= armDistance);
+                        if (lvlChgActive && !lvlChgTest)
+                        {
+                            s_lvlChgCapture = lvlChgCapture;
+                        }
 
                         // pitch sleep
                         if (useRandom)
                         {
-                            float altError = APData.TargetAlt - APData.CurrentAlt;
-                            float altErrAbs = Mathf.Abs(altError);
+                            float pitchAltError = APData.TargetAlt - APData.CurrentAlt;
+                            float altErrAbs = Mathf.Abs(pitchAltError);
                             float vsAbs = Mathf.Abs(currentVS);
 
                             if (!s_isPitchSleeping)
@@ -1111,8 +1129,34 @@ internal static class ControlOverridePatch
 
                                 float lvlChgSetpoint = PIDLogger.GetSetpoint(PIDLogger.StepTarget.LvlChg,
                                     lvlChgTargetSpeedMS, speed3d);
-                                targetVS = -(float)PidLvlChg.Update(lvlChgSetpoint, speed3d);
-                                PIDLogger.Log(PIDLogger.StepTarget.LvlChg, targetVS, speed3d);
+                                float lvlChgVS = -(float)PidLvlChg.Update(lvlChgSetpoint, speed3d);
+
+                                if (lvlChgCapture)
+                                {
+                                    ConfigurePID(PidAlt, ActivePid.Alt, dt,
+                                        -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
+                                    float vsAccelLimit = Mathf.Max(Plugin.LvlChgVsAccelLimit.Value, 0.1f);
+                                    PidAlt.DuMin = -vsAccelLimit;
+                                    PidAlt.DuMax = vsAccelLimit;
+
+                                    float baseTargetAlt = APData.TargetAlt > 0f ? APData.TargetAlt : APData.CurrentAlt;
+                                    float altTarget = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Alt, baseTargetAlt,
+                                        APData.CurrentAlt);
+                                    float altVS = (float)PidAlt.Update(altTarget, APData.CurrentAlt);
+                                    float blend = Mathf.Clamp01((armDistance - absAltError) /
+                                        Mathf.Max(armDistance - ActivePid.LvlChgHandoffDistance, 0.1f));
+                                    targetVS = Mathf.Lerp(lvlChgVS, altVS, blend);
+                                    float captureVSLimit = Mathf.Sqrt(2f * captureDecel * absAltError);
+                                    targetVS = Mathf.Clamp(targetVS, -captureVSLimit, captureVSLimit);
+                                }
+                                else
+                                {
+                                    targetVS = lvlChgVS;
+
+                                    PidAlt.DuMin = double.NegativeInfinity;
+                                    PidAlt.DuMax = double.PositiveInfinity;
+                                    PidAlt.Update(APData.TargetAlt, APData.CurrentAlt, 0, 0, 0, Mode.Track);
+                                }
 
                                 if (lvlChgActive && !lvlChgTest)
                                 {
@@ -1125,11 +1169,41 @@ internal static class ControlOverridePatch
                                         targetVS = Mathf.Min(targetVS, 0f);
                                     }
                                 }
+
+                                PIDLogger.Log(PIDLogger.StepTarget.LvlChg, targetVS, speed3d);
+
+                                if (lvlChgCapture &&
+                                    absAltError <= ActivePid.LvlChgHandoffDistance &&
+                                    Mathf.Abs(currentVS) <= ActivePid.LvlChgHandoffVS)
+                                {
+                                    APData.LvlChgEnabled = false;
+                                    s_lvlChgCapture = false;
+
+                                    float speedError = lvlChgTargetSpeedMS - speed3d;
+                                    float speedKick = Mathf.Clamp((float)(ActivePid.Spd.Kp * speedError),
+                                        -0.5f, 0.5f);
+                                    float minThrottle = APData.AllowExtremeThrottle
+                                        ? 0f
+                                        : Plugin.ThrottleMinLimit.Value;
+                                    float maxThrottle = APData.AllowExtremeThrottle
+                                        ? 1f
+                                        : Plugin.ThrottleMaxLimit.Value;
+                                    PidSpd.Init(lvlChgTargetSpeedMS, speed3d,
+                                        Mathf.Clamp(ThrottleOutput + speedKick, minThrottle, maxThrottle));
+
+                                    AircraftActionsReport captureReport = SceneSingleton<AircraftActionsReport>.i;
+                                    if (captureReport != null)
+                                    {
+                                        captureReport.ReportText("LC Altitude Reached", 2f);
+                                    }
+                                }
                             }
                             else
                             {
                                 ConfigurePID(PidAlt, ActivePid.Alt, dt,
                                     -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
+                                PidAlt.DuMin = double.NegativeInfinity;
+                                PidAlt.DuMax = double.PositiveInfinity;
 
                                 float baseTargetAlt = APData.TargetAlt > 0f ? APData.TargetAlt : APData.CurrentAlt;
                                 float altTarget = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Alt, baseTargetAlt,

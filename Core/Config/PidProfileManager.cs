@@ -96,7 +96,7 @@ public static class PidProfileManager
     }
     private static void SuppressConfigAutosaveForTuning()
     {
-        if (Plugin.Instance?.Config == null || s_prevSaveOnConfigSet.HasValue)
+        if (Plugin.Instance == null || Plugin.Instance.Config == null || s_prevSaveOnConfigSet.HasValue)
         {
             return;
         }
@@ -158,7 +158,7 @@ public static class PidProfileManager
     }
     private static void RestoreConfigAutosaveAfterTuning()
     {
-        if (Plugin.Instance?.Config == null || !s_prevSaveOnConfigSet.HasValue)
+        if (Plugin.Instance == null || Plugin.Instance.Config == null || !s_prevSaveOnConfigSet.HasValue)
         {
             return;
         }

@@ -117,7 +117,7 @@ public static class ActivePid
 
     public static void SyncToConfig()
     {
-        if (Plugin.Instance?.Config == null)
+        if (Plugin.Instance == null || Plugin.Instance.Config == null)
         {
             return;
         }
@@ -186,7 +186,7 @@ public static class ActivePid
 
     public static void WriteGlobalDefaultsToConfig()
     {
-        if (Plugin.Instance?.Config == null)
+        if (Plugin.Instance == null || Plugin.Instance.Config == null)
         {
             return;
         }

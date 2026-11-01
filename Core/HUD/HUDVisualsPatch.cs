@@ -100,10 +100,25 @@ internal static class HUDVisualsPatch
 
         if (!Plugin.ShowExtraInfo.Value)
         {
-            s_infoOverlayObj?.SetActive(false);
-            s_gcasLeftObj?.SetActive(false);
-            s_gcasRightObj?.SetActive(false);
-            s_gcasTopObj?.SetActive(false);
+            if (s_infoOverlayObj != null)
+            {
+                s_infoOverlayObj.SetActive(false);
+            }
+
+            if (s_gcasLeftObj != null)
+            {
+                s_gcasLeftObj.SetActive(false);
+            }
+
+            if (s_gcasRightObj != null)
+            {
+                s_gcasRightObj.SetActive(false);
+            }
+
+            if (s_gcasTopObj != null)
+            {
+                s_gcasTopObj.SetActive(false);
+            }
             return;
         }
 
@@ -423,7 +438,7 @@ internal static class HUDVisualsPatch
                                 hasLine3 = true;
                             }
 
-                            if (APData.NavEnabled && APData.NavQueue.Count > 0)
+                            if (APData.NavEnabled && APData.NavQueue.Count > 0 && APData.PlayerRB != null)
                             {
                                 if (hasLine3)
                                 {

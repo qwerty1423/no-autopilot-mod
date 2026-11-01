@@ -1103,7 +1103,12 @@ internal static class ControlOverridePatch
         if (pilot != s_glocPilot)
         {
             s_glocPilot = pilot;
-            s_cachedGloc = (pilot?.GetComponent<GLOC>());
+            s_cachedGloc = null;
+            if (pilot != null)
+            {
+                s_cachedGloc = pilot.GetComponent<GLOC>();
+            }
+
             s_glocNextRetry = Time.time + 0.25f;
             return s_cachedGloc;
         }

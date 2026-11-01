@@ -750,7 +750,7 @@ public class Plugin : BaseUnityPlugin
                     APData.TargetTrack = -1f;
                     APData.TargetRoll = 0f;
                 }
-                else if (APData.PlayerRB?.velocity.sqrMagnitude > 1f)
+                else if (APData.PlayerRB != null && APData.PlayerRB.velocity.sqrMagnitude > 1f)
                 {
                     Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
                     APData.TargetTrack = Quaternion.LookRotation(flatVel).eulerAngles.y;
@@ -796,7 +796,11 @@ public class Plugin : BaseUnityPlugin
                     APData.ALSActive = false;
                     APData.ALSStatusText = "";
 
-                    APData.LocalPilot?.SwitchState(APData.LocalPilot.playerState);
+                    Pilot localPilot = APData.LocalPilot;
+                    if (localPilot != null)
+                    {
+                        localPilot.SwitchState(localPilot.playerState);
+                    }
                 }
                 else
                 {
@@ -818,7 +822,7 @@ public class Plugin : BaseUnityPlugin
                         : APData.PlayerRB.velocity.magnitude;
                     if (APData.SpeedHoldIsMach)
                     {
-                        float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
+                        float currentAlt = APData.LocalAircraft != null ? APData.LocalAircraft.GlobalPosition().y : 0f;
                         float sos = LevelInfo.GetSpeedOfSound(currentAlt);
                         APData.TargetSpeed = currentTAS / sos;
                         s_bufSpeed = APData.TargetSpeed.ToString("F2");
@@ -847,7 +851,7 @@ public class Plugin : BaseUnityPlugin
                             : APData.PlayerRB.velocity.magnitude;
                         if (APData.SpeedHoldIsMach)
                         {
-                            float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
+                            float currentAlt = APData.LocalAircraft != null ? APData.LocalAircraft.GlobalPosition().y : 0f;
                             APData.TargetSpeed = currentTAS / LevelInfo.GetSpeedOfSound(currentAlt);
                         }
                         else
@@ -859,7 +863,7 @@ public class Plugin : BaseUnityPlugin
                     float step = SpeedStep.Value * 60f * Time.deltaTime;
                     if (APData.SpeedHoldIsMach)
                     {
-                        float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
+                        float currentAlt = APData.LocalAircraft != null ? APData.LocalAircraft.GlobalPosition().y : 0f;
                         float sos = LevelInfo.GetSpeedOfSound(currentAlt);
                         step /= Mathf.Max(sos, 1f);
                     }
@@ -880,7 +884,7 @@ public class Plugin : BaseUnityPlugin
                 {
                     if (float.TryParse(s_bufSpeed, out float val))
                     {
-                        float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
+                        float currentAlt = APData.LocalAircraft != null ? APData.LocalAircraft.GlobalPosition().y : 0f;
                         float sos = LevelInfo.GetSpeedOfSound(currentAlt);
                         if (!APData.SpeedHoldIsMach)
                         {
@@ -1240,14 +1244,14 @@ public class Plugin : BaseUnityPlugin
 
         GUILayout.BeginVertical();
 
-        float currentVS = (APData.PlayerRB?.velocity.y) ?? 0f;
+        float currentVS = APData.PlayerRB.velocity.y;
 
-        float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
+        float currentAlt = APData.LocalAircraft.GlobalPosition().y;
         float sos = LevelInfo.GetSpeedOfSound(currentAlt);
-        float currentSpeed = (APData.PlayerRB?.velocity.magnitude) ?? 0f;
+        float currentSpeed = APData.PlayerRB.velocity.magnitude;
 
         float currentTrack = 0f;
-        if (APData.PlayerRB?.velocity.sqrMagnitude > 1f)
+        if (APData.PlayerRB.velocity.sqrMagnitude > 1f)
         {
             Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
             currentTrack = Quaternion.LookRotation(flatVel).eulerAngles.y;
@@ -1580,7 +1584,11 @@ public class Plugin : BaseUnityPlugin
                 APData.ALSActive = false;
                 APData.ALSStatusText = "";
 
-                APData.LocalPilot?.SwitchState(APData.LocalPilot.playerState);
+                Pilot localPilot = APData.LocalPilot;
+                if (localPilot != null)
+                {
+                    localPilot.SwitchState(localPilot.playerState);
+                }
             }
             else
             {
@@ -2007,7 +2015,7 @@ public class Plugin : BaseUnityPlugin
 
         FactionHQ hq = aircraft.NetworkHQ;
 
-        if (hq?.GetAirbases().Any() != true)
+        if (hq == null || hq.GetAirbases().Any() != true)
         {
             APData.ALSStatusText = "ALS: NO AIRBASE";
             return false;
@@ -2038,11 +2046,6 @@ public class Plugin : BaseUnityPlugin
     {
         try
         {
-            if (string.Equals(scene.name, "GameWorld", StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
-
             APData.Reset();
             HudPatch.Reset();
             ControlOverridePatch.Reset();

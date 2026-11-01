@@ -31,8 +31,7 @@ internal static class FixGLOCLeakPatch
 
         try
         {
-            GLOC existingGloc = pilot.gameObject.GetComponent<GLOC>();
-            if (existingGloc != null)
+            if (pilot.gameObject.TryGetComponent(out GLOC existingGloc))
             {
                 Object.Destroy(existingGloc);
             }

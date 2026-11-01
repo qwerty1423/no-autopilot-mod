@@ -25,7 +25,7 @@ internal static class MinimapTerrainOpacityPatch
         if (s_terrainImage == null)
         {
             DynamicMap map = SceneSingleton<DynamicMap>.i;
-            if (map?.mapImage != null)
+            if (map != null && map.mapImage != null)
             {
                 s_terrainImage = map.mapImage.GetComponent<Image>();
             }
@@ -71,7 +71,7 @@ internal static class MinimapTerrainOpacityPatch
                 Reset();
 
                 DynamicMap map = SceneSingleton<DynamicMap>.i;
-                if (map?.mapImage != null)
+                if (map != null && map.mapImage != null)
                 {
                     s_terrainImage = map.mapImage.GetComponent<Image>();
                 }

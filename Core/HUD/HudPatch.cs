@@ -71,7 +71,13 @@ internal static class HudPatch
 
             APData.LocalAircraft = aircraft;
             APData.PlayerTransform = aircraft.transform;
-            APData.PlayerRB = aircraft.cockpit?.rb ?? aircraft.GetComponent<Rigidbody>();
+            Rigidbody playerRb = null;
+            if (aircraft.cockpit != null)
+            {
+                playerRb = aircraft.cockpit.rb;
+            }
+
+            APData.PlayerRB = playerRb != null ? playerRb : aircraft.GetComponent<Rigidbody>();
             APData.LocalWeaponManager = aircraft.weaponManager;
             APData.TargetAlt = aircraft.transform.position.GlobalY();
             APData.TargetRoll = 0f;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -41,7 +42,40 @@ public class Plugin : BaseUnityPlugin
     private static string s_bufClimb = "40";
     private static string s_bufRoll = "";
     private static string s_bufSpeed = "";
-    private static string s_bufCourse = "";
+    private static string s_bufTrack = "";
+
+    public enum AnnouncementKind
+    {
+        Autopilot = 0,
+        TrackHold = 1,
+        Nav = 2,
+        LevelChange = 3,
+        SpeedHold = 4,
+        SpeedReference = 5,
+        Afterburner = 6,
+        Gcas = 7,
+        Autoland = 8,
+        Fbw = 9,
+        AutoJammer = 10,
+    }
+
+    private static readonly (AnnouncementKind Kind, string Key, string Description)[] AnnouncementDefs =
+    [
+        (AnnouncementKind.Autopilot, "01. Autopilot", "Announce AP engage/disengage"),
+        (AnnouncementKind.TrackHold, "02. Track Hold", "Announce track hold engage/disengage"),
+        (AnnouncementKind.Nav, "03. Nav", "Announce nav enable/disable"),
+        (AnnouncementKind.LevelChange, "04. Level Change", "Announce level change state and capture"),
+        (AnnouncementKind.SpeedHold, "05. Speed Hold", "Announce autothrottle state"),
+        (AnnouncementKind.SpeedReference, "06. Speed Reference", "Announce Mach/TAS reference changes"),
+        (AnnouncementKind.Afterburner, "07. Afterburner Limit", "Announce AB/airbrake limit changes"),
+        (AnnouncementKind.Gcas, "08. GCAS", "Announce GCAS state"),
+        (AnnouncementKind.Autoland, "09. Autoland", "Announce autoland state"),
+        (AnnouncementKind.Fbw, "10. FBW", "Announce FBW state"),
+        (AnnouncementKind.AutoJammer, "11. Auto Jammer", "Announce auto jammer state"),
+    ];
+
+    private static readonly Dictionary<AnnouncementKind, ConfigEntry<bool>> AnnouncementToggles = [];
+    public static ConfigEntry<bool> AnnouncementsEnabled;
     public static ConfigEntry<float> NavReachDistance, NavPassedDistance;
     public static ConfigEntry<string> ColorNav;
     public static ConfigEntry<bool> NavCycle;
@@ -85,7 +119,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> StickTempThreshold, StickDisengageThreshold;
     public static ConfigEntry<float> DisengageDelay, ReengageDelay;
     public static ConfigEntry<bool> InvertRoll, InvertPitch, StickDisengageEnabled;
-    public static ConfigEntry<bool> Conf_InvertCourseRoll, DisableATAPKey;
+    public static ConfigEntry<bool> Conf_InvertTrackRoll, DisableATAPKey;
     public static ConfigEntry<bool> DisableATAPGCAS, DisableATAPGUI, DisableATAPStick;
     public static ConfigEntry<bool> DisableNavAPKey, DisableNavAPStick, EnableNavonWP;
     public static ConfigEntry<bool> KeepSetAltKey, KeepSetAltStick, UnpatchIfBroken;
@@ -116,6 +150,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<KeyboardShortcut> UpKey, DownKey, BigUpKey, BigDownKey;
     public static ConfigEntry<KeyboardShortcut> ClimbRateUpKey, ClimbRateDownKey;
     public static ConfigEntry<KeyboardShortcut> BankLeftKey, BankRightKey;
+    public static ConfigEntry<KeyboardShortcut> TrackHoldKey, NavHoldKey, LvlChgKey;
     public static ConfigEntry<KeyboardShortcut> SpeedHoldKey, SpeedUpKey, SpeedDownKey;
     public static ConfigEntry<KeyboardShortcut> ToggleMachKey, ToggleABKey;
 
@@ -125,6 +160,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<string> UpRW, DownRW, BigUpRW, BigDownRW;
     public static ConfigEntry<string> ClimbRateUpRW, ClimbRateDownRW;
     public static ConfigEntry<string> BankLeftRW, BankRightRW;
+    public static ConfigEntry<string> TrackHoldRW, NavHoldRW, LvlChgRW;
     public static ConfigEntry<string> SpeedHoldRW, SpeedUpRW, SpeedDownRW;
     public static ConfigEntry<string> ToggleMachRW, ToggleABRW;
 
@@ -132,13 +168,18 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> AltStep, BigAltStep, ClimbRateStep, BankStep, SpeedStep, MinAltitude;
 
     // Limits
-    public static ConfigEntry<float> DefaultMaxClimbRate, Conf_VS_MaxAngle, DefaultCRLimit;
+    public static ConfigEntry<float> DefaultMaxClimbRate, Conf_VS_MaxAngle, DefaultTrkRollLimit;
+    public static ConfigEntry<float> LvlChgCaptureArmDistance;
+    public static ConfigEntry<float> LvlChgVsAccelLimit;
+    public static ConfigEntry<float> ConfLvlChgCaptureDecelG;
+    public static ConfigEntry<float> ConfLvlChgHandoffDistance;
+    public static ConfigEntry<float> ConfLvlChgHandoffVS;
     public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, MaxRollRate;
 
     // pid
     public static ConfigEntry<PIDTuning> ConfPidAlt, ConfPidVs, ConfPidPitch;
     public static ConfigEntry<PIDTuning> ConfPidRoll, ConfPidRollRate, ConfPidYaw;
-    public static ConfigEntry<PIDTuning> ConfPidCrs, ConfPidSpd, ConfPidGcas;
+    public static ConfigEntry<PIDTuning> ConfPidTrk, ConfPidSpd, ConfPidLvlChg, ConfPidGcas;
 
     public static ConfigEntry<GainSchedule> SchedPidPitch;
     public static ConfigEntry<GainSchedule> SchedPidRollRate;
@@ -179,11 +220,14 @@ public class Plugin : BaseUnityPlugin
         "<b>Toggle AJ:</b> / (Slash)\n" +
         "<b>Toggle GCAS:</b> \\ (Backslash)\n" +
         "<b>Toggle ALS:</b> LCtrl + = (Equals) | Autoland\n" +
-        "<b>Clear/Reset:</b> ' (Quote) | Roll>Nav>Crs>Roll>Alt>Roll\n\n" +
+        "<b>Clear/Reset:</b> ' (Quote) | Roll>Nav>Trk>Roll>Alt>Roll\n\n" +
         "<b>Target Alt Small:</b> Up / Down Arrow | Small adjustment\n" +
         "<b>Target Alt Large:</b> Left / Right Arrow | Large adjustment\n" +
         "<b>Max Climb Rate:</b> PgUp / PgDn | Limit vertical speed\n" +
-        "<b>Bank/Course L/R:</b> [ and ] | Adjust roll or heading\n\n" +
+        "<b>Bank/Track L/R:</b> [ and ] | Adjust roll or track\n" +
+        "<b>Track Hold:</b> RShift + { | Hold current track\n" +
+        "<b>Nav Hold:</b> RShift + } | Toggle nav mode\n" +
+        "<b>Toggle LVL CHG:</b> RShift + ; | Needs altitude and speed hold\n\n" +
         "<b>Toggle Speed Hold:</b> ; (Semicolon) | Matches current speed\n" +
         "<b>Speed Up / Down:</b> LShift / LCtrl | Adjust target speed\n" +
         "<b>Mach/TAS Hold:</b> Home | Switch between Mach/TAS\n" +
@@ -311,7 +355,7 @@ public class Plugin : BaseUnityPlugin
             "Stick input (0.0 to 1.0) required to disengage AP entirely");
         InvertRoll = Config.Bind("Settings", "6. Invert Roll", true, "Flip Roll");
         InvertPitch = Config.Bind("Settings", "7. Invert Pitch", true, "Flip Pitch");
-        Conf_InvertCourseRoll =
+        Conf_InvertTrackRoll =
             Config.Bind("Settings", "8. Invert Bank Direction", true, "Toggle if plane turns wrong way");
         DisableATAPGCAS = Config.Bind("Settings - Misc", "Disable autothrottle with AP (GCAS)", false,
             "Disable autothrottle when AP is disengaged by GCAS");
@@ -390,8 +434,14 @@ public class Plugin : BaseUnityPlugin
             "Turn Auto-GCAS on/off");
         ToggleALSKey = Config.Bind("Controls", "5.1 Toggle ALS Key",
             new KeyboardShortcut(KeyCode.Equals, KeyCode.LeftControl), "Turn autoland on/off");
-        ClearKey = Config.Bind("Controls", "6. clear roll/nav/crs/roll/alt/roll", new KeyboardShortcut(KeyCode.Quote),
+        ClearKey = Config.Bind("Controls", "6. clear roll/nav/trk/roll/alt/roll", new KeyboardShortcut(KeyCode.Quote),
             "every press will clear/reset first thing it sees isn't clear from left to right");
+        TrackHoldKey = Config.Bind("Controls", "7. Track Hold Key",
+            new KeyboardShortcut(KeyCode.LeftBracket, KeyCode.RightShift), "Toggle track hold");
+        NavHoldKey = Config.Bind("Controls", "8. Nav Hold Key",
+            new KeyboardShortcut(KeyCode.RightBracket, KeyCode.RightShift), "Toggle nav mode");
+        LvlChgKey = Config.Bind("Controls", "9. Toggle LVL CHG Key",
+            new KeyboardShortcut(KeyCode.Semicolon, KeyCode.RightShift), "Toggle level change");
         UpKey = Config.Bind("Controls - Altitude", "1. Altitude Up (Small)", new KeyboardShortcut(KeyCode.UpArrow),
             "small increase");
         DownKey = Config.Bind("Controls - Altitude", "2. Altitude Down (Small)",
@@ -405,9 +455,9 @@ public class Plugin : BaseUnityPlugin
         ClimbRateDownKey = Config.Bind("Controls - Altitude", "6. Climb Rate Decrease",
             new KeyboardShortcut(KeyCode.PageDown), "Decrease Max VS");
         BankLeftKey = Config.Bind("Controls - Bank", "1. Bank Left", new KeyboardShortcut(KeyCode.LeftBracket),
-            "Roll/course Left");
+            "Roll/track Left");
         BankRightKey = Config.Bind("Controls - Bank", "2. Bank Right", new KeyboardShortcut(KeyCode.RightBracket),
-            "Roll/course right");
+            "Roll/track right");
         SpeedHoldKey = Config.Bind("Controls - Speed", "1. Speed Hold Toggle", new KeyboardShortcut(KeyCode.Semicolon),
             "speed hold/clear");
         SpeedUpKey = Config.Bind("Controls - Speed", "2. Target Speed Increase",
@@ -430,8 +480,14 @@ public class Plugin : BaseUnityPlugin
             RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5. Toggle GCAS", "Turn Auto-GCAS on/off");
         ToggleALSRW =
             RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5.1 Toggle ALS", "Turn autoland on/off");
-        ClearRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear roll/nav/crs/roll/alt/roll",
+        ClearRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear roll/nav/trk/roll/alt/roll",
             "every use will clear/reset first thing it sees isn't clear from left to right");
+        TrackHoldRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "7. Track Hold",
+            "Toggle track hold");
+        NavHoldRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "8. Nav Hold",
+            "Toggle nav mode");
+        LvlChgRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "9. Toggle LVL CHG",
+            "Toggle level change");
         UpRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "1. Altitude Up (Small)",
             "small increase");
         DownRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "2. Altitude Down (Small)",
@@ -445,9 +501,9 @@ public class Plugin : BaseUnityPlugin
         ClimbRateDownRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "6. Climb Rate Decrease",
             "Decrease Max VS");
         BankLeftRW =
-            RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "1. Bank Left", "Roll/course Left");
+            RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "1. Bank Left", "Roll/track Left");
         BankRightRW =
-            RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "2. Bank Right", "Roll/course right");
+            RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "2. Bank Right", "Roll/track right");
         SpeedHoldRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "1. Speed Hold Toggle",
             "speed hold/clear");
         SpeedUpRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "2. Target Speed Increase",
@@ -467,6 +523,15 @@ public class Plugin : BaseUnityPlugin
         SpeedStep = Config.Bind("Controls - Values", "21. Speed Step", 1.0f, "m/s per frame (60fps)");
         MinAltitude = Config.Bind("Controls - Values", "22. Minimum Target Altitude", 20f, "Safety floor");
 
+        // Announcements
+        const string announceSect = "Announcements";
+        AnnouncementsEnabled = Config.Bind(announceSect, "00. Enable HMD announcements", true,
+            "Toggle for all HMD mode announcements");
+        foreach ((AnnouncementKind kind, string key, string description) in AnnouncementDefs)
+        {
+            AnnouncementToggles[kind] = Config.Bind(announceSect, key, true, description);
+        }
+
         // Auto GCAS
         EnableGCAS = Config.Bind("Auto GCAS", "01. Enable GCAS on start", true,
             "GCAS off at start if disabled (anything that isn't a helo)");
@@ -485,8 +550,12 @@ public class Plugin : BaseUnityPlugin
 
         DefaultMaxClimbRate = Config.Bind("Limits", "1. Default Max Climb Rate", 10f, "Startup value");
         Conf_VS_MaxAngle = Config.Bind("Limits", "2. Max Pitch Angle", 85.0f, "angle from horizon limit");
-        DefaultCRLimit = Config.Bind("Limits", "3. Default course roll limit", 10.0f,
-            "default roll limit when turning in course/nav mode");
+        DefaultTrkRollLimit = Config.Bind("Limits", "3. Default track roll limit", 10.0f,
+            "default roll limit when turning in track/nav mode");
+        LvlChgCaptureArmDistance = Config.Bind("Limits", "7. LVL CHG Capture Arm Distance", 100f,
+            "Minimum distance from target altitude to begin LVL CHG capture");
+        LvlChgVsAccelLimit = Config.Bind("Limits", "8. LVL CHG VS Accel Limit", 2.0f,
+            "Maximum rate of change of the LVL CHG target vertical speed");
         ThrottleMinLimit = Config.Bind("Limits", "4. Safe Min Throttle", 0.01f,
             "Minimum throttle when limiter is active (prevents Airbrake)");
         ThrottleMaxLimit = Config.Bind("Limits", "5. Safe Max Throttle", 0.89f,
@@ -522,14 +591,25 @@ public class Plugin : BaseUnityPlugin
         ConfPidYaw = PIDTuningBinder.Bind(Config, pidSect, "07. Yaw",
             new PIDTuning(), "Yaw error > Stick");
 
-        ConfPidCrs = PIDTuningBinder.Bind(Config, pidSect, "08. Course > Course Rate",
-            new PIDTuning(), "Course Error > Course Rate");
+        ConfPidTrk = PIDTuningBinder.Bind(Config, pidSect, "08. Track > Track Rate",
+            new PIDTuning(), "Track Error > Track Rate");
 
         ConfPidSpd = PIDTuningBinder.Bind(Config, pidSect, "09. Speed > Throttle",
             new PIDTuning(), "Speed Error > Throttle");
 
         ConfPidGcas = PIDTuningBinder.Bind(Config, pidSect, "10. G-Force > Stick",
             new PIDTuning(), "GCAS G Error > Stick");
+
+        ConfPidLvlChg = PIDTuningBinder.Bind(Config, pidSect, "11. LVL CHG Speed > VS",
+            new PIDTuning(), "Speed Error > Target Vertical Speed");
+
+        const string lvlChgSect = "LVL CHG Capture";
+        ConfLvlChgCaptureDecelG = Config.Bind(lvlChgSect, "01. Capture Decel (g)", 0.05f,
+            "LVL CHG capture flight-path deceleration");
+        ConfLvlChgHandoffDistance = Config.Bind(lvlChgSect, "02. Handoff Distance (m)", 2f,
+            "Altitude error at which capture hands off to altitude hold");
+        ConfLvlChgHandoffVS = Config.Bind(lvlChgSect, "03. Handoff Vertical Speed (m/s)", 0.5f,
+            "Vertical speed at which capture hands off to altitude hold");
 
         const string schedSect = "PID Gain Scheduling (much basic)";
         SchedPidVs = GainScheduleBinder.Bind(Config, schedSect, "01. VS > Pitch Schedule",
@@ -710,6 +790,8 @@ public class Plugin : BaseUnityPlugin
                 APData.Enabled = !APData.Enabled;
                 if (!APData.Enabled)
                 {
+                    APData.LvlChgEnabled = false;
+
                     if (DisableNavAPKey.Value)
                     {
                         APData.NavEnabled = false;
@@ -725,12 +807,64 @@ public class Plugin : BaseUnityPlugin
                     APData.TargetAlt = APData.CurrentAlt;
                 }
 
+                Announce(AnnouncementKind.Autopilot, APData.Enabled ? "Autopilot <b>Engaged</b>" : "Autopilot <b>Disengaged</b>");
                 SyncMenuValues();
+            }
+
+            if (!APData.Enabled)
+            {
+                APData.LvlChgEnabled = false;
+            }
+
+            if (InputHelper.IsDown(TrackHoldRW) || TrackHoldKey.Value.IsDown())
+            {
+                bool wasNav = APData.NavEnabled;
+                APData.NavEnabled = false;
+
+                if (APData.TargetTrack >= 0f && !wasNav)
+                {
+                    APData.TargetTrack = -1f;
+                    APData.TargetRoll = 0f;
+                }
+                else if (APData.PlayerRB != null && APData.PlayerRB.velocity.sqrMagnitude > 1f)
+                {
+                    Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
+                    APData.TargetTrack = Quaternion.LookRotation(flatVel).eulerAngles.y;
+                    if (APData.TargetRoll == -999f || APData.TargetRoll == 0f)
+                    {
+                        APData.TargetRoll = DefaultTrkRollLimit.Value;
+                    }
+                }
+
+                Announce(AnnouncementKind.TrackHold, APData.TargetTrack >= 0f
+                    ? "Track Hold <b>Engaged</b>"
+                    : "Track Hold <b>Disengaged</b>");
+                SyncMenuValues();
+            }
+
+            if (InputHelper.IsDown(NavHoldRW) || NavHoldKey.Value.IsDown())
+            {
+                APData.NavEnabled = !APData.NavEnabled;
+                if (APData.NavEnabled && (APData.TargetRoll == -999f || APData.TargetRoll == 0f))
+                {
+                    APData.TargetRoll = DefaultTrkRollLimit.Value;
+                }
+
+                Announce(AnnouncementKind.Nav, APData.NavEnabled ? "Nav <b>Enabled</b>" : "Nav <b>Disabled</b>");
+                SyncMenuValues();
+            }
+
+            if (InputHelper.IsDown(LvlChgRW) || LvlChgKey.Value.IsDown())
+            {
+                ToggleLevelChange();
             }
 
             if (EnableAutoJammer.Value && (InputHelper.IsDown(AutoJammerRW) || AutoJammerKey.Value.IsDown()))
             {
                 APData.AutoJammerActive = !APData.AutoJammerActive;
+                Announce(AnnouncementKind.AutoJammer, APData.AutoJammerActive
+                    ? "Auto Jammer <b>Enabled</b>"
+                    : "Auto Jammer <b>Disabled</b>");
             }
 
             if (InputHelper.IsDown(ToggleGCASRW) || ToggleGCASKey.Value.IsDown())
@@ -741,21 +875,13 @@ public class Plugin : BaseUnityPlugin
                     APData.GCASActive = false;
                     APData.GCASWarning = false;
                 }
+
+                Announce(AnnouncementKind.Gcas, APData.GCASEnabled ? "GCAS <b>Enabled</b>" : "GCAS <b>Disabled</b>");
             }
 
             if (InputHelper.IsDown(ToggleALSRW) || ToggleALSKey.Value.IsDown())
             {
-                if (APData.ALSActive)
-                {
-                    APData.ALSActive = false;
-                    APData.ALSStatusText = "";
-
-                    APData.LocalPilot?.SwitchState(APData.LocalPilot.playerState);
-                }
-                else
-                {
-                    StartAutoland();
-                }
+                ToggleAutoland();
             }
 
             if (InputHelper.IsDown(SpeedHoldRW) || SpeedHoldKey.Value.IsDown())
@@ -772,7 +898,7 @@ public class Plugin : BaseUnityPlugin
                         : APData.PlayerRB.velocity.magnitude;
                     if (APData.SpeedHoldIsMach)
                     {
-                        float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
+                        float currentAlt = APData.LocalAircraft != null ? APData.LocalAircraft.GlobalPosition().y : 0f;
                         float sos = LevelInfo.GetSpeedOfSound(currentAlt);
                         APData.TargetSpeed = currentTAS / sos;
                         s_bufSpeed = APData.TargetSpeed.ToString("F2");
@@ -784,6 +910,9 @@ public class Plugin : BaseUnityPlugin
                     }
                 }
 
+                Announce(AnnouncementKind.SpeedHold, APData.TargetSpeed >= 0f
+                    ? "Speed Hold <b>Enabled</b>"
+                    : "Speed Hold <b>Disabled</b>");
                 SyncMenuValues();
                 GUI.FocusControl(null);
             }
@@ -801,7 +930,7 @@ public class Plugin : BaseUnityPlugin
                             : APData.PlayerRB.velocity.magnitude;
                         if (APData.SpeedHoldIsMach)
                         {
-                            float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
+                            float currentAlt = APData.LocalAircraft != null ? APData.LocalAircraft.GlobalPosition().y : 0f;
                             APData.TargetSpeed = currentTAS / LevelInfo.GetSpeedOfSound(currentAlt);
                         }
                         else
@@ -813,7 +942,7 @@ public class Plugin : BaseUnityPlugin
                     float step = SpeedStep.Value * 60f * Time.deltaTime;
                     if (APData.SpeedHoldIsMach)
                     {
-                        float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
+                        float currentAlt = APData.LocalAircraft != null ? APData.LocalAircraft.GlobalPosition().y : 0f;
                         float sos = LevelInfo.GetSpeedOfSound(currentAlt);
                         step /= Mathf.Max(sos, 1f);
                     }
@@ -834,7 +963,7 @@ public class Plugin : BaseUnityPlugin
                 {
                     if (float.TryParse(s_bufSpeed, out float val))
                     {
-                        float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
+                        float currentAlt = APData.LocalAircraft != null ? APData.LocalAircraft.GlobalPosition().y : 0f;
                         float sos = LevelInfo.GetSpeedOfSound(currentAlt);
                         if (!APData.SpeedHoldIsMach)
                         {
@@ -849,21 +978,33 @@ public class Plugin : BaseUnityPlugin
                     }
 
                     APData.SpeedHoldIsMach = !APData.SpeedHoldIsMach;
+                    Announce(AnnouncementKind.SpeedReference, APData.SpeedHoldIsMach
+                        ? "Speed Reference <b>Mach</b>"
+                        : "Speed Reference <b>TAS</b>");
                     SyncMenuValues();
                 }
 
                 if (InputHelper.IsDown(ToggleABRW) || ToggleABKey.Value.IsDown())
                 {
                     APData.AllowExtremeThrottle = !APData.AllowExtremeThrottle;
+                    Announce(AnnouncementKind.Afterburner, APData.AllowExtremeThrottle
+                        ? "Afterburner/Airbrake <b>Enabled</b>"
+                        : "Afterburner/Airbrake <b>Disabled</b>");
                 }
             }
 
             if (InputHelper.IsDown(ToggleFBWRW) || ToggleFBWKey.Value.IsDown())
             {
                 APData.NextMultiplayerCheck = 0f;
+                bool wasDisabled = APData.FBWDisabled;
                 APData.FBWDisabled = !IsMultiplayer() && !APData.FBWDisabled;
 
                 UpdateFBWState();
+
+                if (APData.FBWDisabled != wasDisabled)
+                {
+                    AnnounceFBWState(APData.FBWDisabled);
+                }
             }
 
             // no need because plane respawns and the toggle above exists
@@ -1169,7 +1310,7 @@ public class Plugin : BaseUnityPlugin
             ? APData.TargetSpeed.ToString("F2")
             : ModUtils.ConvertSpeed_ToDisplay(APData.TargetSpeed).ToString("F0");
 
-        s_bufCourse = APData.TargetCourse >= 0 ? APData.TargetCourse.ToString("F0") : "";
+        s_bufTrack = APData.TargetTrack >= 0 ? APData.TargetTrack.ToString("F0") : "";
     }
 
     // gui
@@ -1188,17 +1329,17 @@ public class Plugin : BaseUnityPlugin
 
         GUILayout.BeginVertical();
 
-        float currentVS = (APData.PlayerRB?.velocity.y) ?? 0f;
+        float currentVS = APData.PlayerRB.velocity.y;
 
-        float currentAlt = (APData.LocalAircraft?.GlobalPosition().y) ?? 0f;
+        float currentAlt = APData.LocalAircraft.GlobalPosition().y;
         float sos = LevelInfo.GetSpeedOfSound(currentAlt);
-        float currentSpeed = (APData.PlayerRB?.velocity.magnitude) ?? 0f;
+        float currentSpeed = APData.PlayerRB.velocity.magnitude;
 
-        float currentCourse = 0f;
-        if (APData.PlayerRB?.velocity.sqrMagnitude > 1f)
+        float currentTrack = 0f;
+        if (APData.PlayerRB.velocity.sqrMagnitude > 1f)
         {
             Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
-            currentCourse = Quaternion.LookRotation(flatVel).eulerAngles.y;
+            currentTrack = Quaternion.LookRotation(flatVel).eulerAngles.y;
         }
 
         string sAlt = ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.CurrentAlt), true);
@@ -1216,7 +1357,7 @@ public class Plugin : BaseUnityPlugin
             sSpd = ModUtils.ProcessGameString(UnitConverter.SpeedReading(currentSpeed), true);
         }
 
-        string sCrs = $"{currentCourse:F0}°";
+        string sTrk = $"{currentTrack:F0}°";
 
         _measuringContent.text = sAlt;
         float wAlt = _styleLabel.CalcSize(_measuringContent).x;
@@ -1226,10 +1367,10 @@ public class Plugin : BaseUnityPlugin
         float wRoll = _styleLabel.CalcSize(_measuringContent).x;
         _measuringContent.text = sSpd;
         float wSpd = _styleLabel.CalcSize(_measuringContent).x;
-        _measuringContent.text = sCrs;
-        float wCrs = _styleLabel.CalcSize(_measuringContent).x;
+        _measuringContent.text = sTrk;
+        float wTrk = _styleLabel.CalcSize(_measuringContent).x;
 
-        float targetWidth = Mathf.Max(wAlt, wVS, wRoll, wSpd, wCrs) + 6;
+        float targetWidth = Mathf.Max(wAlt, wVS, wRoll, wSpd, wTrk) + 6;
         _dynamicLabelWidth = Mathf.Lerp(_dynamicLabelWidth, targetWidth, 0.15f);
 
         // altitude
@@ -1245,6 +1386,19 @@ public class Plugin : BaseUnityPlugin
         s_bufAlt = GUILayout.TextField(s_bufAlt);
         GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target altitude"));
 
+        GUI.backgroundColor = APData.LvlChgEnabled ? Color.green : Color.white;
+        if (GUILayout.Button(new GUIContent("LC", "Toggle level change\n applies the target altitude\nrequires target altitude and speed"),
+                _styleButton, GUILayout.Width(_buttonWidth)))
+        {
+            APData.TargetAlt = float.TryParse(s_bufAlt, out float alt)
+                ? ModUtils.ConvertAlt_FromDisplay(alt)
+                : -1f;
+            ToggleLevelChange();
+            SyncMenuValues();
+            GUI.FocusControl(null);
+        }
+
+        GUI.backgroundColor = Color.white;
         if (GUILayout.Button(new GUIContent("CLR", "disable alt hold"), _styleButton, GUILayout.Width(_buttonWidth)))
         {
             APData.TargetAlt = -1f;
@@ -1289,7 +1443,7 @@ public class Plugin : BaseUnityPlugin
                     "Current bank angle\nCyan if Nav mode on\nGreen if roll AP on\nClick to copy"), _styleReadout,
                 GUILayout.Width(_dynamicLabelWidth)))
         {
-            s_bufRoll = APData.NavEnabled || APData.TargetCourse >= 0
+            s_bufRoll = APData.NavEnabled || APData.TargetTrack >= 0
                 ? Mathf.Abs(APData.CurrentRoll).ToString("F0")
                 : APData.CurrentRoll.ToString("F0");
         }
@@ -1358,6 +1512,9 @@ public class Plugin : BaseUnityPlugin
             }
 
             APData.SpeedHoldIsMach = !APData.SpeedHoldIsMach;
+            Announce(AnnouncementKind.SpeedReference, APData.SpeedHoldIsMach
+                ? "Speed Reference <b>Mach</b>"
+                : "Speed Reference <b>TAS</b>");
             GUI.FocusControl(null);
         }
 
@@ -1372,39 +1529,42 @@ public class Plugin : BaseUnityPlugin
                 GUILayout.Width(_buttonWidth)))
         {
             APData.AllowExtremeThrottle = !APData.AllowExtremeThrottle;
+            Announce(AnnouncementKind.Afterburner, APData.AllowExtremeThrottle
+                        ? "Afterburner/Airbrake <b>Enabled</b>"
+                        : "Afterburner/Airbrake <b>Disabled</b>");
             GUI.FocusControl(null);
         }
 
         GUI.backgroundColor = oldCol;
         GUILayout.EndHorizontal();
 
-        // course
+        // track
         GUILayout.BeginHorizontal();
         GUI.color = APData.NavEnabled && APData.Enabled
             ? Color.cyan
-            : APData.Enabled && APData.TargetCourse >= 0
+            : APData.Enabled && APData.TargetTrack >= 0
                 ? Color.green : Color.white;
 
         if (GUILayout.Button(
-                new GUIContent($"{sCrs}", "Current course\nCyan if Nav mode on\nGreen if Course AP on\nClick to copy"),
+                new GUIContent($"{sTrk}", "Current track\nCyan if Nav mode on\nGreen if Track AP on\nClick to copy"),
                 _styleReadout, GUILayout.Width(_dynamicLabelWidth)))
         {
-            s_bufCourse = currentCourse.ToString("F0");
+            s_bufTrack = currentTrack.ToString("F0");
         }
 
         GUI.color = Color.white;
-        if (APData.NavEnabled && APData.TargetCourse >= 0)
+        if (APData.NavEnabled && APData.TargetTrack >= 0)
         {
-            s_bufCourse = APData.TargetCourse.ToString("F0");
+            s_bufTrack = APData.TargetTrack.ToString("F0");
         }
 
-        s_bufCourse = GUILayout.TextField(s_bufCourse);
-        GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target course"));
-        if (GUILayout.Button(new GUIContent("CLR", "Disable course hold/nav"), _styleButton,
+        s_bufTrack = GUILayout.TextField(s_bufTrack);
+        GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target track"));
+        if (GUILayout.Button(new GUIContent("CLR", "Disable track hold/nav"), _styleButton,
                 GUILayout.Width(_buttonWidth)))
         {
-            APData.TargetCourse = -1f;
-            s_bufCourse = "";
+            APData.TargetTrack = -1f;
+            s_bufTrack = "";
             APData.NavEnabled = false;
             APData.TargetRoll = 0;
             s_bufRoll = "0";
@@ -1430,17 +1590,17 @@ public class Plugin : BaseUnityPlugin
                     ? s : ModUtils.ConvertSpeed_FromDisplay(s)
                 : -1f;
 
-            APData.TargetCourse = float.TryParse(s_bufCourse, out float crs) ? crs : -1f;
+            APData.TargetTrack = float.TryParse(s_bufTrack, out float trk) ? trk : -1f;
 
             if (float.TryParse(s_bufRoll, out float r))
             {
-                APData.TargetRoll = (APData.NavEnabled || APData.TargetCourse >= 0) &&
+                APData.TargetRoll = (APData.NavEnabled || APData.TargetTrack >= 0) &&
                                     APData.TargetRoll == 0
-                    ? DefaultCRLimit.Value : r;
+                    ? DefaultTrkRollLimit.Value : r;
             }
-            else if (APData.TargetCourse >= 0f || APData.NavEnabled)
+            else if (APData.TargetTrack >= 0f || APData.NavEnabled)
             {
-                APData.TargetRoll = DefaultCRLimit.Value;
+                APData.TargetRoll = DefaultTrkRollLimit.Value;
                 s_bufRoll = APData.TargetRoll.ToString("F0");
             }
             else
@@ -1449,8 +1609,14 @@ public class Plugin : BaseUnityPlugin
                 s_bufRoll = "";
             }
 
+            bool wasEnabled = APData.Enabled;
             APData.Enabled = true;
             APData.UseSetValues = true;
+            if (!wasEnabled)
+            {
+                Announce(AnnouncementKind.Autopilot, "Autopilot <b>Engaged</b>");
+            }
+
             SyncMenuValues();
             GUI.FocusControl(null);
         }
@@ -1468,11 +1634,11 @@ public class Plugin : BaseUnityPlugin
                     s_bufAlt = ModUtils.ConvertAlt_ToDisplay(APData.TargetAlt).ToString("F0");
                 }
 
-                if (string.IsNullOrEmpty(s_bufCourse) && string.IsNullOrEmpty(s_bufRoll))
+                if (string.IsNullOrEmpty(s_bufTrack) && string.IsNullOrEmpty(s_bufRoll))
                 {
-                    if (APData.NavEnabled || APData.TargetCourse >= 0)
+                    if (APData.NavEnabled || APData.TargetTrack >= 0)
                     {
-                        APData.TargetRoll = DefaultCRLimit.Value;
+                        APData.TargetRoll = DefaultTrkRollLimit.Value;
                         s_bufRoll = APData.TargetRoll.ToString("F0");
                     }
                     else
@@ -1491,6 +1657,7 @@ public class Plugin : BaseUnityPlugin
                 SyncMenuValues();
             }
 
+            Announce(AnnouncementKind.Autopilot, APData.Enabled ? "Autopilot <b>Engaged</b>" : "Autopilot <b>Disengaged</b>");
             GUI.FocusControl(null);
         }
 
@@ -1504,6 +1671,9 @@ public class Plugin : BaseUnityPlugin
         if (GUILayout.Button(new GUIContent(ajText, "Toggle Auto Jammer"), _styleButton))
         {
             APData.AutoJammerActive = !APData.AutoJammerActive;
+            Announce(AnnouncementKind.AutoJammer, APData.AutoJammerActive
+                ? "Auto Jammer <b>Enabled</b>"
+                : "Auto Jammer <b>Disabled</b>");
             GUI.FocusControl(null);
         }
 
@@ -1517,24 +1687,14 @@ public class Plugin : BaseUnityPlugin
                 APData.GCASActive = false;
             }
 
+            Announce(AnnouncementKind.Gcas, APData.GCASEnabled ? "GCAS <b>Enabled</b>" : "GCAS <b>Disabled</b>");
             GUI.FocusControl(null);
         }
 
         GUI.backgroundColor = APData.ALSActive ? Color.green : Color.white;
         if (GUILayout.Button(new GUIContent(APData.ALSActive ? "ALS" : "ALS-", "autoland"), _styleButton))
         {
-            if (APData.ALSActive)
-            {
-                APData.ALSActive = false;
-                APData.ALSStatusText = "";
-
-                APData.LocalPilot?.SwitchState(APData.LocalPilot.playerState);
-            }
-            else
-            {
-                StartAutoland();
-            }
-
+            ToggleAutoland();
             GUI.FocusControl(null);
         }
 
@@ -1600,7 +1760,7 @@ public class Plugin : BaseUnityPlugin
             APData.NavEnabled = newNavState;
             if (APData.NavEnabled && (APData.TargetRoll == -999f || APData.TargetRoll == 0f))
             {
-                APData.TargetRoll = DefaultCRLimit.Value;
+                APData.TargetRoll = DefaultTrkRollLimit.Value;
             }
 
             SyncMenuValues();
@@ -1923,9 +2083,90 @@ public class Plugin : BaseUnityPlugin
         }
     }
 
+    public static void Announce(AnnouncementKind kind, string text)
+    {
+        if (AnnouncementsEnabled != null && !AnnouncementsEnabled.Value)
+        {
+            return;
+        }
+
+        if (AnnouncementToggles.TryGetValue(kind, out ConfigEntry<bool> toggle) && !toggle.Value)
+        {
+            return;
+        }
+
+        try
+        {
+            AircraftActionsReport report = SceneSingleton<AircraftActionsReport>.i;
+            if (report != null)
+            {
+                report.ReportText(text, 1f);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning($"[Announce] Error: {ex.Message}");
+        }
+    }
+
+    private static void ToggleLevelChange()
+    {
+        float altError = Mathf.Abs(APData.TargetAlt - APData.CurrentAlt);
+        bool ready = APData.Enabled && APData.TargetAlt > 0f && APData.TargetSpeed >= 0f &&
+                     !APData.GCASActive && !APData.ALSActive &&
+                     altError > LvlChgCaptureArmDistance.Value;
+
+        if (ready)
+        {
+            APData.LvlChgEnabled = !APData.LvlChgEnabled;
+            Announce(AnnouncementKind.LevelChange, APData.LvlChgEnabled
+                ? "Level Change <b>Enabled</b>"
+                : "Level Change <b>Disabled</b>");
+            return;
+        }
+
+        APData.LvlChgEnabled = false;
+        Announce(AnnouncementKind.LevelChange, APData.TargetAlt > 0f && APData.TargetSpeed >= 0f &&
+                 altError <= LvlChgCaptureArmDistance.Value
+            ? "LC Altitude Reached"
+            : "LC: Needs Altitude and Speed Target");
+    }
+
+    private static void AnnounceFBWState(bool fbwDisabled)
+    {
+        Announce(AnnouncementKind.Fbw, fbwDisabled ? "FBW <b>Disabled</b>" : "FBW <b>Enabled</b>");
+    }
+
+    private static void ToggleAutoland()
+    {
+        if (APData.ALSActive)
+        {
+            APData.ALSActive = false;
+            APData.ALSStatusText = "";
+
+            Pilot localPilot = APData.LocalPilot;
+            if (localPilot != null)
+            {
+                localPilot.SwitchState(localPilot.playerState);
+            }
+
+            Announce(AnnouncementKind.Autoland, "Autoland <b>Disengaged</b>");
+            return;
+        }
+
+        if (StartAutoland())
+        {
+            Announce(AnnouncementKind.Autoland, "Autoland <b>Engaged</b>");
+        }
+        else
+        {
+            Announce(AnnouncementKind.Autoland, "Autoland <b>Unavailable</b>");
+        }
+    }
+
     private static bool StartAutoland()
     {
-        APData.ALSActive = true;
+        APData.ALSActive = false;
         Pilot pilot = APData.LocalPilot;
         Aircraft aircraft = APData.LocalAircraft;
 
@@ -1937,7 +2178,7 @@ public class Plugin : BaseUnityPlugin
 
         FactionHQ hq = aircraft.NetworkHQ;
 
-        if (hq?.GetAirbases().Any() != true)
+        if (hq == null || hq.GetAirbases().Any() != true)
         {
             APData.ALSStatusText = "ALS: NO AIRBASE";
             return false;
@@ -1961,6 +2202,7 @@ public class Plugin : BaseUnityPlugin
         }
 
         APData.ALSStatusText = "ALS: SEARCH";
+        APData.ALSActive = true;
         return true;
     }
 
@@ -1968,11 +2210,6 @@ public class Plugin : BaseUnityPlugin
     {
         try
         {
-            if (string.Equals(scene.name, "GameWorld", StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
-
             APData.Reset();
             HudPatch.Reset();
             ControlOverridePatch.Reset();

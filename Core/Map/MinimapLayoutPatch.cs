@@ -68,7 +68,7 @@ internal static class MinimapLayoutPatch
             }
 
             CombatHUD hud = SceneSingleton<CombatHUD>.i;
-            if (hud == null || hud.aircraft?.disabled != false)
+            if (hud == null || hud.aircraft == null || hud.aircraft.disabled)
             {
                 return;
             }
@@ -132,7 +132,8 @@ internal static class MinimapLayoutPatch
             Transform parent = hudMapAnchor.parent;
             if (parent == null || parent.name != "LowerLeftPanel")
             {
-                Plugin.Logger.LogError($"[MinimapLayoutPatch] Expected LowerLeftPanel, got '{parent?.name}'");
+                string parentName = parent != null ? parent.name : "null";
+                Plugin.Logger.LogError($"[MinimapLayoutPatch] Expected LowerLeftPanel, got '{parentName}'");
                 Plugin.IsBroken = true;
                 return false;
             }

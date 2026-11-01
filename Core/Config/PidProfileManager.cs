@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -96,7 +97,7 @@ public static class PidProfileManager
     }
     private static void SuppressConfigAutosaveForTuning()
     {
-        if (Plugin.Instance?.Config == null || s_prevSaveOnConfigSet.HasValue)
+        if (Plugin.Instance == null || Plugin.Instance.Config == null || s_prevSaveOnConfigSet.HasValue)
         {
             return;
         }
@@ -126,8 +127,21 @@ public static class PidProfileManager
         if (tunedProfile.Roll != baseProfile.Roll) { partial.Roll = tunedProfile.Roll; }
         if (tunedProfile.RollRate != baseProfile.RollRate) { partial.RollRate = tunedProfile.RollRate; }
         if (tunedProfile.Yaw != baseProfile.Yaw) { partial.Yaw = tunedProfile.Yaw; }
-        if (tunedProfile.Crs != baseProfile.Crs) { partial.Crs = tunedProfile.Crs; }
+        if (tunedProfile.Trk != baseProfile.Trk) { partial.Trk = tunedProfile.Trk; }
         if (tunedProfile.Spd != baseProfile.Spd) { partial.Spd = tunedProfile.Spd; }
+        if (tunedProfile.LvlChg != baseProfile.LvlChg) { partial.LvlChg = tunedProfile.LvlChg; }
+        if (tunedProfile.LvlChgCaptureDecelG != baseProfile.LvlChgCaptureDecelG)
+        {
+            partial.LvlChgCaptureDecelG = tunedProfile.LvlChgCaptureDecelG;
+        }
+        if (tunedProfile.LvlChgHandoffDistance != baseProfile.LvlChgHandoffDistance)
+        {
+            partial.LvlChgHandoffDistance = tunedProfile.LvlChgHandoffDistance;
+        }
+        if (tunedProfile.LvlChgHandoffVS != baseProfile.LvlChgHandoffVS)
+        {
+            partial.LvlChgHandoffVS = tunedProfile.LvlChgHandoffVS;
+        }
         if (tunedProfile.Gcas != baseProfile.Gcas) { partial.Gcas = tunedProfile.Gcas; }
         if (tunedProfile.SchedPitch != baseProfile.SchedPitch) { partial.SchedPitch = tunedProfile.SchedPitch; }
         if (tunedProfile.SchedRollRate != baseProfile.SchedRollRate) { partial.SchedRollRate = tunedProfile.SchedRollRate; }
@@ -158,7 +172,7 @@ public static class PidProfileManager
     }
     private static void RestoreConfigAutosaveAfterTuning()
     {
-        if (Plugin.Instance?.Config == null || !s_prevSaveOnConfigSet.HasValue)
+        if (Plugin.Instance == null || Plugin.Instance.Config == null || !s_prevSaveOnConfigSet.HasValue)
         {
             return;
         }
@@ -176,19 +190,7 @@ public static class PidProfileManager
 
         IsTuning = false;
 
-        ActivePid.Alt = PIDTuning.Parse(s_tuningSnapshot.Alt);
-        ActivePid.Vs = PIDTuning.Parse(s_tuningSnapshot.Vs);
-        ActivePid.Pitch = PIDTuning.Parse(s_tuningSnapshot.Pitch);
-        ActivePid.Roll = PIDTuning.Parse(s_tuningSnapshot.Roll);
-        ActivePid.RollRate = PIDTuning.Parse(s_tuningSnapshot.RollRate);
-        ActivePid.Yaw = PIDTuning.Parse(s_tuningSnapshot.Yaw);
-        ActivePid.Crs = PIDTuning.Parse(s_tuningSnapshot.Crs);
-        ActivePid.Spd = PIDTuning.Parse(s_tuningSnapshot.Spd);
-        ActivePid.Gcas = PIDTuning.Parse(s_tuningSnapshot.Gcas);
-        ActivePid.SchedPitch = GainSchedule.Parse(s_tuningSnapshot.SchedPitch);
-        ActivePid.SchedRollRate = GainSchedule.Parse(s_tuningSnapshot.SchedRollRate);
-        ActivePid.SchedVs = GainSchedule.Parse(s_tuningSnapshot.SchedVs);
-        ActivePid.SchedSpd = GainSchedule.Parse(s_tuningSnapshot.SchedSpd);
+        ActivePid.ApplyProfile(s_tuningSnapshot);
 
         s_tuningAircraftId = null;
         s_tuningSnapshot = null;
@@ -207,8 +209,12 @@ public static class PidProfileManager
             Roll = ActivePid.Roll.ToString(),
             RollRate = ActivePid.RollRate.ToString(),
             Yaw = ActivePid.Yaw.ToString(),
-            Crs = ActivePid.Crs.ToString(),
+            Trk = ActivePid.Trk.ToString(),
             Spd = ActivePid.Spd.ToString(),
+            LvlChg = ActivePid.LvlChg.ToString(),
+            LvlChgCaptureDecelG = ActivePid.LvlChgCaptureDecelG.ToString(CultureInfo.InvariantCulture),
+            LvlChgHandoffDistance = ActivePid.LvlChgHandoffDistance.ToString(CultureInfo.InvariantCulture),
+            LvlChgHandoffVS = ActivePid.LvlChgHandoffVS.ToString(CultureInfo.InvariantCulture),
             Gcas = ActivePid.Gcas.ToString(),
             SchedPitch = ActivePid.SchedPitch.ToString(),
             SchedRollRate = ActivePid.SchedRollRate.ToString(),
@@ -305,8 +311,12 @@ public static class PidProfileManager
                 Roll = ActivePid.Roll.ToString(),
                 RollRate = ActivePid.RollRate.ToString(),
                 Yaw = ActivePid.Yaw.ToString(),
-                Crs = ActivePid.Crs.ToString(),
+                Trk = ActivePid.Trk.ToString(),
                 Spd = ActivePid.Spd.ToString(),
+                LvlChg = ActivePid.LvlChg.ToString(),
+                LvlChgCaptureDecelG = ActivePid.LvlChgCaptureDecelG.ToString(CultureInfo.InvariantCulture),
+                LvlChgHandoffDistance = ActivePid.LvlChgHandoffDistance.ToString(CultureInfo.InvariantCulture),
+                LvlChgHandoffVS = ActivePid.LvlChgHandoffVS.ToString(CultureInfo.InvariantCulture),
                 Gcas = ActivePid.Gcas.ToString(),
                 SchedPitch = ActivePid.SchedPitch.ToString(),
                 SchedRollRate = ActivePid.SchedRollRate.ToString(),

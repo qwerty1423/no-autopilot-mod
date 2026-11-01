@@ -21,7 +21,11 @@ internal static class PreventLeaveStateCleanup
         {
             if (APData.ALSActive)
             {
-                __instance.gloc?.ResetGLOC();
+                if (__instance.gloc != null)
+                {
+                    __instance.gloc.ResetGLOC();
+                }
+
                 return false;
             }
         }

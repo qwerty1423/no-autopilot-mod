@@ -20,9 +20,10 @@ public static class PIDLogger
         Roll = 4,
         RollRate = 5,
         Yaw = 6,
-        Crs = 7,
+        Trk = 7,
         Spd = 8,
-        GCAS = 9
+        GCAS = 9,
+        LvlChg = 10
     }
 
     public static bool IsTestActive { get; private set; }

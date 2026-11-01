@@ -155,7 +155,7 @@ internal sealed class APAudio
 
         string lateral =
             APData.NavEnabled ? "NAV" :
-            APData.TargetCourse >= 0f ? "CRS" :
+            APData.TargetTrack >= 0f ? "TRK" :
             APData.TargetRoll != -999f ? "ROLL" :
             "L_NONE";
 

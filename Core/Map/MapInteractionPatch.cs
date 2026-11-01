@@ -65,7 +65,7 @@ internal static class MapInteractionPatch
                 float currentTargetRoll = APData.TargetRoll;
                 if (currentTargetRoll == -999f || currentTargetRoll == 0f)
                 {
-                    APData.TargetRoll = Plugin.DefaultCRLimit.Value;
+                    APData.TargetRoll = Plugin.DefaultTrkRollLimit.Value;
                 }
 
                 Plugin.SyncMenuValues();

@@ -11,8 +11,12 @@ public class PidProfile
     public string Roll;
     public string RollRate;
     public string Yaw;
-    public string Crs;
+    public string Trk;
     public string Spd;
+    public string LvlChg;
+    public string LvlChgCaptureDecelG;
+    public string LvlChgHandoffDistance;
+    public string LvlChgHandoffVS;
     public string Gcas;
 
     public string SchedPitch;
@@ -24,7 +28,9 @@ public class PidProfile
     {
         return string.IsNullOrEmpty(Alt) && string.IsNullOrEmpty(Vs) && string.IsNullOrEmpty(Pitch) &&
         string.IsNullOrEmpty(Roll) && string.IsNullOrEmpty(RollRate) && string.IsNullOrEmpty(Yaw) &&
-        string.IsNullOrEmpty(Crs) && string.IsNullOrEmpty(Spd) && string.IsNullOrEmpty(Gcas) &&
+        string.IsNullOrEmpty(Trk) && string.IsNullOrEmpty(Spd) && string.IsNullOrEmpty(LvlChg) &&
+        string.IsNullOrEmpty(LvlChgCaptureDecelG) && string.IsNullOrEmpty(LvlChgHandoffDistance) &&
+        string.IsNullOrEmpty(LvlChgHandoffVS) && string.IsNullOrEmpty(Gcas) &&
         string.IsNullOrEmpty(SchedPitch) && string.IsNullOrEmpty(SchedRollRate) &&
         string.IsNullOrEmpty(SchedVs) && string.IsNullOrEmpty(SchedSpd);
     }

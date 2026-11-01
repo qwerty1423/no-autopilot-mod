@@ -91,6 +91,23 @@ internal static class HUDVisualsPatch
     }
 
     [UsedImplicitly]
+    private static void AppendHudLine(StringBuilder sb, string color, string text, bool hashColor = false)
+    {
+        if (sb.Length > 0 && sb[^1] != '\n')
+        {
+            sb.Append('\n');
+        }
+
+        sb.Append("<color=");
+        if (hashColor)
+        {
+            sb.Append('#');
+        }
+
+        sb.Append(color).Append('>').Append(text).Append("</color>");
+    }
+
+    [UsedImplicitly]
     private static void Postfix(FlightHud __instance)
     {
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
@@ -100,10 +117,25 @@ internal static class HUDVisualsPatch
 
         if (!Plugin.ShowExtraInfo.Value)
         {
-            s_infoOverlayObj?.SetActive(false);
-            s_gcasLeftObj?.SetActive(false);
-            s_gcasRightObj?.SetActive(false);
-            s_gcasTopObj?.SetActive(false);
+            if (s_infoOverlayObj != null)
+            {
+                s_infoOverlayObj.SetActive(false);
+            }
+
+            if (s_gcasLeftObj != null)
+            {
+                s_gcasLeftObj.SetActive(false);
+            }
+
+            if (s_gcasRightObj != null)
+            {
+                s_gcasRightObj.SetActive(false);
+            }
+
+            if (s_gcasTopObj != null)
+            {
+                s_gcasTopObj.SetActive(false);
+            }
             return;
         }
 
@@ -412,18 +444,18 @@ internal static class HUDVisualsPatch
                         if (apActive)
                         {
                             string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
-                            if (APData.TargetCourse >= 0)
+                            if (APData.TargetTrack >= 0)
                             {
-                                SbHud.Append("C").Append(APData.TargetCourse.ToString("F0")).Append(degUnit);
+                                SbHud.Append("T").Append(APData.TargetTrack.ToString("F0")).Append(degUnit);
                                 hasLine3 = true;
                             }
                             else if (placeholders)
                             {
-                                SbHud.Append("C");
+                                SbHud.Append("T");
                                 hasLine3 = true;
                             }
 
-                            if (APData.NavEnabled && APData.NavQueue.Count > 0)
+                            if (APData.NavEnabled && APData.NavQueue.Count > 0 && APData.PlayerRB != null)
                             {
                                 if (hasLine3)
                                 {
@@ -482,13 +514,18 @@ internal static class HUDVisualsPatch
 
                     if (APData.FBWDisabled)
                     {
-                        SbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">FBW OFF</color>");
+                        AppendHudLine(SbHud, Plugin.ColorCrit.Value, "FBW OFF");
+                    }
+
+                    if (APData.LvlChgEnabled)
+                    {
+                        AppendHudLine(SbHud, Plugin.ColorInfo.Value, "LVL CHG");
                     }
 
                     if (APData.ALSActive || !string.IsNullOrEmpty(APData.ALSStatusText))
                     {
                         string hexColor = ColorUtility.ToHtmlStringRGBA(APData.ALSStatusColor);
-                        SbHud.Append($"\n<color=#{hexColor}>{APData.ALSStatusText}</color>");
+                        AppendHudLine(SbHud, hexColor, APData.ALSStatusText, true);
                     }
 
                     string newText = SbHud.ToString();

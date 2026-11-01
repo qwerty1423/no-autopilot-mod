@@ -386,17 +386,13 @@ public class PIDController
 
     private static double ApplyDeadband(double v, double deadband)
     {
-        if (!IsFinite(v))
-        {
-            return 0;
-        }
-
-        if (!IsFinite(deadband) || deadband <= 0)
-        {
-            return v;
-        }
-
-        return Abs(v) < deadband ? 0 : v - (Sign(v) * deadband);
+        return !IsFinite(v)
+            ? 0
+            : !IsFinite(deadband) || deadband <= 0
+                ? v
+                : Abs(v) < deadband
+                    ? 0
+                    : v - (Sign(v) * deadband);
     }
 
     private static bool IsFinite(double x) =>

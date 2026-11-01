@@ -31,6 +31,14 @@ tab_width = 4
 # New line preferences
 insert_final_newline = false
 
+dotnet_diagnostic.RCS1146.severity = none
+dotnet_diagnostic.RCS1084.severity = none
+dotnet_diagnostic.RCS1206.severity = none
+dotnet_diagnostic.RCS1049.severity = none
+dotnet_diagnostic.IDE0031.severity = none
+dotnet_diagnostic.UNT0007.severity = warning
+dotnet_diagnostic.UNT0008.severity = warning
+
 #### .NET Coding Conventions ####
 [*.{cs,vb}]
 

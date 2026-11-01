@@ -32,7 +32,10 @@ internal static class MinimapGridOpacityPatch
         CachedGraphics.Clear();
         s_lastInstance = instance;
 
-        majorParent?.GetComponentsInChildren(true, CachedGraphics);
+        if (majorParent != null)
+        {
+            majorParent.GetComponentsInChildren(true, CachedGraphics);
+        }
 
         if (minorParent != null)
         {
@@ -45,13 +48,9 @@ internal static class MinimapGridOpacityPatch
         {
             foreach (GameObject gridObj in gridImages)
             {
-                if (gridObj != null)
+                if (gridObj != null && gridObj.TryGetComponent(out Image img))
                 {
-                    Image img = gridObj.GetComponent<Image>();
-                    if (img != null)
-                    {
-                        CachedGraphics.Add(img);
-                    }
+                    CachedGraphics.Add(img);
                 }
             }
         }

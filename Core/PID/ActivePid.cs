@@ -1,16 +1,25 @@
+using System.Globalization;
+
 using NOAutopilot.Core.Config;
+
+using UnityEngine;
 
 namespace NOAutopilot.Core.PID;
 
 public static class ActivePid
 {
     // active values
-    public static PIDTuning Alt, Vs, Pitch, Roll, RollRate, Yaw, Crs, Spd, Gcas;
+    public static PIDTuning Alt, Vs, Pitch, Roll, RollRate, Yaw, Trk, Spd, LvlChg, Gcas;
     public static GainSchedule SchedPitch, SchedRollRate, SchedVs, SchedSpd;
 
+    public static float LvlChgCaptureDecelG;
+    public static float LvlChgHandoffDistance;
+    public static float LvlChgHandoffVS;
+
     // global default
-    private static string s_gAlt, s_gVs, s_gPitch, s_gRoll, s_gRollRate, s_gYaw, s_gCrs, s_gSpd, s_gGcas;
+    private static string s_gAlt, s_gVs, s_gPitch, s_gRoll, s_gRollRate, s_gYaw, s_gTrk, s_gSpd, s_gLvlChg, s_gGcas;
     private static string s_gSchedPitch, s_gSchedRollRate, s_gSchedVs, s_gSchedSpd;
+    private static float s_gLvlChgCaptureDecelG, s_gLvlChgHandoffDistance, s_gLvlChgHandoffVS;
 
     public static string CurrentAircraftId { get; private set; } = "";
     public static bool IsUsingOverride { get; private set; }
@@ -26,9 +35,14 @@ public static class ActivePid
         s_gRoll = Plugin.ConfPidRoll.Value.ToString();
         s_gRollRate = Plugin.ConfPidRollRate.Value.ToString();
         s_gYaw = Plugin.ConfPidYaw.Value.ToString();
-        s_gCrs = Plugin.ConfPidCrs.Value.ToString();
+        s_gTrk = Plugin.ConfPidTrk.Value.ToString();
         s_gSpd = Plugin.ConfPidSpd.Value.ToString();
+        s_gLvlChg = Plugin.ConfPidLvlChg.Value.ToString();
         s_gGcas = Plugin.ConfPidGcas.Value.ToString();
+
+        s_gLvlChgCaptureDecelG = Plugin.ConfLvlChgCaptureDecelG.Value;
+        s_gLvlChgHandoffDistance = Plugin.ConfLvlChgHandoffDistance.Value;
+        s_gLvlChgHandoffVS = Plugin.ConfLvlChgHandoffVS.Value;
 
         s_gSchedPitch = Plugin.SchedPidPitch.Value.ToString();
         s_gSchedRollRate = Plugin.SchedPidRollRate.Value.ToString();
@@ -41,6 +55,10 @@ public static class ActivePid
     /// </summary>
     public static void LoadGlobalDefaults()
     {
+        LvlChgCaptureDecelG = s_gLvlChgCaptureDecelG;
+        LvlChgHandoffDistance = s_gLvlChgHandoffDistance;
+        LvlChgHandoffVS = s_gLvlChgHandoffVS;
+
         PidProfile defaults = DefaultProfiles.Load("global_defaults");
         if (defaults != null)
         {
@@ -54,8 +72,9 @@ public static class ActivePid
             Roll = PIDTuning.Parse(s_gRoll);
             RollRate = PIDTuning.Parse(s_gRollRate);
             Yaw = PIDTuning.Parse(s_gYaw);
-            Crs = PIDTuning.Parse(s_gCrs);
+            Trk = PIDTuning.Parse(s_gTrk);
             Spd = PIDTuning.Parse(s_gSpd);
+            LvlChg = PIDTuning.Parse(s_gLvlChg);
             Gcas = PIDTuning.Parse(s_gGcas);
 
             SchedPitch = GainSchedule.Parse(s_gSchedPitch);
@@ -105,8 +124,12 @@ public static class ActivePid
         if (!string.IsNullOrEmpty(profile.Roll)) { Roll = PIDTuning.Parse(profile.Roll); }
         if (!string.IsNullOrEmpty(profile.RollRate)) { RollRate = PIDTuning.Parse(profile.RollRate); }
         if (!string.IsNullOrEmpty(profile.Yaw)) { Yaw = PIDTuning.Parse(profile.Yaw); }
-        if (!string.IsNullOrEmpty(profile.Crs)) { Crs = PIDTuning.Parse(profile.Crs); }
+        if (!string.IsNullOrEmpty(profile.Trk)) { Trk = PIDTuning.Parse(profile.Trk); }
         if (!string.IsNullOrEmpty(profile.Spd)) { Spd = PIDTuning.Parse(profile.Spd); }
+        if (!string.IsNullOrEmpty(profile.LvlChg)) { LvlChg = PIDTuning.Parse(profile.LvlChg); }
+        LvlChgCaptureDecelG = ParseCaptureFloat(profile.LvlChgCaptureDecelG, LvlChgCaptureDecelG, 0.01f, 1f);
+        LvlChgHandoffDistance = ParseCaptureFloat(profile.LvlChgHandoffDistance, LvlChgHandoffDistance, 0.1f, 100f);
+        LvlChgHandoffVS = ParseCaptureFloat(profile.LvlChgHandoffVS, LvlChgHandoffVS, 0.05f, 10f);
         if (!string.IsNullOrEmpty(profile.Gcas)) { Gcas = PIDTuning.Parse(profile.Gcas); }
 
         if (!string.IsNullOrEmpty(profile.SchedPitch)) { SchedPitch = GainSchedule.Parse(profile.SchedPitch); }
@@ -115,9 +138,17 @@ public static class ActivePid
         if (!string.IsNullOrEmpty(profile.SchedSpd)) { SchedSpd = GainSchedule.Parse(profile.SchedSpd); }
     }
 
+    private static float ParseCaptureFloat(string text, float fallback, float min, float max)
+    {
+        return string.IsNullOrEmpty(text) ||
+            !float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float value)
+            ? fallback
+            : Mathf.Clamp(value, min, max);
+    }
+
     public static void SyncToConfig()
     {
-        if (Plugin.Instance?.Config == null)
+        if (Plugin.Instance == null || Plugin.Instance.Config == null)
         {
             return;
         }
@@ -133,9 +164,13 @@ public static class ActivePid
             Plugin.ConfPidRoll.Value = Roll;
             Plugin.ConfPidRollRate.Value = RollRate;
             Plugin.ConfPidYaw.Value = Yaw;
-            Plugin.ConfPidCrs.Value = Crs;
+            Plugin.ConfPidTrk.Value = Trk;
             Plugin.ConfPidSpd.Value = Spd;
+            Plugin.ConfPidLvlChg.Value = LvlChg;
             Plugin.ConfPidGcas.Value = Gcas;
+            Plugin.ConfLvlChgCaptureDecelG.Value = LvlChgCaptureDecelG;
+            Plugin.ConfLvlChgHandoffDistance.Value = LvlChgHandoffDistance;
+            Plugin.ConfLvlChgHandoffVS.Value = LvlChgHandoffVS;
 
             Plugin.SchedPidPitch.Value = SchedPitch;
             Plugin.SchedPidRollRate.Value = SchedRollRate;
@@ -156,9 +191,13 @@ public static class ActivePid
         Roll = Plugin.ConfPidRoll.Value;
         RollRate = Plugin.ConfPidRollRate.Value;
         Yaw = Plugin.ConfPidYaw.Value;
-        Crs = Plugin.ConfPidCrs.Value;
+        Trk = Plugin.ConfPidTrk.Value;
         Spd = Plugin.ConfPidSpd.Value;
+        LvlChg = Plugin.ConfPidLvlChg.Value;
         Gcas = Plugin.ConfPidGcas.Value;
+        LvlChgCaptureDecelG = Plugin.ConfLvlChgCaptureDecelG.Value;
+        LvlChgHandoffDistance = Plugin.ConfLvlChgHandoffDistance.Value;
+        LvlChgHandoffVS = Plugin.ConfLvlChgHandoffVS.Value;
 
         SchedPitch = Plugin.SchedPidPitch.Value;
         SchedRollRate = Plugin.SchedPidRollRate.Value;
@@ -175,9 +214,13 @@ public static class ActivePid
             Plugin.ConfPidRoll.Value.ToString() == s_gRoll &&
             Plugin.ConfPidRollRate.Value.ToString() == s_gRollRate &&
             Plugin.ConfPidYaw.Value.ToString() == s_gYaw &&
-            Plugin.ConfPidCrs.Value.ToString() == s_gCrs &&
+            Plugin.ConfPidTrk.Value.ToString() == s_gTrk &&
             Plugin.ConfPidSpd.Value.ToString() == s_gSpd &&
+            Plugin.ConfPidLvlChg.Value.ToString() == s_gLvlChg &&
             Plugin.ConfPidGcas.Value.ToString() == s_gGcas &&
+            Mathf.Approximately(Plugin.ConfLvlChgCaptureDecelG.Value, s_gLvlChgCaptureDecelG) &&
+            Mathf.Approximately(Plugin.ConfLvlChgHandoffDistance.Value, s_gLvlChgHandoffDistance) &&
+            Mathf.Approximately(Plugin.ConfLvlChgHandoffVS.Value, s_gLvlChgHandoffVS) &&
             Plugin.SchedPidPitch.Value.ToString() == s_gSchedPitch &&
             Plugin.SchedPidRollRate.Value.ToString() == s_gSchedRollRate &&
             Plugin.SchedPidVs.Value.ToString() == s_gSchedVs &&
@@ -186,7 +229,7 @@ public static class ActivePid
 
     public static void WriteGlobalDefaultsToConfig()
     {
-        if (Plugin.Instance?.Config == null)
+        if (Plugin.Instance == null || Plugin.Instance.Config == null)
         {
             return;
         }
@@ -202,9 +245,13 @@ public static class ActivePid
             Plugin.ConfPidRoll.Value = Roll;
             Plugin.ConfPidRollRate.Value = RollRate;
             Plugin.ConfPidYaw.Value = Yaw;
-            Plugin.ConfPidCrs.Value = Crs;
+            Plugin.ConfPidTrk.Value = Trk;
             Plugin.ConfPidSpd.Value = Spd;
+            Plugin.ConfPidLvlChg.Value = LvlChg;
             Plugin.ConfPidGcas.Value = Gcas;
+            Plugin.ConfLvlChgCaptureDecelG.Value = LvlChgCaptureDecelG;
+            Plugin.ConfLvlChgHandoffDistance.Value = LvlChgHandoffDistance;
+            Plugin.ConfLvlChgHandoffVS.Value = LvlChgHandoffVS;
 
             Plugin.SchedPidPitch.Value = SchedPitch;
             Plugin.SchedPidRollRate.Value = SchedRollRate;

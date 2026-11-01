@@ -171,10 +171,13 @@ A more up to date version of the table below is included in one of the tooltips 
 | Bank Left/Right             | `[` and `]`            | Adjust roll angle                            |
 | Track Hold                  | `Shift + {`            | Hold current track                           |
 | Nav Hold                    | `Shift + }`            | Toggle nav mode                              |
+| Toggle LVL CHG              | `Shift + ;`            | Toggle level change                          |
 | C Trk/R Roll/C Alt/C Roll   | `'` (Quote)            | clear/reset in that order, one per keystroke |
 | Toggle GCAS                 | `\` (Backslash)        | added just in case                           |
 | Toggle autothrottle         | `;`                    | will write current speed to ui/delete it     |
 | **Toggle AP GUI**           | `F8`                   | **opens/closes the GUI**                     |
+
+Level change requires a target altitude and a target speed. The default shortcut is `Shift + :`.
 
 Large altitude adjustment key has minimum limit to reduce crashes when sea skimming if the key is accidentally pressed.
 

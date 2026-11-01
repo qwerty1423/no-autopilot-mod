@@ -500,6 +500,11 @@ internal static class HUDVisualsPatch
                         SbHud.Append("<color=").Append(Plugin.ColorCrit.Value).Append(">FBW OFF</color>");
                     }
 
+                    if (APData.LvlChgEnabled)
+                    {
+                        SbHud.Append(" <color=").Append(Plugin.ColorInfo.Value).Append(">LVL CHG</color>");
+                    }
+
                     if (APData.ALSActive || !string.IsNullOrEmpty(APData.ALSStatusText))
                     {
                         string hexColor = ColorUtility.ToHtmlStringRGBA(APData.ALSStatusColor);

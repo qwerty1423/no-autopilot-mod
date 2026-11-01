@@ -5,11 +5,11 @@ namespace NOAutopilot.Core.PID;
 public static class ActivePid
 {
     // active values
-    public static PIDTuning Alt, Vs, Pitch, Roll, RollRate, Yaw, Trk, Spd, Gcas;
+    public static PIDTuning Alt, Vs, Pitch, Roll, RollRate, Yaw, Trk, Spd, LvlChg, Gcas;
     public static GainSchedule SchedPitch, SchedRollRate, SchedVs, SchedSpd;
 
     // global default
-    private static string s_gAlt, s_gVs, s_gPitch, s_gRoll, s_gRollRate, s_gYaw, s_gTrk, s_gSpd, s_gGcas;
+    private static string s_gAlt, s_gVs, s_gPitch, s_gRoll, s_gRollRate, s_gYaw, s_gTrk, s_gSpd, s_gLvlChg, s_gGcas;
     private static string s_gSchedPitch, s_gSchedRollRate, s_gSchedVs, s_gSchedSpd;
 
     public static string CurrentAircraftId { get; private set; } = "";
@@ -28,6 +28,7 @@ public static class ActivePid
         s_gYaw = Plugin.ConfPidYaw.Value.ToString();
         s_gTrk = Plugin.ConfPidTrk.Value.ToString();
         s_gSpd = Plugin.ConfPidSpd.Value.ToString();
+        s_gLvlChg = Plugin.ConfPidLvlChg.Value.ToString();
         s_gGcas = Plugin.ConfPidGcas.Value.ToString();
 
         s_gSchedPitch = Plugin.SchedPidPitch.Value.ToString();
@@ -56,6 +57,7 @@ public static class ActivePid
             Yaw = PIDTuning.Parse(s_gYaw);
             Trk = PIDTuning.Parse(s_gTrk);
             Spd = PIDTuning.Parse(s_gSpd);
+            LvlChg = PIDTuning.Parse(s_gLvlChg);
             Gcas = PIDTuning.Parse(s_gGcas);
 
             SchedPitch = GainSchedule.Parse(s_gSchedPitch);
@@ -107,6 +109,7 @@ public static class ActivePid
         if (!string.IsNullOrEmpty(profile.Yaw)) { Yaw = PIDTuning.Parse(profile.Yaw); }
         if (!string.IsNullOrEmpty(profile.Trk)) { Trk = PIDTuning.Parse(profile.Trk); }
         if (!string.IsNullOrEmpty(profile.Spd)) { Spd = PIDTuning.Parse(profile.Spd); }
+        if (!string.IsNullOrEmpty(profile.LvlChg)) { LvlChg = PIDTuning.Parse(profile.LvlChg); }
         if (!string.IsNullOrEmpty(profile.Gcas)) { Gcas = PIDTuning.Parse(profile.Gcas); }
 
         if (!string.IsNullOrEmpty(profile.SchedPitch)) { SchedPitch = GainSchedule.Parse(profile.SchedPitch); }
@@ -135,6 +138,7 @@ public static class ActivePid
             Plugin.ConfPidYaw.Value = Yaw;
             Plugin.ConfPidTrk.Value = Trk;
             Plugin.ConfPidSpd.Value = Spd;
+            Plugin.ConfPidLvlChg.Value = LvlChg;
             Plugin.ConfPidGcas.Value = Gcas;
 
             Plugin.SchedPidPitch.Value = SchedPitch;
@@ -158,6 +162,7 @@ public static class ActivePid
         Yaw = Plugin.ConfPidYaw.Value;
         Trk = Plugin.ConfPidTrk.Value;
         Spd = Plugin.ConfPidSpd.Value;
+        LvlChg = Plugin.ConfPidLvlChg.Value;
         Gcas = Plugin.ConfPidGcas.Value;
 
         SchedPitch = Plugin.SchedPidPitch.Value;
@@ -177,6 +182,7 @@ public static class ActivePid
             Plugin.ConfPidYaw.Value.ToString() == s_gYaw &&
             Plugin.ConfPidTrk.Value.ToString() == s_gTrk &&
             Plugin.ConfPidSpd.Value.ToString() == s_gSpd &&
+            Plugin.ConfPidLvlChg.Value.ToString() == s_gLvlChg &&
             Plugin.ConfPidGcas.Value.ToString() == s_gGcas &&
             Plugin.SchedPidPitch.Value.ToString() == s_gSchedPitch &&
             Plugin.SchedPidRollRate.Value.ToString() == s_gSchedRollRate &&
@@ -204,6 +210,7 @@ public static class ActivePid
             Plugin.ConfPidYaw.Value = Yaw;
             Plugin.ConfPidTrk.Value = Trk;
             Plugin.ConfPidSpd.Value = Spd;
+            Plugin.ConfPidLvlChg.Value = LvlChg;
             Plugin.ConfPidGcas.Value = Gcas;
 
             Plugin.SchedPidPitch.Value = SchedPitch;

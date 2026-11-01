@@ -116,7 +116,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<KeyboardShortcut> UpKey, DownKey, BigUpKey, BigDownKey;
     public static ConfigEntry<KeyboardShortcut> ClimbRateUpKey, ClimbRateDownKey;
     public static ConfigEntry<KeyboardShortcut> BankLeftKey, BankRightKey;
-    public static ConfigEntry<KeyboardShortcut> TrackHoldKey, NavHoldKey;
+    public static ConfigEntry<KeyboardShortcut> TrackHoldKey, NavHoldKey, LvlChgKey;
     public static ConfigEntry<KeyboardShortcut> SpeedHoldKey, SpeedUpKey, SpeedDownKey;
     public static ConfigEntry<KeyboardShortcut> ToggleMachKey, ToggleABKey;
 
@@ -126,7 +126,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<string> UpRW, DownRW, BigUpRW, BigDownRW;
     public static ConfigEntry<string> ClimbRateUpRW, ClimbRateDownRW;
     public static ConfigEntry<string> BankLeftRW, BankRightRW;
-    public static ConfigEntry<string> TrackHoldRW, NavHoldRW;
+    public static ConfigEntry<string> TrackHoldRW, NavHoldRW, LvlChgRW;
     public static ConfigEntry<string> SpeedHoldRW, SpeedUpRW, SpeedDownRW;
     public static ConfigEntry<string> ToggleMachRW, ToggleABRW;
 
@@ -135,12 +135,14 @@ public class Plugin : BaseUnityPlugin
 
     // Limits
     public static ConfigEntry<float> DefaultMaxClimbRate, Conf_VS_MaxAngle, DefaultTrkRollLimit;
+    public static ConfigEntry<float> LvlChgCaptureDistance;
+    public static ConfigEntry<bool> LvlChgManualThrottle;
     public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, MaxRollRate;
 
     // pid
     public static ConfigEntry<PIDTuning> ConfPidAlt, ConfPidVs, ConfPidPitch;
     public static ConfigEntry<PIDTuning> ConfPidRoll, ConfPidRollRate, ConfPidYaw;
-    public static ConfigEntry<PIDTuning> ConfPidTrk, ConfPidSpd, ConfPidGcas;
+    public static ConfigEntry<PIDTuning> ConfPidTrk, ConfPidSpd, ConfPidLvlChg, ConfPidGcas;
 
     public static ConfigEntry<GainSchedule> SchedPidPitch;
     public static ConfigEntry<GainSchedule> SchedPidRollRate;
@@ -187,7 +189,8 @@ public class Plugin : BaseUnityPlugin
         "<b>Max Climb Rate:</b> PgUp / PgDn | Limit vertical speed\n" +
         "<b>Bank/Track L/R:</b> [ and ] | Adjust roll or track\n" +
         "<b>Track Hold:</b> LShift + { | Hold current track\n" +
-        "<b>Nav Hold:</b> LShift + } | Toggle nav mode\n\n" +
+        "<b>Nav Hold:</b> LShift + } | Toggle nav mode\n" +
+        "<b>Toggle LVL CHG:</b> LShift + ; | Needs altitude and speed hold\n\n" +
         "<b>Toggle Speed Hold:</b> ; (Semicolon) | Matches current speed\n" +
         "<b>Speed Up / Down:</b> LShift / LCtrl | Adjust target speed\n" +
         "<b>Mach/TAS Hold:</b> Home | Switch between Mach/TAS\n" +
@@ -397,9 +400,11 @@ public class Plugin : BaseUnityPlugin
         ClearKey = Config.Bind("Controls", "6. clear roll/nav/trk/roll/alt/roll", new KeyboardShortcut(KeyCode.Quote),
             "every press will clear/reset first thing it sees isn't clear from left to right");
         TrackHoldKey = Config.Bind("Controls", "7. Track Hold Key", new KeyboardShortcut(KeyCode.LeftBracket, KeyCode.LeftShift),
-            "Hold current track (LShift + [)");
+            "Toggle track hold");
         NavHoldKey = Config.Bind("Controls", "8. Nav Hold Key", new KeyboardShortcut(KeyCode.RightBracket, KeyCode.LeftShift),
-            "Toggle nav mode (LShift + ])");
+            "Toggle nav mode");
+        LvlChgKey = Config.Bind("Controls", "9. Toggle LVL CHG Key",
+            new KeyboardShortcut(KeyCode.Semicolon, KeyCode.LeftShift), "Toggle level change");
         UpKey = Config.Bind("Controls - Altitude", "1. Altitude Up (Small)", new KeyboardShortcut(KeyCode.UpArrow),
             "small increase");
         DownKey = Config.Bind("Controls - Altitude", "2. Altitude Down (Small)",
@@ -441,9 +446,11 @@ public class Plugin : BaseUnityPlugin
         ClearRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear roll/nav/trk/roll/alt/roll",
             "every use will clear/reset first thing it sees isn't clear from left to right");
         TrackHoldRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "7. Track Hold",
-            "Hold current track (LShift + [)");
+            "Toggle track hold");
         NavHoldRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "8. Nav Hold",
-            "Toggle nav mode (LShift + ])");
+            "Toggle nav mode");
+        LvlChgRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "9. Toggle LVL CHG",
+            "Toggle level change");
         UpRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "1. Altitude Up (Small)",
             "small increase");
         DownRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "2. Altitude Down (Small)",
@@ -499,6 +506,10 @@ public class Plugin : BaseUnityPlugin
         Conf_VS_MaxAngle = Config.Bind("Limits", "2. Max Pitch Angle", 85.0f, "angle from horizon limit");
         DefaultTrkRollLimit = Config.Bind("Limits", "3. Default track roll limit", 10.0f,
             "default roll limit when turning in track/nav mode");
+        LvlChgCaptureDistance = Config.Bind("Limits", "7. LVL CHG Capture Distance", 100f,
+            "Distance from target altitude to hand back to altitude hold");
+        LvlChgManualThrottle = Config.Bind("Limits", "8. LVL CHG Manual Throttle", false,
+            "disable for auto throttle for level change");
         ThrottleMinLimit = Config.Bind("Limits", "4. Safe Min Throttle", 0.01f,
             "Minimum throttle when limiter is active (prevents Airbrake)");
         ThrottleMaxLimit = Config.Bind("Limits", "5. Safe Max Throttle", 0.89f,
@@ -542,6 +553,9 @@ public class Plugin : BaseUnityPlugin
 
         ConfPidGcas = PIDTuningBinder.Bind(Config, pidSect, "10. G-Force > Stick",
             new PIDTuning(), "GCAS G Error > Stick");
+
+        ConfPidLvlChg = PIDTuningBinder.Bind(Config, pidSect, "11. LVL CHG Speed > VS",
+            new PIDTuning(), "Speed Error > Target Vertical Speed");
 
         const string schedSect = "PID Gain Scheduling (much basic)";
         SchedPidVs = GainScheduleBinder.Bind(Config, schedSect, "01. VS > Pitch Schedule",
@@ -722,6 +736,8 @@ public class Plugin : BaseUnityPlugin
                 APData.Enabled = !APData.Enabled;
                 if (!APData.Enabled)
                 {
+                    APData.LvlChgEnabled = false;
+
                     if (DisableNavAPKey.Value)
                     {
                         APData.NavEnabled = false;
@@ -738,6 +754,11 @@ public class Plugin : BaseUnityPlugin
                 }
 
                 SyncMenuValues();
+            }
+
+            if (!APData.Enabled)
+            {
+                APData.LvlChgEnabled = false;
             }
 
             if (InputHelper.IsDown(TrackHoldRW) || TrackHoldKey.Value.IsDown())
@@ -772,6 +793,39 @@ public class Plugin : BaseUnityPlugin
                 }
 
                 SyncMenuValues();
+            }
+
+            if (InputHelper.IsDown(LvlChgRW) || LvlChgKey.Value.IsDown())
+            {
+                float altError = Mathf.Abs(APData.TargetAlt - APData.CurrentAlt);
+                bool ready = APData.Enabled && APData.TargetAlt > 0f && APData.TargetSpeed >= 0f &&
+                             !APData.GCASActive && !APData.ALSActive &&
+                             altError > LvlChgCaptureDistance.Value;
+
+                AircraftActionsReport report = SceneSingleton<AircraftActionsReport>.i;
+
+                if (ready)
+                {
+                    APData.LvlChgEnabled = !APData.LvlChgEnabled;
+                    if (report != null)
+                    {
+                        report.ReportText(APData.LvlChgEnabled
+                            ? "LVL CHG <b>Enabled</b>"
+                            : "LVL CHG <b>Disabled</b>", 2f);
+                    }
+                }
+                else
+                {
+                    APData.LvlChgEnabled = false;
+                    if (report != null)
+                    {
+                        string message = APData.TargetAlt > 0f && APData.TargetSpeed >= 0f &&
+                                         altError <= LvlChgCaptureDistance.Value
+                            ? "LVL CHG: altitude captured"
+                            : "LVL CHG: set altitude and speed";
+                        report.ReportText(message, 2f);
+                    }
+                }
             }
 
             if (EnableAutoJammer.Value && (InputHelper.IsDown(AutoJammerRW) || AutoJammerKey.Value.IsDown()))

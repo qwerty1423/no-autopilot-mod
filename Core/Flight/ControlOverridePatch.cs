@@ -26,7 +26,9 @@ internal static class ControlOverridePatch
     private static readonly PIDController PidTrk = new();
     private static readonly PIDController PidGCAS = new();
     private static readonly PIDController PidSpd = new();
+    private static readonly PIDController PidLvlChg = new();
     private static bool s_wasEnabled;
+    private static bool s_wasLvlChg;
     private static float s_pitchSleepUntil;
     private static float s_rollSleepUntil;
     private static float s_spdSleepUntil;
@@ -85,8 +87,10 @@ internal static class ControlOverridePatch
         PidTrk.Reset();
         PidGCAS.Reset();
         PidSpd.Reset();
+        PidLvlChg.Reset();
 
         s_wasEnabled = false;
+        s_wasLvlChg = false;
         s_pitchSleepUntil = 0f;
         s_rollSleepUntil = 0f;
         s_spdSleepUntil = 0f;
@@ -120,6 +124,7 @@ internal static class ControlOverridePatch
         PidYaw.Reset();
         PidTrk.Reset();
         PidGCAS.Reset();
+        PidLvlChg.Reset();
 
         if (APData.TargetSpeed < 0)
         {
@@ -601,8 +606,52 @@ internal static class ControlOverridePatch
 
             bool isWaitingToReengage = Time.time - APData.LastOverrideInputTime < Plugin.ReengageDelay.Value;
 
+            bool lvlChgActive = APData.LvlChgEnabled && APData.Enabled && !APData.GCASActive && !APData.ALSActive &&
+                                APData.LocalAircraft != null && APData.TargetAlt > 0f && APData.TargetSpeed >= 0f;
+
+            if (lvlChgActive &&
+                Mathf.Abs(APData.TargetAlt - APData.CurrentAlt) <= Plugin.LvlChgCaptureDistance.Value)
+            {
+                APData.LvlChgEnabled = false;
+                lvlChgActive = false;
+
+                AircraftActionsReport report = SceneSingleton<AircraftActionsReport>.i;
+                if (report != null)
+                {
+                    report.ReportText("LVL CHG: altitude captured", 2f);
+                }
+            }
+
+            if (APData.LvlChgEnabled && !lvlChgActive)
+            {
+                APData.LvlChgEnabled = false;
+            }
+
+            if (lvlChgActive != s_wasLvlChg)
+            {
+                PidLvlChg.Reset();
+                PidAlt.Reset();
+                PidSpd.Reset();
+                s_wasLvlChg = lvlChgActive;
+            }
+
+            float lvlChgTargetSpeedMS = -1f;
+
             // throttle control
-            if (APData.TargetSpeed >= 0 || PIDLogger.IsTesting(PIDLogger.StepTarget.Spd))
+            if (lvlChgActive)
+            {
+                float altitude = APData.LocalAircraft.GlobalPosition().y;
+                float sos = LevelInfo.GetSpeedOfSound(altitude);
+                lvlChgTargetSpeedMS = APData.SpeedHoldIsMach ? APData.TargetSpeed * sos : APData.TargetSpeed;
+
+                if (!Plugin.LvlChgManualThrottle.Value)
+                {
+                    ThrottleOutput = APData.TargetAlt > APData.CurrentAlt
+                        ? (APData.AllowExtremeThrottle ? 1f : Plugin.ThrottleMaxLimit.Value)
+                        : (APData.AllowExtremeThrottle ? 0f : Plugin.ThrottleMinLimit.Value);
+                }
+            }
+            else if (APData.TargetSpeed >= 0 || PIDLogger.IsTesting(PIDLogger.StepTarget.Spd))
             {
                 float targetSpeedMS;
 
@@ -1026,7 +1075,7 @@ internal static class ControlOverridePatch
                             }
                         }
 
-                        if (useRandom && s_isPitchSleeping)
+                        if (useRandom && s_isPitchSleeping && !lvlChgActive)
                         {
                             // PidAlt.SeedIntegral(Mathf.MoveTowards((float)PidAlt.ITerm, 0f, dt * 2f));
                             // PidVS.SeedIntegral(Mathf.MoveTowards((float)PidVS.ITerm, 0f, dt * 10f));
@@ -1034,14 +1083,25 @@ internal static class ControlOverridePatch
                         }
                         else
                         {
-                            // Altitude > vertical speed
-                            ConfigurePID(PidAlt, ActivePid.Alt, dt,
-                                -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
+                            float targetVS;
+                            if (lvlChgActive)
+                            {
+                                ConfigurePID(PidLvlChg, ActivePid.LvlChg, dt,
+                                    -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
 
-                            float baseTargetAlt = APData.TargetAlt > 0f ? APData.TargetAlt : APData.CurrentAlt;
-                            float altTarget = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Alt, baseTargetAlt, APData.CurrentAlt);
-                            float targetVS = (float)PidAlt.Update(altTarget, APData.CurrentAlt);
-                            PIDLogger.Log(PIDLogger.StepTarget.Alt, targetVS, APData.CurrentAlt);
+                                targetVS = -(float)PidLvlChg.Update(lvlChgTargetSpeedMS, speed3d);
+                            }
+                            else
+                            {
+                                ConfigurePID(PidAlt, ActivePid.Alt, dt,
+                                    -APData.CurrentMaxClimbRate, APData.CurrentMaxClimbRate);
+
+                                float baseTargetAlt = APData.TargetAlt > 0f ? APData.TargetAlt : APData.CurrentAlt;
+                                float altTarget = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Alt, baseTargetAlt,
+                                    APData.CurrentAlt);
+                                targetVS = (float)PidAlt.Update(altTarget, APData.CurrentAlt);
+                                PIDLogger.Log(PIDLogger.StepTarget.Alt, targetVS, APData.CurrentAlt);
+                            }
 
                             float possibleAccel = Plugin.GcasMaxG.Value * 9.81f;
                             float altErr2 = Mathf.Abs(APData.TargetAlt - APData.CurrentAlt);
@@ -1145,6 +1205,11 @@ internal static class ThrottleOverridePatch
         }
 
         if (APData.TargetSpeed < 0 && !PIDLogger.IsTesting(PIDLogger.StepTarget.Spd))
+        {
+            return;
+        }
+
+        if (APData.LvlChgEnabled && APData.Enabled && Plugin.LvlChgManualThrottle.Value)
         {
             return;
         }

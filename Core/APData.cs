@@ -18,6 +18,7 @@ public static class APData
     public static bool SpeedHoldIsMach;
     public static bool NavEnabled;
     public static bool FBWDisabled;
+    public static bool LvlChgEnabled;
     public static float TargetAlt = -1f;
     public static float TargetRoll = -999f;
     public static float TargetSpeed = -1f;
@@ -68,6 +69,7 @@ public static class APData
         SpeedHoldIsMach = false;
         NavEnabled = false;
         FBWDisabled = false;
+        LvlChgEnabled = false;
         TargetAlt = -1f;
         TargetRoll = -999f;
         TargetSpeed = -1f;

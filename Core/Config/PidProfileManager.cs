@@ -128,6 +128,7 @@ public static class PidProfileManager
         if (tunedProfile.Yaw != baseProfile.Yaw) { partial.Yaw = tunedProfile.Yaw; }
         if (tunedProfile.Trk != baseProfile.Trk) { partial.Trk = tunedProfile.Trk; }
         if (tunedProfile.Spd != baseProfile.Spd) { partial.Spd = tunedProfile.Spd; }
+        if (tunedProfile.LvlChg != baseProfile.LvlChg) { partial.LvlChg = tunedProfile.LvlChg; }
         if (tunedProfile.Gcas != baseProfile.Gcas) { partial.Gcas = tunedProfile.Gcas; }
         if (tunedProfile.SchedPitch != baseProfile.SchedPitch) { partial.SchedPitch = tunedProfile.SchedPitch; }
         if (tunedProfile.SchedRollRate != baseProfile.SchedRollRate) { partial.SchedRollRate = tunedProfile.SchedRollRate; }
@@ -184,6 +185,7 @@ public static class PidProfileManager
         ActivePid.Yaw = PIDTuning.Parse(s_tuningSnapshot.Yaw);
         ActivePid.Trk = PIDTuning.Parse(s_tuningSnapshot.Trk);
         ActivePid.Spd = PIDTuning.Parse(s_tuningSnapshot.Spd);
+        ActivePid.LvlChg = PIDTuning.Parse(s_tuningSnapshot.LvlChg);
         ActivePid.Gcas = PIDTuning.Parse(s_tuningSnapshot.Gcas);
         ActivePid.SchedPitch = GainSchedule.Parse(s_tuningSnapshot.SchedPitch);
         ActivePid.SchedRollRate = GainSchedule.Parse(s_tuningSnapshot.SchedRollRate);
@@ -209,6 +211,7 @@ public static class PidProfileManager
             Yaw = ActivePid.Yaw.ToString(),
             Trk = ActivePid.Trk.ToString(),
             Spd = ActivePid.Spd.ToString(),
+            LvlChg = ActivePid.LvlChg.ToString(),
             Gcas = ActivePid.Gcas.ToString(),
             SchedPitch = ActivePid.SchedPitch.ToString(),
             SchedRollRate = ActivePid.SchedRollRate.ToString(),
@@ -307,6 +310,7 @@ public static class PidProfileManager
                 Yaw = ActivePid.Yaw.ToString(),
                 Trk = ActivePid.Trk.ToString(),
                 Spd = ActivePid.Spd.ToString(),
+                LvlChg = ActivePid.LvlChg.ToString(),
                 Gcas = ActivePid.Gcas.ToString(),
                 SchedPitch = ActivePid.SchedPitch.ToString(),
                 SchedRollRate = ActivePid.SchedRollRate.ToString(),

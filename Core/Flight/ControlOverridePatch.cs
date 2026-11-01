@@ -586,7 +586,7 @@ internal static class ControlOverridePatch
                     if (triggerDisengage)
                     {
                         APData.Enabled = false;
-                        Plugin.Announce("Autopilot <b>Disengaged</b>");
+                        Plugin.Announce(Plugin.AnnouncementKind.Autopilot, "Autopilot <b>Disengaged</b>");
 
                         if (Plugin.DisableNavAPStick.Value)
                         {
@@ -1063,7 +1063,7 @@ internal static class ControlOverridePatch
                         float captureDecel = Mathf.Max(ActivePid.LvlChgCaptureDecelG, 0.01f) * 9.81f;
                         float stoppingDistance = currentVS * currentVS / (2f * captureDecel);
                         float armDistance = Mathf.Max(Plugin.LvlChgCaptureArmDistance.Value,
-                            stoppingDistance * 1.25f + 10f);
+                            (stoppingDistance * 1.25f) + 10f);
                         bool lvlChgCapture = lvlChgActive && !lvlChgTest &&
                                              (s_lvlChgCapture || absAltError <= armDistance);
                         if (lvlChgActive && !lvlChgTest)
@@ -1193,7 +1193,7 @@ internal static class ControlOverridePatch
                                     PidSpd.Init(lvlChgTargetSpeedMS, speed3d,
                                         Mathf.Clamp(ThrottleOutput + speedKick, minThrottle, maxThrottle));
 
-                                    Plugin.Announce("LC Altitude Reached");
+                                    Plugin.Announce(Plugin.AnnouncementKind.LevelChange, "LC Altitude Reached");
                                 }
                             }
                             else

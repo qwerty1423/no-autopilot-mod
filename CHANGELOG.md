@@ -10,7 +10,7 @@
 
 ### Changed
 
-- renamed course to track, this will probably break mods.
+- renamed course to track, this will probably break mods that depend on this mod.
 
 ### Fixed
 

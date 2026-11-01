@@ -91,16 +91,23 @@ internal static class HUDVisualsPatch
     }
 
     [UsedImplicitly]
-    private static void AppendHudLine(StringBuilder sb, string text)
+    private static void AppendHudLine(StringBuilder sb, string color, string text, bool hashColor = false)
     {
-        if (sb.Length > 0 && sb[sb.Length - 1] != '\n')
+        if (sb.Length > 0 && sb[^1] != '\n')
         {
             sb.Append('\n');
         }
 
-        sb.Append(text);
+        sb.Append("<color=");
+        if (hashColor)
+        {
+            sb.Append('#');
+        }
+
+        sb.Append(color).Append('>').Append(text).Append("</color>");
     }
 
+    [UsedImplicitly]
     private static void Postfix(FlightHud __instance)
     {
         if (Plugin.IsBroken && Plugin.UnpatchIfBroken.Value)
@@ -507,20 +514,18 @@ internal static class HUDVisualsPatch
 
                     if (APData.FBWDisabled)
                     {
-                        AppendHudLine(SbHud,
-                            $"<color={Plugin.ColorCrit.Value}>FBW OFF</color>");
+                        AppendHudLine(SbHud, Plugin.ColorCrit.Value, "FBW OFF");
                     }
 
                     if (APData.LvlChgEnabled)
                     {
-                        AppendHudLine(SbHud,
-                            $"<color={Plugin.ColorInfo.Value}>LVL CHG</color>");
+                        AppendHudLine(SbHud, Plugin.ColorInfo.Value, "LVL CHG");
                     }
 
                     if (APData.ALSActive || !string.IsNullOrEmpty(APData.ALSStatusText))
                     {
                         string hexColor = ColorUtility.ToHtmlStringRGBA(APData.ALSStatusColor);
-                        AppendHudLine(SbHud, $"<color=#{hexColor}>{APData.ALSStatusText}</color>");
+                        AppendHudLine(SbHud, hexColor, APData.ALSStatusText, true);
                     }
 
                     string newText = SbHud.ToString();

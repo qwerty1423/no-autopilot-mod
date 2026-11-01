@@ -586,6 +586,8 @@ internal static class ControlOverridePatch
                     if (triggerDisengage)
                     {
                         APData.Enabled = false;
+                        Plugin.Announce("Autopilot <b>Disengaged</b>");
+
                         if (Plugin.DisableNavAPStick.Value)
                         {
                             APData.NavEnabled = false;
@@ -1191,11 +1193,7 @@ internal static class ControlOverridePatch
                                     PidSpd.Init(lvlChgTargetSpeedMS, speed3d,
                                         Mathf.Clamp(ThrottleOutput + speedKick, minThrottle, maxThrottle));
 
-                                    AircraftActionsReport captureReport = SceneSingleton<AircraftActionsReport>.i;
-                                    if (captureReport != null)
-                                    {
-                                        captureReport.ReportText("LC Altitude Reached", 2f);
-                                    }
+                                    Plugin.Announce("LC Altitude Reached");
                                 }
                             }
                             else

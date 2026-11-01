@@ -764,6 +764,7 @@ public class Plugin : BaseUnityPlugin
                     APData.TargetAlt = APData.CurrentAlt;
                 }
 
+                Announce(APData.Enabled ? "Autopilot <b>Engaged</b>" : "Autopilot <b>Disengaged</b>");
                 SyncMenuValues();
             }
 
@@ -792,6 +793,9 @@ public class Plugin : BaseUnityPlugin
                     }
                 }
 
+                Announce(APData.TargetTrack >= 0f
+                    ? "Track Hold <b>Engaged</b>"
+                    : "Track Hold <b>Disengaged</b>");
                 SyncMenuValues();
             }
 
@@ -803,45 +807,21 @@ public class Plugin : BaseUnityPlugin
                     APData.TargetRoll = DefaultTrkRollLimit.Value;
                 }
 
+                Announce(APData.NavEnabled ? "Nav <b>Enabled</b>" : "Nav <b>Disabled</b>");
                 SyncMenuValues();
             }
 
             if (InputHelper.IsDown(LvlChgRW) || LvlChgKey.Value.IsDown())
             {
-                float altError = Mathf.Abs(APData.TargetAlt - APData.CurrentAlt);
-                bool ready = APData.Enabled && APData.TargetAlt > 0f && APData.TargetSpeed >= 0f &&
-                             !APData.GCASActive && !APData.ALSActive &&
-                             altError > LvlChgCaptureArmDistance.Value;
-
-                AircraftActionsReport report = SceneSingleton<AircraftActionsReport>.i;
-
-                if (ready)
-                {
-                    APData.LvlChgEnabled = !APData.LvlChgEnabled;
-                    if (report != null)
-                    {
-                        report.ReportText(APData.LvlChgEnabled
-                            ? "Level Change <b>Enabled</b>"
-                            : "Level Change <b>Disabled</b>", 3f);
-                    }
-                }
-                else
-                {
-                    APData.LvlChgEnabled = false;
-                    if (report != null)
-                    {
-                        string message = APData.TargetAlt > 0f && APData.TargetSpeed >= 0f &&
-                                         altError <= LvlChgCaptureArmDistance.Value
-                            ? "LC Altitude Reached"
-                            : "LC: Needs Altitude and Speed Target";
-                        report.ReportText(message, 3f);
-                    }
-                }
+                ToggleLevelChange();
             }
 
             if (EnableAutoJammer.Value && (InputHelper.IsDown(AutoJammerRW) || AutoJammerKey.Value.IsDown()))
             {
                 APData.AutoJammerActive = !APData.AutoJammerActive;
+                Announce(APData.AutoJammerActive
+                    ? "Auto Jammer <b>Enabled</b>"
+                    : "Auto Jammer <b>Disabled</b>");
             }
 
             if (InputHelper.IsDown(ToggleGCASRW) || ToggleGCASKey.Value.IsDown())
@@ -852,6 +832,8 @@ public class Plugin : BaseUnityPlugin
                     APData.GCASActive = false;
                     APData.GCASWarning = false;
                 }
+
+                Announce(APData.GCASEnabled ? "GCAS <b>Enabled</b>" : "GCAS <b>Disabled</b>");
             }
 
             if (InputHelper.IsDown(ToggleALSRW) || ToggleALSKey.Value.IsDown())
@@ -871,6 +853,8 @@ public class Plugin : BaseUnityPlugin
                 {
                     StartAutoland();
                 }
+
+                Announce(APData.ALSActive ? "Autoland <b>Engaged</b>" : "Autoland <b>Disengaged</b>");
             }
 
             if (InputHelper.IsDown(SpeedHoldRW) || SpeedHoldKey.Value.IsDown())
@@ -899,6 +883,9 @@ public class Plugin : BaseUnityPlugin
                     }
                 }
 
+                Announce(APData.TargetSpeed >= 0f
+                    ? "Speed Hold <b>Enabled</b>"
+                    : "Speed Hold <b>Disabled</b>");
                 SyncMenuValues();
                 GUI.FocusControl(null);
             }
@@ -964,12 +951,18 @@ public class Plugin : BaseUnityPlugin
                     }
 
                     APData.SpeedHoldIsMach = !APData.SpeedHoldIsMach;
+                    Announce(APData.SpeedHoldIsMach
+                        ? "Speed Reference <b>Mach</b>"
+                        : "Speed Reference <b>TAS</b>");
                     SyncMenuValues();
                 }
 
                 if (InputHelper.IsDown(ToggleABRW) || ToggleABKey.Value.IsDown())
                 {
                     APData.AllowExtremeThrottle = !APData.AllowExtremeThrottle;
+                    Announce(APData.AllowExtremeThrottle
+                        ? "Afterburner/Airbrake <b>Enabled</b>"
+                        : "Afterburner/Airbrake <b>Disabled</b>");
                 }
             }
 
@@ -1366,6 +1359,19 @@ public class Plugin : BaseUnityPlugin
         s_bufAlt = GUILayout.TextField(s_bufAlt);
         GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target altitude"));
 
+        GUI.backgroundColor = APData.LvlChgEnabled ? Color.green : Color.white;
+        if (GUILayout.Button(new GUIContent("LC", "Toggle level change\n applies the target altitude\nrequires target altitude and speed"),
+                _styleButton, GUILayout.Width(_buttonWidth)))
+        {
+            APData.TargetAlt = float.TryParse(s_bufAlt, out float alt)
+                ? ModUtils.ConvertAlt_FromDisplay(alt)
+                : -1f;
+            ToggleLevelChange();
+            SyncMenuValues();
+            GUI.FocusControl(null);
+        }
+
+        GUI.backgroundColor = Color.white;
         if (GUILayout.Button(new GUIContent("CLR", "disable alt hold"), _styleButton, GUILayout.Width(_buttonWidth)))
         {
             APData.TargetAlt = -1f;
@@ -1479,6 +1485,9 @@ public class Plugin : BaseUnityPlugin
             }
 
             APData.SpeedHoldIsMach = !APData.SpeedHoldIsMach;
+            Announce(APData.SpeedHoldIsMach
+                ? "Speed Reference <b>Mach</b>"
+                : "Speed Reference <b>TAS</b>");
             GUI.FocusControl(null);
         }
 
@@ -1493,6 +1502,9 @@ public class Plugin : BaseUnityPlugin
                 GUILayout.Width(_buttonWidth)))
         {
             APData.AllowExtremeThrottle = !APData.AllowExtremeThrottle;
+            Announce(APData.AllowExtremeThrottle
+                        ? "Afterburner/Airbrake <b>Enabled</b>"
+                        : "Afterburner/Airbrake <b>Disabled</b>");
             GUI.FocusControl(null);
         }
 
@@ -1570,8 +1582,14 @@ public class Plugin : BaseUnityPlugin
                 s_bufRoll = "";
             }
 
+            bool wasEnabled = APData.Enabled;
             APData.Enabled = true;
             APData.UseSetValues = true;
+            if (!wasEnabled)
+            {
+                Announce("Autopilot <b>Engaged</b>");
+            }
+
             SyncMenuValues();
             GUI.FocusControl(null);
         }
@@ -1612,6 +1630,7 @@ public class Plugin : BaseUnityPlugin
                 SyncMenuValues();
             }
 
+            Announce(APData.Enabled ? "Autopilot <b>Engaged</b>" : "Autopilot <b>Disengaged</b>");
             GUI.FocusControl(null);
         }
 
@@ -1625,6 +1644,9 @@ public class Plugin : BaseUnityPlugin
         if (GUILayout.Button(new GUIContent(ajText, "Toggle Auto Jammer"), _styleButton))
         {
             APData.AutoJammerActive = !APData.AutoJammerActive;
+            Announce(APData.AutoJammerActive
+                ? "Auto Jammer <b>Enabled</b>"
+                : "Auto Jammer <b>Disabled</b>");
             GUI.FocusControl(null);
         }
 
@@ -1638,6 +1660,7 @@ public class Plugin : BaseUnityPlugin
                 APData.GCASActive = false;
             }
 
+            Announce(APData.GCASEnabled ? "GCAS <b>Enabled</b>" : "GCAS <b>Disabled</b>");
             GUI.FocusControl(null);
         }
 
@@ -1660,6 +1683,7 @@ public class Plugin : BaseUnityPlugin
                 StartAutoland();
             }
 
+            Announce(APData.ALSActive ? "Autoland <b>Engaged</b>" : "Autoland <b>Disengaged</b>");
             GUI.FocusControl(null);
         }
 
@@ -2048,22 +2072,48 @@ public class Plugin : BaseUnityPlugin
         }
     }
 
-    private static void AnnounceFBWState(bool fbwDisabled)
+    public static void Announce(string text)
     {
         try
         {
             AircraftActionsReport report = SceneSingleton<AircraftActionsReport>.i;
-            if (report == null)
+            if (report != null)
             {
-                return;
+                report.ReportText(text, 1f);
             }
-
-            report.ReportText(fbwDisabled ? "FBW <b>Disabled</b>" : "FBW <b>Enabled</b>", 3f);
         }
         catch (Exception ex)
         {
-            Logger.LogWarning($"[AnnounceFBWState] Error: {ex.Message}");
+            Logger.LogWarning($"[Announce] Error: {ex.Message}");
         }
+    }
+
+    private static void ToggleLevelChange()
+    {
+        float altError = Mathf.Abs(APData.TargetAlt - APData.CurrentAlt);
+        bool ready = APData.Enabled && APData.TargetAlt > 0f && APData.TargetSpeed >= 0f &&
+                     !APData.GCASActive && !APData.ALSActive &&
+                     altError > LvlChgCaptureArmDistance.Value;
+
+        if (ready)
+        {
+            APData.LvlChgEnabled = !APData.LvlChgEnabled;
+            Announce(APData.LvlChgEnabled
+                ? "Level Change <b>Enabled</b>"
+                : "Level Change <b>Disabled</b>");
+            return;
+        }
+
+        APData.LvlChgEnabled = false;
+        Announce(APData.TargetAlt > 0f && APData.TargetSpeed >= 0f &&
+                 altError <= LvlChgCaptureArmDistance.Value
+            ? "LC Altitude Reached"
+            : "LC: Needs Altitude and Speed Target");
+    }
+
+    private static void AnnounceFBWState(bool fbwDisabled)
+    {
+        Announce(fbwDisabled ? "FBW <b>Disabled</b>" : "FBW <b>Enabled</b>");
     }
 
     private static bool StartAutoland()

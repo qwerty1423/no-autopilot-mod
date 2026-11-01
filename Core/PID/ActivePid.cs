@@ -140,13 +140,10 @@ public static class ActivePid
 
     private static float ParseCaptureFloat(string text, float fallback, float min, float max)
     {
-        if (string.IsNullOrEmpty(text) ||
-            !float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float value))
-        {
-            return fallback;
-        }
-
-        return Mathf.Clamp(value, min, max);
+        return string.IsNullOrEmpty(text) ||
+            !float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float value)
+            ? fallback
+            : Mathf.Clamp(value, min, max);
     }
 
     public static void SyncToConfig()

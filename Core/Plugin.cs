@@ -881,23 +881,7 @@ public class Plugin : BaseUnityPlugin
 
             if (InputHelper.IsDown(ToggleALSRW) || ToggleALSKey.Value.IsDown())
             {
-                if (APData.ALSActive)
-                {
-                    APData.ALSActive = false;
-                    APData.ALSStatusText = "";
-
-                    Pilot localPilot = APData.LocalPilot;
-                    if (localPilot != null)
-                    {
-                        localPilot.SwitchState(localPilot.playerState);
-                    }
-                }
-                else
-                {
-                    StartAutoland();
-                }
-
-                Announce(AnnouncementKind.Autoland, APData.ALSActive ? "Autoland <b>Engaged</b>" : "Autoland <b>Disengaged</b>");
+                ToggleAutoland();
             }
 
             if (InputHelper.IsDown(SpeedHoldRW) || SpeedHoldKey.Value.IsDown())
@@ -1710,23 +1694,7 @@ public class Plugin : BaseUnityPlugin
         GUI.backgroundColor = APData.ALSActive ? Color.green : Color.white;
         if (GUILayout.Button(new GUIContent(APData.ALSActive ? "ALS" : "ALS-", "autoland"), _styleButton))
         {
-            if (APData.ALSActive)
-            {
-                APData.ALSActive = false;
-                APData.ALSStatusText = "";
-
-                Pilot localPilot = APData.LocalPilot;
-                if (localPilot != null)
-                {
-                    localPilot.SwitchState(localPilot.playerState);
-                }
-            }
-            else
-            {
-                StartAutoland();
-            }
-
-            Announce(AnnouncementKind.Autoland, APData.ALSActive ? "Autoland <b>Engaged</b>" : "Autoland <b>Disengaged</b>");
+            ToggleAutoland();
             GUI.FocusControl(null);
         }
 
@@ -2169,9 +2137,36 @@ public class Plugin : BaseUnityPlugin
         Announce(AnnouncementKind.Fbw, fbwDisabled ? "FBW <b>Disabled</b>" : "FBW <b>Enabled</b>");
     }
 
+    private static void ToggleAutoland()
+    {
+        if (APData.ALSActive)
+        {
+            APData.ALSActive = false;
+            APData.ALSStatusText = "";
+
+            Pilot localPilot = APData.LocalPilot;
+            if (localPilot != null)
+            {
+                localPilot.SwitchState(localPilot.playerState);
+            }
+
+            Announce(AnnouncementKind.Autoland, "Autoland <b>Disengaged</b>");
+            return;
+        }
+
+        if (StartAutoland())
+        {
+            Announce(AnnouncementKind.Autoland, "Autoland <b>Engaged</b>");
+        }
+        else
+        {
+            Announce(AnnouncementKind.Autoland, "Autoland <b>Unavailable</b>");
+        }
+    }
+
     private static bool StartAutoland()
     {
-        APData.ALSActive = true;
+        APData.ALSActive = false;
         Pilot pilot = APData.LocalPilot;
         Aircraft aircraft = APData.LocalAircraft;
 
@@ -2207,6 +2202,7 @@ public class Plugin : BaseUnityPlugin
         }
 
         APData.ALSStatusText = "ALS: SEARCH";
+        APData.ALSActive = true;
         return true;
     }
 

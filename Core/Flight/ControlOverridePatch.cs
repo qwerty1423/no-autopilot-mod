@@ -623,7 +623,6 @@ internal static class ControlOverridePatch
                 if (lvlChgActive)
                 {
                     PidLvlChg.Reset();
-                    PidSpd.Reset();
                 }
 
                 s_lvlChgCapture = false;

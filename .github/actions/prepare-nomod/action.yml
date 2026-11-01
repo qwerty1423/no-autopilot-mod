@@ -5,6 +5,12 @@ outputs:
   managed-dir:
     description: Path to the Managed assemblies directory
     value: ${{ steps.resolve.outputs.managed-dir }}
+  game-version:
+    description: Nuclear Option version from globalgamemanagers
+    value: ${{ steps.meta.outputs.game-version }}
+  game-build:
+    description: Nuclear Option build hash from build-hash.txt
+    value: ${{ steps.meta.outputs.game-build }}
 
 runs:
   using: composite
@@ -14,13 +20,13 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: ~/nomod-managed
-        key: nomod-managed-1
+        key: nomod-managed-2
 
     - name: Check managed dir
       id: managed
       shell: bash
       run: |
-        if [[ -f "$HOME/nomod-managed/Assembly-CSharp.dll" ]]; then
+        if [[ -f "$HOME/nomod-managed/Assembly-CSharp.dll" && -f "$HOME/nomod-managed/.game-version" && -f "$HOME/nomod-managed/.game-build" ]]; then
           echo "ready=true" >> "$GITHUB_OUTPUT"
         else
           rm -rf "$HOME/nomod-managed"
@@ -73,7 +79,15 @@ runs:
           exit 1
         fi
 
+        version="$(grep -aoE '[0-9]+\.[0-9]+\.[0-9]+' "$install_dir/NuclearOptionServer_Data/globalgamemanagers" 2>/dev/null |
+          grep -vE '^20[0-9][0-9]\.' |
+          head -n1 || true)"
+        build_hash="$(tr -d '\r\n' < "$install_dir/build-hash.txt" 2>/dev/null || true)"
+
+        rm -rf "$HOME/nomod-managed.tmp"
         cp -r "$managed" "$HOME/nomod-managed.tmp"
+        printf '%s\n' "$version" > "$HOME/nomod-managed.tmp/.game-version"
+        printf '%s\n' "$build_hash" > "$HOME/nomod-managed.tmp/.game-build"
         mv "$HOME/nomod-managed.tmp" "$HOME/nomod-managed"
         rm -rf "$install_dir"
 
@@ -81,3 +95,26 @@ runs:
       id: resolve
       shell: bash
       run: echo "managed-dir=$HOME/nomod-managed" >> "$GITHUB_OUTPUT"
+
+    - name: Read game metadata
+      id: meta
+      shell: bash
+      run: |
+        set -euo pipefail
+        version="unknown"
+        build="unknown"
+        if [[ -f "$HOME/nomod-managed/.game-version" ]]; then
+          value="$(tr -d '\r\n' < "$HOME/nomod-managed/.game-version")"
+          if [[ -n "$value" ]]; then
+            version="$value"
+          fi
+        fi
+        if [[ -f "$HOME/nomod-managed/.game-build" ]]; then
+          value="$(tr -d '\r\n' < "$HOME/nomod-managed/.game-build")"
+          if [[ -n "$value" ]]; then
+            build="$value"
+          fi
+        fi
+        echo "game-version=$version" >> "$GITHUB_OUTPUT"
+        echo "game-build=$build" >> "$GITHUB_OUTPUT"
+        echo "Nuclear Option version: $version (build $build)" >> "$GITHUB_STEP_SUMMARY"

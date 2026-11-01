@@ -30,6 +30,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    outputs:
+      mod-version: ${{ steps.version.outputs.version }}
+      game-version: ${{ steps.nomod.outputs.game-version }}
+      game-build: ${{ steps.nomod.outputs.game-build }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -37,12 +41,39 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Read mod version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's:.*<Version>\([^<]*\)</Version>.*:\1:p' NOAutopilot.csproj | head -n1)"
+          [[ -n "$version" ]] || { echo "::error::could not read <Version> from NOAutopilot.csproj"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Mod version: \`$version\`" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Prepare Nuclear Option
         id: nomod
         uses: ./.github/actions/prepare-nomod
 
       - name: Build in container
         run: ./scripts/build.sh --managed-dir "${{ steps.nomod.outputs.managed-dir }}"
+
+      - name: Write build metadata
+        shell: bash
+        env:
+          MOD_VERSION: ${{ steps.version.outputs.version }}
+          GAME_VERSION: ${{ steps.nomod.outputs.game-version }}
+          GAME_BUILD: ${{ steps.nomod.outputs.game-build }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          {
+            printf 'mod_version=%s\n' "$MOD_VERSION"
+            printf 'game_version=%s\n' "$GAME_VERSION"
+            printf 'game_build=%s\n' "$GAME_BUILD"
+            printf 'commit=%s\n' "$COMMIT_SHA"
+          } > build-output/build-info.txt
+          cat build-output/build-info.txt >> "$GITHUB_STEP_SUMMARY"
 
       - name: Hash stuff
         run: |
@@ -56,10 +87,20 @@ jobs:
               "$MANAGED/Unity.TextMeshPro.dll" \
               "build-output/com.qwerty1423.NOAutopilot.dll"
 
-      - name: Upload artifacts
+      - name: Upload package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
+          name: package
           path: build-output/com.qwerty1423.NOAutopilot-*.7z
+          if-no-files-found: error
+          compression-level: 0
+          archive: false
+
+      - name: Upload build metadata
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: build-info
+          path: build-output/build-info.txt
           if-no-files-found: error
           compression-level: 0
           archive: false

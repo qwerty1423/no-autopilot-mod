@@ -44,17 +44,54 @@ jobs:
                     --status success --limit 1 --json databaseId -q '.[0].databaseId')"
             [[ -n "$id" ]] || { echo "::error::no successful build.yml run on main"; exit 1; }
           fi
+          head_sha="$(gh run view "$id" --json headSha -q '.headSha // ""')"
+          head_branch="$(gh run view "$id" --json headBranch -q '.headBranch // ""')"
           echo "id=$id" >> "$GITHUB_OUTPUT"
-          echo "Using build run $id"
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+          echo "head_branch=$head_branch" >> "$GITHUB_OUTPUT"
+          echo "Using build run $id (commit $head_sha on $head_branch)"
 
       - name: Download package
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           run-id: ${{ steps.run.outputs.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          pattern: com.qwerty1423.NOAutopilot-*.7z
-          merge-multiple: true
+          name: package
           path: dist
+
+      - name: Download build metadata
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          run-id: ${{ steps.run.outputs.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: build-info
+          path: dist
+
+      - name: Read build metadata
+        id: info
+        shell: bash
+        run: |
+          mod_version="unknown"
+          game_version="unknown"
+          game_build="unknown"
+          if [[ -f dist/build-info.txt ]]; then
+            while IFS='=' read -r key value; do
+              case "$key" in
+                mod_version) mod_version="$value" ;;
+                game_version) game_version="$value" ;;
+                game_build) game_build="$value" ;;
+              esac
+            done < dist/build-info.txt
+          fi
+          [[ -n "$mod_version" ]] || mod_version="unknown"
+          [[ -n "$game_version" ]] || game_version="unknown"
+          [[ -n "$game_build" ]] || game_build="unknown"
+          echo "mod-version=$mod_version" >> "$GITHUB_OUTPUT"
+          echo "game-version=$game_version" >> "$GITHUB_OUTPUT"
+          echo "game-build=$game_build" >> "$GITHUB_OUTPUT"
+          echo "Mod version: $mod_version" >> "$GITHUB_STEP_SUMMARY"
+          echo "Nuclear Option: $game_version (build $game_build)" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Resolve tag and check it is free
         id: pkg
@@ -62,6 +99,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           TAG_OVERRIDE: ${{ inputs.tag }}
+          BUILD_MOD_VERSION: ${{ steps.info.outputs.mod-version }}
         shell: bash
         run: |
           set -euo pipefail
@@ -71,6 +109,11 @@ jobs:
           base="$(basename "${assets[0]}" .7z)"
           version="${base#com.qwerty1423.NOAutopilot-}"
           tag="${TAG_OVERRIDE:-v$version}"
+
+          if [[ -n "$BUILD_MOD_VERSION" && "$BUILD_MOD_VERSION" != "unknown" && "$BUILD_MOD_VERSION" != "$version" ]]; then
+            echo "::error::artifact version '$version' does not match build-info mod_version '$BUILD_MOD_VERSION'"
+            exit 1
+          fi
 
           if gh release view "$tag" >/dev/null 2>&1; then
             state="$(gh release view "$tag" --json isDraft -q 'if .isDraft then "draft" else "published" end')"
@@ -93,20 +136,25 @@ jobs:
         with:
           tag_name: ${{ steps.pkg.outputs.tag }}
           name: ${{ steps.pkg.outputs.tag }}
-          target_commitish: ${{ github.sha }}
+          target_commitish: ${{ steps.run.outputs.head_sha != '' && steps.run.outputs.head_sha || github.sha }}
           draft: true
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: dist/com.qwerty1423.NOAutopilot-*.7z
           append_body: true
           body: |
-            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.run.outputs.id }}
+            **Mod version:** `${{ steps.pkg.outputs.version }}`
+            **Nuclear Option:** `${{ steps.info.outputs.game-version }}` (build `${{ steps.info.outputs.game-build }}`)
+            **Build commit:** `${{ steps.run.outputs.head_sha }}` on `${{ steps.run.outputs.head_branch }}`
+            **Build run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.run.outputs.id }}
 
       - name: Summary
         shell: bash
         run: |
           {
             echo "### Draft \`${{ steps.pkg.outputs.tag }}\`"
-            echo "- from build run \`${{ steps.run.outputs.id }}\`"
+            echo "- mod version \`${{ steps.pkg.outputs.version }}\`"
+            echo "- Nuclear Option \`${{ steps.info.outputs.game-version }}\` (build \`${{ steps.info.outputs.game-build }}\`)"
+            echo "- from build run \`${{ steps.run.outputs.id }}\` at \`${{ steps.run.outputs.head_sha }}\`"
             echo "- ${{ steps.release.outputs.url }}"
           } >> "$GITHUB_STEP_SUMMARY"

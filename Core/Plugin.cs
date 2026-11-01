@@ -41,7 +41,7 @@ public class Plugin : BaseUnityPlugin
     private static string s_bufClimb = "40";
     private static string s_bufRoll = "";
     private static string s_bufSpeed = "";
-    private static string s_bufCourse = "";
+    private static string s_bufTrack = "";
     public static ConfigEntry<float> NavReachDistance, NavPassedDistance;
     public static ConfigEntry<string> ColorNav;
     public static ConfigEntry<bool> NavCycle;
@@ -85,7 +85,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> StickTempThreshold, StickDisengageThreshold;
     public static ConfigEntry<float> DisengageDelay, ReengageDelay;
     public static ConfigEntry<bool> InvertRoll, InvertPitch, StickDisengageEnabled;
-    public static ConfigEntry<bool> Conf_InvertCourseRoll, DisableATAPKey;
+    public static ConfigEntry<bool> Conf_InvertTrackRoll, DisableATAPKey;
     public static ConfigEntry<bool> DisableATAPGCAS, DisableATAPGUI, DisableATAPStick;
     public static ConfigEntry<bool> DisableNavAPKey, DisableNavAPStick, EnableNavonWP;
     public static ConfigEntry<bool> KeepSetAltKey, KeepSetAltStick, UnpatchIfBroken;
@@ -132,13 +132,13 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> AltStep, BigAltStep, ClimbRateStep, BankStep, SpeedStep, MinAltitude;
 
     // Limits
-    public static ConfigEntry<float> DefaultMaxClimbRate, Conf_VS_MaxAngle, DefaultCRLimit;
+    public static ConfigEntry<float> DefaultMaxClimbRate, Conf_VS_MaxAngle, DefaultTrkRollLimit;
     public static ConfigEntry<float> ThrottleMinLimit, ThrottleMaxLimit, MaxRollRate;
 
     // pid
     public static ConfigEntry<PIDTuning> ConfPidAlt, ConfPidVs, ConfPidPitch;
     public static ConfigEntry<PIDTuning> ConfPidRoll, ConfPidRollRate, ConfPidYaw;
-    public static ConfigEntry<PIDTuning> ConfPidCrs, ConfPidSpd, ConfPidGcas;
+    public static ConfigEntry<PIDTuning> ConfPidTrk, ConfPidSpd, ConfPidGcas;
 
     public static ConfigEntry<GainSchedule> SchedPidPitch;
     public static ConfigEntry<GainSchedule> SchedPidRollRate;
@@ -179,11 +179,11 @@ public class Plugin : BaseUnityPlugin
         "<b>Toggle AJ:</b> / (Slash)\n" +
         "<b>Toggle GCAS:</b> \\ (Backslash)\n" +
         "<b>Toggle ALS:</b> LCtrl + = (Equals) | Autoland\n" +
-        "<b>Clear/Reset:</b> ' (Quote) | Roll>Nav>Crs>Roll>Alt>Roll\n\n" +
+        "<b>Clear/Reset:</b> ' (Quote) | Roll>Nav>Trk>Roll>Alt>Roll\n\n" +
         "<b>Target Alt Small:</b> Up / Down Arrow | Small adjustment\n" +
         "<b>Target Alt Large:</b> Left / Right Arrow | Large adjustment\n" +
         "<b>Max Climb Rate:</b> PgUp / PgDn | Limit vertical speed\n" +
-        "<b>Bank/Course L/R:</b> [ and ] | Adjust roll or heading\n\n" +
+        "<b>Bank/Track L/R:</b> [ and ] | Adjust roll or track\n\n" +
         "<b>Toggle Speed Hold:</b> ; (Semicolon) | Matches current speed\n" +
         "<b>Speed Up / Down:</b> LShift / LCtrl | Adjust target speed\n" +
         "<b>Mach/TAS Hold:</b> Home | Switch between Mach/TAS\n" +
@@ -311,7 +311,7 @@ public class Plugin : BaseUnityPlugin
             "Stick input (0.0 to 1.0) required to disengage AP entirely");
         InvertRoll = Config.Bind("Settings", "6. Invert Roll", true, "Flip Roll");
         InvertPitch = Config.Bind("Settings", "7. Invert Pitch", true, "Flip Pitch");
-        Conf_InvertCourseRoll =
+        Conf_InvertTrackRoll =
             Config.Bind("Settings", "8. Invert Bank Direction", true, "Toggle if plane turns wrong way");
         DisableATAPGCAS = Config.Bind("Settings - Misc", "Disable autothrottle with AP (GCAS)", false,
             "Disable autothrottle when AP is disengaged by GCAS");
@@ -390,7 +390,7 @@ public class Plugin : BaseUnityPlugin
             "Turn Auto-GCAS on/off");
         ToggleALSKey = Config.Bind("Controls", "5.1 Toggle ALS Key",
             new KeyboardShortcut(KeyCode.Equals, KeyCode.LeftControl), "Turn autoland on/off");
-        ClearKey = Config.Bind("Controls", "6. clear roll/nav/crs/roll/alt/roll", new KeyboardShortcut(KeyCode.Quote),
+        ClearKey = Config.Bind("Controls", "6. clear roll/nav/trk/roll/alt/roll", new KeyboardShortcut(KeyCode.Quote),
             "every press will clear/reset first thing it sees isn't clear from left to right");
         UpKey = Config.Bind("Controls - Altitude", "1. Altitude Up (Small)", new KeyboardShortcut(KeyCode.UpArrow),
             "small increase");
@@ -405,9 +405,9 @@ public class Plugin : BaseUnityPlugin
         ClimbRateDownKey = Config.Bind("Controls - Altitude", "6. Climb Rate Decrease",
             new KeyboardShortcut(KeyCode.PageDown), "Decrease Max VS");
         BankLeftKey = Config.Bind("Controls - Bank", "1. Bank Left", new KeyboardShortcut(KeyCode.LeftBracket),
-            "Roll/course Left");
+            "Roll/track Left");
         BankRightKey = Config.Bind("Controls - Bank", "2. Bank Right", new KeyboardShortcut(KeyCode.RightBracket),
-            "Roll/course right");
+            "Roll/track right");
         SpeedHoldKey = Config.Bind("Controls - Speed", "1. Speed Hold Toggle", new KeyboardShortcut(KeyCode.Semicolon),
             "speed hold/clear");
         SpeedUpKey = Config.Bind("Controls - Speed", "2. Target Speed Increase",
@@ -430,7 +430,7 @@ public class Plugin : BaseUnityPlugin
             RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5. Toggle GCAS", "Turn Auto-GCAS on/off");
         ToggleALSRW =
             RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "5.1 Toggle ALS", "Turn autoland on/off");
-        ClearRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear roll/nav/crs/roll/alt/roll",
+        ClearRW = RewiredConfigManager.BindRW(Config, "Controls (Rewired)", "6. clear roll/nav/trk/roll/alt/roll",
             "every use will clear/reset first thing it sees isn't clear from left to right");
         UpRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "1. Altitude Up (Small)",
             "small increase");
@@ -445,9 +445,9 @@ public class Plugin : BaseUnityPlugin
         ClimbRateDownRW = RewiredConfigManager.BindRW(Config, "Controls - Altitude (Rewired)", "6. Climb Rate Decrease",
             "Decrease Max VS");
         BankLeftRW =
-            RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "1. Bank Left", "Roll/course Left");
+            RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "1. Bank Left", "Roll/track Left");
         BankRightRW =
-            RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "2. Bank Right", "Roll/course right");
+            RewiredConfigManager.BindRW(Config, "Controls - Bank (Rewired)", "2. Bank Right", "Roll/track right");
         SpeedHoldRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "1. Speed Hold Toggle",
             "speed hold/clear");
         SpeedUpRW = RewiredConfigManager.BindRW(Config, "Controls - Speed (Rewired)", "2. Target Speed Increase",
@@ -485,8 +485,8 @@ public class Plugin : BaseUnityPlugin
 
         DefaultMaxClimbRate = Config.Bind("Limits", "1. Default Max Climb Rate", 10f, "Startup value");
         Conf_VS_MaxAngle = Config.Bind("Limits", "2. Max Pitch Angle", 85.0f, "angle from horizon limit");
-        DefaultCRLimit = Config.Bind("Limits", "3. Default course roll limit", 10.0f,
-            "default roll limit when turning in course/nav mode");
+        DefaultTrkRollLimit = Config.Bind("Limits", "3. Default track roll limit", 10.0f,
+            "default roll limit when turning in track/nav mode");
         ThrottleMinLimit = Config.Bind("Limits", "4. Safe Min Throttle", 0.01f,
             "Minimum throttle when limiter is active (prevents Airbrake)");
         ThrottleMaxLimit = Config.Bind("Limits", "5. Safe Max Throttle", 0.89f,
@@ -522,8 +522,8 @@ public class Plugin : BaseUnityPlugin
         ConfPidYaw = PIDTuningBinder.Bind(Config, pidSect, "07. Yaw",
             new PIDTuning(), "Yaw error > Stick");
 
-        ConfPidCrs = PIDTuningBinder.Bind(Config, pidSect, "08. Course > Course Rate",
-            new PIDTuning(), "Course Error > Course Rate");
+        ConfPidTrk = PIDTuningBinder.Bind(Config, pidSect, "08. Track > Track Rate",
+            new PIDTuning(), "Track Error > Track Rate");
 
         ConfPidSpd = PIDTuningBinder.Bind(Config, pidSect, "09. Speed > Throttle",
             new PIDTuning(), "Speed Error > Throttle");
@@ -1169,7 +1169,7 @@ public class Plugin : BaseUnityPlugin
             ? APData.TargetSpeed.ToString("F2")
             : ModUtils.ConvertSpeed_ToDisplay(APData.TargetSpeed).ToString("F0");
 
-        s_bufCourse = APData.TargetCourse >= 0 ? APData.TargetCourse.ToString("F0") : "";
+        s_bufTrack = APData.TargetTrack >= 0 ? APData.TargetTrack.ToString("F0") : "";
     }
 
     // gui
@@ -1194,11 +1194,11 @@ public class Plugin : BaseUnityPlugin
         float sos = LevelInfo.GetSpeedOfSound(currentAlt);
         float currentSpeed = (APData.PlayerRB?.velocity.magnitude) ?? 0f;
 
-        float currentCourse = 0f;
+        float currentTrack = 0f;
         if (APData.PlayerRB?.velocity.sqrMagnitude > 1f)
         {
             Vector3 flatVel = Vector3.ProjectOnPlane(APData.PlayerRB.velocity, Vector3.up);
-            currentCourse = Quaternion.LookRotation(flatVel).eulerAngles.y;
+            currentTrack = Quaternion.LookRotation(flatVel).eulerAngles.y;
         }
 
         string sAlt = ModUtils.ProcessGameString(UnitConverter.AltitudeReading(APData.CurrentAlt), true);
@@ -1216,7 +1216,7 @@ public class Plugin : BaseUnityPlugin
             sSpd = ModUtils.ProcessGameString(UnitConverter.SpeedReading(currentSpeed), true);
         }
 
-        string sCrs = $"{currentCourse:F0}°";
+        string sTrk = $"{currentTrack:F0}°";
 
         _measuringContent.text = sAlt;
         float wAlt = _styleLabel.CalcSize(_measuringContent).x;
@@ -1226,10 +1226,10 @@ public class Plugin : BaseUnityPlugin
         float wRoll = _styleLabel.CalcSize(_measuringContent).x;
         _measuringContent.text = sSpd;
         float wSpd = _styleLabel.CalcSize(_measuringContent).x;
-        _measuringContent.text = sCrs;
-        float wCrs = _styleLabel.CalcSize(_measuringContent).x;
+        _measuringContent.text = sTrk;
+        float wTrk = _styleLabel.CalcSize(_measuringContent).x;
 
-        float targetWidth = Mathf.Max(wAlt, wVS, wRoll, wSpd, wCrs) + 6;
+        float targetWidth = Mathf.Max(wAlt, wVS, wRoll, wSpd, wTrk) + 6;
         _dynamicLabelWidth = Mathf.Lerp(_dynamicLabelWidth, targetWidth, 0.15f);
 
         // altitude
@@ -1289,7 +1289,7 @@ public class Plugin : BaseUnityPlugin
                     "Current bank angle\nCyan if Nav mode on\nGreen if roll AP on\nClick to copy"), _styleReadout,
                 GUILayout.Width(_dynamicLabelWidth)))
         {
-            s_bufRoll = APData.NavEnabled || APData.TargetCourse >= 0
+            s_bufRoll = APData.NavEnabled || APData.TargetTrack >= 0
                 ? Mathf.Abs(APData.CurrentRoll).ToString("F0")
                 : APData.CurrentRoll.ToString("F0");
         }
@@ -1378,33 +1378,33 @@ public class Plugin : BaseUnityPlugin
         GUI.backgroundColor = oldCol;
         GUILayout.EndHorizontal();
 
-        // course
+        // track
         GUILayout.BeginHorizontal();
         GUI.color = APData.NavEnabled && APData.Enabled
             ? Color.cyan
-            : APData.Enabled && APData.TargetCourse >= 0
+            : APData.Enabled && APData.TargetTrack >= 0
                 ? Color.green : Color.white;
 
         if (GUILayout.Button(
-                new GUIContent($"{sCrs}", "Current course\nCyan if Nav mode on\nGreen if Course AP on\nClick to copy"),
+                new GUIContent($"{sTrk}", "Current track\nCyan if Nav mode on\nGreen if Track AP on\nClick to copy"),
                 _styleReadout, GUILayout.Width(_dynamicLabelWidth)))
         {
-            s_bufCourse = currentCourse.ToString("F0");
+            s_bufTrack = currentTrack.ToString("F0");
         }
 
         GUI.color = Color.white;
-        if (APData.NavEnabled && APData.TargetCourse >= 0)
+        if (APData.NavEnabled && APData.TargetTrack >= 0)
         {
-            s_bufCourse = APData.TargetCourse.ToString("F0");
+            s_bufTrack = APData.TargetTrack.ToString("F0");
         }
 
-        s_bufCourse = GUILayout.TextField(s_bufCourse);
-        GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target course"));
-        if (GUILayout.Button(new GUIContent("CLR", "Disable course hold/nav"), _styleButton,
+        s_bufTrack = GUILayout.TextField(s_bufTrack);
+        GUI.Label(GUILayoutUtility.GetLastRect(), new GUIContent("", "Target track"));
+        if (GUILayout.Button(new GUIContent("CLR", "Disable track hold/nav"), _styleButton,
                 GUILayout.Width(_buttonWidth)))
         {
-            APData.TargetCourse = -1f;
-            s_bufCourse = "";
+            APData.TargetTrack = -1f;
+            s_bufTrack = "";
             APData.NavEnabled = false;
             APData.TargetRoll = 0;
             s_bufRoll = "0";
@@ -1430,17 +1430,17 @@ public class Plugin : BaseUnityPlugin
                     ? s : ModUtils.ConvertSpeed_FromDisplay(s)
                 : -1f;
 
-            APData.TargetCourse = float.TryParse(s_bufCourse, out float crs) ? crs : -1f;
+            APData.TargetTrack = float.TryParse(s_bufTrack, out float trk) ? trk : -1f;
 
             if (float.TryParse(s_bufRoll, out float r))
             {
-                APData.TargetRoll = (APData.NavEnabled || APData.TargetCourse >= 0) &&
+                APData.TargetRoll = (APData.NavEnabled || APData.TargetTrack >= 0) &&
                                     APData.TargetRoll == 0
-                    ? DefaultCRLimit.Value : r;
+                    ? DefaultTrkRollLimit.Value : r;
             }
-            else if (APData.TargetCourse >= 0f || APData.NavEnabled)
+            else if (APData.TargetTrack >= 0f || APData.NavEnabled)
             {
-                APData.TargetRoll = DefaultCRLimit.Value;
+                APData.TargetRoll = DefaultTrkRollLimit.Value;
                 s_bufRoll = APData.TargetRoll.ToString("F0");
             }
             else
@@ -1468,11 +1468,11 @@ public class Plugin : BaseUnityPlugin
                     s_bufAlt = ModUtils.ConvertAlt_ToDisplay(APData.TargetAlt).ToString("F0");
                 }
 
-                if (string.IsNullOrEmpty(s_bufCourse) && string.IsNullOrEmpty(s_bufRoll))
+                if (string.IsNullOrEmpty(s_bufTrack) && string.IsNullOrEmpty(s_bufRoll))
                 {
-                    if (APData.NavEnabled || APData.TargetCourse >= 0)
+                    if (APData.NavEnabled || APData.TargetTrack >= 0)
                     {
-                        APData.TargetRoll = DefaultCRLimit.Value;
+                        APData.TargetRoll = DefaultTrkRollLimit.Value;
                         s_bufRoll = APData.TargetRoll.ToString("F0");
                     }
                     else
@@ -1600,7 +1600,7 @@ public class Plugin : BaseUnityPlugin
             APData.NavEnabled = newNavState;
             if (APData.NavEnabled && (APData.TargetRoll == -999f || APData.TargetRoll == 0f))
             {
-                APData.TargetRoll = DefaultCRLimit.Value;
+                APData.TargetRoll = DefaultTrkRollLimit.Value;
             }
 
             SyncMenuValues();

@@ -412,14 +412,14 @@ internal static class HUDVisualsPatch
                         if (apActive)
                         {
                             string degUnit = Plugin.AngleShowUnit.Value ? "°" : "";
-                            if (APData.TargetCourse >= 0)
+                            if (APData.TargetTrack >= 0)
                             {
-                                SbHud.Append("C").Append(APData.TargetCourse.ToString("F0")).Append(degUnit);
+                                SbHud.Append("T").Append(APData.TargetTrack.ToString("F0")).Append(degUnit);
                                 hasLine3 = true;
                             }
                             else if (placeholders)
                             {
-                                SbHud.Append("C");
+                                SbHud.Append("T");
                                 hasLine3 = true;
                             }
 

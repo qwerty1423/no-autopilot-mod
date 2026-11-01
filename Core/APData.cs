@@ -21,7 +21,7 @@ public static class APData
     public static float TargetAlt = -1f;
     public static float TargetRoll = -999f;
     public static float TargetSpeed = -1f;
-    public static float TargetCourse = -1f;
+    public static float TargetTrack = -1f;
     public static float CurrentAlt;
     public static float CurrentRoll;
     public static float CurrentMaxClimbRate = -1f;
@@ -71,7 +71,7 @@ public static class APData
         TargetAlt = -1f;
         TargetRoll = -999f;
         TargetSpeed = -1f;
-        TargetCourse = -1f;
+        TargetTrack = -1f;
         CurrentAlt = 0f;
         CurrentRoll = 0f;
         CurrentMaxClimbRate = -1f;

@@ -5,11 +5,11 @@ namespace NOAutopilot.Core.PID;
 public static class ActivePid
 {
     // active values
-    public static PIDTuning Alt, Vs, Pitch, Roll, RollRate, Yaw, Crs, Spd, Gcas;
+    public static PIDTuning Alt, Vs, Pitch, Roll, RollRate, Yaw, Trk, Spd, Gcas;
     public static GainSchedule SchedPitch, SchedRollRate, SchedVs, SchedSpd;
 
     // global default
-    private static string s_gAlt, s_gVs, s_gPitch, s_gRoll, s_gRollRate, s_gYaw, s_gCrs, s_gSpd, s_gGcas;
+    private static string s_gAlt, s_gVs, s_gPitch, s_gRoll, s_gRollRate, s_gYaw, s_gTrk, s_gSpd, s_gGcas;
     private static string s_gSchedPitch, s_gSchedRollRate, s_gSchedVs, s_gSchedSpd;
 
     public static string CurrentAircraftId { get; private set; } = "";
@@ -26,7 +26,7 @@ public static class ActivePid
         s_gRoll = Plugin.ConfPidRoll.Value.ToString();
         s_gRollRate = Plugin.ConfPidRollRate.Value.ToString();
         s_gYaw = Plugin.ConfPidYaw.Value.ToString();
-        s_gCrs = Plugin.ConfPidCrs.Value.ToString();
+        s_gTrk = Plugin.ConfPidTrk.Value.ToString();
         s_gSpd = Plugin.ConfPidSpd.Value.ToString();
         s_gGcas = Plugin.ConfPidGcas.Value.ToString();
 
@@ -54,7 +54,7 @@ public static class ActivePid
             Roll = PIDTuning.Parse(s_gRoll);
             RollRate = PIDTuning.Parse(s_gRollRate);
             Yaw = PIDTuning.Parse(s_gYaw);
-            Crs = PIDTuning.Parse(s_gCrs);
+            Trk = PIDTuning.Parse(s_gTrk);
             Spd = PIDTuning.Parse(s_gSpd);
             Gcas = PIDTuning.Parse(s_gGcas);
 
@@ -105,7 +105,7 @@ public static class ActivePid
         if (!string.IsNullOrEmpty(profile.Roll)) { Roll = PIDTuning.Parse(profile.Roll); }
         if (!string.IsNullOrEmpty(profile.RollRate)) { RollRate = PIDTuning.Parse(profile.RollRate); }
         if (!string.IsNullOrEmpty(profile.Yaw)) { Yaw = PIDTuning.Parse(profile.Yaw); }
-        if (!string.IsNullOrEmpty(profile.Crs)) { Crs = PIDTuning.Parse(profile.Crs); }
+        if (!string.IsNullOrEmpty(profile.Trk)) { Trk = PIDTuning.Parse(profile.Trk); }
         if (!string.IsNullOrEmpty(profile.Spd)) { Spd = PIDTuning.Parse(profile.Spd); }
         if (!string.IsNullOrEmpty(profile.Gcas)) { Gcas = PIDTuning.Parse(profile.Gcas); }
 
@@ -133,7 +133,7 @@ public static class ActivePid
             Plugin.ConfPidRoll.Value = Roll;
             Plugin.ConfPidRollRate.Value = RollRate;
             Plugin.ConfPidYaw.Value = Yaw;
-            Plugin.ConfPidCrs.Value = Crs;
+            Plugin.ConfPidTrk.Value = Trk;
             Plugin.ConfPidSpd.Value = Spd;
             Plugin.ConfPidGcas.Value = Gcas;
 
@@ -156,7 +156,7 @@ public static class ActivePid
         Roll = Plugin.ConfPidRoll.Value;
         RollRate = Plugin.ConfPidRollRate.Value;
         Yaw = Plugin.ConfPidYaw.Value;
-        Crs = Plugin.ConfPidCrs.Value;
+        Trk = Plugin.ConfPidTrk.Value;
         Spd = Plugin.ConfPidSpd.Value;
         Gcas = Plugin.ConfPidGcas.Value;
 
@@ -175,7 +175,7 @@ public static class ActivePid
             Plugin.ConfPidRoll.Value.ToString() == s_gRoll &&
             Plugin.ConfPidRollRate.Value.ToString() == s_gRollRate &&
             Plugin.ConfPidYaw.Value.ToString() == s_gYaw &&
-            Plugin.ConfPidCrs.Value.ToString() == s_gCrs &&
+            Plugin.ConfPidTrk.Value.ToString() == s_gTrk &&
             Plugin.ConfPidSpd.Value.ToString() == s_gSpd &&
             Plugin.ConfPidGcas.Value.ToString() == s_gGcas &&
             Plugin.SchedPidPitch.Value.ToString() == s_gSchedPitch &&
@@ -202,7 +202,7 @@ public static class ActivePid
             Plugin.ConfPidRoll.Value = Roll;
             Plugin.ConfPidRollRate.Value = RollRate;
             Plugin.ConfPidYaw.Value = Yaw;
-            Plugin.ConfPidCrs.Value = Crs;
+            Plugin.ConfPidTrk.Value = Trk;
             Plugin.ConfPidSpd.Value = Spd;
             Plugin.ConfPidGcas.Value = Gcas;
 

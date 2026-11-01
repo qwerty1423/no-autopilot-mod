@@ -20,7 +20,7 @@ public static class PIDLogger
         Roll = 4,
         RollRate = 5,
         Yaw = 6,
-        Crs = 7,
+        Trk = 7,
         Spd = 8,
         GCAS = 9
     }

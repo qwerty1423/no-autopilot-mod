@@ -23,7 +23,7 @@ internal static class ControlOverridePatch
     private static readonly PIDController PidRoll = new();
     private static readonly PIDController PidRollRate = new();
     private static readonly PIDController PidYaw = new();
-    private static readonly PIDController PidCrs = new();
+    private static readonly PIDController PidTrk = new();
     private static readonly PIDController PidGCAS = new();
     private static readonly PIDController PidSpd = new();
     private static bool s_wasEnabled;
@@ -82,7 +82,7 @@ internal static class ControlOverridePatch
         PidRoll.Reset();
         PidRollRate.Reset();
         PidYaw.Reset();
-        PidCrs.Reset();
+        PidTrk.Reset();
         PidGCAS.Reset();
         PidSpd.Reset();
 
@@ -118,7 +118,7 @@ internal static class ControlOverridePatch
         PidRoll.Reset();
         PidRollRate.Reset();
         PidYaw.Reset();
-        PidCrs.Reset();
+        PidTrk.Reset();
         PidGCAS.Reset();
 
         if (APData.TargetSpeed < 0)
@@ -257,7 +257,7 @@ internal static class ControlOverridePatch
                 if (APData.Enabled && APData.NavEnabled && !APData.GCASActive)
                 {
                     float bearing = Mathf.Atan2(diff.x, diff.z) * Mathf.Rad2Deg;
-                    APData.TargetCourse = (bearing + 360f) % 360f;
+                    APData.TargetTrack = (bearing + 360f) % 360f;
                 }
             }
 
@@ -711,7 +711,7 @@ internal static class ControlOverridePatch
                         {
                             if (APData.TargetRoll == -999f)
                             {
-                                APData.TargetRoll = Plugin.DefaultCRLimit.Value;
+                                APData.TargetRoll = Plugin.DefaultTrkRollLimit.Value;
                             }
 
                             if (bankLeft)
@@ -728,16 +728,16 @@ internal static class ControlOverridePatch
                         }
                     }
 
-                    if (APData.TargetCourse >= 0f)
+                    if (APData.TargetTrack >= 0f)
                     {
                         if (InputHelper.IsPressed(Plugin.BankLeftRW) || Plugin.BankLeftKey.Value.IsPressed())
                         {
-                            APData.TargetCourse = Mathf.Repeat(APData.TargetCourse - rStep, 360f);
+                            APData.TargetTrack = Mathf.Repeat(APData.TargetTrack - rStep, 360f);
                         }
 
                         if (InputHelper.IsPressed(Plugin.BankRightRW) || Plugin.BankRightKey.Value.IsPressed())
                         {
-                            APData.TargetCourse = Mathf.Repeat(APData.TargetCourse + rStep, 360f);
+                            APData.TargetTrack = Mathf.Repeat(APData.TargetTrack + rStep, 360f);
                         }
                     }
                     else
@@ -769,19 +769,19 @@ internal static class ControlOverridePatch
                     {
                         if (APData.NavEnabled)
                         {
-                            float crlimit = Plugin.DefaultCRLimit.Value;
-                            if (APData.TargetRoll != crlimit)
+                            float trkRollLimit = Plugin.DefaultTrkRollLimit.Value;
+                            if (APData.TargetRoll != trkRollLimit)
                             {
-                                APData.TargetRoll = crlimit;
+                                APData.TargetRoll = trkRollLimit;
                             }
                             else
                             {
                                 APData.NavEnabled = false;
                             }
                         }
-                        else if (APData.TargetCourse != -1f)
+                        else if (APData.TargetTrack != -1f)
                         {
-                            APData.TargetCourse = -1f;
+                            APData.TargetTrack = -1f;
                         }
                         else if (APData.TargetRoll != 0f)
                         {
@@ -798,11 +798,11 @@ internal static class ControlOverridePatch
                     }
                 }
 
-                // roll/course control
+                // roll/track control
                 bool rollTest = PIDLogger.IsTesting(PIDLogger.StepTarget.Roll) ||
-                    PIDLogger.IsTesting(PIDLogger.StepTarget.Crs);
+                    PIDLogger.IsTesting(PIDLogger.StepTarget.Trk);
                 bool rollAxisActive = APData.GCASActive ||
-                    APData.TargetCourse >= 0f ||
+                    APData.TargetTrack >= 0f ||
                     APData.TargetRoll != -999f ||
                     rollTest;
 
@@ -815,7 +815,7 @@ internal static class ControlOverridePatch
 
                     if ((pilotRoll || isWaitingToReengage) && !APData.GCASActive)
                     {
-                        PidCrs.Reset();
+                        PidTrk.Reset();
                         PidRoll.Update(APData.CurrentRoll, APData.CurrentRoll,
                             0, 0, 0, Mode.Track);
                         PidRollRate.Update(rollRate, rollRate,
@@ -825,28 +825,28 @@ internal static class ControlOverridePatch
                     {
                         float activeTargetRoll = APData.TargetRoll;
 
-                        if ((APData.TargetCourse >= 0f ||
-                            PIDLogger.IsTesting(PIDLogger.StepTarget.Crs)) &&
+                        if ((APData.TargetTrack >= 0f ||
+                            PIDLogger.IsTesting(PIDLogger.StepTarget.Trk)) &&
                             APData.PlayerRB.velocity.sqrMagnitude > 1f &&
                             !APData.GCASActive && flatVel.sqrMagnitude > 1f)
                         {
-                            float curCrs = Quaternion.LookRotation(flatVel).eulerAngles.y;
-                            float baseTargetCrs = APData.TargetCourse >= 0f ? APData.TargetCourse : curCrs;
+                            float curTrk = Quaternion.LookRotation(flatVel).eulerAngles.y;
+                            float baseTargetTrk = APData.TargetTrack >= 0f ? APData.TargetTrack : curTrk;
 
-                            float targetCrs = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Crs, baseTargetCrs, curCrs);
-                            float cErr = Mathf.DeltaAngle(curCrs, targetCrs);
-                            float unwrappedTargetCrs = curCrs + cErr;
-                            ConfigurePID(PidCrs, ActivePid.Crs, dt, -90f, 90f);
-                            float desiredTurnRate = (float)PidCrs.Update(unwrappedTargetCrs, curCrs);
+                            float targetTrk = PIDLogger.GetSetpoint(PIDLogger.StepTarget.Trk, baseTargetTrk, curTrk);
+                            float cErr = Mathf.DeltaAngle(curTrk, targetTrk);
+                            float unwrappedTargetTrk = curTrk + cErr;
+                            ConfigurePID(PidTrk, ActivePid.Trk, dt, -90f, 90f);
+                            float desiredTurnRate = (float)PidTrk.Update(unwrappedTargetTrk, curTrk);
 
-                            PIDLogger.Log(PIDLogger.StepTarget.Crs, desiredTurnRate, curCrs);
+                            PIDLogger.Log(PIDLogger.StepTarget.Trk, desiredTurnRate, curTrk);
 
                             const float gravity = 9.81f;
                             float velocity = Mathf.Max(airSpeed3d, 1f);
                             float turnRateRad = desiredTurnRate * Mathf.Deg2Rad;
                             float bankReq = Mathf.Atan(velocity * turnRateRad / gravity) * Mathf.Rad2Deg;
 
-                            if (Plugin.Conf_InvertCourseRoll.Value)
+                            if (Plugin.Conf_InvertTrackRoll.Value)
                             {
                                 bankReq = -bankReq;
                             }
@@ -856,7 +856,7 @@ internal static class ControlOverridePatch
 
                             float userLimit = APData.TargetRoll != -999f && APData.TargetRoll != 0
                                 ? Mathf.Abs(APData.TargetRoll)
-                                : Plugin.DefaultCRLimit.Value;
+                                : Plugin.DefaultTrkRollLimit.Value;
 
                             float finalBankLimit = Mathf.Min(userLimit, gLimitBank);
 

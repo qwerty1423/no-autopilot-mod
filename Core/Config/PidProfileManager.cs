@@ -126,7 +126,7 @@ public static class PidProfileManager
         if (tunedProfile.Roll != baseProfile.Roll) { partial.Roll = tunedProfile.Roll; }
         if (tunedProfile.RollRate != baseProfile.RollRate) { partial.RollRate = tunedProfile.RollRate; }
         if (tunedProfile.Yaw != baseProfile.Yaw) { partial.Yaw = tunedProfile.Yaw; }
-        if (tunedProfile.Crs != baseProfile.Crs) { partial.Crs = tunedProfile.Crs; }
+        if (tunedProfile.Trk != baseProfile.Trk) { partial.Trk = tunedProfile.Trk; }
         if (tunedProfile.Spd != baseProfile.Spd) { partial.Spd = tunedProfile.Spd; }
         if (tunedProfile.Gcas != baseProfile.Gcas) { partial.Gcas = tunedProfile.Gcas; }
         if (tunedProfile.SchedPitch != baseProfile.SchedPitch) { partial.SchedPitch = tunedProfile.SchedPitch; }
@@ -182,7 +182,7 @@ public static class PidProfileManager
         ActivePid.Roll = PIDTuning.Parse(s_tuningSnapshot.Roll);
         ActivePid.RollRate = PIDTuning.Parse(s_tuningSnapshot.RollRate);
         ActivePid.Yaw = PIDTuning.Parse(s_tuningSnapshot.Yaw);
-        ActivePid.Crs = PIDTuning.Parse(s_tuningSnapshot.Crs);
+        ActivePid.Trk = PIDTuning.Parse(s_tuningSnapshot.Trk);
         ActivePid.Spd = PIDTuning.Parse(s_tuningSnapshot.Spd);
         ActivePid.Gcas = PIDTuning.Parse(s_tuningSnapshot.Gcas);
         ActivePid.SchedPitch = GainSchedule.Parse(s_tuningSnapshot.SchedPitch);
@@ -207,7 +207,7 @@ public static class PidProfileManager
             Roll = ActivePid.Roll.ToString(),
             RollRate = ActivePid.RollRate.ToString(),
             Yaw = ActivePid.Yaw.ToString(),
-            Crs = ActivePid.Crs.ToString(),
+            Trk = ActivePid.Trk.ToString(),
             Spd = ActivePid.Spd.ToString(),
             Gcas = ActivePid.Gcas.ToString(),
             SchedPitch = ActivePid.SchedPitch.ToString(),
@@ -305,7 +305,7 @@ public static class PidProfileManager
                 Roll = ActivePid.Roll.ToString(),
                 RollRate = ActivePid.RollRate.ToString(),
                 Yaw = ActivePid.Yaw.ToString(),
-                Crs = ActivePid.Crs.ToString(),
+                Trk = ActivePid.Trk.ToString(),
                 Spd = ActivePid.Spd.ToString(),
                 Gcas = ActivePid.Gcas.ToString(),
                 SchedPitch = ActivePid.SchedPitch.ToString(),

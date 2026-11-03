@@ -52,6 +52,8 @@ public static class APData
     // public static List<Component> LocalLandingGears = [];
     public static bool IsOnGround;
 
+    public const float GroundRadarAltitude = 0.1f;
+
     // ALS
     public static bool ALSActive;
     public static string ALSStatusText = "";

@@ -182,6 +182,11 @@ internal static class ControlOverridePatch
             bool pilotRoll = Mathf.Abs(stickRoll) > Plugin.StickTempThreshold.Value;
             bool pilotYaw = Mathf.Abs(stickYaw) > Plugin.StickTempThreshold.Value;
 
+            Aircraft groundRef = APData.LocalAircraft;
+            APData.IsOnGround = groundRef != null &&
+                groundRef.gearState != LandingGear.GearState.LockedRetracted &&
+                groundRef.radarAlt < APData.GroundRadarAltitude;
+
             Vector3 pForward = APData.PlayerTransform.forward;
             Vector3 pUp = APData.PlayerTransform.up;
             Vector3 localAngVel = APData.PlayerTransform.InverseTransformDirection(APData.PlayerRB.angularVelocity);
@@ -295,13 +300,6 @@ internal static class ControlOverridePatch
                 if (acRef.gearState != LandingGear.GearState.LockedRetracted)
                 {
                     gearDown = true;
-                }
-
-                APData.IsOnGround = false;
-                float currentRadarAlt = APData.LocalAircraft.radarAlt;
-                if (gearDown && currentRadarAlt < 0.1f)
-                {
-                    APData.IsOnGround = true;
                 }
 
                 bool pilotOverride = Mathf.Abs(stickPitch) > Plugin.GcasDeadzone.Value ||

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -890,6 +890,11 @@ public class Plugin : BaseUnityPlugin
                 {
                     APData.TargetSpeed = -1f;
                     s_bufSpeed = "";
+                    Announce(AnnouncementKind.SpeedHold, "Speed Hold <b>Disabled</b>");
+                }
+                else if (APData.IsOnGround)
+                {
+                    Announce(AnnouncementKind.SpeedHold, "Speed Hold <b>Unavailable</b>");
                 }
                 else if (APData.PlayerRB != null && APData.LocalAircraft != null)
                 {
@@ -908,13 +913,20 @@ public class Plugin : BaseUnityPlugin
                         APData.TargetSpeed = currentTAS;
                         s_bufSpeed = ModUtils.ConvertSpeed_ToDisplay(currentTAS).ToString("F0");
                     }
+
+                    Announce(AnnouncementKind.SpeedHold, "Speed Hold <b>Enabled</b>");
                 }
 
-                Announce(AnnouncementKind.SpeedHold, APData.TargetSpeed >= 0f
-                    ? "Speed Hold <b>Enabled</b>"
-                    : "Speed Hold <b>Disabled</b>");
                 SyncMenuValues();
                 GUI.FocusControl(null);
+            }
+
+            if (APData.TargetSpeed >= 0f && APData.IsOnGround)
+            {
+                APData.TargetSpeed = -1f;
+                s_bufSpeed = "";
+                Announce(AnnouncementKind.SpeedHold, "Speed Hold <b>Disabled</b>");
+                SyncMenuValues();
             }
 
             if (APData.TargetSpeed >= 0f)
@@ -1585,10 +1597,11 @@ public class Plugin : BaseUnityPlugin
                 APData.CurrentMaxClimbRate = Mathf.Max(0.5f, ModUtils.ConvertVS_FromDisplay(c));
             }
 
-            APData.TargetSpeed = float.TryParse(s_bufSpeed, out float s)
+            float applySpeed = float.TryParse(s_bufSpeed, out float s)
                 ? APData.SpeedHoldIsMach
                     ? s : ModUtils.ConvertSpeed_FromDisplay(s)
                 : -1f;
+            APData.TargetSpeed = APData.IsOnGround ? -1f : applySpeed;
 
             APData.TargetTrack = float.TryParse(s_bufTrack, out float trk) ? trk : -1f;
 

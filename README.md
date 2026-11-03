@@ -21,9 +21,9 @@ This project is an unofficial community modification and is not affiliated with,
   - [Disabling features](#disabling-features)
 - [Default controls](#default-controls)
 - [screenshot of an old version?](#screenshot-of-an-old-version)
-- [features and not features](#features-and-not-features)
-  - [list of some features](#list-of-some-features)
-  - [features not in the mod (yet?)](#features-not-in-the-mod-yet)
+- [Features](#features)
+  - [Implemented features](#implemented-features)
+  - [Potential features](#potential-features)
 - [Autopilot](#autopilot)
 - [Auto Jammer](#auto-jammer)
 - [Fuel time and range display](#fuel-time-and-range-display)
@@ -190,20 +190,16 @@ After installation of the config manager, you can press F1 to bring up the confi
 
 ![imperialap](https://github.com/user-attachments/assets/23580e9d-2ea9-441d-8079-a181dab5c0cc)
 
-## features and not features
+## Features
 
-Some of the not features may eventually be implemented.
+Some of the potential features may eventually be implemented.
 
-### list of some features
+### Implemented features
 
-- wing leveller and altitude hold
-- climb/descend to altitude at set rate
-- set target roll angle
-- HUD autopilot display
-- fuel time and range display
-- Medusa auto jam on full capacitor (won’t select targets or weapons)
+- autopilot
+- hud overlay with fuel time and range
+- Offensive jammer pod auto jam on target selected
 - Auto-GCAS
-- simple autopilot GUI
 - track hold
 - autothrottle
 - waypoints
@@ -211,7 +207,7 @@ Some of the not features may eventually be implemented.
 - singleplayer fbw disabler
 - autoland
   
-### features not in the mod (yet?)
+### Potential features
 
 - terrain following
 - proper helicopter support

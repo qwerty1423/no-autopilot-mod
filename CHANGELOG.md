@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [6.0.1]
+
+### Fixed
+
+- autothrottle will now be disabled when the aircraft is on the ground
+
 ## [6.0.0]
 
 ### Added
@@ -422,7 +428,8 @@ currently the autoland is not working.
 
 ## [4.8.4] - 2025-12-29
 
-[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v6.0.0...HEAD
+[Unreleased]: https://github.com/qwerty1423/no-autopilot-mod/compare/v6.0.1...HEAD
+[6.0.1]: https://github.com/qwerty1423/no-autopilot-mod/compare/v6.0.0...v6.0.1
 [6.0.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.6.0...v6.0.0
 [5.6.0]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.5.3...v5.6.0
 [5.5.3]: https://github.com/qwerty1423/no-autopilot-mod/compare/v5.5.2...v5.5.3

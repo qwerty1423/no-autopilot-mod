@@ -49,8 +49,6 @@ Hosts known to prohibit use:
 - GrayWar
 - Tomo's Co-Op/PvP
 
-Another list can be found in [this mod's post](https://discord.com/channels/909034158205059082/1458083280250208307/1458083280250208307) on the nuclear option discord's mod forum.
-
 ## [Changelog](https://github.com/qwerty1423/no-autopilot-mod/blob/main/CHANGELOG.md)
 
 ## Installation
@@ -61,9 +59,7 @@ After install, you should enable the BepInEx logging console so you can view err
 
 ### Mod manager
 
-[NOMM](https://github.com/Combat787/NOMM) - probably recommended
-
-[Yellowcake](https://github.com/NaghDiefallah/Yellowcake) - currently unmaintained?
+[NOMM](https://github.com/Combat787/NOMM)
 
 install the mod manager, and then look for this mod and the [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager).
 
@@ -100,10 +96,6 @@ folder structure after install (the names and locations are wrong now, but just 
 
 If you're stuck you can try Primeva 2082 discord's mod install guide:
 <https://docs.google.com/document/d/16aRWcrkt89YEn9_THwe9Fxo7AYPLE9SYSab_Y929dvE>
-
-or ask for help on the nuclear option discord.
-
-There are also more mods available on the discord.
 
 ## After updates
 

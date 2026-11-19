@@ -43,35 +43,6 @@ Makeshift autopilot mod, intended as a stopgap until something better is availab
 
 After install, you should enable the BepInEx logging console so you can view error messages while the game is running.
 
----
-
-### Manual installation
-
-1. Install latest BepInEx 5.
-   - [their github has install instructions](https://github.com/BepInEx/BepInEx/)
-   - always download the win_x64 version (even on linux, since NO runs on wine)
-   - if you are on linux, add override in steam launch options: `WINEDLLOVERRIDES="winhttp=n,b" %command%`
-   - run the game, then quit
-   - edit BepInEx.cfg in BepInEx/config
-
-   - line that says:
-   `HideManagerGameObject = false`
-   - should be changed to:
-   `HideManagerGameObject = true`
-
-   (mod will not work with this setting off. the config manager will also not work with it off.)
-
-2. (Recommended) Install BepInEx Configuration Manager. It is useful for editing settings ingame.
-   - download [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager)
-   - place extracted folder in BepInEx/plugins. (make sure your folder structure is like the image below)
-3. Download  `com.qwerty1423.NOAutopilot-{version}.7z` from releases (to the right if you are on pc) and extract the `no-autopilot-mod` folder.
-4. Place the extracted `no-autopilot-mod` folder into your `BepInEx/plugins/` folder.
-5. Run the game again to generate the config file (for the mod). The mod should work at this point.
-
-folder structure after install (the names and locations are wrong now, but just imagine a `no-autopilot-mod` folder in `plugins`)
-
-![no-folder-structure](https://github.com/user-attachments/assets/ff161a5b-676d-48eb-9eac-944afdeedb6c)
-
 ## After updates
 
 It is sometimes recommended to regenerate your config file at `BepInEx/config/com.qwerty1423.NOAutopilot.cfg` by either deleting it or moving it somewhere else and merging your changes with the newer version, because default config may change after an update.

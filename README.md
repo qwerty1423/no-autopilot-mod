@@ -35,19 +35,7 @@ This project is an unofficial community modification and is not affiliated with,
 
 ---
 
-Adds autopilot and some other features. Clientside and multiplayer compatible.
-
-It would be best to make sure the host is ok with you using the mod, especially in PVP.
-
-Hosts known to permit use:
-
-- Talon Two
-- DirtyMike and the Boys
-
-Hosts known to prohibit use:
-
-- GrayWar
-- Tomo's Co-Op/PvP
+Makeshift autopilot mod, intended as a stopgap until something better is available.
 
 ## [Changelog](https://github.com/qwerty1423/no-autopilot-mod/blob/main/CHANGELOG.md)
 

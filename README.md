@@ -6,8 +6,6 @@ This project is an unofficial community modification and is not affiliated with,
 
 - [Changelog](#changelog)
 - [Installation](#installation)
-  - [Mod manager](#mod-manager)
-  - [Manual installation](#manual-installation)
 - [After updates](#after-updates)
 - [Issues and questions](#issues-and-questions)
   - [Autopilot not engaging](#autopilot-not-engaging)

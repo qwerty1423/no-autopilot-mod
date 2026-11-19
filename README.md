@@ -45,16 +45,6 @@ After install, you should enable the BepInEx logging console so you can view err
 
 ---
 
-### Mod manager
-
-[NOMM](https://github.com/Combat787/NOMM)
-
-install the mod manager, and then look for this mod and the [BepInEx Configuration Manager](https://github.com/BepInEx/BepInEx.ConfigurationManager).
-
-If you are on linux, add override in steam launch options: `WINEDLLOVERRIDES="winhttp=n,b" %command%`
-
----
-
 ### Manual installation
 
 1. Install latest BepInEx 5.

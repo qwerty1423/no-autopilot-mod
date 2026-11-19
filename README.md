@@ -72,9 +72,6 @@ folder structure after install (the names and locations are wrong now, but just 
 
 ![no-folder-structure](https://github.com/user-attachments/assets/ff161a5b-676d-48eb-9eac-944afdeedb6c)
 
-If you're stuck you can try Primeva 2082 discord's mod install guide:
-<https://docs.google.com/document/d/16aRWcrkt89YEn9_THwe9Fxo7AYPLE9SYSab_Y929dvE>
-
 ## After updates
 
 It is sometimes recommended to regenerate your config file at `BepInEx/config/com.qwerty1423.NOAutopilot.cfg` by either deleting it or moving it somewhere else and merging your changes with the newer version, because default config may change after an update.

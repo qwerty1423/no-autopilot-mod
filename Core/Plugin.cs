@@ -300,7 +300,7 @@ public class Plugin : BaseUnityPlugin
         ShowFuelOverlay = Config.Bind("Visuals", "Show Fuel Overlay", true, "Draw fuel info text on the HUD.");
         ShowAPOverlay = Config.Bind("Visuals", "Show AP Overlay", true,
             "Draw AP status text on the HUD. Turn off if you want, there's a window now.");
-        ShowGCASOff = Config.Bind("Visuals", "Show GCAS OFF", true, "Show GCAS- on HUD");
+        ShowGCASOff = Config.Bind("Visuals", "Show GCAS state on HUD", false, "Show GCAS- on HUD");
         ShowGCASChevronOff = Config.Bind("Visuals", "Show GCAS chevron while disabled", true,
             "Show chevron while GCAS disabled");
         GCASChevronPlacement = Config.Bind("Visuals", "GCAS chevron placement", GCASChevronPlacementEnum.Hud,
@@ -533,11 +533,11 @@ public class Plugin : BaseUnityPlugin
         }
 
         // Auto GCAS
-        EnableGCAS = Config.Bind("Auto GCAS", "01. Enable GCAS on start", true,
+        EnableGCAS = Config.Bind("Auto GCAS", "01. Enable GCAS on start", false,
             "GCAS off at start if disabled (anything that isn't a helo)");
         EnableGCASHelo = Config.Bind("Auto GCAS", "02. Enable GCAS on start (Helo)", false,
             "If disabled, GCAS starts off for helicopters.");
-        EnableGCASTiltwing = Config.Bind("Auto GCAS", "03. Enable GCAS on start (Tiltwing)", true,
+        EnableGCASTiltwing = Config.Bind("Auto GCAS", "03. Enable GCAS on start (Tiltwing)", false,
             "If disabled, gcas starts off for tiltwings.");
         GcasMaxG = Config.Bind("Auto GCAS", "04. Max G-Pull", 5.0f, "Assumed G-Force capability for calculation");
         GcasWarnBuffer =

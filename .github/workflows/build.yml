@@ -22,6 +22,8 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+  attestations: write
 
 concurrency:
   group: build-${{ github.workflow }}-${{ github.ref }}
@@ -102,3 +104,9 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           archive: false
+
+      - name: Attest package provenance
+        if: github.event_name != 'pull_request'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: build-output/com.qwerty1423.NOAutopilot-*.7z
